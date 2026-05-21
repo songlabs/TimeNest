@@ -33,16 +33,19 @@ class MonthCalendarViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
 
-        let calendar = Calendar.current
+        // 使用 Gregorian calendar 确保年份显示为西历（2026 年而不是令和 8 年）
+        let calendar = Calendar(identifier: .gregorian)
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
 
         do {
-            grid = try await calendarDisplayUseCase.monthGrid(
+            let baseGrid = try await calendarDisplayUseCase.monthGrid(
                 year: year,
                 month: month,
                 setting: currentSetting
             )
+            // 不添加 mock 排班数据，shift 内容应由用户输入
+            grid = baseGrid
         } catch {
             errorMessage = error.localizedDescription
             grid = nil
@@ -52,7 +55,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func goToPreviousMonth() async {
-        let calendar = Calendar.current
+        let calendar = Calendar(identifier: .gregorian)
         if let newDate = calendar.date(byAdding: .month, value: -1, to: selectedDate) {
             selectedDate = newDate
             await reloadMonth()
@@ -60,7 +63,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func goToNextMonth() async {
-        let calendar = Calendar.current
+        let calendar = Calendar(identifier: .gregorian)
         if let newDate = calendar.date(byAdding: .month, value: 1, to: selectedDate) {
             selectedDate = newDate
             await reloadMonth()
@@ -73,7 +76,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func createEvent(title: String, date: Date, isAllDay: Bool) async throws {
-        let calendar = Calendar.current
+        let calendar = Calendar(identifier: .gregorian)
         let startDate: Date
         let endDate: Date?
 
@@ -123,7 +126,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     func updateEvent(id: UUID, title: String, date: Date, isAllDay: Bool) async {
         do {
-            let calendar = Calendar.current
+            let calendar = Calendar(identifier: .gregorian)
             let startDate: Date
             let endDate: Date?
 

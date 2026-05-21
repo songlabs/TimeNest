@@ -13,25 +13,43 @@ struct MonthCalendarView: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
-            headerSection
+        ZStack {
+            ShiftCalendarColors.backgroundColor
 
-            weekdaySymbolsSection
+            VStack(spacing: 0) {
+                // 顶部 Header
+                CalendarHeaderView(
+                    title: viewModel.grid?.title ?? "",
+                    onPreviousMonth: {
+                        Task {
+                            await viewModel.goToPreviousMonth()
+                        }
+                    },
+                    onNextMonth: {
+                        Task {
+                            await viewModel.goToNextMonth()
+                        }
+                    },
+                    onAddButtonTapped: {
+                        viewModel.showingEventEditor = true
+                    }
+                )
 
-            if viewModel.isLoading {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if let errorMessage = viewModel.errorMessage {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity)
-            } else if let grid = viewModel.grid {
-                monthGridSection(grid)
-            } else {
-                EmptyView()
+                // 月历 Grid + 底部区域
+                if viewModel.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let errorMessage = viewModel.errorMessage {
+                    Text(errorMessage)
+                        .foregroundColor(ShiftCalendarColors.sundayRed)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if let grid = viewModel.grid {
+                    calendarWithBottomSection(grid)
+                }
             }
         }
-        .padding()
+        .padding(.horizontal, ShiftCalendarLayout.calendarGridHorizontalPadding)
+        .ignoresSafeArea(edges: .bottom)
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
@@ -72,123 +90,220 @@ struct MonthCalendarView: View {
         }
     }
 
-    private var headerSection: some View {
-        HStack {
-            Button(action: {
-                Task {
-                    await viewModel.goToPreviousMonth()
-                }
-            }) {
-                Image(systemName: "chevron.left")
-                    .font(.title3)
-            }
+    @ViewBuilder
+    private func calendarWithBottomSection(_ grid: MonthGrid) -> some View {
+        VStack(spacing: 0) {
+            // 月历表格 - 最大化占据空间
+            GeometryReader { geometry in
+                let headerHeight: CGFloat = ShiftCalendarLayout.headerHeight
+                let infoBarHeight: CGFloat = ShiftCalendarLayout.selectedDateInfoHeight
+                let adBannerHeight: CGFloat = ShiftCalendarLayout.adBannerHeight
+                let tabBarHeight: CGFloat = ShiftCalendarLayout.tabBarHeight
+                let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
 
-            Spacer()
+                // 可用高度 = 总高度 - header - infoBar - adBanner - tabBar
+                let availableHeight = geometry.size.height - headerHeight - infoBarHeight - adBannerHeight - tabBarHeight
+                // 星期行固定高度 + 6 行日期
+                let dateCellHeight = max(ShiftCalendarLayout.dayCellMinHeight, (availableHeight - weekdayRowHeight) / 6.0)
+                let containerWidth = geometry.size.width
+                let cellWidth = containerWidth / 7.0
+                let gridHeight = weekdayRowHeight + dateCellHeight * 6
 
-            if let grid = viewModel.grid {
-                Text(grid.title)
-                    .font(.title)
-                    .fontWeight(.semibold)
-            }
+                // Cell 层 + 网格线 overlay
+                LazyVStack(spacing: 0) {
+                    // 第 0 行：星期栏（固定高度）
+                    WeekdayHeaderView(
+                        weekdaySymbols: grid.weekdaySymbols,
+                        cellWidth: cellWidth
+                    )
 
-            Spacer()
-
-            Button(action: {
-                Task {
-                    await viewModel.goToNextMonth()
-                }
-            }) {
-                Image(systemName: "chevron.right")
-                    .font(.title3)
-            }
-
-            Button(action: {
-                viewModel.showingEventEditor = true
-            }) {
-                Image(systemName: "plus")
-                    .font(.title3)
-            }
-        }
-    }
-
-    private var todayButtonSection: some View {
-        Button(action: {
-            Task {
-                await viewModel.goToToday()
-            }
-        }) {
-            Text("Today")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(6)
-        }
-    }
-
-    private var weekdaySymbolsSection: some View {
-        Group {
-            if let grid = viewModel.grid {
-                HStack(spacing: 0) {
-                    ForEach(grid.weekdaySymbols, id: \.self) { symbol in
-                        Text(symbol)
-                            .frame(maxWidth: .infinity)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.secondary)
+                    // 第 1～6 行：日期
+                    ForEach(0..<6, id: \.self) { rowIndex in
+                        HStack(spacing: 0) {
+                            ForEach(0..<7, id: \.self) { colIndex in
+                                let dayIndex = rowIndex * 7 + colIndex
+                                if dayIndex < grid.days.count {
+                                    let cell = grid.days[dayIndex]
+                                    DayCellView(
+                                        cell: cell,
+                                        cellWidth: cellWidth,
+                                        cellHeight: dateCellHeight,
+                                        isSelected: viewModel.selectedDayCell?.id == cell.id
+                                    )
+                                    .onTapGesture {
+                                        viewModel.selectDay(cell)
+                                    }
+                                } else {
+                                    // 空 cell
+                                    DayCellView(
+                                        cell: CalendarDayCell.empty,
+                                        cellWidth: cellWidth,
+                                        cellHeight: dateCellHeight,
+                                        isSelected: false
+                                    )
+                                    .opacity(0)
+                                }
+                            }
+                        }
+                        .frame(width: containerWidth, height: dateCellHeight)
                     }
                 }
+                // 网格线作为 overlay 在最上层绘制，不被任何内容遮挡
+                .overlay(
+                    gridLinesOverlay(
+                        cellWidth: cellWidth,
+                        dateCellHeight: dateCellHeight,
+                        containerWidth: containerWidth,
+                        gridHeight: gridHeight
+                    )
+                )
+                .frame(height: gridHeight)
             }
+            .frame(maxHeight: .infinity)
+
+            // 选中日期信息条
+            selectedDateInfoBar(for: grid)
+
+            // 广告 banner 占位
+            AdBannerPlaceholderView()
         }
+        .background(ShiftCalendarColors.backgroundColor)
     }
 
-    private func monthGridSection(_ grid: MonthGrid) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
-            ForEach(grid.days) { cell in
-                DayCellView(cell: cell)
-                    .onTapGesture {
-                        viewModel.selectDay(cell)
+    /// 网格线 overlay - 使用 Path 精确绘制连续网格线
+    @ViewBuilder
+    private func gridLinesOverlay(cellWidth: CGFloat, dateCellHeight: CGFloat, containerWidth: CGFloat, gridHeight: CGFloat) -> some View {
+        let lineWidth = ShiftCalendarLayout.gridLineWidth
+        let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
+
+        // 横线位置（不等高行）：
+        // 第 0 条：0（顶部）
+        // 第 1 条：weekdayRowHeight（星期行底部）
+        // 第 2～7 条：weekdayRowHeight + dateCellHeight * 1～6（日期行底部）
+        // 共 8 条横线
+        let horizontalLines: [CGFloat] = [0, weekdayRowHeight] + (1...6).map { weekdayRowHeight + dateCellHeight * CGFloat($0) }
+
+        // 竖线位置：0, cellWidth, cellWidth*2, ..., cellWidth*7 (共 8 条)
+        let verticalLines: [CGFloat] = (0...7).map { CGFloat($0) * cellWidth }
+
+        Path { p in
+            // 绘制横线
+            for y in horizontalLines {
+                p.move(to: CGPoint(x: 0, y: y))
+                p.addLine(to: CGPoint(x: containerWidth, y: y))
+            }
+            // 绘制竖线
+            for x in verticalLines {
+                p.move(to: CGPoint(x: x, y: 0))
+                p.addLine(to: CGPoint(x: x, y: gridHeight))
+            }
+        }
+        .stroke(ShiftCalendarColors.gridLineColor, lineWidth: lineWidth)
+    }
+
+    @ViewBuilder
+    private func selectedDateInfoBar(for grid: MonthGrid) -> some View {
+        if let selectedCell = viewModel.selectedDayCell {
+            SelectedDateInfoBarView(
+                cell: selectedCell,
+                onDetailTapped: {
+                    viewModel.showingDayDetail = true
+                }
+            )
+        } else {
+            // 默认显示今天
+            if let todayCell = grid.days.first(where: { $0.isToday }) {
+                SelectedDateInfoBarView(
+                    cell: todayCell,
+                    onDetailTapped: {
+                        viewModel.showingDayDetail = true
                     }
+                )
             }
         }
     }
 }
+
+// MARK: - DayCellView
 
 struct DayCellView: View {
     let cell: CalendarDayCell
+    let cellWidth: CGFloat
+    let cellHeight: CGFloat
+    let isSelected: Bool
 
     var body: some View {
-        VStack(spacing: 2) {
-            Text(cell.dayText)
-                .font(.body)
-                .fontWeight(cell.isToday ? .bold : .regular)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .aspectRatio(1, contentMode: .fit)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(cell.isToday ? Color.blue : Color.gray.opacity(0.1))
-                )
-                .foregroundColor(cell.isToday ? .white : .primary)
+        ZStack(alignment: .topLeading) {
+            // 背景
+            Rectangle()
+                .fill(cellBackgroundColor)
 
-            if !cell.events.isEmpty {
-                Text("\(cell.events.count)")
-                    .font(.caption2)
-                    .foregroundColor(.white)
-                    .fontWeight(.medium)
-            } else if !cell.holidays.isEmpty {
-                Text(holidayName(cell.holidays.first!))
-                    .font(.caption2)
-                    .foregroundColor(.red)
-                    .lineLimit(1)
+            // 选中状态边框 - 红色 2pt，贴着 cell 边缘
+            if isSelected {
+                Rectangle()
+                    .stroke(ShiftCalendarColors.selectedDayBorder, lineWidth: 2)
+            }
+
+            VStack(spacing: 4) {
+                // 顶部区域：日期数字
+                Text(cell.dayText)
+                    .font(.system(
+                        size: cell.isToday ? ShiftCalendarLayout.dayNumberFontSizeToday : ShiftCalendarLayout.dayNumberFontSize,
+                        weight: cell.isToday ? .semibold : .medium
+                    ))
+                    .foregroundColor(dayNumberColor)
+                    .padding(.leading, 8)
+                    .padding(.top, 8)
+
+                Spacer()
+
+                // 排班标签 - 底部居中，圆角矩形样式
+                if let shiftType = cell.shiftType {
+                    Text(shiftType)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(shiftType.shiftLabelColor)
+                        .padding(.horizontal, ShiftCalendarLayout.shiftLabelHorizontalPadding)
+                        .padding(.bottom, 8)
+                }
             }
         }
-        .opacity(cell.isInCurrentMonth ? 1.0 : 0.4)
+        .frame(width: cellWidth, height: cellHeight)
+        .opacity(cell.isInCurrentMonth ? 1.0 : 0.5)
     }
 
-    private func holidayName(_ holiday: Holiday) -> String {
-        holiday.localizedNames.localized(for: .zhHans)
+    private var cellBackgroundColor: Color {
+        if cell.isToday {
+            return Color(red: 0.96, green: 0.98, blue: 1.0)
+        }
+        return .white
+    }
+
+    private var dayNumberColor: Color {
+        if !cell.isInCurrentMonth {
+            return ShiftCalendarColors.otherMonthGray
+        }
+        if cell.weekdayText == "日" {
+            return ShiftCalendarColors.sundayRed
+        }
+        if cell.weekdayText == "土" {
+            return ShiftCalendarColors.saturdayBlue
+        }
+        return ShiftCalendarColors.primaryText
     }
 }
 
+// MARK: - Preview
+
+#Preview {
+    MonthCalendarView(
+        calendarDisplayUseCase: CalendarDisplayUseCase(
+            holidayUseCase: HolidayUseCase(holidayProvider: BundleHolidayProvider()),
+            localizationUseCase: CalendarLocalizationUseCase(),
+            eventUseCase: EventUseCase(repository: InMemoryEventRepository())
+        ),
+        eventUseCase: EventUseCase(repository: InMemoryEventRepository())
+    )
+}

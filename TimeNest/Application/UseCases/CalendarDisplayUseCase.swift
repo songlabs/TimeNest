@@ -16,7 +16,8 @@ class CalendarDisplayUseCase {
     }
 
     func monthGrid(year: Int, month: Int, setting: CalendarDisplaySetting) async throws -> MonthGrid {
-        let calendar = Calendar.current
+        // 使用 Gregorian calendar 确保日期计算使用西历
+        let calendar = Calendar(identifier: .gregorian)
         var components = DateComponents()
         components.year = year
         components.month = month
@@ -74,7 +75,9 @@ class CalendarDisplayUseCase {
                 events: dayEvents,
                 isToday: isToday,
                 isWeekend: isWeekend,
-                isInCurrentMonth: isInCurrentMonth
+                isInCurrentMonth: isInCurrentMonth,
+                shiftType: nil,
+                eventMarkers: []
             ))
         }
 
@@ -87,11 +90,11 @@ class CalendarDisplayUseCase {
             let isToday = todayOnly == dateOnly
             let isWeekend = isSaturdayOrSunday(date: date, calendar: calendar)
 
-            let holidays = try? await holidayUseCase.holidaysInDateRange(
+            let holidays: [Holiday] = (try? await holidayUseCase.holidaysInDateRange(
                 from: dateOnly,
                 to: dateOnly,
                 setting: setting
-            ) ?? []
+            )) ?? []
 
             let dayEvents = occurrences.filter { $0.occurrenceDate.id == dateOnly.id }
 
@@ -100,11 +103,13 @@ class CalendarDisplayUseCase {
                 date: dateOnly,
                 dayText: dayText,
                 weekdayText: weekdayText,
-                holidays: holidays ?? [],
+                holidays: holidays,
                 events: dayEvents,
                 isToday: isToday,
                 isWeekend: isWeekend,
-                isInCurrentMonth: true
+                isInCurrentMonth: true,
+                shiftType: nil,
+                eventMarkers: []
             ))
         }
 
@@ -131,7 +136,9 @@ class CalendarDisplayUseCase {
                     events: dayEvents,
                     isToday: isToday,
                     isWeekend: isWeekend,
-                    isInCurrentMonth: false
+                    isInCurrentMonth: false,
+                    shiftType: nil,
+                    eventMarkers: []
                 ))
             }
         }
@@ -144,7 +151,7 @@ class CalendarDisplayUseCase {
     }
 
     private func weekStartOffset(for weekday: Int, weekStartPolicy: WeekStartPolicy) -> Int {
-        let calendar = Calendar.current
+        let calendar = Calendar(identifier: .gregorian)
         let systemWeekStart = calendar.firstWeekday
 
         let actualWeekStart: Int
