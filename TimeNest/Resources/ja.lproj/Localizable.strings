@@ -1,0 +1,65 @@
+/* Localizable strings for Japanese */
+
+/* Tab Titles */
+"tab.list_calendar" = "リスト";
+"tab.shift_input" = "シフト入力";
+"tab.shift_share" = "シフト共有";
+
+/* Placeholder */
+"placeholder.coming_soon" = "近日公開";
+"placeholder.feature_not_implemented" = "未実装";
+
+/* Settings */
+"settings.title" = "設定";
+"settings.language" = "言語";
+"settings.notification" = "通知";
+"settings.calendar" = "カレンダー設定";
+"settings.theme" = "テーマ";
+"settings.about" = "アプリ情報";
+"settings.holiday_region" = "祝祭日";
+"settings.week_start" = "週の開始日";
+
+/* Language Options */
+"language.system" = "システム標準";
+"language.zh_hans" = "简体中文";
+"language.ja" = "日本語";
+"language.ko" = "한국어";
+"language.en_us" = "English";
+
+/* Holiday Region */
+"region.japan" = "日本";
+"region.china" = "中国";
+"region.korea" = "韓国";
+"region.united_states" = "アメリカ";
+
+/* Week Start */
+"week_start.system" = "システム標準";
+"week_start.sunday" = "日曜日";
+"week_start.monday" = "月曜日";
+
+/* Theme */
+"theme.light" = "ライト";
+"theme.dark" = "ダーク";
+"theme.system" = "システム標準";
+
+/* About */
+"about.version" = "バージョン";
+"about.developer" = "開発者";
+"about.privacy" = "プライバシーポリシー";
+"about.terms" = "利用規約";
+
+/* Notification */
+"notification.enabled" = "通知を有効にする";
+"notification.time" = "通知時間";
+"notification.sound" = "サウンド";
+
+/* Calendar */
+"calendar.settings" = "カレンダー設定";
+"calendar.first_day" = "週の開始日";
+"calendar.show_week_numbers" = "週番号を表示";
+
+/* Common */
+"common.not_implemented" = "未実装";
+"common.save" = "保存";
+"common.cancel" = "キャンセル";
+"common.ok" = "OK";

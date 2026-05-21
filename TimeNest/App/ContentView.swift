@@ -39,9 +39,16 @@ struct TabSelectionView<Content: View>: View {
             switch selectedTab {
             case .monthCalendar:
                 content
-            default:
-                // 其他 Tab 暂时显示占位
-                Color.black.opacity(0.1)
+            case .listCalendar:
+                ListPlaceholderView(title: LocalizedString.listCalendar.localized)
+            case .shiftInput:
+                ListPlaceholderView(title: LocalizedString.shiftInput.localized)
+            case .shiftShare:
+                ListPlaceholderView(title: LocalizedString.shiftShare.localized)
+            case .settings:
+                NavigationView {
+                    SettingsView()
+                }
             }
         }
     }

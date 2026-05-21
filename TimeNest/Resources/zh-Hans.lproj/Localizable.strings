@@ -1,0 +1,65 @@
+/* Localizable strings for Simplified Chinese */
+
+/* Tab Titles */
+"tab.list_calendar" = "列表";
+"tab.shift_input" = "シフト入力";
+"tab.shift_share" = "シフト共有";
+
+/* Placeholder */
+"placeholder.coming_soon" = "近日公开";
+"placeholder.feature_not_implemented" = "未实现";
+
+/* Settings */
+"settings.title" = "设置";
+"settings.language" = "语言";
+"settings.notification" = "通知";
+"settings.calendar" = "日历设置";
+"settings.theme" = "主题";
+"settings.about" = "应用信息";
+"settings.holiday_region" = "节假日";
+"settings.week_start" = "一周开始";
+
+/* Language Options */
+"language.system" = "系统默认";
+"language.zh_hans" = "简体中文";
+"language.ja" = "日本語";
+"language.ko" = "한국어";
+"language.en_us" = "English";
+
+/* Holiday Region */
+"region.japan" = "日本";
+"region.china" = "中国";
+"region.korea" = "韩国";
+"region.united_states" = "美国";
+
+/* Week Start */
+"week_start.system" = "系统默认";
+"week_start.sunday" = "周日";
+"week_start.monday" = "周一";
+
+/* Theme */
+"theme.light" = "浅色";
+"theme.dark" = "深色";
+"theme.system" = "系统默认";
+
+/* About */
+"about.version" = "版本";
+"about.developer" = "开发者";
+"about.privacy" = "隐私政策";
+"about.terms" = "使用条款";
+
+/* Notification */
+"notification.enabled" = "启用通知";
+"notification.time" = "通知时间";
+"notification.sound" = "提示音";
+
+/* Calendar */
+"calendar.settings" = "日历设置";
+"calendar.first_day" = "一周开始";
+"calendar.show_week_numbers" = "显示周号";
+
+/* Common */
+"common.not_implemented" = "未实现";
+"common.save" = "保存";
+"common.cancel" = "取消";
+"common.ok" = "确定";

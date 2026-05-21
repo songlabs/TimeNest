@@ -1,0 +1,65 @@
+/* Localizable strings for English */
+
+/* Tab Titles */
+"tab.list_calendar" = "List";
+"tab.shift_input" = "Shift Input";
+"tab.shift_share" = "Shift Share";
+
+/* Placeholder */
+"placeholder.coming_soon" = "Coming Soon";
+"placeholder.feature_not_implemented" = "Not Implemented";
+
+/* Settings */
+"settings.title" = "Settings";
+"settings.language" = "Language";
+"settings.notification" = "Notification";
+"settings.calendar" = "Calendar Settings";
+"settings.theme" = "Theme";
+"settings.about" = "About";
+"settings.holiday_region" = "Holiday Region";
+"settings.week_start" = "Week Start";
+
+/* Language Options */
+"language.system" = "System Default";
+"language.zh_hans" = "简体中文";
+"language.ja" = "日本語";
+"language.ko" = "한국어";
+"language.en_us" = "English";
+
+/* Holiday Region */
+"region.japan" = "Japan";
+"region.china" = "China";
+"region.korea" = "Korea";
+"region.united_states" = "United States";
+
+/* Week Start */
+"week_start.system" = "System Default";
+"week_start.sunday" = "Sunday";
+"week_start.monday" = "Monday";
+
+/* Theme */
+"theme.light" = "Light";
+"theme.dark" = "Dark";
+"theme.system" = "System Default";
+
+/* About */
+"about.version" = "Version";
+"about.developer" = "Developer";
+"about.privacy" = "Privacy Policy";
+"about.terms" = "Terms of Service";
+
+/* Notification */
+"notification.enabled" = "Enable Notifications";
+"notification.time" = "Notification Time";
+"notification.sound" = "Sound";
+
+/* Calendar */
+"calendar.settings" = "Calendar Settings";
+"calendar.first_day" = "First Day of Week";
+"calendar.show_week_numbers" = "Show Week Numbers";
+
+/* Common */
+"common.not_implemented" = "Not Implemented";
+"common.save" = "Save";
+"common.cancel" = "Cancel";
+"common.ok" = "OK";

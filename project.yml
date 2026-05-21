@@ -25,6 +25,12 @@ targets:
       - path: TimeNest
         excludes:
           - "**/*.md"
+      - path: TimeNest/Resources/ja.lproj
+        buildPhase: resources
+      - path: TimeNest/Resources/zh-Hans.lproj
+        buildPhase: resources
+      - path: TimeNest/Resources/en.lproj
+        buildPhase: resources
     settings:
       base:
         INFOPLIST_FILE: TimeNest/Info.plist
