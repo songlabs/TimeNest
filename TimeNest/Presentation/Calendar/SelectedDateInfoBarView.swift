@@ -38,7 +38,7 @@ struct SelectedDateInfoBarView: View {
             // 右侧 詳細 > 按钮
             Button(action: onDetailTapped) {
                 HStack(spacing: 2) {
-                    Text(verbatim: localization.localized(.notImplemented))
+                    Text(localization.localized(.detail))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(ShiftCalendarColors.primaryBlue)
 

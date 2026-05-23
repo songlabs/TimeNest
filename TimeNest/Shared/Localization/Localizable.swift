@@ -74,6 +74,20 @@ enum LocalizedString: String {
     case cancel = "common.cancel"
     case ok = "common.ok"
     case adPlaceholder = "common.ad_placeholder"
+    case detail = "common.detail"
+
+    // MARK: - Event Editor
+
+    case editorTitle = "editor.title"
+    case editorBasicInfo = "editor.basic_info"
+    case editorDate = "editor.date"
+    case editorTime = "editor.time"
+    case editorAllDay = "editor.all_day"
+    case editorError = "editor.error"
+    case editorSave = "editor.save"
+    case editorCancel = "editor.cancel"
+    case editorNewEvent = "editor.new_event"
+    case editorEditEvent = "editor.edit_event"
 
     // MARK: - Day Detail
 

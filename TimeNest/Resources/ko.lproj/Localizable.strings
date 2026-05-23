@@ -65,6 +65,19 @@
 "common.cancel" = "취소";
 "common.ok" = "확인";
 "common.ad_placeholder" = "AD / 광고 공간";
+"common.detail" = "상세";
+
+/* Event Editor */
+"editor.title" = "제목";
+"editor.basic_info" = "기본 정보";
+"editor.date" = "날짜";
+"editor.time" = "시간";
+"editor.all_day" = "하루 종일";
+"editor.error" = "오류";
+"editor.save" = "저장";
+"editor.cancel" = "취소";
+"editor.new_event" = "새 일정";
+"editor.edit_event" = "일정 편집";
 
 /* Day Detail */
 "day_detail.title" = "이벤트";

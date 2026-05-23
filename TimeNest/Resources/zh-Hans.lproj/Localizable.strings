@@ -65,6 +65,19 @@
 "common.cancel" = "取消";
 "common.ok" = "确定";
 "common.ad_placeholder" = "AD / 广告位";
+"common.detail" = "详细";
+
+/* Event Editor */
+"editor.title" = "标题";
+"editor.basic_info" = "基本信息";
+"editor.date" = "日期";
+"editor.time" = "时间";
+"editor.all_day" = "全天";
+"editor.error" = "错误";
+"editor.save" = "保存";
+"editor.cancel" = "取消";
+"editor.new_event" = "新建日程";
+"editor.edit_event" = "编辑日程";
 
 /* Day Detail */
 "day_detail.title" = "日程";

@@ -65,6 +65,19 @@
 "common.cancel" = "キャンセル";
 "common.ok" = "OK";
 "common.ad_placeholder" = "AD / 広告スペース";
+"common.detail" = "詳細";
+
+/* Event Editor */
+"editor.title" = "タイトル";
+"editor.basic_info" = "基本情報";
+"editor.date" = "日付";
+"editor.time" = "時間";
+"editor.all_day" = "終日";
+"editor.error" = "エラー";
+"editor.save" = "保存";
+"editor.cancel" = "キャンセル";
+"editor.new_event" = "新規予定";
+"editor.edit_event" = "予定を編集";
 
 /* Day Detail */
 "day_detail.title" = "予定";

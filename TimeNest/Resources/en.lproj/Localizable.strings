@@ -65,6 +65,19 @@
 "common.cancel" = "Cancel";
 "common.ok" = "OK";
 "common.ad_placeholder" = "AD / Ad Space";
+"common.detail" = "Details";
+
+/* Event Editor */
+"editor.title" = "Title";
+"editor.basic_info" = "Basic Info";
+"editor.date" = "Date";
+"editor.time" = "Time";
+"editor.all_day" = "All Day";
+"editor.error" = "Error";
+"editor.save" = "Save";
+"editor.cancel" = "Cancel";
+"editor.new_event" = "New Event";
+"editor.edit_event" = "Edit Event";
 
 /* Day Detail */
 "day_detail.title" = "Events";

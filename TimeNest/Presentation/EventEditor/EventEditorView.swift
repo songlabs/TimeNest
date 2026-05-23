@@ -6,6 +6,7 @@ enum EventEditorMode {
 }
 
 struct EventEditorView: View {
+    @Environment(\.localization) private var localization
     @Binding var isPresented: Bool
     let mode: EventEditorMode
     var onSave: (String, Date, Bool) async throws -> Void
@@ -29,16 +30,16 @@ struct EventEditorView: View {
     var body: some View {
         Form {
             Section {
-                TextField("标题", text: $title)
+                TextField(localization.localized(.editorTitle), text: $title)
             } header: {
-                Text("基本信息")
+                Text(localization.localized(.editorBasicInfo))
             }
 
             Section {
-                DatePicker("日期", selection: $date)
-                Toggle("全天", isOn: $isAllDay)
+                DatePicker(localization.localized(.editorDate), selection: $date)
+                Toggle(localization.localized(.editorAllDay), isOn: $isAllDay)
             } header: {
-                Text("时间")
+                Text(localization.localized(.editorTime))
             }
 
             if let errorMessage = errorMessage {
@@ -46,12 +47,12 @@ struct EventEditorView: View {
                     Text(errorMessage)
                         .foregroundColor(.red)
                 } header: {
-                    Text("错误")
+                    Text(localization.localized(.editorError))
                 }
             }
 
             Section {
-                Button("保存") {
+                Button(localization.localized(.editorSave)) {
                     Task {
                         await save()
                     }
@@ -60,12 +61,12 @@ struct EventEditorView: View {
             }
 
             Section {
-                Button("取消", role: .cancel) {
+                Button(localization.localized(.editorCancel), role: .cancel) {
                     isPresented = false
                 }
             }
         }
-        .navigationTitle(isEditing ? "編集予定" : "新建予定")
+        .navigationTitle(isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent))
         .disabled(saving)
         .onAppear {
             setupInitialState()

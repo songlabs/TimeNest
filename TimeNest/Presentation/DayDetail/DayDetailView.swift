@@ -54,7 +54,7 @@ struct DayDetailView: View {
             if !cell.holidays.isEmpty {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(cell.holidays, id: \.id) { holiday in
-                        Text(holiday.localizedNames.zhHans)
+                        Text(localizedHolidayName(holiday))
                             .font(.subheadline)
                             .foregroundColor(.red)
                     }
@@ -101,6 +101,32 @@ struct DayDetailView: View {
     private var dateTitle: String {
         let date = cell.date.toDate()
         return LocalizationManager.shared.formattedDateShort(for: date)
+    }
+
+    private func localizedHolidayName(_ holiday: Holiday) -> String {
+        let language = localization.currentLanguage
+        let names = holiday.localizedNames
+
+        // 优先返回当前语言对应的名称，如果没有则按 fallback 顺序返回
+        switch language {
+        case .ja:
+            return names.ja.isEmpty ? localizedHolidayNameFallback(names) : names.ja
+        case .zhHans, .system:
+            return names.zhHans.isEmpty ? localizedHolidayNameFallback(names) : names.zhHans
+        case .ko:
+            return names.ko.isEmpty ? localizedHolidayNameFallback(names) : names.ko
+        case .enUS:
+            return names.enUS.isEmpty ? localizedHolidayNameFallback(names) : names.enUS
+        }
+    }
+
+    private func localizedHolidayNameFallback(_ names: LocalizedText) -> String {
+        // Fallback 顺序：ja -> zhHans -> enUS -> 任意非空名称
+        if !names.ja.isEmpty { return names.ja }
+        if !names.zhHans.isEmpty { return names.zhHans }
+        if !names.enUS.isEmpty { return names.enUS }
+        if !names.ko.isEmpty { return names.ko }
+        return ""
     }
 }
 
