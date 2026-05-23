@@ -1,0 +1,70 @@
+/* Localizable strings for Korean */
+
+/* Tab Titles */
+"tab.list_calendar" = "목록";
+"tab.shift_input" = "교대 입력";
+"tab.shift_share" = "교대 공유";
+
+/* Placeholder */
+"placeholder.coming_soon" = "곧 공개";
+"placeholder.feature_not_implemented" = "구현되지 않음";
+
+/* Settings */
+"settings.title" = "설정";
+"settings.language" = "언어";
+"settings.notification" = "알림";
+"settings.calendar" = "캘린더 설정";
+"settings.theme" = "테마";
+"settings.about" = "앱 정보";
+"settings.holiday_region" = "공휴일";
+"settings.week_start" = "일주 시작";
+
+/* Language Options */
+"language.system" = "시스템 기본";
+"language.zh_hans" = "简体中文";
+"language.ja" = "日本語";
+"language.ko" = "한국어";
+"language.en_us" = "English";
+
+/* Holiday Region */
+"region.japan" = "일본";
+"region.china" = "중국";
+"region.korea" = "한국";
+"region.united_states" = "미국";
+
+/* Week Start */
+"week_start.system" = "시스템 기본";
+"week_start.sunday" = "일요일";
+"week_start.monday" = "월요일";
+
+/* Theme */
+"theme.light" = "라이트";
+"theme.dark" = "다크";
+"theme.system" = "시스템 기본";
+
+/* About */
+"about.version" = "버전";
+"about.developer" = "개발자";
+"about.privacy" = "개인정보 보호 정책";
+"about.terms" = "이용 약관";
+
+/* Notification */
+"notification.enabled" = "알림 활성화";
+"notification.time" = "알림 시간";
+"notification.sound" = "사운드";
+
+/* Calendar */
+"calendar.settings" = "캘린더 설정";
+"calendar.first_day" = "일주 시작";
+"calendar.show_week_numbers" = "주 번호 표시";
+
+/* Common */
+"common.not_implemented" = "구현되지 않음";
+"common.save" = "저장";
+"common.cancel" = "취소";
+"common.ok" = "확인";
+"common.ad_placeholder" = "광고";
+
+/* Day Detail */
+"day_detail.title" = "이벤트";
+"day_detail.no_events" = "이벤트 없음";
