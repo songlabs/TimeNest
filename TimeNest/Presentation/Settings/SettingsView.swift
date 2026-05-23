@@ -1,119 +1,119 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @AppStorage("displayLanguage") private var displayLanguage: String = "system"
+    @EnvironmentObject private var localization: LocalizationManager
     @AppStorage("holidayRegion") private var holidayRegion: String = "japan"
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
     @AppStorage("notificationEnabled") private var notificationEnabled: Bool = true
     @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = false
-    
+
     @State private var showVersionInfo: Bool = false
-    
+
     var body: some View {
         Form {
             // MARK: - Language Section
             Section {
-                Picker(LocalizedString.settingsLanguage.localized, selection: $displayLanguage) {
-                    Text(LocalizedString.languageSystem.localized).tag("system")
-                    Text(LocalizedString.languageSimplifiedChinese.localized).tag("zh_hans")
-                    Text(LocalizedString.languageJapanese.localized).tag("ja")
-                    Text(LocalizedString.languageKorean.localized).tag("ko")
-                    Text(LocalizedString.languageEnglish.localized).tag("en_us")
+                Picker(localization.localized(.settingsLanguage), selection: $localization.selectedLanguageCode) {
+                    Text(localization.localized(.languageSystem)).tag("system")
+                    Text(localization.localized(.languageSimplifiedChinese)).tag("zhHans")
+                    Text(localization.localized(.languageJapanese)).tag("ja")
+                    Text(localization.localized(.languageKorean)).tag("ko")
+                    Text(localization.localized(.languageEnglish)).tag("enUS")
                 }
             } header: {
-                Text(LocalizedString.settingsLanguage.localized)
+                Text(localization.localized(.settingsLanguage))
             }
-            
+
             // MARK: - Holiday Region Section
             Section {
-                Picker(LocalizedString.settingsHolidayRegion.localized, selection: $holidayRegion) {
-                    Text(LocalizedString.regionJapan.localized).tag("japan")
-                    Text(LocalizedString.regionChina.localized).tag("china")
-                    Text(LocalizedString.regionKorea.localized).tag("korea")
-                    Text(LocalizedString.regionUnitedStates.localized).tag("united_states")
+                Picker(localization.localized(.settingsHolidayRegion), selection: $holidayRegion) {
+                    Text(localization.localized(.regionJapan)).tag("japan")
+                    Text(localization.localized(.regionChina)).tag("china")
+                    Text(localization.localized(.regionKorea)).tag("korea")
+                    Text(localization.localized(.regionUnitedStates)).tag("united_states")
                 }
             } header: {
-                Text(LocalizedString.settingsHolidayRegion.localized)
+                Text(localization.localized(.settingsHolidayRegion))
             }
-            
+
             // MARK: - Week Start Section
             Section {
-                Picker(LocalizedString.settingsWeekStart.localized, selection: $weekStart) {
-                    Text(LocalizedString.weekStartSystem.localized).tag("system")
-                    Text(LocalizedString.weekStartSunday.localized).tag("sunday")
-                    Text(LocalizedString.weekStartMonday.localized).tag("monday")
+                Picker(localization.localized(.settingsWeekStart), selection: $weekStart) {
+                    Text(localization.localized(.weekStartSystem)).tag("system")
+                    Text(localization.localized(.weekStartSunday)).tag("sunday")
+                    Text(localization.localized(.weekStartMonday)).tag("monday")
                 }
             } header: {
-                Text(LocalizedString.settingsWeekStart.localized)
+                Text(localization.localized(.settingsWeekStart))
             }
-            
+
             // MARK: - Week Numbers Section
             Section {
-                Toggle(LocalizedString.calendarShowWeekNumbers.localized, isOn: $showWeekNumbers)
+                Toggle(localization.localized(.calendarShowWeekNumbers), isOn: $showWeekNumbers)
             } header: {
-                Text(LocalizedString.calendarSettings.localized)
+                Text(localization.localized(.calendarSettings))
             }
-            
+
             // MARK: - Notification Section
             Section {
-                Toggle(LocalizedString.notificationEnabled.localized, isOn: $notificationEnabled)
-                
+                Toggle(localization.localized(.notificationEnabled), isOn: $notificationEnabled)
+
                 // Placeholder for future notification time setting
                 HStack {
-                    Text(LocalizedString.notificationTime.localized)
+                    Text(localization.localized(.notificationTime))
                     Spacer()
-                    Text(LocalizedString.notImplemented.localized)
+                    Text(localization.localized(.notImplemented))
                         .foregroundColor(.secondary)
                         .font(.caption)
                 }
                 .opacity(notificationEnabled ? 1.0 : 0.5)
                 .disabled(!notificationEnabled)
             } header: {
-                Text(LocalizedString.settingsNotification.localized)
+                Text(localization.localized(.settingsNotification))
             }
-            
+
             // MARK: - Theme Section
             Section {
-                Picker(LocalizedString.settingsTheme.localized, selection: $themeMode) {
-                    Text(LocalizedString.themeLight.localized).tag("light")
-                    Text(LocalizedString.themeDark.localized).tag("dark")
-                    Text(LocalizedString.themeSystem.localized).tag("system")
+                Picker(localization.localized(.settingsTheme), selection: $themeMode) {
+                    Text(localization.localized(.themeLight)).tag("light")
+                    Text(localization.localized(.themeDark)).tag("dark")
+                    Text(localization.localized(.themeSystem)).tag("system")
                 }
             } header: {
-                Text(LocalizedString.settingsTheme.localized)
+                Text(localization.localized(.settingsTheme))
             }
-            
+
             // MARK: - About Section
             Section {
                 HStack {
-                    Text(LocalizedString.aboutVersion.localized)
+                    Text(localization.localized(.aboutVersion))
                     Spacer()
                     Text("1.0.0")
                         .foregroundColor(.secondary)
                 }
-                
+
                 HStack {
-                    Text(LocalizedString.aboutDeveloper.localized)
+                    Text(localization.localized(.aboutDeveloper))
                     Spacer()
                     Text("TimeNest Team")
                         .foregroundColor(.secondary)
                 }
-                
+
                 // Placeholder links (not functional in preview)
                 Link(destination: URL(string: "https://example.com/privacy")!) {
                     HStack {
-                        Text(LocalizedString.aboutPrivacy.localized)
+                        Text(localization.localized(.aboutPrivacy))
                         Spacer()
                         Image(systemName: "arrow.up.right")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                 }
-                
+
                 Link(destination: URL(string: "https://example.com/terms")!) {
                     HStack {
-                        Text(LocalizedString.aboutTerms.localized)
+                        Text(localization.localized(.aboutTerms))
                         Spacer()
                         Image(systemName: "arrow.up.right")
                             .font(.caption)
@@ -121,24 +121,19 @@ struct SettingsView: View {
                     }
                 }
             } header: {
-                Text(LocalizedString.settingsAbout.localized)
+                Text(localization.localized(.settingsAbout))
             }
         }
-        .navigationTitle(LocalizedString.settingsTitle.localized)
+        .navigationTitle(localization.localized(.settingsTitle))
         .foregroundColor(.primary)
     }
 }
-
-// MARK: - Settings View Models
-
-// DisplayLanguage is defined in Domain/Rules/DisplayLanguage.swift
-// HolidayRegion is defined in Domain/Rules/HolidayRegion.swift
-// WeekStartPolicy is defined in Domain/Rules/WeekStartPolicy.swift
 
 // MARK: - Preview
 
 #Preview {
     NavigationView {
         SettingsView()
+            .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     }
 }

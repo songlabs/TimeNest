@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// 日历 Header - 压缩高度，"2026 年 5 月"格式，前后月切换 + シフト入力按钮
+/// 日历 Header - 压缩高度，"2026 年 5 月" 格式，前后月切换 + Shift Input 按钮
 struct CalendarHeaderView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let title: String
     let onPreviousMonth: () -> Void
     let onNextMonth: () -> Void
@@ -49,9 +50,9 @@ struct CalendarHeaderView: View {
                 }
             }
 
-            // シフト入力按钮
+            // Shift Input 按钮
             Button(action: onAddButtonTapped) {
-                Text("シフト入力")
+                Text(verbatim: localization.localized(.shiftInput))
                     .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.white)
                     .frame(width: 68, height: 28)

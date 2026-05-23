@@ -34,6 +34,7 @@
 		601434245D349B48607E5BEC /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6423E12AEFF20549A1DB96 /* CalendarEvent.swift */; };
 		6839B6B779B1BCABBD773D1D /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = E9CEA7091890BFAB3C7B58EF /* en.lproj */; };
 		7148073A3AEBCAD722A1FEF1 /* AddEventButtonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5CD7A38AD5074A7707015200 /* AddEventButtonRow.swift */; };
+		72A14A1B8C98BE895CB58329 /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = FD009AC9340826530FB78B78 /* ko.lproj */; };
 		72F8137F7B5B97D9FA82938C /* Localizable.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB7D1FCDFE583F4CADA13A0B /* Localizable.swift */; };
 		7B81A8AD25EB5F5CB2780573 /* PlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06600F158A953E74ADBEBB69 /* PlaceholderView.swift */; };
 		7BAAE5B7CA121B7C7E66C578 /* ReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = F786127B6D78F95EC1A11570 /* ReminderRepository.swift */; };
@@ -58,6 +59,7 @@
 		D594A6245E016952B851D0FA /* WeekStartPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C80166B8FCD1DC798FF5FFB /* WeekStartPolicy.swift */; };
 		D5E766E5392BD1FDB5CC110E /* EventCategory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2CBB242BEA1E0C0D6A1993BF /* EventCategory.swift */; };
 		D68ACD27D603FA5C091C3943 /* RecurrenceRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00E77805A7FD7651A7D51D2D /* RecurrenceRule.swift */; };
+		DC12A9E91D661531B48C8AEE /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 947BED78596841B0AF260897 /* LocalizationManager.swift */; };
 		DE72508C123D5BACDB6F5A4C /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = E439670392271700E636B759 /* Localizable.strings */; };
 		E1F666FAB384344CC825B6CE /* HolidayUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D8594EFD3EEC9D785D70FC1 /* HolidayUseCase.swift */; };
 		F10090AC7E7DD170FDC0933D /* ReminderUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 735689838CC2044510B86E90 /* ReminderUseCase.swift */; };
@@ -89,14 +91,15 @@
 		5CD7A38AD5074A7707015200 /* AddEventButtonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButtonRow.swift; sourceTree = "<group>"; };
 		5D8594EFD3EEC9D785D70FC1 /* HolidayUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayUseCase.swift; sourceTree = "<group>"; };
 		5EE07A17F3762284F455C9D8 /* SelectedDateDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedDateDetailView.swift; sourceTree = "<group>"; };
-		5FEAA0FECE743D61878BE79D /* TimeNest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5FEAA0FECE743D61878BE79D /* TimeNest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		67ADAD077EA077DD836ECFDF /* ReminderScheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduling.swift; sourceTree = "<group>"; };
 		735689838CC2044510B86E90 /* ReminderUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderUseCase.swift; sourceTree = "<group>"; };
 		74FAF6DFBA5FFD0C3D513BB1 /* WeatherProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherProviding.swift; sourceTree = "<group>"; };
-		81008528D75F27AC81D854F1 /* ja.lproj */ = {isa = PBXFileReference; path = ja.lproj; sourceTree = "<group>"; };
+		81008528D75F27AC81D854F1 /* ja.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ja.lproj; sourceTree = "<group>"; };
 		8A3C86D3041C26844E7991D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8CD23027255CFC9D1EE49C5C /* InMemoryEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryEventRepository.swift; sourceTree = "<group>"; };
 		930B04AEF751C1556AC288C0 /* ImportSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSource.swift; sourceTree = "<group>"; };
+		947BED78596841B0AF260897 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		989C24E133C49121F2E0A868 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		9AF5DE3632C0B3995E70548A /* WeekdayHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayHeaderView.swift; sourceTree = "<group>"; };
 		9B104717B9916B3CB217D944 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -120,12 +123,14 @@
 		D9DEA1E3A69AB607D62E1E69 /* HolidayRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRegion.swift; sourceTree = "<group>"; };
 		DF46837BBCDCF4238367EE27 /* ReminderStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStatus.swift; sourceTree = "<group>"; };
 		E529D090684264185A62D2DD /* BundleHolidayProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleHolidayProvider.swift; sourceTree = "<group>"; };
-		E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */ = {isa = PBXFileReference; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
-		E9CEA7091890BFAB3C7B58EF /* en.lproj */ = {isa = PBXFileReference; path = en.lproj; sourceTree = "<group>"; };
+		E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
+		E9CEA7091890BFAB3C7B58EF /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = en.lproj; sourceTree = "<group>"; };
 		EA537673E0FB2CA5435DF0F1 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EC4BC937DED38ACC686A57B4 /* ImportSourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSourceType.swift; sourceTree = "<group>"; };
 		EDD535FD2A3A66B1639FAE1F /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarView.swift; sourceTree = "<group>"; };
+		F556AE27004F0D2E0520B852 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		F786127B6D78F95EC1A11570 /* ReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRepository.swift; sourceTree = "<group>"; };
+		FD009AC9340826530FB78B78 /* ko.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ko.lproj; sourceTree = "<group>"; };
 		FD81A481736AFAF2E5FBF110 /* EventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRepository.swift; sourceTree = "<group>"; };
 		FF6423E12AEFF20549A1DB96 /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -271,6 +276,7 @@
 			isa = PBXGroup;
 			children = (
 				BB7D1FCDFE583F4CADA13A0B /* Localizable.swift */,
+				947BED78596841B0AF260897 /* LocalizationManager.swift */,
 			);
 			path = Localization;
 			sourceTree = "<group>";
@@ -341,6 +347,7 @@
 			children = (
 				E9CEA7091890BFAB3C7B58EF /* en.lproj */,
 				81008528D75F27AC81D854F1 /* ja.lproj */,
+				FD009AC9340826530FB78B78 /* ko.lproj */,
 				E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */,
 				E439670392271700E636B759 /* Localizable.strings */,
 			);
@@ -475,7 +482,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					2225269E6F32DE4DDE7D53EC = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -487,6 +493,7 @@
 				Base,
 				en,
 				ja,
+				ko,
 				"zh-Hans",
 			);
 			mainGroup = 3E07FB5761A2775BE17A7FF3;
@@ -509,6 +516,7 @@
 				DE72508C123D5BACDB6F5A4C /* Localizable.strings in Resources */,
 				6839B6B779B1BCABBD773D1D /* en.lproj in Resources */,
 				28EA7B08CE5976E1EB5EE94D /* ja.lproj in Resources */,
+				72A14A1B8C98BE895CB58329 /* ko.lproj in Resources */,
 				2A452B2BF2815D6737317826 /* zh-Hans.lproj in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -551,6 +559,7 @@
 				B6A55D5A3563F7DDED2DFAA1 /* InMemoryEventRepository.swift in Sources */,
 				3F81E0A8D90E6D4D55192D2C /* InMemoryReminderRepository.swift in Sources */,
 				72F8137F7B5B97D9FA82938C /* Localizable.swift in Sources */,
+				DC12A9E91D661531B48C8AEE /* LocalizationManager.swift in Sources */,
 				552794D3E036900EF531FB98 /* LocalizedText.swift in Sources */,
 				889EC769BE998CF66CC585FF /* MockReminderScheduler.swift in Sources */,
 				AEE32A9D708168EB86F0B980 /* MockWeatherProvider.swift in Sources */,
@@ -584,6 +593,7 @@
 			children = (
 				9B104717B9916B3CB217D944 /* en */,
 				EA537673E0FB2CA5435DF0F1 /* ja */,
+				F556AE27004F0D2E0520B852 /* ko */,
 				30C3C5FB4EB1928A7D6D5AEE /* zh-Hans */,
 			);
 			name = Localizable.strings;
@@ -657,6 +667,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -675,6 +686,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

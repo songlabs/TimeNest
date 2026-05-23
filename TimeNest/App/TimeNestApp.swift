@@ -34,6 +34,7 @@ struct TimeNestApp: App {
                 calendarDisplayUseCase: calendarDisplayUseCase,
                 eventUseCase: eventUseCase
             )
+            .environmentObject(LocalizationManager.shared)
         }
     }
 }

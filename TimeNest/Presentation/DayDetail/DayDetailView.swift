@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DayDetailView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
     let onUpdateEvent: (UUID, String, Date, Bool) async -> Void
@@ -23,7 +24,7 @@ struct DayDetailView: View {
                 }
                 .padding()
             }
-            .navigationTitle("予定")
+            .navigationTitle(localization.localized(.dayDetailTitle))
             .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingEditor) {
                 if let eventID = editingEventID {
@@ -64,12 +65,12 @@ struct DayDetailView: View {
 
     private var eventsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("予定")
+            Text(localization.localized(.dayDetailTitle))
                 .font(.title2)
                 .fontWeight(.semibold)
 
             if cell.events.isEmpty {
-                Text("予定はありません")
+                Text(localization.localized(.dayDetailNoEvents))
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 40)
@@ -98,10 +99,8 @@ struct DayDetailView: View {
     }
 
     private var dateTitle: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy 年 M 月 d 日"
         let date = cell.date.toDate()
-        return formatter.string(from: date)
+        return LocalizationManager.shared.formattedDateShort(for: date)
     }
 }
 
@@ -149,3 +148,25 @@ struct EventRowView: View {
     }
 }
 
+// MARK: - Preview
+
+#Preview {
+    DayDetailView(
+        cell: CalendarDayCell(
+            id: "2026-05-27",
+            date: DateOnly(year: 2026, month: 5, day: 27),
+            dayText: "27",
+            weekdayText: "二",
+            holidays: [],
+            events: [],
+            isToday: false,
+            isWeekend: false,
+            isInCurrentMonth: true,
+            shiftType: "早班",
+            eventMarkers: []
+        ),
+        onDeleteEvent: { _ in },
+        onUpdateEvent: { _, _, _, _ in }
+    )
+    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
+}

@@ -28,7 +28,7 @@ enum CalendarTab: String, CaseIterable, Identifiable {
     var localizedKey: LocalizedString {
         switch self {
         case .monthCalendar:
-            return .listCalendar
+            return .calendar
         case .listCalendar:
             return .listCalendar
         case .shiftInput:

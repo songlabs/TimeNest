@@ -5,6 +5,7 @@ import SwiftUI
 /// 本地化字符串 Key 枚举
 enum LocalizedString: String {
     // MARK: - Tab Titles
+    case calendar = "tab.calendar"
     case listCalendar = "tab.list_calendar"
     case shiftInput = "tab.shift_input"
     case shiftShare = "tab.shift_share"
@@ -72,6 +73,12 @@ enum LocalizedString: String {
     case save = "common.save"
     case cancel = "common.cancel"
     case ok = "common.ok"
+    case adPlaceholder = "common.ad_placeholder"
+
+    // MARK: - Day Detail
+
+    case dayDetailTitle = "day_detail.title"
+    case dayDetailNoEvents = "day_detail.no_events"
 
     // MARK: - Placeholder
 
@@ -79,22 +86,16 @@ enum LocalizedString: String {
     case placeholderFeatureNotImplemented = "placeholder.feature_not_implemented"
 }
 
-// MARK: - Localized String Extension
+// MARK: - EnvironmentObject Extension
 
-extension LocalizedString {
-    var localized: String {
-        return NSLocalizedString(rawValue, comment: "")
+extension EnvironmentValues {
+    /// 自定义 environment key 用于访问 LocalizationManager
+    var localization: LocalizationManager {
+        get { self[LocalizationKey.self] }
+        set { self[LocalizationKey.self] = newValue }
     }
-
-    var localizedText: Text {
-        return Text(LocalizedStringKey(rawValue))
-    }
-}
-
-// MARK: - SwiftUI Text Extension
-
-extension Text {
-    static func localized(_ key: LocalizedString) -> Text {
-        return Text(LocalizedStringKey(key.rawValue))
+    
+    private struct LocalizationKey: EnvironmentKey {
+        static let defaultValue: LocalizationManager = LocalizationManager.shared
     }
 }

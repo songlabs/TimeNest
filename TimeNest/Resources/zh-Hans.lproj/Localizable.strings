@@ -1,9 +1,10 @@
 /* Localizable strings for Simplified Chinese */
 
 /* Tab Titles */
+"tab.calendar" = "日历";
 "tab.list_calendar" = "列表";
-"tab.shift_input" = "シフト入力";
-"tab.shift_share" = "シフト共有";
+"tab.shift_input" = "班次输入";
+"tab.shift_share" = "班次共享";
 
 /* Placeholder */
 "placeholder.coming_soon" = "近日公开";
@@ -63,3 +64,8 @@
 "common.save" = "保存";
 "common.cancel" = "取消";
 "common.ok" = "确定";
+"common.ad_placeholder" = "AD / 广告位";
+
+/* Day Detail */
+"day_detail.title" = "日程";
+"day_detail.no_events" = "暂无日程";

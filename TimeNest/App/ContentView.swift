@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
     @State private var selectedTab: CalendarTab = .monthCalendar
@@ -22,6 +23,8 @@ struct ContentView: View {
                     eventUseCase: eventUseCase
                 )
             }
+            // 语言变化时强制刷新整个内容区域
+            .id(localization.selectedLanguageCode)
 
             // 自定义底部 TabBar - 固定在底部
             BottomTabBarView(selectedTab: $selectedTab)
@@ -31,6 +34,7 @@ struct ContentView: View {
 
 /// Tab 内容切换视图
 struct TabSelectionView<Content: View>: View {
+    @EnvironmentObject private var localization: LocalizationManager
     @Binding var selectedTab: CalendarTab
     @ViewBuilder let content: Content
 
@@ -40,14 +44,15 @@ struct TabSelectionView<Content: View>: View {
             case .monthCalendar:
                 content
             case .listCalendar:
-                ListPlaceholderView(title: LocalizedString.listCalendar.localized)
+                ListPlaceholderView(titleKey: .listCalendar)
             case .shiftInput:
-                ListPlaceholderView(title: LocalizedString.shiftInput.localized)
+                ListPlaceholderView(titleKey: .shiftInput)
             case .shiftShare:
-                ListPlaceholderView(title: LocalizedString.shiftShare.localized)
+                ListPlaceholderView(titleKey: .shiftShare)
             case .settings:
                 NavigationView {
                     SettingsView()
+                        .environmentObject(localization)
                 }
             }
         }
@@ -65,4 +70,5 @@ struct TabSelectionView<Content: View>: View {
         ),
         eventUseCase: EventUseCase(repository: InMemoryEventRepository())
     )
+    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import Combine
 
 @MainActor
 class MonthCalendarViewModel: ObservableObject {
@@ -13,13 +14,9 @@ class MonthCalendarViewModel: ObservableObject {
 
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
-    private var currentSetting: CalendarDisplaySetting = .init(
-        displayLanguage: .zhHans,
-        primaryHolidayRegion: .japan,
-        additionalHolidayRegions: [],
-        weekStartPolicy: .system,
-        showLunarCalendar: false
-    )
+    private var currentSetting: CalendarDisplaySetting
+
+    private var languageObserver: AnyCancellable?
 
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
@@ -27,6 +24,38 @@ class MonthCalendarViewModel: ObservableObject {
     ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
+        
+        // 初始化时从 LocalizationManager 读取当前语言
+        let initialLanguage = LocalizationManager.shared.currentLanguage
+        self.currentSetting = .init(
+            displayLanguage: initialLanguage,
+            primaryHolidayRegion: .japan,
+            additionalHolidayRegions: [],
+            weekStartPolicy: .system,
+            showLunarCalendar: false
+        )
+
+        // 监听 LocalizationManager 的语言变化
+        setupLanguageObserver()
+    }
+
+    private func setupLanguageObserver() {
+        languageObserver = LocalizationManager.shared.$selectedLanguageCode
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.updateDisplayLanguage()
+                }
+            }
+    }
+
+    private func updateDisplayLanguage() {
+        let newLanguage = LocalizationManager.shared.currentLanguage
+        if currentSetting.displayLanguage != newLanguage {
+            currentSetting.displayLanguage = newLanguage
+            Task {
+                await reloadMonth()
+            }
+        }
     }
 
     func reloadMonth() async {
@@ -52,6 +81,17 @@ class MonthCalendarViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    /// 获取当前月份的本地化标题
+    func monthTitle() -> String {
+        LocalizationManager.shared.monthTitle(for: selectedDate)
+    }
+
+    /// 获取当前语言对应的星期符号数组
+    func weekdaySymbols() -> [String] {
+        let weekStartPolicy: WeekStartPolicy = currentSetting.weekStartPolicy == .monday ? .monday : .sunday
+        return LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: weekStartPolicy)
     }
 
     func goToPreviousMonth() async {

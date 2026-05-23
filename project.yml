@@ -31,6 +31,8 @@ targets:
         buildPhase: resources
       - path: TimeNest/Resources/en.lproj
         buildPhase: resources
+      - path: TimeNest/Resources/ko.lproj
+        buildPhase: resources
     settings:
       base:
         INFOPLIST_FILE: TimeNest/Info.plist

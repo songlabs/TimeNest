@@ -1,6 +1,7 @@
 /* Localizable strings for Japanese */
 
 /* Tab Titles */
+"tab.calendar" = "カレンダー";
 "tab.list_calendar" = "リスト";
 "tab.shift_input" = "シフト入力";
 "tab.shift_share" = "シフト共有";
@@ -63,3 +64,8 @@
 "common.save" = "保存";
 "common.cancel" = "キャンセル";
 "common.ok" = "OK";
+"common.ad_placeholder" = "AD / 広告スペース";
+
+/* Day Detail */
+"day_detail.title" = "予定";
+"day_detail.no_events" = "予定はありません";

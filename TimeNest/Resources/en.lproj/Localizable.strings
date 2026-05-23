@@ -1,9 +1,10 @@
 /* Localizable strings for English */
 
 /* Tab Titles */
+"tab.calendar" = "Calendar";
 "tab.list_calendar" = "List";
-"tab.shift_input" = "Shift Input";
-"tab.shift_share" = "Shift Share";
+"tab.shift_input" = "Shift";
+"tab.shift_share" = "Share";
 
 /* Placeholder */
 "placeholder.coming_soon" = "Coming Soon";
@@ -63,3 +64,8 @@
 "common.save" = "Save";
 "common.cancel" = "Cancel";
 "common.ok" = "OK";
+"common.ad_placeholder" = "AD / Ad Space";
+
+/* Day Detail */
+"day_detail.title" = "Events";
+"day_detail.no_events" = "No events";

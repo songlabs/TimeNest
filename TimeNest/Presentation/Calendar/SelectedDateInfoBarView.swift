@@ -2,6 +2,7 @@ import SwiftUI
 
 /// 选中日期信息条 - 紧凑的信息展示条，替代原来的详情区域
 struct SelectedDateInfoBarView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDetailTapped: () -> Void
 
@@ -37,7 +38,7 @@ struct SelectedDateInfoBarView: View {
             // 右侧 詳細 > 按钮
             Button(action: onDetailTapped) {
                 HStack(spacing: 2) {
-                    Text("詳細")
+                    Text(verbatim: localization.localized(.notImplemented))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(ShiftCalendarColors.primaryBlue)
 
@@ -55,25 +56,14 @@ struct SelectedDateInfoBarView: View {
     }
 
     private var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M/d（E）"
         let date = cell.date.toDate()
-        let result = formatter.string(from: date)
-        // 将 "5/27（Wed）" 转换为 "5/27（水）"
-        return result
-            .replacing("Wed", with: "水")
-            .replacing("Thu", with: "木")
-            .replacing("Fri", with: "金")
-            .replacing("Sat", with: "土")
-            .replacing("Sun", with: "日")
-            .replacing("Mon", with: "月")
-            .replacing("Tue", with: "火")
+        return LocalizationManager.shared.formattedDateShort(for: date)
     }
 }
 
 // MARK: - Preview
 
-#Preview {
+#Preview("Japanese") {
     VStack {
         SelectedDateInfoBarView(
             cell: CalendarDayCell(
@@ -109,5 +99,52 @@ struct SelectedDateInfoBarView: View {
             onDetailTapped: {}
         )
     }
+    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
+    .background(ShiftCalendarColors.backgroundColor)
+}
+
+#Preview("Simplified Chinese") {
+    VStack {
+        SelectedDateInfoBarView(
+            cell: CalendarDayCell(
+                id: "2026-05-27",
+                date: DateOnly(year: 2026, month: 5, day: 27),
+                dayText: "27",
+                weekdayText: "二",
+                holidays: [],
+                events: [],
+                isToday: false,
+                isWeekend: false,
+                isInCurrentMonth: true,
+                shiftType: "早班",
+                eventMarkers: []
+            ),
+            onDetailTapped: {}
+        )
+    }
+    .environmentObject(LocalizationManager.preview(languageCode: "zhHans"))
+    .background(ShiftCalendarColors.backgroundColor)
+}
+
+#Preview("English") {
+    VStack {
+        SelectedDateInfoBarView(
+            cell: CalendarDayCell(
+                id: "2026-05-27",
+                date: DateOnly(year: 2026, month: 5, day: 27),
+                dayText: "27",
+                weekdayText: "Tue",
+                holidays: [],
+                events: [],
+                isToday: false,
+                isWeekend: false,
+                isInCurrentMonth: true,
+                shiftType: "Morning",
+                eventMarkers: []
+            ),
+            onDetailTapped: {}
+        )
+    }
+    .environmentObject(LocalizationManager.preview(languageCode: "enUS"))
     .background(ShiftCalendarColors.backgroundColor)
 }
