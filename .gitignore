@@ -5,6 +5,10 @@
 ## User settings
 xcuserdata/
 
+## Generated files - do not commit
+.DS_Store
+TimeNest.xcodeproj/
+
 ## Obj-C/Swift specific
 *.hmap
 
