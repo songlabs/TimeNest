@@ -295,17 +295,30 @@ struct HolidaySourceEditView: View {
                 print("[HolidaySourceSettings] data size =", data.count)
                 #endif
 
-                // 3. 验证 ICS 内容
+                // 3. 验证 ICS 内容（包括 VEVENT 检查）
                 try downloadService.validateICSContent(data)
 
-                // 4. 保存 URL（保存实际成功的 URL）
+                // 4. 解析 ICS 以确认可以提取出节假日事件
+                let parseService = ICSParseService()
+                let events = try parseService.parse(data: data, region: region, sourceURL: savedURL)
+
+                #if DEBUG
+                print("[HolidaySourceSettings] parsed events count =", events.count)
+                #endif
+
+                // 5. 确保至少解析出一个事件才允许保存
+                guard !events.isEmpty else {
+                    throw EnhancedICSError.noEvents
+                }
+
+                // 6. 保存 URL（保存实际成功的 URL）
                 try subscriptionManager.updateURL(for: region, newURL: savedURL)
 
                 #if DEBUG
                 print("[HolidaySourceSettings] URL updated in subscriptionManager")
                 #endif
 
-                // 5. 成功后自动同步
+                // 7. 成功后自动同步
                 await subscriptionManager.syncAllEnabled()
 
                 logSaveSuccess(savedURL)
@@ -328,6 +341,7 @@ struct HolidaySourceEditView: View {
     /// 下载 ICS 并自动尝试 fallback URL
     /// - 如果 normal URL 返回 500，自动尝试 clean URL
     /// - 返回实际成功的 URL
+    /// - clean URL 也必须通过 VEVENT 检查，否则抛出错误
     private func downloadWithFallback(
         url: URL,
         regionName: String,
@@ -341,8 +355,12 @@ struct HolidaySourceEditView: View {
 
         do {
             let data = try await downloadService.download(from: url, region: regionName, host: host)
+            
+            // 验证 ICS 内容（包括 VEVENT 检查）
+            try downloadService.validateICSContent(data)
+            
             #if DEBUG
-            print("[HolidaySourceEditView] initial download succeeded")
+            print("[HolidaySourceEditView] initial download succeeded and validated")
             #endif
             return (data, url.absoluteString)
         } catch EnhancedICSError.invalidHTTPStatus(let statusCode) where statusCode == 500 {
@@ -370,8 +388,13 @@ struct HolidaySourceEditView: View {
             #endif
 
             let data = try await downloadService.download(from: cleanURL, region: regionName, host: host)
+            
+            // 验证 clean URL 的 ICS 内容（包括 VEVENT 检查）
+            // 如果 clean URL 没有事件，抛出错误而不是保存
+            try downloadService.validateICSContent(data)
+            
             #if DEBUG
-            print("[HolidaySourceEditView] fallback download succeeded")
+            print("[HolidaySourceEditView] fallback download succeeded and validated")
             #endif
             return (data, cleanURL.absoluteString)
         }

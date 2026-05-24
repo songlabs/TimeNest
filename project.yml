@@ -51,3 +51,20 @@ targets:
         preActions:
           - execute:
               script: "echo \"Building TimeNest for iOS...\""
+
+  TimeNestTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "17.0"
+    product: unit-test
+    bundleId: com.song.TimeNestTests
+    sources:
+      - path: Tests/TimeNestTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.song.TimeNestTests
+        SKIP_INSTALL: YES
+    scheme:
+      testPlan: Tests/TimeNestTests/TimeNestTests.xctest
+    dependencies:
+      - target: TimeNest

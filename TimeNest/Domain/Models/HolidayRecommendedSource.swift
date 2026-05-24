@@ -97,15 +97,16 @@ enum HolidayRecommendedSources {
     // MARK: - 获取推荐源
 
     /// 获取指定地区的推荐源列表
-    /// 返回多个候选源，按优先级排序（normal 优先，clean 为 fallback）
+    /// 只返回 normal 版本，clean 版本不再作为默认推荐
+    /// 因为 clean URL 即使 HTTP 200 也可能没有 VEVENT 事件
     static func sources(for region: HolidayRegion) -> [HolidayRecommendedSource] {
         switch region {
         case .japan:
-            return [officeHolidaysJapan, officeHolidaysJapanClean]
+            return [officeHolidaysJapan]
         case .china:
-            return [officeHolidaysChina, officeHolidaysChinaClean]
+            return [officeHolidaysChina]
         case .korea:
-            return [officeHolidaysKorea, officeHolidaysKoreaClean]
+            return [officeHolidaysKorea]
         case .unitedStates:
             return [officeHolidaysUSA]
         }

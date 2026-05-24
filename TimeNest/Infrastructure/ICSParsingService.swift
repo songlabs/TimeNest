@@ -58,7 +58,12 @@ class ICSParseService: ICSParsing {
         print("[ICSParseService] parse(content:) started")
         #endif
 
-        let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        // 1. Normalize line endings: CRLF/CR -> LF
+        let normalizedContent = content
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+
+        let trimmedContent = normalizedContent.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedContent.isEmpty else {
             #if DEBUG
             print("[ICSParseService] content is empty")
@@ -75,32 +80,35 @@ class ICSParseService: ICSParsing {
             throw ICSParseError.invalidFormat
         }
 
-        var events: [HolidayEvent] = []
-        let lines = trimmedContent.components(separatedBy: .newlines)
+        // 2. Unfold lines (RFC5545: lines starting with space/tab are continuation)
+        let unfoldedLines = unfoldICSLines(text: trimmedContent)
 
+        // DEBUG: body 级别日志
+        #if DEBUG
+        let veventCount = unfoldedLines.filter { $0 == "BEGIN:VEVENT" }.count
+        print("[ICSParseService] unfoldedLines count =", unfoldedLines.count)
+        print("[ICSParseService] veventCount (BEGIN:VEVENT) =", veventCount)
+        #endif
+
+        var events: [HolidayEvent] = []
         var inVEvent = false
-        var currentEvent: [String: String] = [:]
-        var lineIndex = 0
+        var currentEventLines: [String] = []
         var vEventCount = 0
 
-        for line in lines {
-            lineIndex += 1
-
-            // 处理行折叠（以空格开头的行是上一行的延续）
-            let unfoldedLine = handleLineFold(lines: lines, startIndex: &lineIndex, currentLine: line)
-
-            if unfoldedLine.hasPrefix("BEGIN:VEVENT") {
+        // 3. Parse by VEVENT blocks
+        for line in unfoldedLines {
+            if line == "BEGIN:VEVENT" {
                 inVEvent = true
                 vEventCount += 1
-                currentEvent = [:]
-            } else if unfoldedLine.hasPrefix("END:VEVENT") {
+                currentEventLines = []
+            } else if line == "END:VEVENT" {
                 inVEvent = false
-                if let event = try parseVEvent(currentEvent, region: region, sourceURL: sourceURL) {
+                if let event = try parseVEventLines(lines: currentEventLines, region: region, sourceURL: sourceURL) {
                     events.append(event)
                 }
-                currentEvent = [:]
+                currentEventLines = []
             } else if inVEvent {
-                parseVEventProperty(line: unfoldedLine, into: &currentEvent)
+                currentEventLines.append(line)
             }
 
             // 检查事件数量限制
@@ -109,14 +117,43 @@ class ICSParseService: ICSParsing {
             }
         }
 
+        // 4. DEBUG logs
         #if DEBUG
-        print("[ICSParseService] parsed", events.count, "holidays from", vEventCount, "VEVENT blocks")
-        if !events.isEmpty {
-            print("[ICSParseService] first holiday =", events.first!.name, "on", events.first!.date)
+        print("[ICSParseService] veventBlocks =", vEventCount)
+        print("[ICSParseService] parsedCount =", events.count)
+        if !currentEventLines.isEmpty || vEventCount > 0 {
+            print("[ICSParseService] firstEventRaw =", currentEventLines.prefix(20).joined(separator: "\\n"))
         }
+        if !events.isEmpty {
+            let firstDate = events.first?.date
+            let dateStr = firstDate != nil ? "\(firstDate!.year)-\(firstDate!.month)-\(firstDate!.day)" : "nil"
+            print("[ICSParseService] firstParsedSummary =", events.first?.name ?? "nil")
+            print("[ICSParseService] firstParsedDate =", dateStr)
+        }
+        // HolidaySync 级别的日志
+        print("[HolidaySync] parsed holidays count =", events.count)
+        print("[HolidaySync] first holiday =", events.first?.name ?? "nil")
         #endif
 
         return events
+    }
+
+    /// Unfold ICS lines according to RFC5545
+    /// Lines starting with space or tab are continuation of the previous line
+    private func unfoldICSLines(text: String) -> [String] {
+        var result: [String] = []
+
+        for rawLine in text.components(separatedBy: "\n") {
+            if rawLine.hasPrefix(" ") || rawLine.hasPrefix("\t") {
+                if !result.isEmpty {
+                    result[result.count - 1] += String(rawLine.dropFirst())
+                }
+            } else {
+                result.append(rawLine)
+            }
+        }
+
+        return result
     }
 
     /// 处理 ICS 行折叠
@@ -139,7 +176,7 @@ class ICSParseService: ICSParsing {
         return result
     }
 
-    /// 解析 VEVENT 属性
+    /// 解析 VEVENT 属性（旧方法，保留用于兼容）
     private func parseVEventProperty(line: String, into dict: inout [String: String]) {
         // 处理带参数的属性：DTSTART;VALUE=DATE:20260101
         let components = line.split(separator: ":", maxSplits: 1)
@@ -155,16 +192,45 @@ class ICSParseService: ICSParsing {
         dict[key] = (dict[key] ?? "") + value
     }
 
+    /// 解析 VEVENT 属性（新方法，支持完整 RFC5545 格式）
+    private func parseVEventPropertyAdvanced(line: String, into dict: inout [String: String]) {
+        // 必须包含冒号
+        guard let colonIndex = line.firstIndex(of: ":") else { return }
+
+        let keyPart = String(line[..<colonIndex])
+        let value = String(line[line.index(after: colonIndex)...])
+
+        // 提取属性名（去掉参数部分，如 DTSTART;VALUE=DATE -> DTSTART）
+        let key = keyPart.split(separator: ";").first.map(String.init) ?? keyPart
+
+        // 存储值（累加，以防值被拆分）
+        dict[key] = (dict[key] ?? "") + value
+    }
+
+    /// 解析单个 VEVENT（新方法，基于 lines）
+    private func parseVEventLines(lines: [String], region: HolidayRegion, sourceURL: String) throws -> HolidayEvent? {
+        var properties: [String: String] = [:]
+
+        for line in lines {
+            parseVEventPropertyAdvanced(line: line, into: &properties)
+        }
+
+        return try parseVEvent(properties: properties, region: region, sourceURL: sourceURL)
+    }
+
     /// 解析单个 VEVENT
-    private func parseVEvent(_ properties: [String: String], region: HolidayRegion, sourceURL: String) throws -> HolidayEvent? {
+    private func parseVEvent(properties: [String: String], region: HolidayRegion, sourceURL: String) throws -> HolidayEvent? {
         // 必填字段
         guard let summary = properties["SUMMARY"]?.trimmingCharacters(in: .whitespacesAndNewlines),
               !summary.isEmpty else {
             return nil  // 没有 SUMMARY 的事件跳过
         }
 
-        // 解析日期
+        // 解析日期 - 支持多种 DTSTART 格式
         guard let date = parseDate(from: properties) else {
+            #if DEBUG
+            print("[ICSParseService] failed to parse date from properties:", properties)
+            #endif
             return nil  // 无法解析日期则跳过
         }
 
@@ -174,22 +240,45 @@ class ICSParseService: ICSParsing {
         // 解析事件类型
         let type = parseEventType(from: properties, summary: summary)
 
+        // 5. Unescape SUMMARY (ICS escape sequences)
+        let unescapedSummary = unescapeICSString(summary)
+
         return HolidayEvent(
             id: uid,
             region: region,
             date: date,
-            name: summary,
+            name: unescapedSummary,
             translatedNames: [:],  // ICS 通常不包含多语言翻译，后续可根据需要扩展
             type: type,
             sourceURL: sourceURL
         )
     }
 
+    /// Unescape ICS string according to RFC5545
+    /// Supports: \\n, \\,, \\;, \\\\
+    private func unescapeICSString(_ string: String) -> String {
+        string
+            .replacingOccurrences(of: "\\n", with: "\n")
+            .replacingOccurrences(of: "\\N", with: "\n")
+            .replacingOccurrences(of: "\\,", with: ",")
+            .replacingOccurrences(of: "\\;", with: ";")
+            .replacingOccurrences(of: "\\\\", with: "\\")
+    }
+
     /// 解析日期（支持 DATE 和 DATE-TIME 格式）
     private func parseDate(from properties: [String: String]) -> DateOnly? {
-        // 优先使用 DTSTART;VALUE=DATE 格式
-        if let dateStr = properties["DTSTART;VALUE=DATE"] ?? properties["DTSTART"] {
-            return parseDateFromICSText(dateStr)
+        // 尝试多种 DTSTART 键名（按优先级）
+        // Office Holidays 使用：DTSTART;VALUE=DATE
+        // Google Calendar 使用：DTSTART
+        let possibleKeys = ["DTSTART;VALUE=DATE", "DTSTART"]
+
+        for key in possibleKeys {
+            if let dateStr = properties[key] {
+                let date = parseDateFromICSText(dateStr)
+                if date != nil {
+                    return date
+                }
+            }
         }
 
         // 尝试从 RRULE 解析（跳过重复事件）

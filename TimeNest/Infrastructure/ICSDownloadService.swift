@@ -9,6 +9,7 @@ enum EnhancedICSError: Error, LocalizedError {
     case emptyResponse
     case invalidEncoding
     case invalidICSContent
+    case noEvents
     case parseFailed(String)
     case tooLarge(size: Int, limit: Int)
 
@@ -28,6 +29,8 @@ enum EnhancedICSError: Error, LocalizedError {
             return "ICS データの文字コードを読み取れませんでした。"
         case .invalidICSContent:
             return "取得したデータが有効な iCalendar 形式ではありません。"
+        case .noEvents:
+            return "ダウンロードした ICS に祝日データがありません。別の URL をお試しください。"
         case .parseFailed(let reason):
             return "ICS の解析に失敗しました：\(reason)"
         case .tooLarge(let size, let limit):
@@ -93,6 +96,10 @@ class ICSDownloadService: ICSDownloading {
             if !bodyAlt.contains("BEGIN:VCALENDAR") || !bodyAlt.contains("END:VCALENDAR") {
                 throw EnhancedICSError.invalidICSContent
             }
+            // 检查 VEVENT
+            if !bodyAlt.contains("BEGIN:VEVENT") {
+                throw EnhancedICSError.noEvents
+            }
             return
         }
 
@@ -100,6 +107,19 @@ class ICSDownloadService: ICSDownloading {
         if !body.contains("BEGIN:VCALENDAR") || !body.contains("END:VCALENDAR") {
             throw EnhancedICSError.invalidICSContent
         }
+
+        // 检查是否包含至少一个 VEVENT
+        if !body.contains("BEGIN:VEVENT") {
+            throw EnhancedICSError.noEvents
+        }
+
+        // DEBUG: body 级别日志
+        #if DEBUG
+        let veventCount = body.components(separatedBy: "BEGIN:VEVENT").count - 1
+        print("[EnhancedICS] containsVCALENDAR =", body.contains("BEGIN:VCALENDAR"))
+        print("[EnhancedICS] containsVEVENT =", body.contains("BEGIN:VEVENT"))
+        print("[EnhancedICS] veventCount =", veventCount)
+        #endif
     }
 
     /// 检查是否为 Office Holidays URL
