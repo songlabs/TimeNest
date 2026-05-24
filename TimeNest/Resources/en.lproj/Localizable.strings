@@ -127,3 +127,6 @@
 "holiday_source.use_recommended_source_confirm" = "Use";
 "holiday_source.office_holidays_description" = "Provided by Office Holidays (officeholidays.com)";
 "holiday_source.office_holidays_clean_description" = "Provided by Office Holidays (Clean) (officeholidays.com)";
+
+/* Holiday Subscription Errors */
+"holiday_subscription.source_not_found" = "Subscription source not found";

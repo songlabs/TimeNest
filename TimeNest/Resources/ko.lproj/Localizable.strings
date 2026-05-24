@@ -127,3 +127,6 @@
 "holiday_source.use_recommended_source_confirm" = "사용";
 "holiday_source.office_holidays_description" = "Office Holidays (officeholidays.com) 제공";
 "holiday_source.office_holidays_clean_description" = "Office Holidays (Clean) (officeholidays.com) 제공";
+
+/* Holiday Subscription Errors */
+"holiday_subscription.source_not_found" = "구독원을 찾을 수 없습니다";

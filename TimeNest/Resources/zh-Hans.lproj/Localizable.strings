@@ -127,3 +127,6 @@
 "holiday_source.use_recommended_source_confirm" = "使用";
 "holiday_source.office_holidays_description" = "由 Office Holidays (officeholidays.com) 提供";
 "holiday_source.office_holidays_clean_description" = "由 Office Holidays (Clean) (officeholidays.com) 提供";
+
+/* Holiday Subscription Errors */
+"holiday_subscription.source_not_found" = "订阅源未找到";

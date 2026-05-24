@@ -7,6 +7,20 @@ struct HolidaySourceSettingsView: View {
 
     @State private var selectedRegion: HolidayRegion?
     @State private var showingEditSheet = false
+
+    // MARK: - DEBUG Logging
+
+    private func makeEditView(for region: HolidayRegion) -> some View {
+        #if DEBUG
+        print("[HolidaySettings] opening region =", region.rawValue)
+        #endif
+        return HolidaySourceEditView(
+            region: region,
+            subscriptionManager: viewModel.subscriptionManager
+        )
+        .environmentObject(localization)
+    }
+
     @State private var showingResetAlert = false
 
     var body: some View {
@@ -15,6 +29,9 @@ struct HolidaySourceSettingsView: View {
                 SourceRowView(
                     subscription: subscription,
                     onTap: {
+                        #if DEBUG
+                        print("[HolidaySettings] Japan tapped - region =", subscription.region.rawValue)
+                        #endif
                         selectedRegion = subscription.region
                         showingEditSheet = true
                     }
@@ -31,11 +48,7 @@ struct HolidaySourceSettingsView: View {
         }
         .sheet(isPresented: $showingEditSheet) {
             if let region = selectedRegion {
-                HolidaySourceEditView(
-                    region: region,
-                    subscriptionManager: viewModel.subscriptionManager
-                )
-                .environmentObject(localization)
+                makeEditView(for: region)
             }
         }
     }
@@ -106,6 +119,7 @@ struct HolidaySourceEditView: View {
     @State private var showingResetAlert = false
     @State private var showingUseSourceAlert = false
     @State private var selectedRecommendedSource: HolidayRecommendedSource?
+    @State private var initLogged = false
 
     private var subscription: HolidaySubscription? {
         subscriptionManager.subscriptions.first { $0.region == region }
@@ -113,6 +127,19 @@ struct HolidaySourceEditView: View {
 
     private var recommendedSources: [HolidayRecommendedSource] {
         HolidayRecommendedSources.sources(for: region)
+    }
+
+    // MARK: - DEBUG Logging on Init
+
+    private func logInit() {
+        #if DEBUG
+        if !initLogged {
+            print("[HolidaySourceEditView] init region =", region.rawValue)
+            print("[HolidaySourceEditView] subscription =", subscription != nil ? "found" : "nil")
+            print("[HolidaySourceEditView] recommendedSources =", recommendedSources.map { "\($0.region): \($0.urlString)" })
+            initLogged = true
+        }
+        #endif
     }
 
     // MARK: - DEBUG Logging Helpers
@@ -142,6 +169,14 @@ struct HolidaySourceEditView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // MARK: - Error Section (when subscription not found)
+                if subscription == nil {
+                    Section {
+                        Text(localization.localized(.holidaySubscriptionSourceNotFound))
+                            .foregroundColor(.red)
+                    }
+                }
+
                 Section {
                     TextField("https://...", text: $urlString)
                         .autocapitalization(.none)
@@ -166,14 +201,19 @@ struct HolidaySourceEditView: View {
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                         }
+                    } else if subscription == nil {
+                        Text(localization.localized(.holidaySubscriptionNoURL))
+                            .foregroundColor(.secondary)
                     }
                 }
 
                 Section {
-                    Button(localization.localized(.holidaySourceResetDefault)) {
-                        showingResetAlert = true
+                    if subscription != nil {
+                        Button(localization.localized(.holidaySourceResetDefault)) {
+                            showingResetAlert = true
+                        }
+                        .foregroundColor(.orange)
                     }
-                    .foregroundColor(.orange)
                 }
 
                 Section {
@@ -225,6 +265,12 @@ struct HolidaySourceEditView: View {
                 }
             }
             .onAppear {
+                #if DEBUG
+                if !initLogged {
+                    print("[HolidaySourceEditView] body rendered region =", region.rawValue)
+                    initLogged = true
+                }
+                #endif
                 urlString = subscription?.urlString ?? ""
                 validateURL(urlString)
             }
