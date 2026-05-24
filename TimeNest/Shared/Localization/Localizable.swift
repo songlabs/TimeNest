@@ -113,6 +113,7 @@ enum LocalizedString: String {
     case holidaySourceEnableFirst = "holiday_source.enable_first"
     case holidaySourceNoEvents = "holiday_source.no_events"
     case holidaySourceTestSuccess = "holiday_source.test_success"
+    case holidaySourceTestSuccessTitle = "holiday_source.test_success_title"
     
     // MARK: - Holiday Recommended Sources
 

@@ -117,6 +117,7 @@
 "holiday_source.enable_first" = "请先启用此订阅";
 "holiday_source.no_events" = "下载的 ICS 中没有事件";
 "holiday_source.test_success" = "成功解析 %d 个事件";
+"holiday_source.test_success_title" = "同步测试成功";
 
 /* Holiday Recommended Sources */
 "holiday_source.recommended_section" = "推荐源";

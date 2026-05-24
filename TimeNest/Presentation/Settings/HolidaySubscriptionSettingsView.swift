@@ -133,11 +133,6 @@ struct SubscriptionRowView: View {
             }
 
             Spacer()
-
-            // 右侧：chevron
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-                .font(.caption)
         }
         .padding(.vertical, 4)
         .opacity(canToggle ? 1.0 : 0.6)

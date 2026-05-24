@@ -117,6 +117,7 @@
 "holiday_source.enable_first" = "まずこの購読を有効にしてください";
 "holiday_source.no_events" = "ダウンロードした ICS に予定はありません";
 "holiday_source.test_success" = "%d 個の予定を正常に解析しました";
+"holiday_source.test_success_title" = "同期テスト成功";
 
 /* Holiday Recommended Sources */
 "holiday_source.recommended_section" = "推奨ソース";

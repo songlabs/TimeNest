@@ -117,6 +117,7 @@
 "holiday_source.enable_first" = "먼저 이 구독을 활성화하세요";
 "holiday_source.no_events" = "다운로드한 ICS 에 이벤트가 없습니다";
 "holiday_source.test_success" = "%d 개의 이벤트를 성공적으로 파싱했습니다";
+"holiday_source.test_success_title" = "동기화 테스트 성공";
 
 /* Holiday Recommended Sources */
 "holiday_source.recommended_section" = "추천 소스";

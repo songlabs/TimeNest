@@ -116,6 +116,8 @@ struct HolidaySourceEditView: View {
     @State private var isValidURL = false
     @State private var showError = false
     @State private var errorMessage = ""
+    @State private var showingSyncTestSuccess = false
+    @State private var syncTestSuccessMessage = ""
     @State private var showingResetAlert = false
     @State private var showingUseSourceAlert = false
     @State private var selectedRecommendedSource: HolidayRecommendedSource?
@@ -278,6 +280,11 @@ struct HolidaySourceEditView: View {
                 Button(localization.localized(.ok), role: .cancel) {}
             } message: {
                 Text(errorMessage)
+            }
+            .alert(localization.localized(.holidaySourceTestSuccessTitle), isPresented: $showingSyncTestSuccess) {
+                Button(localization.localized(.ok), role: .cancel) {}
+            } message: {
+                Text(syncTestSuccessMessage)
             }
             .alert(localization.localized(.holidaySourceResetConfirm), isPresented: $showingResetAlert) {
                 Button(localization.localized(.reset), role: .destructive) {
@@ -512,10 +519,11 @@ struct HolidaySourceEditView: View {
 
             if events.isEmpty {
                 errorMessage = localization.localized(.holidaySourceNoEvents)
+                showError = true
             } else {
-                errorMessage = String(format: localization.localized(.holidaySourceTestSuccess), events.count)
+                syncTestSuccessMessage = String(format: localization.localized(.holidaySourceTestSuccess), events.count)
+                showingSyncTestSuccess = true
             }
-            showError = true
 
         } catch {
             #if DEBUG

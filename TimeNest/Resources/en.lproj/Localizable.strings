@@ -117,6 +117,7 @@
 "holiday_source.enable_first" = "Please enable this subscription first";
 "holiday_source.no_events" = "No events in the downloaded ICS";
 "holiday_source.test_success" = "Successfully parsed %d events";
+"holiday_source.test_success_title" = "Sync Test Successful";
 
 /* Holiday Recommended Sources */
 "holiday_source.recommended_section" = "Recommended Sources";
