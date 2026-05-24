@@ -126,3 +126,4 @@
 "holiday_source.use_recommended_source_message" = "This subscription source is provided by a third party. Accuracy and availability depend on the provider.";
 "holiday_source.use_recommended_source_confirm" = "Use";
 "holiday_source.office_holidays_description" = "Provided by Office Holidays (officeholidays.com)";
+"holiday_source.office_holidays_clean_description" = "Provided by Office Holidays (Clean) (officeholidays.com)";

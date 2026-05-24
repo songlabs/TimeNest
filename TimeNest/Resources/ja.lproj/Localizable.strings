@@ -126,3 +126,4 @@
 "holiday_source.use_recommended_source_message" = "この購読元は第三者によって提供されています。正確性および利用可能性は提供元に依存します。";
 "holiday_source.use_recommended_source_confirm" = "使用する";
 "holiday_source.office_holidays_description" = "Office Holidays (officeholidays.com) 提供";
+"holiday_source.office_holidays_clean_description" = "Office Holidays (Clean) (officeholidays.com) 提供";

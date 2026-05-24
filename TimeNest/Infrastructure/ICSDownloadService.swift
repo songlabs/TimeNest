@@ -102,6 +102,67 @@ class ICSDownloadService: ICSDownloading {
         }
     }
 
+    /// 检查是否为 Office Holidays URL
+    private func isOfficeHolidaysURL(_ url: URL) -> Bool {
+        guard let host = url.host else { return false }
+        return host == "www.officeholidays.com" || host == "officeholidays.com"
+    }
+
+    /// 生成带 nocache 参数的 fallback URL
+    private func appendNoCacheQuery(to url: URL) -> URL {
+        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let timestamp = Int(Date().timeIntervalSince1970)
+        let nocacheValue = "\(timestamp)"
+
+        var queryItems = components?.queryItems ?? []
+        queryItems.append(URLQueryItem(name: "nocache", value: nocacheValue))
+        components?.queryItems = queryItems
+
+        return components?.url ?? url
+    }
+
+    /// 下载 ICS 数据（内部方法，带 headers 的单个请求）
+    private func fetchICS(from url: URL, timeout: TimeInterval) async throws -> (Data, HTTPURLResponse) {
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.timeoutInterval = timeout
+        request.cachePolicy = .reloadIgnoringLocalAndRemoteCacheData
+
+        // 设置请求头，使其更像浏览器/日历客户端
+        request.setValue("TimeNest/1.0 iOS Calendar Client", forHTTPHeaderField: "User-Agent")
+        request.setValue("text/calendar, text/plain, */*", forHTTPHeaderField: "Accept")
+        request.setValue("ja,en-US;q=0.9,en;q=0.8", forHTTPHeaderField: "Accept-Language")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("no-cache", forHTTPHeaderField: "Pragma")
+
+        // DEBUG 日志：请求信息
+        #if DEBUG
+        print("[EnhancedICS] requestURL = \(request.url?.absoluteString ?? "nil")")
+        print("[EnhancedICS] userAgent = \(request.value(forHTTPHeaderField: "User-Agent") ?? "nil")")
+        print("[EnhancedICS] accept = \(request.value(forHTTPHeaderField: "Accept") ?? "nil")")
+        print("[EnhancedICS] cachePolicy = \(request.cachePolicy.rawValue)")
+        #endif
+
+        let (data, response) = try await session.data(for: request)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            print("[EnhancedICS] 无效的响应类型：\(type(of: response))")
+            throw EnhancedICSError.emptyResponse
+        }
+
+        // DEBUG 日志：响应信息
+        #if DEBUG
+        print("[EnhancedICS] finalURL = \(httpResponse.url?.absoluteString ?? "nil")")
+        print("[EnhancedICS] statusCode = \(httpResponse.statusCode)")
+        print("[EnhancedICS] contentType = \(httpResponse.value(forHTTPHeaderField: "Content-Type") ?? "nil")")
+        print("[EnhancedICS] dataSize = \(data.count)")
+        let bodyPrefix = String(data: data.prefix(300), encoding: .utf8) ?? ""
+        print("[EnhancedICS] bodyPrefix = \(bodyPrefix)")
+        #endif
+
+        return (data, httpResponse)
+    }
+
     /// 下载 ICS 数据
     func download(from url: URL, timeout: TimeInterval = 30, region: String? = nil, host: String? = nil) async throws -> Data {
         // 验证 URL scheme
@@ -109,53 +170,59 @@ class ICSDownloadService: ICSDownloading {
             throw EnhancedICSError.unsupportedScheme
         }
 
-        var request = URLRequest(url: url)
-        request.timeoutInterval = timeout
-
-        // 设置 User-Agent
-        request.setValue("TimeNest/1.0 (iOS Calendar)", forHTTPHeaderField: "User-Agent")
-        request.setValue("accept: text/calendar, */*", forHTTPHeaderField: "Accept")
-
         do {
-            let (data, response) = try await session.data(for: request)
-
-            // 检查响应
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("[ICSDownload] 无效的响应类型: \(type(of: response))")
-                throw EnhancedICSError.emptyResponse
-            }
+            // 第一次请求
+            let (data, httpResponse) = try await fetchICS(from: url, timeout: timeout)
 
             // 检查 HTTP 状态码
             guard (200...299).contains(httpResponse.statusCode) else {
-                print("[ICSDownload] HTTP 错误：\(httpResponse.statusCode)")
+                print("[EnhancedICS] HTTP 错误：\(httpResponse.statusCode)")
+
+                // 对 HTTP 500 增加 Office Holidays fallback
+                if httpResponse.statusCode == 500 && isOfficeHolidaysURL(url) {
+                    let fallbackURL = appendNoCacheQuery(to: url)
+                    #if DEBUG
+                    print("[EnhancedICS] retryReason = HTTP 500 from Office Holidays")
+                    print("[EnhancedICS] fallbackURL = \(fallbackURL.absoluteString)")
+                    #endif
+
+                    // 重试带 nocache 参数的 URL
+                    let (retryData, retryResponse) = try await fetchICS(from: fallbackURL, timeout: timeout)
+
+                    guard let retryHTTPResponse = retryResponse as? HTTPURLResponse else {
+                        print("[EnhancedICS] fallback 响应类型无效")
+                        throw EnhancedICSError.emptyResponse
+                    }
+
+                    guard (200...299).contains(retryHTTPResponse.statusCode) else {
+                        print("[EnhancedICS] fallback 后仍然 HTTP 错误：\(retryHTTPResponse.statusCode)")
+                        throw EnhancedICSError.invalidHTTPStatus(retryHTTPResponse.statusCode)
+                    }
+
+                    // DEBUG 日志：fallback 成功
+                    #if DEBUG
+                    print("[EnhancedICS] fallback 成功：\(retryData.count) bytes")
+                    #endif
+
+                    return retryData
+                }
+
                 throw EnhancedICSError.invalidHTTPStatus(httpResponse.statusCode)
             }
 
             // 检查文件大小
             if data.count > maxFileSize {
-                print("[ICSDownload] 文件过大：\(data.count) bytes")
+                print("[EnhancedICS] 文件过大：\(data.count) bytes")
                 throw EnhancedICSError.tooLarge(size: data.count, limit: maxFileSize)
             }
-
-            // DEBUG 日志
-            #if DEBUG
-            let contentType = httpResponse.value(forHTTPHeaderField: "Content-Type") ?? "nil"
-            let bodyPrefix = String(data: data.prefix(200), encoding: .utf8) ?? ""
-            print("[ICSDownload] inputURL = \(url.absoluteString)")
-            print("[ICSDownload] finalURL = \(httpResponse.url?.absoluteString ?? "nil")")
-            print("[ICSDownload] statusCode = \(httpResponse.statusCode)")
-            print("[ICSDownload] contentType = \(contentType)")
-            print("[ICSDownload] dataSize = \(data.count)")
-            print("[ICSDownload] bodyPrefix = \(bodyPrefix)")
-            #endif
 
             return data
 
         } catch let error as URLError {
-            print("[ICSDownload] URLError: \(error.code) - \(error.localizedDescription)")
+            print("[EnhancedICS] URLError: \(error.code) - \(error.localizedDescription)")
             throw EnhancedICSError.networkError(error)
         } catch {
-            print("[ICSDownload] 未知错误：\(error)")
+            print("[EnhancedICS] 未知错误：\(error)")
             throw EnhancedICSError.networkError(error)
         }
     }

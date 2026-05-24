@@ -126,3 +126,4 @@
 "holiday_source.use_recommended_source_message" = "이 구독 소스는 제 3 자가 제공합니다. 정확성과 사용 가능 여부는 제공자에 따라 달라집니다.";
 "holiday_source.use_recommended_source_confirm" = "사용";
 "holiday_source.office_holidays_description" = "Office Holidays (officeholidays.com) 제공";
+"holiday_source.office_holidays_clean_description" = "Office Holidays (Clean) (officeholidays.com) 제공";

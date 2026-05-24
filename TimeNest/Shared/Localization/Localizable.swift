@@ -123,6 +123,7 @@ enum LocalizedString: String {
     case holidaySourceUseRecommendedSourceMessage = "holiday_source.use_recommended_source_message"
     case holidaySourceUseRecommendedSourceConfirm = "holiday_source.use_recommended_source_confirm"
     case holidaySourceOfficeHolidaysDescription = "holiday_source.office_holidays_description"
+    case holidaySourceOfficeHolidaysCleanDescription = "holiday_source.office_holidays_clean_description"
 
     // MARK: - Event Editor
 

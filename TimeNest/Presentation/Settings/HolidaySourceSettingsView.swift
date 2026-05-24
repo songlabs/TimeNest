@@ -4,11 +4,11 @@ struct HolidaySourceSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
     @ObservedObject var viewModel: HolidaySubscriptionSettingsViewModel
-    
+
     @State private var selectedRegion: HolidayRegion?
     @State private var showingEditSheet = false
     @State private var showingResetAlert = false
-    
+
     var body: some View {
         List {
             ForEach(viewModel.allAvailableSubscriptions) { subscription in
@@ -46,23 +46,23 @@ struct HolidaySourceSettingsView: View {
 struct SourceRowView: View {
     let subscription: HolidaySubscription
     let onTap: () -> Void
-    
+
     @EnvironmentObject private var localization: LocalizationManager
-    
+
     var body: some View {
         HStack {
             Text(localization.localized(subscription.displayNameKey))
                 .foregroundColor(.primary)
-            
+
             Spacer()
-            
+
             VStack(alignment: .trailing, spacing: 4) {
                 // 显示 URL 的前部分
                 Text(shortenURL(subscription.urlString))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
-                
+
                 Image(systemName: "chevron.right")
                     .font(.caption2)
                     .foregroundColor(.secondary)
@@ -73,13 +73,13 @@ struct SourceRowView: View {
             onTap()
         }
     }
-    
+
     private func shortenURL(_ url: String) -> String {
         let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
             return localization.localized(.holidaySubscriptionNoURL)
         }
-        
+
         // 显示 https:// 和最后 20 个字符
         if trimmed.count > 30 {
             let prefix = String(trimmed.prefix(10))
@@ -106,7 +106,7 @@ struct HolidaySourceEditView: View {
     @State private var showingResetAlert = false
     @State private var showingUseSourceAlert = false
     @State private var selectedRecommendedSource: HolidayRecommendedSource?
-    
+
     private var subscription: HolidaySubscription? {
         subscriptionManager.subscriptions.first { $0.region == region }
     }
@@ -114,7 +114,7 @@ struct HolidaySourceEditView: View {
     private var recommendedSources: [HolidayRecommendedSource] {
         HolidayRecommendedSources.sources(for: region)
     }
-    
+
     var body: some View {
         NavigationStack {
             Form {
@@ -131,7 +131,7 @@ struct HolidaySourceEditView: View {
                 } footer: {
                     Text(localization.localized(.holidaySourceURLFooter))
                 }
-                
+
                 Section {
                     if let urlString = subscription?.urlString, !urlString.isEmpty {
                         HStack {
@@ -144,14 +144,14 @@ struct HolidaySourceEditView: View {
                         }
                     }
                 }
-                
+
                 Section {
                     Button(localization.localized(.holidaySourceResetDefault)) {
                         showingResetAlert = true
                     }
                     .foregroundColor(.orange)
                 }
-                
+
                 Section {
                     Button(localization.localized(.holidaySourceTestSync)) {
                         Task {
@@ -205,6 +205,7 @@ struct HolidaySourceEditView: View {
                 validateURL(urlString)
             }
             .alert(localization.localized(.holidaySourceError), isPresented: $showError) {
+                Button(localization.localized(.ok), role: .cancel) {}
             } message: {
                 Text(errorMessage)
             }
@@ -226,10 +227,10 @@ struct HolidaySourceEditView: View {
             }
         }
     }
-    
+
     private func validateURL(_ url: String) {
         let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         guard !trimmed.isEmpty,
               let urlObj = URL(string: trimmed),
               let scheme = urlObj.scheme,
@@ -237,36 +238,41 @@ struct HolidaySourceEditView: View {
             isValidURL = false
             return
         }
-        
+
         isValidURL = true
     }
-    
+
     private func saveURL() {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-        
+
         Task {
             do {
                 // 1. URL 格式检查
                 let downloadService = ICSDownloadService()
                 try downloadService.validateURL(trimmed)
-                
-                // 2. 下载 ICS
+
+                // 2. 下载 ICS（带 fallback 逻辑）
                 guard let url = URL(string: trimmed) else {
                     throw EnhancedICSError.invalidURL
                 }
                 let host = url.host ?? ""
                 let regionName = region.localizedKey
-                let data = try await downloadService.download(from: url, region: regionName, host: host)
-                
+                let (data, savedURL) = try await downloadWithFallback(
+                    url: url,
+                    regionName: regionName,
+                    host: host,
+                    downloadService: downloadService
+                )
+
                 // 3. 验证 ICS 内容
                 try downloadService.validateICSContent(data)
-                
-                // 4. 保存 URL
-                try subscriptionManager.updateURL(for: region, newURL: trimmed)
-                
+
+                // 4. 保存 URL（保存实际成功的 URL）
+                try subscriptionManager.updateURL(for: region, newURL: savedURL)
+
                 // 5. 成功后自动同步
                 await subscriptionManager.syncAllEnabled()
-                
+
                 await MainActor.run {
                     dismiss()
                 }
@@ -278,19 +284,53 @@ struct HolidaySourceEditView: View {
             }
         }
     }
-    
+
+    /// 下载 ICS 并自动尝试 fallback URL
+    /// - 如果 normal URL 返回 500，自动尝试 clean URL
+    /// - 返回实际成功的 URL
+    private func downloadWithFallback(
+        url: URL,
+        regionName: String,
+        host: String,
+        downloadService: ICSDownloadService
+    ) async throws -> (Data, String) {
+        do {
+            let data = try await downloadService.download(from: url, region: regionName, host: host)
+            return (data, url.absoluteString)
+        } catch EnhancedICSError.invalidHTTPStatus(let statusCode) where statusCode == 500 {
+            // HTTP 500 时尝试 fallback 到 clean URL
+            print("[HolidaySourceEditView] HTTP 500, trying fallback to clean URL...")
+
+            // 获取对应地区的 clean URL
+            let cleanSources = HolidayRecommendedSources.sources(for: region)
+            guard let cleanSource = cleanSources.first(where: { $0.isCleanVersion }) else {
+                // 没有 clean URL，直接抛出错误
+                throw EnhancedICSError.invalidHTTPStatus(statusCode)
+            }
+
+            guard let cleanURL = URL(string: cleanSource.urlString) else {
+                throw EnhancedICSError.invalidURL
+            }
+
+            print("[HolidaySourceEditView] Fallback URL: \(cleanURL.absoluteString)")
+
+            let data = try await downloadService.download(from: cleanURL, region: regionName, host: host)
+            return (data, cleanURL.absoluteString)
+        }
+    }
+
     private func resetToDefault() {
         subscriptionManager.resetToDefaultURL(for: region)
         urlString = subscription?.urlString ?? ""
         validateURL(urlString)
     }
-    
+
     private func applyRecommendedSource() {
         guard let source = selectedRecommendedSource else { return }
         urlString = source.urlString
         validateURL(urlString)
     }
-    
+
     private func testSync() async {
         guard let subscription = subscription,
               subscription.isEnabled else {
@@ -298,32 +338,32 @@ struct HolidaySourceEditView: View {
             showError = true
             return
         }
-        
+
         do {
             // 下载并解析测试
             guard let url = URL(string: subscription.urlString) else {
                 throw EnhancedICSError.invalidURL
             }
-            
+
             let downloadService = ICSDownloadService()
             let parseService = ICSParseService()
-            
+
             let host = url.host ?? ""
             let regionName = region.localizedKey
             let data = try await downloadService.download(from: url, region: regionName, host: host)
-            
+
             // 验证 ICS 内容
             try downloadService.validateICSContent(data)
-            
+
             let events = try parseService.parse(data: data, region: region, sourceURL: subscription.urlString)
-            
+
             if events.isEmpty {
                 errorMessage = localization.localized(.holidaySourceNoEvents)
             } else {
                 errorMessage = String(format: localization.localized(.holidaySourceTestSuccess), events.count)
             }
             showError = true
-            
+
         } catch {
             errorMessage = error.localizedDescription
             showError = true
@@ -336,23 +376,23 @@ struct HolidaySourceEditView: View {
 struct RecommendedSourceRow: View {
     let source: HolidayRecommendedSource
     let onTap: () -> Void
-    
+
     @EnvironmentObject private var localization: LocalizationManager
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(localization.localized(source.descriptionKey))
                     .foregroundColor(.primary)
                     .font(.body)
-                
+
                 Text(source.host)
                     .foregroundColor(.secondary)
                     .font(.caption)
             }
-            
+
             Spacer()
-            
+
             Image(systemName: "chevron.right")
                 .font(.caption2)
                 .foregroundColor(.secondary)
