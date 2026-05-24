@@ -64,7 +64,12 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.song.TimeNestTests
         SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGNING_ALLOWED: NO
+        CODE_SIGNING_REQUIRED: NO
+        CODE_SIGNING_IDENTITY: ""
     scheme:
-      testPlan: Tests/TimeNestTests/TimeNestTests.xctest
+      testTargets:
+        - TimeNestTests
     dependencies:
       - target: TimeNest

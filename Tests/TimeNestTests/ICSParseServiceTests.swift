@@ -125,7 +125,7 @@ END:VEVENT
 END:VCALENDAR
 """
 
-        let region = HolidayRegion.usa
+        let region = HolidayRegion.unitedStates
         let events = try parseService.parse(content: icsContent, region: region, sourceURL: "https://calendar.google.com/calendar/ical/...")
 
         XCTAssertEqual(events.count, 2, "应该解析出 2 个节假日")
@@ -335,6 +335,7 @@ END:VCALENDAR
     // MARK: - Unfold Lines Helper Tests
 
     /// 测试 unfoldICSLines 辅助方法
+    /// 根据 RFC5545，folded line 的 continuation 行开头空格是 fold 字符应被移除
     func testUnfoldICSLines() throws {
         let input = """
 BEGIN:VCALENDAR
@@ -345,10 +346,11 @@ SUMMARY:Test
 END:VCALENDAR
 """
 
+        // RFC5545: 移除 continuation line 开头的空格后拼接到上一行
         let expectedLines = [
             "BEGIN:VCALENDAR",
             "VERSION:2.0",
-            "DESCRIPTION:This is a long description that is folded",
+            "DESCRIPTION:This is a longdescription that is folded",
             "SUMMARY:Test",
             "END:VCALENDAR"
         ]
