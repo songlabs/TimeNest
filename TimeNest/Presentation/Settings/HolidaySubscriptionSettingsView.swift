@@ -44,17 +44,22 @@ struct HolidaySubscriptionSettingsView: View {
                         // 订阅列表
                         Section {
                             ForEach(viewModel.allAvailableSubscriptions) { subscription in
-                                SubscriptionRowView(
-                                    subscription: subscription,
-                                    isEnabled: viewModel.isEnabled(subscription.region),
-                                    canToggle: viewModel.canToggle(subscription.region),
-                                    onToggle: {
-                                        viewModel.toggleSubscription(subscription.region)
-                                    },
-                                    onSettingsTap: {
-                                        viewModel.selectSubscription(subscription.region)
-                                    }
-                                )
+                                NavigationLink {
+                                    HolidaySourceEditView(
+                                        region: subscription.region,
+                                        subscriptionManager: viewModel.subscriptionManager
+                                    )
+                                    .environmentObject(localization)
+                                } label: {
+                                    SubscriptionRowView(
+                                        subscription: subscription,
+                                        isEnabled: viewModel.isEnabled(subscription.region),
+                                        canToggle: viewModel.canToggle(subscription.region),
+                                        onToggle: {
+                                            viewModel.toggleSubscription(subscription.region)
+                                        }
+                                    )
+                                }
                             }
                         } header: {
                             Text(localization.localized(.holidaySubscriptionListHeader))
@@ -97,7 +102,6 @@ struct SubscriptionRowView: View {
     let isEnabled: Bool
     let canToggle: Bool
     let onToggle: () -> Void
-    let onSettingsTap: () -> Void
 
     @EnvironmentObject private var localization: LocalizationManager
 
@@ -137,10 +141,6 @@ struct SubscriptionRowView: View {
         }
         .padding(.vertical, 4)
         .opacity(canToggle ? 1.0 : 0.6)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onSettingsTap()
-        }
     }
     
     private var syncStatusIcon: some View {
@@ -230,11 +230,6 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
         } catch {
             print("Toggle subscription failed: \(error)")
         }
-    }
-    
-    func selectSubscription(_ region: HolidayRegion) {
-        // 可以在这里显示详细设置 sheet
-        print("Select subscription: \(region)")
     }
     
     func syncAll() async {
