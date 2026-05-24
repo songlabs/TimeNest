@@ -4,10 +4,9 @@ struct HolidaySubscriptionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
     @StateObject private var viewModel: HolidaySubscriptionSettingsViewModel
-    
-    @State private var showSourceSettings = false
+
     @State private var showingSyncError = false
-    
+
     init(subscriptionManager: HolidaySubscriptionManager) {
         _viewModel = StateObject(wrappedValue: HolidaySubscriptionSettingsViewModel(subscriptionManager: subscriptionManager))
     }
@@ -63,20 +62,6 @@ struct HolidaySubscriptionSettingsView: View {
                             Text(localization.localized(.holidaySubscriptionMaxLimitNote))
                         }
                         
-                        // 订阅源设置入口
-                        Section {
-                            NavigationLink {
-                                HolidaySourceSettingsView(viewModel: viewModel)
-                                    .environmentObject(localization)
-                            } label: {
-                                HStack {
-                                    Text(localization.localized(.holidaySubscriptionSourceSettings))
-                                    Spacer()
-                                    Image(systemName: "arrow.right")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
                     }
                 }
             }
@@ -113,9 +98,9 @@ struct SubscriptionRowView: View {
     let canToggle: Bool
     let onToggle: () -> Void
     let onSettingsTap: () -> Void
-    
+
     @EnvironmentObject private var localization: LocalizationManager
-    
+
     var body: some View {
         HStack {
             // 左侧：复选框
@@ -127,13 +112,13 @@ struct SubscriptionRowView: View {
                         onToggle()
                     }
                 }
-            
+
             // 中间：订阅信息
             VStack(alignment: .leading, spacing: 4) {
                 Text(localization.localized(subscription.displayNameKey))
                     .foregroundColor(.primary)
                     .font(.body)
-                
+
                 // 同步状态
                 HStack(spacing: 4) {
                     syncStatusIcon
@@ -142,19 +127,20 @@ struct SubscriptionRowView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            
+
             Spacer()
-            
-            // 右侧：设置入口
+
+            // 右侧：chevron
             Image(systemName: "chevron.right")
                 .foregroundColor(.secondary)
                 .font(.caption)
-                .onTapGesture {
-                    onSettingsTap()
-                }
         }
         .padding(.vertical, 4)
         .opacity(canToggle ? 1.0 : 0.6)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onSettingsTap()
+        }
     }
     
     private var syncStatusIcon: some View {
