@@ -362,6 +362,64 @@ END:VCALENDAR
         }
     }
 
+    // MARK: - Real Office Holidays Format Tests
+
+    /// 测试真实 Office Holidays Japan 格式（无 VALUE=DATE 参数）
+    /// 这是实际从 https://www.officeholidays.com/ics/japan 下载的格式
+    func testParseRealOfficeHolidaysJapanFormat() throws {
+        let icsContent = """
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Office Holidays//NONSGML Japan Holidays//EN
+BEGIN:VEVENT
+DTSTAMP:20260101T000000Z
+DTSTART:20260101
+DTEND:20260102
+SUMMARY:Japan: New Year's Day
+UID:2026-01-01JP415regcountry@www.officeholidays.com
+END:VEVENT
+END:VCALENDAR
+"""
+
+        let region = HolidayRegion.japan
+        let events = try parseService.parse(content: icsContent, region: region, sourceURL: "https://www.officeholidays.com/ics/japan")
+
+        XCTAssertEqual(events.count, 1, "应该解析出 1 个节假日")
+
+        let firstEvent = events[0]
+        XCTAssertEqual(firstEvent.name, "Japan: New Year's Day")
+        XCTAssertEqual(firstEvent.date.year, 2026)
+        XCTAssertEqual(firstEvent.date.month, 1)
+        XCTAssertEqual(firstEvent.date.day, 1)
+        XCTAssertEqual(firstEvent.sourceURL, "https://www.officeholidays.com/ics/japan")
+    }
+
+    /// 测试带 VALUE=DATE 参数的格式
+    func testParseOfficeHolidaysWithParameterValueDate() throws {
+        let icsContent = """
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Office Holidays//NONSGML Japan Holidays//EN
+BEGIN:VEVENT
+DTSTART;VALUE=DATE:20260112
+DTEND;VALUE=DATE:20260113
+SUMMARY:Japan: Coming-of-Age Day
+END:VEVENT
+END:VCALENDAR
+"""
+
+        let region = HolidayRegion.japan
+        let events = try parseService.parse(content: icsContent, region: region, sourceURL: "https://www.officeholidays.com/ics/japan")
+
+        XCTAssertEqual(events.count, 1, "应该解析出 1 个节假日")
+
+        let firstEvent = events[0]
+        XCTAssertEqual(firstEvent.name, "Japan: Coming-of-Age Day")
+        XCTAssertEqual(firstEvent.date.year, 2026)
+        XCTAssertEqual(firstEvent.date.month, 1)
+        XCTAssertEqual(firstEvent.date.day, 12)
+    }
+
     // MARK: - Helper Methods
 
     /// 使用 Mirror 测试私有 unfoldICSLines 方法
