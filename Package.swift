@@ -3,6 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "TimeNest",
+    defaultLocalization: "zh-Hans",
     platforms: [
         .iOS(.v17)
     ],
@@ -15,7 +16,10 @@ let package = Package(
     targets: [
         .target(
             name: "TimeNest",
-            path: "TimeNest"
+            path: "TimeNest",
+            resources: [
+                .process("Resources")
+            ]
         ),
     ]
 )

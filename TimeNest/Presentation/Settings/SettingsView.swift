@@ -2,19 +2,22 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var localization: LocalizationManager
-    @AppStorage("holidayRegion") private var holidayRegion: String = "japan"
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
     @AppStorage("notificationEnabled") private var notificationEnabled: Bool = true
     @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = false
 
     @State private var showVersionInfo: Bool = false
+    @StateObject private var subscriptionManager = HolidaySubscriptionManager()
 
     var body: some View {
         Form {
             // MARK: - Language Section
             Section {
-                Picker(localization.localized(.settingsLanguage), selection: $localization.selectedLanguageCode) {
+                Picker(localization.localized(.settingsLanguage), selection: Binding(
+                    get: { localization.selectedLanguageCode },
+                    set: { localization.setLanguage(DisplayLanguage(rawValue: $0) ?? .system) }
+                )) {
                     Text(localization.localized(.languageSystem)).tag("system")
                     Text(localization.localized(.languageSimplifiedChinese)).tag("zhHans")
                     Text(localization.localized(.languageJapanese)).tag("ja")
@@ -25,13 +28,18 @@ struct SettingsView: View {
                 Text(localization.localized(.settingsLanguage))
             }
 
-            // MARK: - Holiday Region Section
+            // MARK: - Holiday Subscription Section
             Section {
-                Picker(localization.localized(.settingsHolidayRegion), selection: $holidayRegion) {
-                    Text(localization.localized(.regionJapan)).tag("japan")
-                    Text(localization.localized(.regionChina)).tag("china")
-                    Text(localization.localized(.regionKorea)).tag("korea")
-                    Text(localization.localized(.regionUnitedStates)).tag("united_states")
+                NavigationLink {
+                    HolidaySubscriptionSettingsView(subscriptionManager: subscriptionManager)
+                        .environmentObject(localization)
+                } label: {
+                    HStack {
+                        Text(localization.localized(.settingsHolidayRegion))
+                        Spacer()
+                        Text(enabledSubscriptionsDisplayText)
+                            .foregroundColor(.secondary)
+                    }
                 }
             } header: {
                 Text(localization.localized(.settingsHolidayRegion))
@@ -126,6 +134,23 @@ struct SettingsView: View {
         }
         .navigationTitle(localization.localized(.settingsTitle))
         .foregroundColor(.primary)
+        .onAppear {
+            // 执行启动时的自动同步检查
+            Task {
+                await subscriptionManager.performAutoSync()
+            }
+        }
+    }
+
+    private var enabledSubscriptionsDisplayText: String {
+        let enabledRegions = subscriptionManager.enabledRegions
+        if enabledRegions.isEmpty {
+            return localization.localized(.holidaySubscriptionNone)
+        }
+        return enabledRegions
+            .sorted { $0.localizedKey < $1.localizedKey }
+            .map { localization.localized($0.localizedKey) }
+            .joined(separator: ", ")
     }
 }
 

@@ -66,6 +66,8 @@
 "common.ok" = "确定";
 "common.ad_placeholder" = "AD / 广告位";
 "common.detail" = "详细";
+"common.done" = "完成";
+"common.reset" = "恢复默认";
 
 /* Event Editor */
 "editor.title" = "标题";
@@ -82,3 +84,45 @@
 /* Day Detail */
 "day_detail.title" = "日程";
 "day_detail.no_events" = "暂无日程";
+
+/* Holiday Region Selection */
+"holiday_region.selection_title" = "选择节假日";
+"holiday_region.max_limit" = "节假日最多可选择 2 个";
+"holiday_region.min_limit" = "至少需要选择 1 个节假日";
+
+/* Holiday Subscription */
+"holiday_subscription.settings_title" = "节假日订阅";
+"holiday_subscription.list_header" = "订阅的地区";
+"holiday_subscription.source_settings" = "订阅源设置";
+"holiday_subscription.refresh" = "手动刷新";
+"holiday_subscription.max_limit_note" = "最多可启用 2 个订阅";
+"holiday_subscription.none" = "未启用";
+"holiday_subscription.no_subscriptions" = "没有订阅";
+"holiday_subscription.no_subscriptions_description" = "请添加订阅源";
+"holiday_subscription.synced" = "已同步";
+"holiday_subscription.sync_failed" = "同步失败";
+"holiday_subscription.not_synced" = "未同步";
+"holiday_subscription.sync_error" = "同步错误";
+"holiday_subscription.no_url" = "未设置";
+
+/* Holiday Source Settings */
+"holiday_source.url_header" = "ICS URL";
+"holiday_source.url_footer" = "请输入有效的 HTTPS URL";
+"holiday_source.current_url" = "当前 URL";
+"holiday_source.reset_default" = "恢复默认 URL";
+"holiday_source.test_sync" = "测试同步";
+"holiday_source.error" = "错误";
+"holiday_source.reset_confirm" = "确认恢复默认？";
+"holiday_source.reset_message" = "这将恢复为默认订阅源 URL";
+"holiday_source.enable_first" = "请先启用此订阅";
+"holiday_source.no_events" = "下载的 ICS 中没有事件";
+"holiday_source.test_success" = "成功解析 %d 个事件";
+
+/* Holiday Recommended Sources */
+"holiday_source.recommended_section" = "推荐源";
+"holiday_source.no_recommended_sources" = "暂无推荐源";
+"holiday_source.third_party_notice" = "该订阅源由第三方提供，准确性和可用性取决于提供方。";
+"holiday_source.use_recommended_source_title" = "使用此推荐源？";
+"holiday_source.use_recommended_source_message" = "该订阅源由第三方提供，准确性和可用性取决于提供方。";
+"holiday_source.use_recommended_source_confirm" = "使用";
+"holiday_source.office_holidays_description" = "由 Office Holidays (officeholidays.com) 提供";

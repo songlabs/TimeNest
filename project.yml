@@ -36,6 +36,10 @@ targets:
     settings:
       base:
         INFOPLIST_FILE: TimeNest/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.song.TimeNest
+        PRODUCT_BUNDLE_PACKAGE_TYPE: APPL
+        MACH_O_TYPE: mh_execute
+        SKIP_INSTALL: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
     scheme:

@@ -66,6 +66,8 @@
 "common.ok" = "OK";
 "common.ad_placeholder" = "AD / Ad Space";
 "common.detail" = "Details";
+"common.done" = "Done";
+"common.reset" = "Reset to Default";
 
 /* Event Editor */
 "editor.title" = "Title";
@@ -82,3 +84,45 @@
 /* Day Detail */
 "day_detail.title" = "Events";
 "day_detail.no_events" = "No events";
+
+/* Holiday Region Selection */
+"holiday_region.selection_title" = "Select Holiday Regions";
+"holiday_region.max_limit" = "You can select up to 2 holiday regions.";
+"holiday_region.min_limit" = "At least one holiday region must be selected.";
+
+/* Holiday Subscription */
+"holiday_subscription.settings_title" = "Holiday Subscriptions";
+"holiday_subscription.list_header" = "Subscribed Regions";
+"holiday_subscription.source_settings" = "Source Settings";
+"holiday_subscription.refresh" = "Refresh";
+"holiday_subscription.max_limit_note" = "Up to 2 subscriptions can be enabled";
+"holiday_subscription.none" = "None";
+"holiday_subscription.no_subscriptions" = "No Subscriptions";
+"holiday_subscription.no_subscriptions_description" = "Please add a subscription source";
+"holiday_subscription.synced" = "Synced";
+"holiday_subscription.sync_failed" = "Sync Failed";
+"holiday_subscription.not_synced" = "Not Synced";
+"holiday_subscription.sync_error" = "Sync Error";
+"holiday_subscription.no_url" = "Not Set";
+
+/* Holiday Source Settings */
+"holiday_source.url_header" = "ICS URL";
+"holiday_source.url_footer" = "Please enter a valid HTTPS URL";
+"holiday_source.current_url" = "Current URL";
+"holiday_source.reset_default" = "Reset to Default URL";
+"holiday_source.test_sync" = "Test Sync";
+"holiday_source.error" = "Error";
+"holiday_source.reset_confirm" = "Confirm Reset?";
+"holiday_source.reset_message" = "This will restore the default subscription source URL";
+"holiday_source.enable_first" = "Please enable this subscription first";
+"holiday_source.no_events" = "No events in the downloaded ICS";
+"holiday_source.test_success" = "Successfully parsed %d events";
+
+/* Holiday Recommended Sources */
+"holiday_source.recommended_section" = "Recommended Sources";
+"holiday_source.no_recommended_sources" = "No recommended sources available";
+"holiday_source.third_party_notice" = "This subscription source is provided by a third party. Accuracy and availability depend on the provider.";
+"holiday_source.use_recommended_source_title" = "Use This Recommended Source?";
+"holiday_source.use_recommended_source_message" = "This subscription source is provided by a third party. Accuracy and availability depend on the provider.";
+"holiday_source.use_recommended_source_confirm" = "Use";
+"holiday_source.office_holidays_description" = "Provided by Office Holidays (officeholidays.com)";

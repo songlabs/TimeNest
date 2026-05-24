@@ -75,6 +75,54 @@ enum LocalizedString: String {
     case ok = "common.ok"
     case adPlaceholder = "common.ad_placeholder"
     case detail = "common.detail"
+    case done = "common.done"
+    case reset = "common.reset"
+
+    // MARK: - Holiday Region Selection
+
+    case holidayRegionSelectionTitle = "holiday_region.selection_title"
+    case holidayRegionMaxLimit = "holiday_region.max_limit"
+    case holidayRegionMinLimit = "holiday_region.min_limit"
+
+    // MARK: - Holiday Subscription
+
+    case holidaySubscriptionSettingsTitle = "holiday_subscription.settings_title"
+    case holidaySubscriptionListHeader = "holiday_subscription.list_header"
+    case holidaySubscriptionSourceSettings = "holiday_subscription.source_settings"
+    case holidaySubscriptionRefresh = "holiday_subscription.refresh"
+    case holidaySubscriptionMaxLimitNote = "holiday_subscription.max_limit_note"
+    case holidaySubscriptionNone = "holiday_subscription.none"
+    case holidaySubscriptionNoSubscriptions = "holiday_subscription.no_subscriptions"
+    case holidaySubscriptionNoSubscriptionsDescription = "holiday_subscription.no_subscriptions_description"
+    case holidaySubscriptionSynced = "holiday_subscription.synced"
+    case holidaySubscriptionSyncFailed = "holiday_subscription.sync_failed"
+    case holidaySubscriptionNotSynced = "holiday_subscription.not_synced"
+    case holidaySubscriptionSyncError = "holiday_subscription.sync_error"
+    case holidaySubscriptionNoURL = "holiday_subscription.no_url"
+
+    // MARK: - Holiday Source Settings
+
+    case holidaySourceURLHeader = "holiday_source.url_header"
+    case holidaySourceURLFooter = "holiday_source.url_footer"
+    case holidaySourceCurrentURL = "holiday_source.current_url"
+    case holidaySourceResetDefault = "holiday_source.reset_default"
+    case holidaySourceTestSync = "holiday_source.test_sync"
+    case holidaySourceError = "holiday_source.error"
+    case holidaySourceResetConfirm = "holiday_source.reset_confirm"
+    case holidaySourceResetMessage = "holiday_source.reset_message"
+    case holidaySourceEnableFirst = "holiday_source.enable_first"
+    case holidaySourceNoEvents = "holiday_source.no_events"
+    case holidaySourceTestSuccess = "holiday_source.test_success"
+    
+    // MARK: - Holiday Recommended Sources
+
+    case holidaySourceRecommendedSection = "holiday_source.recommended_section"
+    case holidaySourceNoRecommendedSources = "holiday_source.no_recommended_sources"
+    case holidaySourceThirdPartyNotice = "holiday_source.third_party_notice"
+    case holidaySourceUseRecommendedSourceTitle = "holiday_source.use_recommended_source_title"
+    case holidaySourceUseRecommendedSourceMessage = "holiday_source.use_recommended_source_message"
+    case holidaySourceUseRecommendedSourceConfirm = "holiday_source.use_recommended_source_confirm"
+    case holidaySourceOfficeHolidaysDescription = "holiday_source.office_holidays_description"
 
     // MARK: - Event Editor
 
@@ -108,7 +156,7 @@ extension EnvironmentValues {
         get { self[LocalizationKey.self] }
         set { self[LocalizationKey.self] = newValue }
     }
-    
+
     private struct LocalizationKey: EnvironmentKey {
         static let defaultValue: LocalizationManager = LocalizationManager.shared
     }

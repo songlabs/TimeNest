@@ -257,8 +257,11 @@ struct DayCellView: View {
 
                 Spacer()
 
-                // 排班标签 - 底部居中，圆角矩形样式
-                if let shiftType = cell.shiftType {
+                // 节假日标签 - 底部居中，优先于排班标签显示
+                if !cell.holidays.isEmpty {
+                    holidayLabelsView
+                } else if let shiftType = cell.shiftType {
+                    // 排班标签 - 底部居中，圆角矩形样式
                     Text(shiftType)
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.white)
@@ -285,6 +288,10 @@ struct DayCellView: View {
         if !cell.isInCurrentMonth {
             return ShiftCalendarColors.otherMonthGray
         }
+        // 节假日优先于周末颜色
+        if !cell.holidays.isEmpty {
+            return ShiftCalendarColors.sundayRed
+        }
         // 使用 isWeekend 属性判断周末，而不是硬编码星期文字
         if cell.isWeekend {
             // Sunday = red, Saturday = blue
@@ -300,15 +307,54 @@ struct DayCellView: View {
         }
         return ShiftCalendarColors.primaryText
     }
-    
+
     /// 判断是否为周日（支持多语言）
     private func isSunday(weekdayText: String) -> Bool {
         ["日", "Sun", "Sunday", "일", "dom"].contains(weekdayText)
     }
-    
+
     /// 判断是否为周六（支持多语言）
     private func isSaturday(weekdayText: String) -> Bool {
         ["土", "Sat", "Saturday", "토", "sab"].contains(weekdayText)
+    }
+    
+    /// 节假日标签视图 - 支持多国节假日显示
+    @ViewBuilder
+    private var holidayLabelsView: some View {
+        let holidayNames = holidayDisplayNames
+        if holidayNames.count == 1 {
+            // 单个节假日：简单显示
+            Text(holidayNames[0])
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(ShiftCalendarColors.sundayRed)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 4)
+                .padding(.bottom, 8)
+        } else {
+            // 多个节假日：分行显示
+            VStack(spacing: 2) {
+                ForEach(Array(holidayNames.enumerated()), id: \.offset) { index, name in
+                    Text(name)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(ShiftCalendarColors.sundayRed)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 2)
+            .padding(.horizontal, 4)
+            .padding(.bottom, 8)
+        }
+    }
+    
+    /// 获取节假日显示名称数组（按 UI 语言）
+    private var holidayDisplayNames: [String] {
+        let currentLanguage = LocalizationManager.shared.currentLanguage
+        return cell.holidays.map { holiday in
+            holiday.localizedNames.localized(for: currentLanguage)
+        }
     }
 }
 

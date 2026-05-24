@@ -18,6 +18,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     private var languageObserver: AnyCancellable?
 
+    private var notificationObservers: [AnyCancellable] = []
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
         eventUseCase: EventUseCase
@@ -29,23 +30,41 @@ class MonthCalendarViewModel: ObservableObject {
         let initialLanguage = LocalizationManager.shared.currentLanguage
         self.currentSetting = .init(
             displayLanguage: initialLanguage,
-            primaryHolidayRegion: .japan,
-            additionalHolidayRegions: [],
+            selectedHolidayRegions: [.japan],
             weekStartPolicy: .system,
             showLunarCalendar: false
         )
 
         // 监听 LocalizationManager 的语言变化
         setupLanguageObserver()
+        // 监听节假日订阅变化
+        setupNotificationObserver()
     }
 
     private func setupLanguageObserver() {
         languageObserver = LocalizationManager.shared.$selectedLanguageCode
             .sink { [weak self] _ in
-                Task { @MainActor in
+                Task { @MainActor in await 
                     self?.updateDisplayLanguage()
                 }
             }
+    }
+
+    private func setupNotificationObserver() {
+        notificationObservers = [
+            NotificationCenter.default.publisher(for: .holidaySubscriptionsDidChange)
+                .sink { [weak self] _ in
+                    Task { @MainActor in
+                        await self?.reloadMonth()
+                    }
+                },
+            NotificationCenter.default.publisher(for: .holidayEventsDidUpdate)
+                .sink { [weak self] _ in
+                    Task { @MainActor in
+                        await self?.reloadMonth()
+                    }
+                }
+        ]
     }
 
     private func updateDisplayLanguage() {

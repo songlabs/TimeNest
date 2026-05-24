@@ -25,7 +25,6 @@ struct DayDetailView: View {
                 .padding()
             }
             .navigationTitle(localization.localized(.dayDetailTitle))
-            .navigationBarTitleDisplayMode(.inline)
             .sheet(isPresented: $showingEditor) {
                 if let eventID = editingEventID {
                     EventEditorView(
