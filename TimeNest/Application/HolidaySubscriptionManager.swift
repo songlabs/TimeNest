@@ -172,6 +172,10 @@ class HolidaySubscriptionManager: ObservableObject {
     func syncAllEnabled() async {
         guard !syncInProgress else { return }
 
+        #if DEBUG
+        print("[HolidaySubscriptionManager] syncAllEnabled started")
+        #endif
+
         syncInProgress = true
         lastSyncError = nil
 
@@ -184,13 +188,26 @@ class HolidaySubscriptionManager: ObservableObject {
         let enabled = enabledSubscriptions
 
         guard !enabled.isEmpty else {
+            #if DEBUG
+            print("[HolidaySubscriptionManager] no enabled subscriptions")
+            #endif
             return
         }
+
+        #if DEBUG
+        print("[HolidaySubscriptionManager] enabled subscriptions count =", enabled.count)
+        for sub in enabled {
+            print("[HolidaySubscriptionManager] - region:", sub.region.rawValue, "URL:", sub.urlString)
+        }
+        #endif
 
         for subscription in enabled {
             do {
                 try await syncSingle(subscription: subscription)
             } catch {
+                #if DEBUG
+                print("[HolidaySubscriptionManager] sync failed for", subscription.region.rawValue, ":", error.localizedDescription)
+                #endif
                 updateSubscription(subscription.id) {
                     $0.syncStatus = .failed
                     $0.errorMessage = error.localizedDescription
@@ -199,11 +216,20 @@ class HolidaySubscriptionManager: ObservableObject {
             }
         }
 
+        #if DEBUG
+        print("[HolidaySubscriptionManager] syncAllEnabled completed")
+        #endif
+
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
     }
 
     /// 同步单个订阅
     private func syncSingle(subscription: HolidaySubscription) async throws {
+        #if DEBUG
+        print("[HolidaySubscriptionManager] syncSingle started for", subscription.region.rawValue)
+        print("[HolidaySubscriptionManager] URL =", subscription.urlString)
+        #endif
+
         guard let url = URL(string: subscription.urlString) else {
             throw SubscriptionManagerError.invalidURL
         }
@@ -214,13 +240,28 @@ class HolidaySubscriptionManager: ObservableObject {
         // 下载 ICS 数据
         let data = try await downloadService.download(from: url, timeout: 30, region: regionName, host: host)
 
+        #if DEBUG
+        print("[HolidaySubscriptionManager] download succeeded, data size =", data.count)
+        #endif
+
         // 解析 ICS
         let events = try await Task.detached { [parseService] in
             try parseService.parse(data: data, region: subscription.region, sourceURL: subscription.urlString)
         }.value
 
+        #if DEBUG
+        print("[HolidaySubscriptionManager] parsed holidays count =", events.count)
+        if let firstEvent = events.first {
+            print("[HolidaySubscriptionManager] first holiday =", firstEvent.name, "on", firstEvent.date)
+        }
+        #endif
+
         // 保存到缓存
         try await cacheRepository.saveEvents(events, for: subscription.region)
+
+        #if DEBUG
+        print("[HolidaySubscriptionManager] events saved to cache")
+        #endif
 
         // 更新订阅状态
         updateSubscription(subscription.id) {
@@ -228,6 +269,10 @@ class HolidaySubscriptionManager: ObservableObject {
             $0.lastUpdatedAt = Date()
             $0.errorMessage = nil
         }
+
+        #if DEBUG
+        print("[HolidaySubscriptionManager] syncSingle completed for", subscription.region.rawValue)
+        #endif
 
         NotificationCenter.default.post(name: .holidayEventsDidUpdate, object: nil)
     }

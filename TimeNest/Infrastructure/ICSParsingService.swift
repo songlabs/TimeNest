@@ -39,21 +39,39 @@ class ICSParseService: ICSParsing {
     private let maxEventCount: Int = 1000
 
     func parse(data: Data, region: HolidayRegion, sourceURL: String) throws -> [HolidayEvent] {
+        #if DEBUG
+        print("[ICSParseService] parse(data:) started, data size =", data.count)
+        print("[ICSParseService] region =", region.rawValue, "sourceURL =", sourceURL)
+        #endif
+
         guard let content = String(data: data, encoding: .utf8) else {
+            #if DEBUG
+            print("[ICSParseService] failed to decode data as UTF-8")
+            #endif
             throw ICSParseError.invalidFormat
         }
         return try parse(content: content, region: region, sourceURL: sourceURL)
     }
 
     func parse(content: String, region: HolidayRegion, sourceURL: String) throws -> [HolidayEvent] {
+        #if DEBUG
+        print("[ICSParseService] parse(content:) started")
+        #endif
+
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedContent.isEmpty else {
+            #if DEBUG
+            print("[ICSParseService] content is empty")
+            #endif
             throw ICSParseError.emptyContent
         }
 
         // 检查 VCALENDAR 开始和结束标记
         guard trimmedContent.contains("BEGIN:VCALENDAR"),
               trimmedContent.contains("END:VCALENDAR") else {
+            #if DEBUG
+            print("[ICSParseService] invalid VCALENDAR format")
+            #endif
             throw ICSParseError.invalidFormat
         }
 
@@ -63,6 +81,7 @@ class ICSParseService: ICSParsing {
         var inVEvent = false
         var currentEvent: [String: String] = [:]
         var lineIndex = 0
+        var vEventCount = 0
 
         for line in lines {
             lineIndex += 1
@@ -72,6 +91,7 @@ class ICSParseService: ICSParsing {
 
             if unfoldedLine.hasPrefix("BEGIN:VEVENT") {
                 inVEvent = true
+                vEventCount += 1
                 currentEvent = [:]
             } else if unfoldedLine.hasPrefix("END:VEVENT") {
                 inVEvent = false
@@ -88,6 +108,13 @@ class ICSParseService: ICSParsing {
                 break
             }
         }
+
+        #if DEBUG
+        print("[ICSParseService] parsed", events.count, "holidays from", vEventCount, "VEVENT blocks")
+        if !events.isEmpty {
+            print("[ICSParseService] first holiday =", events.first!.name, "on", events.first!.date)
+        }
+        #endif
 
         return events
     }
