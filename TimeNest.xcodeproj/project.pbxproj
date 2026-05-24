@@ -107,12 +107,12 @@
 		5CD7A38AD5074A7707015200 /* AddEventButtonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButtonRow.swift; sourceTree = "<group>"; };
 		5D8594EFD3EEC9D785D70FC1 /* HolidayUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayUseCase.swift; sourceTree = "<group>"; };
 		5EE07A17F3762284F455C9D8 /* SelectedDateDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedDateDetailView.swift; sourceTree = "<group>"; };
-		5FEAA0FECE743D61878BE79D /* TimeNest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5FEAA0FECE743D61878BE79D /* TimeNest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		67ADAD077EA077DD836ECFDF /* ReminderScheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduling.swift; sourceTree = "<group>"; };
 		735689838CC2044510B86E90 /* ReminderUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderUseCase.swift; sourceTree = "<group>"; };
 		74FAF6DFBA5FFD0C3D513BB1 /* WeatherProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherProviding.swift; sourceTree = "<group>"; };
 		7EF9C9B46FBE954C36BF0CB8 /* HolidaySubscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscriptionSettingsView.swift; sourceTree = "<group>"; };
-		81008528D75F27AC81D854F1 /* ja.lproj */ = {isa = PBXFileReference; path = ja.lproj; sourceTree = "<group>"; };
+		81008528D75F27AC81D854F1 /* ja.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ja.lproj; sourceTree = "<group>"; };
 		8A3C86D3041C26844E7991D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8CD23027255CFC9D1EE49C5C /* InMemoryEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryEventRepository.swift; sourceTree = "<group>"; };
 		930B04AEF751C1556AC288C0 /* ImportSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSource.swift; sourceTree = "<group>"; };
@@ -144,15 +144,15 @@
 		D9DEA1E3A69AB607D62E1E69 /* HolidayRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRegion.swift; sourceTree = "<group>"; };
 		DF46837BBCDCF4238367EE27 /* ReminderStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStatus.swift; sourceTree = "<group>"; };
 		E529D090684264185A62D2DD /* BundleHolidayProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleHolidayProvider.swift; sourceTree = "<group>"; };
-		E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */ = {isa = PBXFileReference; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
+		E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
 		E78AC648768A087EBFC5FAF0 /* HolidayRecommendedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRecommendedSource.swift; sourceTree = "<group>"; };
-		E9CEA7091890BFAB3C7B58EF /* en.lproj */ = {isa = PBXFileReference; path = en.lproj; sourceTree = "<group>"; };
+		E9CEA7091890BFAB3C7B58EF /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = en.lproj; sourceTree = "<group>"; };
 		EA537673E0FB2CA5435DF0F1 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EC4BC937DED38ACC686A57B4 /* ImportSourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSourceType.swift; sourceTree = "<group>"; };
 		EDD535FD2A3A66B1639FAE1F /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarView.swift; sourceTree = "<group>"; };
 		F556AE27004F0D2E0520B852 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		F786127B6D78F95EC1A11570 /* ReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRepository.swift; sourceTree = "<group>"; };
-		FD009AC9340826530FB78B78 /* ko.lproj */ = {isa = PBXFileReference; path = ko.lproj; sourceTree = "<group>"; };
+		FD009AC9340826530FB78B78 /* ko.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ko.lproj; sourceTree = "<group>"; };
 		FD81A481736AFAF2E5FBF110 /* EventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRepository.swift; sourceTree = "<group>"; };
 		FF6423E12AEFF20549A1DB96 /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -523,7 +523,6 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					2225269E6F32DE4DDE7D53EC = {
-						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -720,6 +719,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -741,6 +741,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

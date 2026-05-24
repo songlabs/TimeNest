@@ -233,7 +233,7 @@ struct HolidaySourceEditView: View {
         guard !trimmed.isEmpty,
               let urlObj = URL(string: trimmed),
               let scheme = urlObj.scheme,
-              scheme.lowercased() == "https" else {
+              ["https", "http"].contains(scheme.lowercased()) else {
             isValidURL = false
             return
         }
@@ -244,12 +244,38 @@ struct HolidaySourceEditView: View {
     private func saveURL() {
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         
-        do {
-            try subscriptionManager.updateURL(for: region, newURL: trimmed)
-            dismiss()
-        } catch {
-            errorMessage = error.localizedDescription
-            showError = true
+        Task {
+            do {
+                // 1. URL 格式检查
+                let downloadService = ICSDownloadService()
+                try downloadService.validateURL(trimmed)
+                
+                // 2. 下载 ICS
+                guard let url = URL(string: trimmed) else {
+                    throw EnhancedICSError.invalidURL
+                }
+                let host = url.host ?? ""
+                let regionName = region.localizedKey
+                let data = try await downloadService.download(from: url, region: regionName, host: host)
+                
+                // 3. 验证 ICS 内容
+                try downloadService.validateICSContent(data)
+                
+                // 4. 保存 URL
+                try subscriptionManager.updateURL(for: region, newURL: trimmed)
+                
+                // 5. 成功后自动同步
+                await subscriptionManager.syncAllEnabled()
+                
+                await MainActor.run {
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
         }
     }
     
@@ -276,7 +302,7 @@ struct HolidaySourceEditView: View {
         do {
             // 下载并解析测试
             guard let url = URL(string: subscription.urlString) else {
-                throw SubscriptionManagerError.invalidURL
+                throw EnhancedICSError.invalidURL
             }
             
             let downloadService = ICSDownloadService()
@@ -285,7 +311,11 @@ struct HolidaySourceEditView: View {
             let host = url.host ?? ""
             let regionName = region.localizedKey
             let data = try await downloadService.download(from: url, region: regionName, host: host)
-            let events = try await parseService.parse(data: data, region: region, sourceURL: subscription.urlString)
+            
+            // 验证 ICS 内容
+            try downloadService.validateICSContent(data)
+            
+            let events = try parseService.parse(data: data, region: region, sourceURL: subscription.urlString)
             
             if events.isEmpty {
                 errorMessage = localization.localized(.holidaySourceNoEvents)
