@@ -118,10 +118,10 @@ struct HolidaySourceEditView: View {
     @State private var errorMessage = ""
     @State private var showingSyncTestSuccess = false
     @State private var syncTestSuccessMessage = ""
-    @State private var showingResetAlert = false
     @State private var showingUseSourceAlert = false
     @State private var selectedRecommendedSource: HolidayRecommendedSource?
     @State private var initLogged = false
+    @FocusState private var isURLFieldFocused: Bool
 
     private var subscription: HolidaySubscription? {
         subscriptionManager.subscriptions.first { $0.region == region }
@@ -169,71 +169,53 @@ struct HolidaySourceEditView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                // MARK: - Error Section (when subscription not found)
-                if subscription == nil {
-                    Section {
-                        Text(localization.localized(.holidaySubscriptionSourceNotFound))
-                            .foregroundColor(.red)
+        Form {
+            // MARK: - Error Section (when subscription not found)
+            if subscription == nil {
+                Section {
+                    Text(localization.localized(.holidaySubscriptionSourceNotFound))
+                        .foregroundColor(.red)
+                }
+            }
+
+            Section {
+                TextField("https://...", text: $urlString)
+                    .autocapitalization(.none)
+                    .disableAutocorrection(true)
+                    .keyboardType(.URL)
+                    .focused($isURLFieldFocused)
+                    .onChange(of: urlString) { _, newValue in
+                        validateURL(newValue)
+                    }
+                    .onSubmit {
+                        // 按下回车键时失焦，触发自动保存
+                        isURLFieldFocused = false
+                    }
+            } header: {
+                Text(localization.localized(.holidaySourceURLHeader))
+            } footer: {
+                Text(localization.localized(.holidaySourceURLFooter))
+            }
+            .onChange(of: isURLFieldFocused) { _, newValue in
+                // TextField 失焦时触发自动保存
+                if !newValue {
+                    Task {
+                        await saveIfNeeded()
                     }
                 }
+            }
 
-                Section {
-                    TextField("https://...", text: $urlString)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .keyboardType(.URL)
-                        .onChange(of: urlString) { _, newValue in
-                            validateURL(newValue)
-                        }
-                } header: {
-                    Text(localization.localized(.holidaySourceURLHeader))
-                } footer: {
-                    Text(localization.localized(.holidaySourceURLFooter))
-                }
-
-                Section {
-                    if let urlString = subscription?.urlString, !urlString.isEmpty {
-                        HStack {
-                            Text(localization.localized(.holidaySourceCurrentURL))
-                            Spacer()
-                            Text(urlString)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(1)
-                        }
-                    } else if subscription == nil {
-                        Text(localization.localized(.holidaySubscriptionNoURL))
-                            .foregroundColor(.secondary)
+            Section {
+                Button(localization.localized(.holidaySourceTestSync)) {
+                    Task {
+                        await testSync()
                     }
                 }
+                .disabled(!isValidURL)
+            }
 
-                Section {
-                    if subscription != nil {
-                        Button(localization.localized(.holidaySourceResetDefault)) {
-                            showingResetAlert = true
-                        }
-                        .foregroundColor(.orange)
-                    }
-                }
-
-                Section {
-                    Button(localization.localized(.holidaySourceTestSync)) {
-                        Task {
-                            await testSync()
-                        }
-                    }
-                    .disabled(!isValidURL)
-                }
-
-                // MARK: - Recommended Sources Section
-                Section {
-                    Text(localization.localized(.holidaySourceRecommendedSection))
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                }
-
+            // MARK: - Recommended Sources Section
+            if !recommendedSources.isEmpty {
                 Section {
                     if recommendedSources.isEmpty {
                         Text(localization.localized(.holidaySourceNoRecommendedSources))
@@ -246,62 +228,43 @@ struct HolidaySourceEditView: View {
                             }
                         }
                     }
+                } header: {
+                    Text(localization.localized(.holidaySourceRecommendedSection))
                 } footer: {
                     Text(localization.localized(.holidaySourceThirdPartyNotice))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
             }
-            .navigationTitle(localization.localized(subscription?.displayNameKey ?? region.localizedKey))
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.localized(.save)) {
-                        saveURL()
-                    }
-                    .disabled(!isValidURL || urlString == (subscription?.urlString ?? ""))
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.localized(.cancel)) {
-                        dismiss()
-                    }
-                }
+        }
+        .navigationTitle(localization.localized(subscription?.displayNameKey ?? region.localizedKey))
+        .onAppear {
+            #if DEBUG
+            if !initLogged {
+                print("[HolidaySourceEditView] body rendered region =", region.rawValue)
+                initLogged = true
             }
-            .onAppear {
-                #if DEBUG
-                if !initLogged {
-                    print("[HolidaySourceEditView] body rendered region =", region.rawValue)
-                    initLogged = true
-                }
-                #endif
-                urlString = subscription?.urlString ?? ""
-                validateURL(urlString)
+            #endif
+            urlString = subscription?.urlString ?? ""
+            validateURL(urlString)
+        }
+        .alert(localization.localized(.holidaySourceError), isPresented: $showError) {
+            Button(localization.localized(.ok), role: .cancel) {}
+        } message: {
+            Text(errorMessage)
+        }
+        .alert(localization.localized(.holidaySourceTestSuccessTitle), isPresented: $showingSyncTestSuccess) {
+            Button(localization.localized(.ok), role: .cancel) {}
+        } message: {
+            Text(syncTestSuccessMessage)
+        }
+       .alert(localization.localized(.holidaySourceUseRecommendedSourceTitle), isPresented: $showingUseSourceAlert) {
+            Button(localization.localized(.holidaySourceUseRecommendedSourceConfirm)) {
+                applyRecommendedSource()
             }
-            .alert(localization.localized(.holidaySourceError), isPresented: $showError) {
-                Button(localization.localized(.ok), role: .cancel) {}
-            } message: {
-                Text(errorMessage)
-            }
-            .alert(localization.localized(.holidaySourceTestSuccessTitle), isPresented: $showingSyncTestSuccess) {
-                Button(localization.localized(.ok), role: .cancel) {}
-            } message: {
-                Text(syncTestSuccessMessage)
-            }
-            .alert(localization.localized(.holidaySourceResetConfirm), isPresented: $showingResetAlert) {
-                Button(localization.localized(.reset), role: .destructive) {
-                    resetToDefault()
-                }
-                Button(localization.localized(.cancel), role: .cancel) {}
-            } message: {
-                Text(localization.localized(.holidaySourceResetMessage))
-            }
-            .alert(localization.localized(.holidaySourceUseRecommendedSourceTitle), isPresented: $showingUseSourceAlert) {
-                Button(localization.localized(.holidaySourceUseRecommendedSourceConfirm)) {
-                    applyRecommendedSource()
-                }
-                Button(localization.localized(.cancel), role: .cancel) {}
-            } message: {
-                Text(localization.localized(.holidaySourceUseRecommendedSourceMessage))
-            }
+            Button(localization.localized(.cancel), role: .cancel) {}
+        } message: {
+            Text(localization.localized(.holidaySourceUseRecommendedSourceMessage))
         }
     }
 
@@ -317,6 +280,66 @@ struct HolidaySourceEditView: View {
         }
 
         isValidURL = true
+    }
+
+    /// 自动保存：仅在输入为有效 HTTPS URL 且与原值不同时保存
+    private func saveIfNeeded() async {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalURL = subscription?.urlString ?? ""
+
+        // 如果输入为空或与原值相同，不保存
+        if trimmed.isEmpty || trimmed == originalURL {
+            return
+        }
+
+        // 检查是否为 HTTPS URL
+        guard let urlObj = URL(string: trimmed),
+              let scheme = urlObj.scheme,
+              scheme.lowercased() == "https" else {
+            // 无效 URL 或不使用 HTTPS，不保存
+            return
+        }
+
+        // 尝试保存
+        do {
+            let downloadService = ICSDownloadService()
+            try downloadService.validateURL(trimmed)
+
+            guard let url = URL(string: trimmed) else {
+                throw EnhancedICSError.invalidURL
+            }
+            let host = url.host ?? ""
+            let regionName = region.localizedKey
+            let (data, savedURL) = try await downloadWithFallback(
+                url: url,
+                regionName: regionName,
+                host: host,
+                downloadService: downloadService
+            )
+
+            try downloadService.validateICSContent(data)
+
+            let parseService = ICSParseService()
+            let events = try parseService.parse(data: data, region: region, sourceURL: savedURL)
+
+            guard !events.isEmpty else {
+                throw EnhancedICSError.noEvents
+            }
+
+            try subscriptionManager.updateURL(for: region, newURL: savedURL)
+            await subscriptionManager.syncAllEnabled()
+
+            #if DEBUG
+            print("[HolidaySourceEditView] auto-save succeeded: \(savedURL)")
+            #endif
+        } catch {
+            // 保存失败，显示错误提示
+            #if DEBUG
+            print("[HolidaySourceEditView] auto-save failed: \(error.localizedDescription)")
+            #endif
+            errorMessage = error.localizedDescription
+            showError = true
+        }
     }
 
     private func saveURL() {
@@ -451,12 +474,6 @@ struct HolidaySourceEditView: View {
             #endif
             return (data, cleanURL.absoluteString)
         }
-    }
-
-    private func resetToDefault() {
-        subscriptionManager.resetToDefaultURL(for: region)
-        urlString = subscription?.urlString ?? ""
-        validateURL(urlString)
     }
 
     private func applyRecommendedSource() {
