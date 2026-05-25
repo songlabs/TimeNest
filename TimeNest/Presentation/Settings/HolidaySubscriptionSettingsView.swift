@@ -71,13 +71,6 @@ struct HolidaySubscriptionSettingsView: View {
                 }
             }
             .navigationTitle(localization.localized(.holidaySubscriptionSettingsTitle))
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.localized(.done)) {
-                        dismiss()
-                    }
-                }
-            }
             .alert(localization.localized(.holidaySubscriptionSyncError), isPresented: $showingSyncError) {
             } message: {
                 Text(viewModel.lastSyncError?.localizedDescription ?? "")
