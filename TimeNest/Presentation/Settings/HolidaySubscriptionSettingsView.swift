@@ -4,44 +4,99 @@ struct HolidaySubscriptionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
     @StateObject private var viewModel: HolidaySubscriptionSettingsViewModel
+    @ObservedObject private var tabBarVisibility = TabBarVisibilityState.shared
 
     @State private var showingSyncError = false
+    @State private var showingSyncResult = false
+    @State private var syncResultTitle = ""
+    @State private var syncResultMessage = ""
+    @State private var didHideTabBar = false
 
     init(subscriptionManager: HolidaySubscriptionManager) {
         _viewModel = StateObject(wrappedValue: HolidaySubscriptionSettingsViewModel(subscriptionManager: subscriptionManager))
     }
-    
+
+    private var customHeaderView: some View {
+        VStack(spacing: 0) {
+            // 返回按钮
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 56, height: 56)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(Circle())
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+
+            // 标题
+            Text(localization.localized(.holidaySubscriptionSettingsTitle))
+                .font(.system(size: 34, weight: .bold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 32)
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+        }
+        .background(Color(.systemBackground))
+    }
+
     var body: some View {
-        NavigationStack {
-            Group {
-                if viewModel.allAvailableSubscriptions.isEmpty {
-                    ContentUnavailableView {
-                        Label("holiday_subscription.no_subscriptions", systemImage: "calendar.badge.exclamationmark")
-                    } description: {
-                        Text(localization.localized(.holidaySubscriptionNoSubscriptionsDescription))
-                    }
-                } else {
-                    List {
-                        // 同步状态和刷新按钮
-                        Section {
-                            HStack {
-                                Text(localization.localized(.holidaySubscriptionRefresh))
-                                Spacer()
-                                if viewModel.isSyncing {
-                                    ProgressView()
-                                        .scaleEffect(0.8)
-                                } else {
-                                    Button(localization.localized(.holidaySubscriptionRefresh)) {
-                                        Task {
-                                            await viewModel.syncAll()
+        ZStack {
+            Color(.systemBackground)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                customHeaderView
+
+                List {
+                    // 同步状态和刷新按钮
+                    Section {
+                        HStack {
+                            Spacer()
+
+                            if viewModel.isSyncing {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else {
+                                Button {
+                                    Task {
+                                        let result = await viewModel.syncAll()
+                                        await MainActor.run {
+                                            if result.isSuccess {
+                                                syncResultTitle = localization.localized(.holidaySubscriptionSyncSuccessTitle)
+                                                syncResultMessage = localization.localized(.holidaySubscriptionSyncSuccessMessage)
+                                                showingSyncResult = true
+                                            } else if let error = result.error {
+                                                syncResultTitle = localization.localized(.holidaySubscriptionSyncFailedTitle)
+                                                syncResultMessage = error.localizedDescription
+                                                showingSyncResult = true
+                                            }
                                         }
                                     }
-                                    .disabled(viewModel.isSyncing)
+                                } label: {
+                                    Text(localization.localized(.holidaySubscriptionRefresh))
+                                        .font(.system(size: 17, weight: .semibold))
                                 }
+                                .disabled(viewModel.isSyncing)
                             }
                         }
-                        
-                        // 订阅列表
+                    }
+
+                    // 订阅列表
+                    if viewModel.allAvailableSubscriptions.isEmpty {
+                        ContentUnavailableView {
+                            Label("holiday_subscription.no_subscriptions", systemImage: "calendar.badge.exclamationmark")
+                        } description: {
+                            Text(localization.localized(.holidaySubscriptionNoSubscriptionsDescription))
+                        }
+                    } else {
                         Section {
                             ForEach(viewModel.allAvailableSubscriptions) { subscription in
                                 NavigationLink {
@@ -65,23 +120,45 @@ struct HolidaySubscriptionSettingsView: View {
                             Text(localization.localized(.holidaySubscriptionListHeader))
                         } footer: {
                             Text(localization.localized(.holidaySubscriptionMaxLimitNote))
+                                .listRowSeparator(.hidden)
                         }
-                        
                     }
                 }
+                .listStyle(.plain)
+                .scrollContentBackground(.hidden)
+                .padding(.top, 8)
             }
-            .navigationTitle(localization.localized(.holidaySubscriptionSettingsTitle))
-            .navigationBarTitleDisplayMode(.inline)
-            .alert(localization.localized(.holidaySubscriptionSyncError), isPresented: $showingSyncError) {
-            } message: {
-                Text(viewModel.lastSyncError?.localizedDescription ?? "")
+        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        .navigationTitle("")
+        .onAppear {
+            if !didHideTabBar {
+                tabBarVisibility.hide()
+                didHideTabBar = true
             }
-            .onChange(of: viewModel.isSyncing) { _, newValue in
-                if !newValue {
-                    // 同步完成后检查是否有错误
-                    if let _ = viewModel.lastSyncError {
-                        showingSyncError = true
-                    }
+        }
+        .onDisappear {
+            if didHideTabBar {
+                tabBarVisibility.show()
+                didHideTabBar = false
+            }
+        }
+        .alert(syncResultTitle, isPresented: $showingSyncResult) {
+            Button(localization.localized(.ok), role: .cancel) {}
+        } message: {
+            Text(syncResultMessage)
+        }
+        .alert(localization.localized(.holidaySubscriptionSyncError), isPresented: $showingSyncError) {
+        } message: {
+            Text(viewModel.lastSyncError?.localizedDescription ?? "")
+        }
+        .onChange(of: viewModel.isSyncing) { _, newValue in
+            if !newValue {
+                // 同步完成后检查是否有错误
+                if let _ = viewModel.lastSyncError {
+                    showingSyncError = true
                 }
             }
         }
@@ -100,16 +177,19 @@ struct SubscriptionRowView: View {
     @EnvironmentObject private var localization: LocalizationManager
 
     var body: some View {
-        HStack {
-            // 左侧：复选框
-            Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(isEnabled ? .accentColor : .secondary)
-                .font(.title2)
-                .onTapGesture {
-                    if canToggle {
-                        onToggle()
-                    }
+        HStack(spacing: 12) {
+            // 左侧：复选框（仅圆圈区域可点击切换）
+            Button(action: {
+                if canToggle {
+                    onToggle()
                 }
+            }) {
+                Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
+                    .foregroundColor(isEnabled ? .accentColor : .secondary)
+                    .font(.title2)
+            }
+            .buttonStyle(.plain)
+            .frame(width: 28, height: 28)
 
             // 中间：订阅信息
             VStack(alignment: .leading, spacing: 4) {
@@ -221,15 +301,17 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
         }
     }
     
-    func syncAll() async {
+    func syncAll() async -> SyncResult {
         isSyncing = true
         lastSyncError = nil
         
-        await subscriptionManager.syncAllEnabled()
+        let result = await subscriptionManager.syncAllEnabled()
         
         isSyncing = false
-        lastSyncError = subscriptionManager.lastSyncError
+        lastSyncError = result.error
         updateSubscriptions()
+        
+        return result
     }
     
     private func updateSubscriptions() {

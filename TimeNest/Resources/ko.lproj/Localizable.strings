@@ -131,3 +131,8 @@
 
 /* Holiday Subscription Errors */
 "holiday_subscription.source_not_found" = "구독원을 찾을 수 없습니다";
+
+/* Holiday Subscription Sync Alert */
+"holiday_subscription.sync_success_title" = "동기화 성공";
+"holiday_subscription.sync_success_message" = "공휴일 구독을 새로고침했습니다.";
+"holiday_subscription.sync_failed_title" = "동기화 실패";

@@ -9,6 +9,7 @@ enum SubscriptionManagerError: Error, LocalizedError {
     case downloadFailed(Error)
     case parseFailed(Error)
     case noEnabledSubscriptions
+    case syncInProgress
 
     var errorDescription: String? {
         switch self {
@@ -24,7 +25,19 @@ enum SubscriptionManagerError: Error, LocalizedError {
             return "解析失败：\(error.localizedDescription)"
         case .noEnabledSubscriptions:
             return "没有启用的订阅"
+        case .syncInProgress:
+            return "同步正在进行中"
         }
+    }
+}
+
+/// 同步结果
+struct SyncResult {
+    let totalEvents: Int
+    let error: Error?
+    
+    var isSuccess: Bool {
+        error == nil
     }
 }
 
@@ -169,8 +182,11 @@ class HolidaySubscriptionManager: ObservableObject {
     }
 
     /// 手动同步所有启用的订阅
-    func syncAllEnabled() async {
-        guard !syncInProgress else { return }
+    /// - Returns: 同步结果，包含成功解析的事件总数和错误信息（如果有）
+    func syncAllEnabled() async -> SyncResult {
+        guard !syncInProgress else {
+            return SyncResult(totalEvents: 0, error: SubscriptionManagerError.syncInProgress)
+        }
 
         #if DEBUG
         print("[HolidaySubscriptionManager] syncAllEnabled started")
@@ -191,7 +207,7 @@ class HolidaySubscriptionManager: ObservableObject {
             #if DEBUG
             print("[HolidaySubscriptionManager] no enabled subscriptions")
             #endif
-            return
+            return SyncResult(totalEvents: 0, error: nil)
         }
 
         #if DEBUG
@@ -201,9 +217,13 @@ class HolidaySubscriptionManager: ObservableObject {
         }
         #endif
 
+        var totalEvents = 0
+        var firstError: Error?
+
         for subscription in enabled {
             do {
-                try await syncSingle(subscription: subscription)
+                let events = try await syncSingleWithResult(subscription: subscription)
+                totalEvents += events
             } catch {
                 #if DEBUG
                 print("[HolidaySubscriptionManager] sync failed for", subscription.region.rawValue, ":", error.localizedDescription)
@@ -212,21 +232,26 @@ class HolidaySubscriptionManager: ObservableObject {
                     $0.syncStatus = .failed
                     $0.errorMessage = error.localizedDescription
                 }
-                lastSyncError = error
+                if firstError == nil {
+                    firstError = error
+                    lastSyncError = error
+                }
             }
         }
 
         #if DEBUG
-        print("[HolidaySubscriptionManager] syncAllEnabled completed")
+        print("[HolidaySubscriptionManager] syncAllEnabled completed, total events =", totalEvents)
         #endif
 
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
+        
+        return SyncResult(totalEvents: totalEvents, error: firstError)
     }
-
-    /// 同步单个订阅
-    private func syncSingle(subscription: HolidaySubscription) async throws {
+    
+    /// 同步单个订阅并返回事件数量
+    private func syncSingleWithResult(subscription: HolidaySubscription) async throws -> Int {
         #if DEBUG
-        print("[HolidaySubscriptionManager] syncSingle started for", subscription.region.rawValue)
+        print("[HolidaySubscriptionManager] syncSingleWithResult started for", subscription.region.rawValue)
         print("[HolidaySubscriptionManager] URL =", subscription.urlString)
         #endif
 
@@ -271,10 +296,17 @@ class HolidaySubscriptionManager: ObservableObject {
         }
 
         #if DEBUG
-        print("[HolidaySubscriptionManager] syncSingle completed for", subscription.region.rawValue)
+        print("[HolidaySubscriptionManager] syncSingleWithResult completed for", subscription.region.rawValue)
         #endif
 
         NotificationCenter.default.post(name: .holidayEventsDidUpdate, object: nil)
+        
+        return events.count
+    }
+
+    /// 同步单个订阅（不返回事件数量）
+    private func syncSingle(subscription: HolidaySubscription) async throws {
+        _ = try await syncSingleWithResult(subscription: subscription)
     }
 
     /// 检查是否需要自动同步

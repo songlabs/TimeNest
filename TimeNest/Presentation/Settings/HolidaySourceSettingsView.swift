@@ -122,6 +122,7 @@ struct HolidaySourceEditView: View {
     @State private var showingUseSourceAlert = false
     @State private var selectedRecommendedSource: HolidayRecommendedSource?
     @State private var initLogged = false
+    @State private var didHideTabBar = false
     @FocusState private var isURLFieldFocused: Bool
 
     private var subscription: HolidaySubscription? {
@@ -130,6 +131,37 @@ struct HolidaySourceEditView: View {
 
     private var recommendedSources: [HolidayRecommendedSource] {
         HolidayRecommendedSources.sources(for: region)
+    }
+
+    private var customHeaderView: some View {
+        VStack(spacing: 0) {
+            // 返回按钮
+            HStack {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 56, height: 56)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(Circle())
+                }
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+
+            // 标题
+            Text(localization.localized(subscription?.displayNameKey ?? region.localizedKey))
+                .font(.system(size: 34, weight: .bold))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 32)
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+        }
+        .background(Color(.systemBackground))
     }
 
     // MARK: - DEBUG Logging on Init
@@ -171,90 +203,106 @@ struct HolidaySourceEditView: View {
 
     var body: some View {
         ZStack {
-            Form {
-                // MARK: - Error Section (when subscription not found)
-                if subscription == nil {
+            Color(.systemBackground)
+                .ignoresSafeArea()
+
+            VStack(spacing: 0) {
+                customHeaderView
+
+                Form {
+                    // MARK: - Error Section (when subscription not found)
+                    if subscription == nil {
+                        Section {
+                            Text(localization.localized(.holidaySubscriptionSourceNotFound))
+                                .foregroundColor(.red)
+                        }
+                    }
+
                     Section {
-                        Text(localization.localized(.holidaySubscriptionSourceNotFound))
-                            .foregroundColor(.red)
+                        TextField("https://...", text: $urlString)
+                            .autocapitalization(.none)
+                            .disableAutocorrection(true)
+                            .keyboardType(.URL)
+                            .focused($isURLFieldFocused)
+                            .onChange(of: urlString) { _, newValue in
+                                validateURL(newValue)
+                            }
+                            .onSubmit {
+                                // 按下回车键时失焦，触发自动保存
+                                isURLFieldFocused = false
+                            }
+                    } header: {
+                        Text(localization.localized(.holidaySourceURLHeader))
+                    } footer: {
+                        Text(localization.localized(.holidaySourceURLFooter))
                     }
-                }
-
-                Section {
-                    TextField("https://...", text: $urlString)
-                        .autocapitalization(.none)
-                        .disableAutocorrection(true)
-                        .keyboardType(.URL)
-                        .focused($isURLFieldFocused)
-                        .onChange(of: urlString) { _, newValue in
-                            validateURL(newValue)
-                        }
-                        .onSubmit {
-                            // 按下回车键时失焦，触发自动保存
-                            isURLFieldFocused = false
-                        }
-                } header: {
-                    Text(localization.localized(.holidaySourceURLHeader))
-                } footer: {
-                    Text(localization.localized(.holidaySourceURLFooter))
-                }
-                .onChange(of: isURLFieldFocused) { _, newValue in
-                    // TextField 失焦时触发自动保存
-                    if !newValue {
-                        Task {
-                            await saveIfNeeded()
-                        }
-                    }
-                }
-
-                Section {
-                    Button(localization.localized(.holidaySourceTestSync)) {
-                        Task {
-                            await testSync()
-                        }
-                    }
-                    .disabled(!isValidURL)
-                }
-
-                // MARK: - Recommended Sources Section
-                if !recommendedSources.isEmpty {
-                    Section {
-                        if recommendedSources.isEmpty {
-                            Text(localization.localized(.holidaySourceNoRecommendedSources))
-                                .foregroundColor(.secondary)
-                        } else {
-                            ForEach(recommendedSources) { source in
-                                RecommendedSourceRow(source: source) {
-                                    selectedRecommendedSource = source
-                                    showingUseSourceAlert = true
-                                }
+                    .onChange(of: isURLFieldFocused) { _, newValue in
+                        // TextField 失焦时触发自动保存
+                        if !newValue {
+                            Task {
+                                await saveIfNeeded()
                             }
                         }
-                    } header: {
-                        Text(localization.localized(.holidaySourceRecommendedSection))
-                    } footer: {
-                        Text(localization.localized(.holidaySourceThirdPartyNotice))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    }
+
+                    Section {
+                        Button(localization.localized(.holidaySourceTestSync)) {
+                            Task {
+                                await testSync()
+                            }
+                        }
+                        .disabled(!isValidURL)
+                    }
+
+                    // MARK: - Recommended Sources Section
+                    if !recommendedSources.isEmpty {
+                        Section {
+                            if recommendedSources.isEmpty {
+                                Text(localization.localized(.holidaySourceNoRecommendedSources))
+                                    .foregroundColor(.secondary)
+                            } else {
+                                ForEach(recommendedSources) { source in
+                                    RecommendedSourceRow(source: source) {
+                                        selectedRecommendedSource = source
+                                        showingUseSourceAlert = true
+                                    }
+                                }
+                            }
+                        } header: {
+                            Text(localization.localized(.holidaySourceRecommendedSection))
+                        } footer: {
+                            Text(localization.localized(.holidaySourceThirdPartyNotice))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                 }
+                .scrollContentBackground(.hidden)
+                .padding(.top, 8)
             }
-            .navigationTitle(localization.localized(subscription?.displayNameKey ?? region.localizedKey))
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .onAppear {
-                #if DEBUG
-                if !initLogged {
-                    print("[HolidaySourceEditView] body rendered region =", region.rawValue)
-                    initLogged = true
-                }
-                #endif
-                tabBarVisibility.isHidden = true
-                urlString = subscription?.urlString ?? ""
-                validateURL(urlString)
+        }
+        .navigationBarBackButtonHidden(true)
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
+        .navigationTitle("")
+        .onAppear {
+            #if DEBUG
+            if !initLogged {
+                print("[HolidaySourceEditView] body rendered region =", region.rawValue)
+                initLogged = true
             }
-            .onDisappear {
-                tabBarVisibility.isHidden = false
+            #endif
+            if !didHideTabBar {
+                tabBarVisibility.hide()
+                didHideTabBar = true
+            }
+            urlString = subscription?.urlString ?? ""
+            validateURL(urlString)
+        }
+        .onDisappear {
+            if didHideTabBar {
+                tabBarVisibility.show()
+                didHideTabBar = false
             }
         }
         .alert(localization.localized(.holidaySourceError), isPresented: $showError) {

@@ -131,3 +131,8 @@
 
 /* Holiday Subscription Errors */
 "holiday_subscription.source_not_found" = "订阅源が見つかりません";
+
+/* Holiday Subscription Sync Alert */
+"holiday_subscription.sync_success_title" = "同期成功";
+"holiday_subscription.sync_success_message" = "祝日購読を更新しました。";
+"holiday_subscription.sync_failed_title" = "同期失敗";

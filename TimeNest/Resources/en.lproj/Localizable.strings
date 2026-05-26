@@ -131,3 +131,8 @@
 
 /* Holiday Subscription Errors */
 "holiday_subscription.source_not_found" = "Subscription source not found";
+
+/* Holiday Subscription Sync Alert */
+"holiday_subscription.sync_success_title" = "Sync Succeeded";
+"holiday_subscription.sync_success_message" = "Holiday subscriptions were refreshed successfully.";
+"holiday_subscription.sync_failed_title" = "Sync Failed";

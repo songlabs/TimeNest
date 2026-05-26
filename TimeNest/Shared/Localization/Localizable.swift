@@ -99,6 +99,9 @@ enum LocalizedString: String {
     case holidaySubscriptionNotSynced = "holiday_subscription.not_synced"
     case holidaySubscriptionSyncError = "holiday_subscription.sync_error"
     case holidaySubscriptionNoURL = "holiday_subscription.no_url"
+    case holidaySubscriptionSyncSuccessTitle = "holiday_subscription.sync_success_title"
+    case holidaySubscriptionSyncSuccessMessage = "holiday_subscription.sync_success_message"
+    case holidaySubscriptionSyncFailedTitle = "holiday_subscription.sync_failed_title"
 
     // MARK: - Holiday Source Settings
 
