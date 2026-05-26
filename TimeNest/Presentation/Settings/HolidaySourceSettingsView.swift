@@ -108,6 +108,7 @@ struct SourceRowView: View {
 struct HolidaySourceEditView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
+    @ObservedObject private var tabBarVisibility = TabBarVisibilityState.shared
 
     let region: HolidayRegion
     let subscriptionManager: HolidaySubscriptionManager
@@ -247,8 +248,12 @@ struct HolidaySourceEditView: View {
                     initLogged = true
                 }
                 #endif
+                tabBarVisibility.isHidden = true
                 urlString = subscription?.urlString ?? ""
                 validateURL(urlString)
+            }
+            .onDisappear {
+                tabBarVisibility.isHidden = false
             }
         }
         .alert(localization.localized(.holidaySourceError), isPresented: $showError) {

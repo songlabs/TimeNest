@@ -7,7 +7,13 @@ xcuserdata/
 
 ## Generated files - do not commit
 .DS_Store
-TimeNest.xcodeproj/
+
+# Xcode project user-specific files (ignore user data, track project config)
+TimeNest.xcodeproj/xcuserdata/
+*.xcuserstate
+
+## Workspace auto-generated schemes
+Workspace.xcworkspace/xcshareddata/xcschemes/
 
 ## Obj-C/Swift specific
 *.hmap

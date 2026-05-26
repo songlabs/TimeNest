@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var localization: LocalizationManager
+    @StateObject private var tabBarVisibility = TabBarVisibilityState.shared
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
     @State private var selectedTab: CalendarTab = .monthCalendar
@@ -27,7 +28,9 @@ struct ContentView: View {
             .id(localization.selectedLanguageCode)
 
             // 自定义底部 TabBar - 固定在底部
-            BottomTabBarView(selectedTab: $selectedTab)
+            if !tabBarVisibility.isHidden {
+                BottomTabBarView(selectedTab: $selectedTab)
+            }
         }
     }
 }
