@@ -240,6 +240,7 @@ struct HolidaySourceEditView: View {
                 }
             }
             .navigationTitle(localization.localized(subscription?.displayNameKey ?? region.localizedKey))
+            .navigationBarTitleDisplayMode(.inline)
             .navigationBarBackButtonHidden(true)
             .onAppear {
                 #if DEBUG

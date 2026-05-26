@@ -71,6 +71,7 @@ struct HolidaySubscriptionSettingsView: View {
                 }
             }
             .navigationTitle(localization.localized(.holidaySubscriptionSettingsTitle))
+            .navigationBarTitleDisplayMode(.inline)
             .alert(localization.localized(.holidaySubscriptionSyncError), isPresented: $showingSyncError) {
             } message: {
                 Text(viewModel.lastSyncError?.localizedDescription ?? "")
