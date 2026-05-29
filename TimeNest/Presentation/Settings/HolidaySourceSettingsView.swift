@@ -646,7 +646,7 @@ struct RecommendedSourceRow: View {
     NavigationStack {
         HolidaySourceSettingsView(
             viewModel: HolidaySubscriptionSettingsViewModel(
-                subscriptionManager: HolidaySubscriptionManager()
+                subscriptionManager: .shared
             )
         )
         .environmentObject(LocalizationManager.preview(languageCode: "ja"))

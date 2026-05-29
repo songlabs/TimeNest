@@ -8,7 +8,7 @@ struct SettingsView: View {
     @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = false
 
     @State private var showVersionInfo: Bool = false
-    @StateObject private var subscriptionManager = HolidaySubscriptionManager()
+    @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
 
     var body: some View {
         Form {
@@ -31,7 +31,7 @@ struct SettingsView: View {
             // MARK: - Holiday Subscription Section
             Section {
                 NavigationLink {
-                    HolidaySubscriptionSettingsView(subscriptionManager: subscriptionManager)
+                    HolidaySubscriptionSettingsView()
                         .environmentObject(localization)
                 } label: {
                     HStack {
