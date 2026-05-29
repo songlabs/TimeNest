@@ -110,12 +110,13 @@ struct MonthCalendarView: View {
                 let gridHeight = weekdayRowHeight + dateCellHeight * 6
 
                 // Cell 层 + 网格线 overlay
-                LazyVStack(spacing: 0) {
+                VStack(spacing: 0) {
                     // 第 0 行：星期栏（固定高度）
                     WeekdayHeaderView(
                         weekdaySymbols: viewModel.weekdaySymbols(),
                         cellWidth: cellWidth
                     )
+                    .frame(height: weekdayRowHeight)
 
                     // 第 1～6 行：日期
                     ForEach(0..<6, id: \.self) { rowIndex in
@@ -243,7 +244,8 @@ struct DayCellView: View {
                     .stroke(ShiftCalendarColors.selectedDayBorder, lineWidth: 2)
             }
 
-            VStack(spacing: 4) {
+            // 内容区域 - 统一从顶部对齐
+            VStack(alignment: .leading, spacing: 0) {
                 // 顶部区域：日期数字
                 Text(cell.dayText)
                     .font(.system(
@@ -254,8 +256,10 @@ struct DayCellView: View {
                     .padding(.leading, 8)
                     .padding(.top, 8)
 
+                // 弹性空间 - 将底部标签推到底部
                 Spacer()
 
+                // 底部区域：节假日标签或排班标签
                 // 节假日标签 - 底部居中，优先于排班标签显示
                 if !cell.holidays.isEmpty {
                     holidayLabelsView
@@ -271,7 +275,7 @@ struct DayCellView: View {
                         .padding(.bottom, 8)
                 }
             }
-            .frame(maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .frame(width: cellWidth, height: cellHeight)
         .opacity(cell.isInCurrentMonth ? 1.0 : 0.5)
