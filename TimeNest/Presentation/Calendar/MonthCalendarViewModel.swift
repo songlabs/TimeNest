@@ -68,9 +68,7 @@ class MonthCalendarViewModel: ObservableObject {
             NotificationCenter.default.publisher(for: .holidaySubscriptionsDidChange)
                 .sink { [weak self] _ in
                     Task { @MainActor in
-                        // 先同步最新的 enabledRegions 到 currentSetting
-                        self?.currentSetting.selectedHolidayRegions = self?.subscriptionManager.enabledRegions ?? []
-                        await self?.reloadMonth()
+                        await self?.syncHolidayRegionsAndReload()
                     }
                 },
             NotificationCenter.default.publisher(for: .holidayEventsDidUpdate)
@@ -83,37 +81,24 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     private func setupSubscriptionObserver() {
-        subscriptionObserver = subscriptionManager.$subscriptions
-            .map { $0.filter { $0.isEnabled }.map { $0.region } }
-            .removeDuplicates()
-            .sink { [weak self] newRegions in
-                #if DEBUG
-                print("[MonthCalendarViewModel] subscriptionObserver triggered")
-                print("[MonthCalendarViewModel] subscriptionObserver - newRegions =", newRegions.map { $0.rawValue })
-                print("[MonthCalendarViewModel] subscriptionObserver - current selectedHolidayRegions =", self?.currentSetting.selectedHolidayRegions.map { $0.rawValue } ?? [])
-                #endif
-                Task { @MainActor in
-                    await self?.updateHolidayRegions(newRegions)
-                }
-            }
+        // 移除 subscriptionObserver，统一使用 notification observer
+        // 避免两个 observer 同时触发导致状态不同步
+        subscriptionObserver = nil
     }
 
-    private func updateHolidayRegions(_ newRegions: [HolidayRegion]) {
-        let currentRegions = currentSetting.selectedHolidayRegions
-        if Set(currentRegions) != Set(newRegions) {
-            #if DEBUG
-            print("[MonthCalendarViewModel] updateHolidayRegions - old =", currentRegions.map { $0.rawValue })
-            print("[MonthCalendarViewModel] updateHolidayRegions - new =", newRegions.map { $0.rawValue })
-            #endif
-            currentSetting.selectedHolidayRegions = newRegions
-            Task {
-                await reloadMonth()
-            }
-        } else {
-            #if DEBUG
-            print("[MonthCalendarViewModel] updateHolidayRegions - regions unchanged, skipping reload")
-            #endif
-        }
+    /// 同步节假日地区并重新加载月份（统一入口）
+    private func syncHolidayRegionsAndReload() async {
+        let newRegions = subscriptionManager.enabledRegions
+        let oldRegions = currentSetting.selectedHolidayRegions
+        
+        #if DEBUG
+        print("[MonthCalendarViewModel] syncHolidayRegionsAndReload called")
+        print("[MonthCalendarViewModel] old selectedHolidayRegions =", oldRegions.map { $0.rawValue })
+        print("[MonthCalendarViewModel] new selectedHolidayRegions =", newRegions.map { $0.rawValue })
+        #endif
+        
+        currentSetting.selectedHolidayRegions = newRegions
+        await reloadMonth()
     }
 
     private func updateDisplayLanguage() {
@@ -153,11 +138,19 @@ class MonthCalendarViewModel: ObservableObject {
                 month: month,
                 setting: currentSetting
             )
-            // 不添加 mock 排班数据，shift 内容应由用户输入
-            grid = baseGrid
+            // 完全替换旧的 grid，不要 append / merge
+            self.grid = baseGrid
 
             #if DEBUG
+            let totalHolidays = baseGrid.days.flatMap { $0.holidays }.count
             print("[MonthCalendarViewModel] reloadMonth succeeded, grid.days count =", baseGrid.days.count)
+            print("[MonthCalendarViewModel] holiday count in current month =", totalHolidays)
+            // 详细打印每个 day 的 holidays
+            for day in baseGrid.days {
+                if !day.holidays.isEmpty {
+                    print("[MonthCalendarViewModel] - day \(day.date.year)-\(day.date.month)-\(day.date.day): holidays =", day.holidays.map { $0.localizedNames.zhHans })
+                }
+            }
             #endif
         } catch {
             errorMessage = error.localizedDescription

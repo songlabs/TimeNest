@@ -16,6 +16,11 @@ class CalendarDisplayUseCase {
     }
 
     func monthGrid(year: Int, month: Int, setting: CalendarDisplaySetting) async throws -> MonthGrid {
+        #if DEBUG
+        print("[CalendarDisplayUseCase] monthGrid called")
+        print("[CalendarDisplayUseCase] selectedHolidayRegions =", setting.selectedHolidayRegions.map { $0.rawValue })
+        #endif
+        
         // 使用 Gregorian calendar 确保日期计算使用西历
         let calendar = Calendar(identifier: .gregorian)
         var components = DateComponents()

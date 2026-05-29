@@ -150,13 +150,16 @@ class HolidaySubscriptionManager: ObservableObject {
 
     /// 禁用订阅
     func disable(subscription: HolidaySubscription) throws {
+        #if DEBUG
+        print("[HolidaySubscription] before disable - enabledRegions =", enabledRegions.map { $0.rawValue })
+        #endif
+        
         updateSubscription(subscription.id) {
             $0.isEnabled = false
         }
 
         #if DEBUG
-        print("[HolidaySubscriptionManager] disable subscription - region =", subscription.region.rawValue)
-        print("[HolidaySubscriptionManager] enabled regions after disable =", enabledRegions.map { $0.rawValue })
+        print("[HolidaySubscription] after disable - enabledRegions =", enabledRegions.map { $0.rawValue })
         #endif
 
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
