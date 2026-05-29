@@ -114,12 +114,6 @@ class ICSDownloadService: ICSDownloading {
         }
 
         // DEBUG: body 级别日志
-        #if DEBUG
-        let veventCount = body.components(separatedBy: "BEGIN:VEVENT").count - 1
-        print("[EnhancedICS] containsVCALENDAR =", body.contains("BEGIN:VCALENDAR"))
-        print("[EnhancedICS] containsVEVENT =", body.contains("BEGIN:VEVENT"))
-        print("[EnhancedICS] veventCount =", veventCount)
-        #endif
     }
 
     /// 检查是否为 Office Holidays URL
@@ -156,12 +150,6 @@ class ICSDownloadService: ICSDownloading {
         request.setValue("no-cache", forHTTPHeaderField: "Pragma")
 
         // DEBUG 日志：请求信息
-        #if DEBUG
-        print("[EnhancedICS] requestURL = \(request.url?.absoluteString ?? "nil")")
-        print("[EnhancedICS] userAgent = \(request.value(forHTTPHeaderField: "User-Agent") ?? "nil")")
-        print("[EnhancedICS] accept = \(request.value(forHTTPHeaderField: "Accept") ?? "nil")")
-        print("[EnhancedICS] cachePolicy = \(request.cachePolicy.rawValue)")
-        #endif
 
         let (data, response) = try await session.data(for: request)
 
@@ -171,14 +159,6 @@ class ICSDownloadService: ICSDownloading {
         }
 
         // DEBUG 日志：响应信息
-        #if DEBUG
-        print("[EnhancedICS] finalURL = \(httpResponse.url?.absoluteString ?? "nil")")
-        print("[EnhancedICS] statusCode = \(httpResponse.statusCode)")
-        print("[EnhancedICS] contentType = \(httpResponse.value(forHTTPHeaderField: "Content-Type") ?? "nil")")
-        print("[EnhancedICS] dataSize = \(data.count)")
-        let bodyPrefix = String(data: data.prefix(300), encoding: .utf8) ?? ""
-        print("[EnhancedICS] bodyPrefix = \(bodyPrefix)")
-        #endif
 
         return (data, httpResponse)
     }
@@ -201,10 +181,6 @@ class ICSDownloadService: ICSDownloading {
                 // 对 HTTP 500 增加 Office Holidays fallback
                 if httpResponse.statusCode == 500 && isOfficeHolidaysURL(url) {
                     let fallbackURL = appendNoCacheQuery(to: url)
-                    #if DEBUG
-                    print("[EnhancedICS] retryReason = HTTP 500 from Office Holidays")
-                    print("[EnhancedICS] fallbackURL = \(fallbackURL.absoluteString)")
-                    #endif
 
                     // 重试带 nocache 参数的 URL
                     let (retryData, retryResponse) = try await fetchICS(from: fallbackURL, timeout: timeout)
@@ -220,9 +196,6 @@ class ICSDownloadService: ICSDownloading {
                     }
 
                     // DEBUG 日志：fallback 成功
-                    #if DEBUG
-                    print("[EnhancedICS] fallback 成功：\(retryData.count) bytes")
-                    #endif
 
                     return retryData
                 }

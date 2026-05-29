@@ -34,10 +34,6 @@ class MonthCalendarViewModel: ObservableObject {
         let initialLanguage = LocalizationManager.shared.currentLanguage
         let enabledRegions = subscriptionManager.enabledRegions  // 允许空数组
         
-        #if DEBUG
-        print("[MonthCalendarViewModel] init - initialLanguage =", initialLanguage.rawValue)
-        print("[MonthCalendarViewModel] init - enabledRegions =", enabledRegions.map { $0.rawValue })
-        #endif
         
         self.currentSetting = .init(
             displayLanguage: initialLanguage,
@@ -91,11 +87,6 @@ class MonthCalendarViewModel: ObservableObject {
         let newRegions = subscriptionManager.enabledRegions
         let oldRegions = currentSetting.selectedHolidayRegions
         
-        #if DEBUG
-        print("[MonthCalendarViewModel] syncHolidayRegionsAndReload called")
-        print("[MonthCalendarViewModel] old selectedHolidayRegions =", oldRegions.map { $0.rawValue })
-        print("[MonthCalendarViewModel] new selectedHolidayRegions =", newRegions.map { $0.rawValue })
-        #endif
         
         currentSetting.selectedHolidayRegions = newRegions
         await reloadMonth()
@@ -120,18 +111,8 @@ class MonthCalendarViewModel: ObservableObject {
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
 
-        #if DEBUG
-        print("[MonthCalendarViewModel] reloadMonth started")
-        print("[MonthCalendarViewModel] year =", year, "month =", month)
-        print("[MonthCalendarViewModel] displayLanguage =", currentSetting.displayLanguage.rawValue)
-        print("[MonthCalendarViewModel] selectedHolidayRegions =", currentSetting.selectedHolidayRegions.map { $0.rawValue })
-        #endif
 
         do {
-            #if DEBUG
-            print("[MonthCalendarViewModel] About to call calendarDisplayUseCase.monthGrid")
-            print("[MonthCalendarViewModel] currentSetting.selectedHolidayRegions =", currentSetting.selectedHolidayRegions.map { $0.rawValue })
-            #endif
 
             let baseGrid = try await calendarDisplayUseCase.monthGrid(
                 year: year,
@@ -141,24 +122,10 @@ class MonthCalendarViewModel: ObservableObject {
             // 完全替换旧的 grid，不要 append / merge
             self.grid = baseGrid
 
-            #if DEBUG
-            let totalHolidays = baseGrid.days.flatMap { $0.holidays }.count
-            print("[MonthCalendarViewModel] reloadMonth succeeded, grid.days count =", baseGrid.days.count)
-            print("[MonthCalendarViewModel] holiday count in current month =", totalHolidays)
-            // 详细打印每个 day 的 holidays
-            for day in baseGrid.days {
-                if !day.holidays.isEmpty {
-                    print("[MonthCalendarViewModel] - day \(day.date.year)-\(day.date.month)-\(day.date.day): holidays =", day.holidays.map { $0.localizedNames.zhHans })
-                }
-            }
-            #endif
         } catch {
             errorMessage = error.localizedDescription
             grid = nil
 
-            #if DEBUG
-            print("[MonthCalendarViewModel] reloadMonth failed:", error.localizedDescription)
-            #endif
         }
 
         isLoading = false

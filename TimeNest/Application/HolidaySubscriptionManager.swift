@@ -101,18 +101,7 @@ class HolidaySubscriptionManager: ObservableObject {
 
     /// 获取已启用的订阅
     var enabledSubscriptions: [HolidaySubscription] {
-        let enabled = subscriptions.filter { $0.isEnabled }
-        #if DEBUG
-        print("[HolidaySubscriptionManager] enabledSubscriptions count =", enabled.count)
-        for sub in enabled {
-            print("[HolidaySubscriptionManager] - region:", sub.region.rawValue)
-            print("[HolidaySubscriptionManager]   isEnabled:", sub.isEnabled)
-            print("[HolidaySubscriptionManager]   url:", sub.urlString.isEmpty ? "(empty)" : sub.urlString)
-            print("[HolidaySubscriptionManager]   lastSyncAt:", sub.lastUpdatedAt?.description ?? "nil")
-            print("[HolidaySubscriptionManager]   lastSyncStatus:", sub.syncStatus.rawValue)
-        }
-        #endif
-        return enabled
+        subscriptions.filter { $0.isEnabled }
     }
 
     /// 检查是否可以启用新的订阅
@@ -140,27 +129,16 @@ class HolidaySubscriptionManager: ObservableObject {
             }
         }
 
-        #if DEBUG
-        print("[HolidaySubscriptionManager] enable subscription - region =", subscription.region.rawValue)
-        print("[HolidaySubscriptionManager] enabled regions after enable =", enabledRegions.map { $0.rawValue })
-        #endif
-
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
     }
 
     /// 禁用订阅
     func disable(subscription: HolidaySubscription) throws {
-        #if DEBUG
-        print("[HolidaySubscription] before disable - enabledRegions =", enabledRegions.map { $0.rawValue })
-        #endif
         
         updateSubscription(subscription.id) {
             $0.isEnabled = false
         }
 
-        #if DEBUG
-        print("[HolidaySubscription] after disable - enabledRegions =", enabledRegions.map { $0.rawValue })
-        #endif
 
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
     }
@@ -207,10 +185,6 @@ class HolidaySubscriptionManager: ObservableObject {
             return SyncResult(totalEvents: 0, error: SubscriptionManagerError.syncInProgress)
         }
 
-        #if DEBUG
-        print("[HolidaySubscriptionManager] syncAllEnabled started")
-        #endif
-
         syncInProgress = true
         lastSyncError = nil
 
@@ -223,18 +197,8 @@ class HolidaySubscriptionManager: ObservableObject {
         let enabled = enabledSubscriptions
 
         guard !enabled.isEmpty else {
-            #if DEBUG
-            print("[HolidaySubscriptionManager] no enabled subscriptions")
-            #endif
             return SyncResult(totalEvents: 0, error: nil)
         }
-
-        #if DEBUG
-        print("[HolidaySubscriptionManager] enabled subscriptions count =", enabled.count)
-        for sub in enabled {
-            print("[HolidaySubscriptionManager] - region:", sub.region.rawValue, "URL:", sub.urlString)
-        }
-        #endif
 
         var totalEvents = 0
         var firstError: Error?
@@ -244,9 +208,6 @@ class HolidaySubscriptionManager: ObservableObject {
                 let events = try await syncSingleWithResult(subscription: subscription)
                 totalEvents += events
             } catch {
-                #if DEBUG
-                print("[HolidaySubscriptionManager] sync failed for", subscription.region.rawValue, ":", error.localizedDescription)
-                #endif
                 updateSubscription(subscription.id) {
                     $0.syncStatus = .failed
                     $0.errorMessage = error.localizedDescription
@@ -258,10 +219,6 @@ class HolidaySubscriptionManager: ObservableObject {
             }
         }
 
-        #if DEBUG
-        print("[HolidaySubscriptionManager] syncAllEnabled completed, total events =", totalEvents)
-        #endif
-
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
         
         return SyncResult(totalEvents: totalEvents, error: firstError)
@@ -269,11 +226,6 @@ class HolidaySubscriptionManager: ObservableObject {
     
     /// 同步单个订阅并返回事件数量
     private func syncSingleWithResult(subscription: HolidaySubscription) async throws -> Int {
-        #if DEBUG
-        print("[HolidaySubscriptionManager] syncSingleWithResult started for", subscription.region.rawValue)
-        print("[HolidaySubscriptionManager] URL =", subscription.urlString)
-        #endif
-
         guard let url = URL(string: subscription.urlString) else {
             throw SubscriptionManagerError.invalidURL
         }
@@ -284,28 +236,13 @@ class HolidaySubscriptionManager: ObservableObject {
         // 下载 ICS 数据
         let data = try await downloadService.download(from: url, timeout: 30, region: regionName, host: host)
 
-        #if DEBUG
-        print("[HolidaySubscriptionManager] download succeeded, data size =", data.count)
-        #endif
-
         // 解析 ICS
         let events = try await Task.detached { [parseService] in
             try parseService.parse(data: data, region: subscription.region, sourceURL: subscription.urlString)
         }.value
 
-        #if DEBUG
-        print("[HolidaySubscriptionManager] parsed holidays count =", events.count)
-        if let firstEvent = events.first {
-            print("[HolidaySubscriptionManager] first holiday =", firstEvent.name, "on", firstEvent.date)
-        }
-        #endif
-
         // 保存到缓存
         try await cacheRepository.saveEvents(events, for: subscription.region)
-
-        #if DEBUG
-        print("[HolidaySubscriptionManager] events saved to cache")
-        #endif
 
         // 更新订阅状态
         updateSubscription(subscription.id) {
@@ -313,10 +250,6 @@ class HolidaySubscriptionManager: ObservableObject {
             $0.lastUpdatedAt = Date()
             $0.errorMessage = nil
         }
-
-        #if DEBUG
-        print("[HolidaySubscriptionManager] syncSingleWithResult completed for", subscription.region.rawValue)
-        #endif
 
         NotificationCenter.default.post(name: .holidayEventsDidUpdate, object: nil)
         

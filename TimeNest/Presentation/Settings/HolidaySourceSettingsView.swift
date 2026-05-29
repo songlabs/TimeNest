@@ -11,9 +11,6 @@ struct HolidaySourceSettingsView: View {
     // MARK: - DEBUG Logging
 
     private func makeEditView(for region: HolidayRegion) -> some View {
-        #if DEBUG
-        print("[HolidaySettings] opening region =", region.rawValue)
-        #endif
         return HolidaySourceEditView(
             region: region,
             subscriptionManager: viewModel.subscriptionManager
@@ -29,9 +26,6 @@ struct HolidaySourceSettingsView: View {
                 SourceRowView(
                     subscription: subscription,
                     onTap: {
-                        #if DEBUG
-                        print("[HolidaySettings] Japan tapped - region =", subscription.region.rawValue)
-                        #endif
                         selectedRegion = subscription.region
                         showingEditSheet = true
                     }
@@ -167,38 +161,17 @@ struct HolidaySourceEditView: View {
     // MARK: - DEBUG Logging on Init
 
     private func logInit() {
-        #if DEBUG
-        if !initLogged {
-            print("[HolidaySourceEditView] init region =", region.rawValue)
-            print("[HolidaySourceEditView] subscription =", subscription != nil ? "found" : "nil")
-            print("[HolidaySourceEditView] recommendedSources =", recommendedSources.map { "\($0.region): \($0.urlString)" })
-            initLogged = true
-        }
-        #endif
     }
 
     // MARK: - DEBUG Logging Helpers
 
     private func logSaveTapped() {
-        #if DEBUG
-        print("[HolidaySourceSettings] save tapped")
-        print("[HolidaySourceSettings] region =", region.rawValue)
-        print("[HolidaySourceSettings] input urlString =", urlString)
-        print("[HolidaySourceSettings] current saved URL before =", subscription?.urlString ?? "nil")
-        #endif
     }
 
     private func logSaveSuccess(_ url: String) {
-        #if DEBUG
-        print("[HolidaySourceSettings] saved URL after =", url)
-        #endif
     }
 
     private func logTestSyncTapped() {
-        #if DEBUG
-        print("[HolidaySourceSettings] sync test tapped")
-        print("[HolidaySourceSettings] sync test URL =", urlString)
-        #endif
     }
 
     var body: some View {
@@ -286,12 +259,6 @@ struct HolidaySourceEditView: View {
         .toolbar(.hidden, for: .tabBar)
         .navigationTitle("")
         .onAppear {
-            #if DEBUG
-            if !initLogged {
-                print("[HolidaySourceEditView] body rendered region =", region.rawValue)
-                initLogged = true
-            }
-            #endif
             if !didHideTabBar {
                 tabBarVisibility.hide()
                 didHideTabBar = true
@@ -386,14 +353,8 @@ struct HolidaySourceEditView: View {
             try subscriptionManager.updateURL(for: region, newURL: savedURL)
             await subscriptionManager.syncAllEnabled()
 
-            #if DEBUG
-            print("[HolidaySourceEditView] auto-save succeeded: \(savedURL)")
-            #endif
         } catch {
             // 保存失败，显示错误提示
-            #if DEBUG
-            print("[HolidaySourceEditView] auto-save failed: \(error.localizedDescription)")
-            #endif
             errorMessage = error.localizedDescription
             showError = true
         }
@@ -423,10 +384,6 @@ struct HolidaySourceEditView: View {
                     downloadService: downloadService
                 )
 
-                #if DEBUG
-                print("[HolidaySourceSettings] downloadWithFallback returned URL =", savedURL)
-                print("[HolidaySourceSettings] data size =", data.count)
-                #endif
 
                 // 3. 验证 ICS 内容（包括 VEVENT 检查）
                 try downloadService.validateICSContent(data)
@@ -435,9 +392,6 @@ struct HolidaySourceEditView: View {
                 let parseService = ICSParseService()
                 let events = try parseService.parse(data: data, region: region, sourceURL: savedURL)
 
-                #if DEBUG
-                print("[HolidaySourceSettings] parsed events count =", events.count)
-                #endif
 
                 // 5. 确保至少解析出一个事件才允许保存
                 guard !events.isEmpty else {
@@ -447,9 +401,6 @@ struct HolidaySourceEditView: View {
                 // 6. 保存 URL（保存实际成功的 URL）
                 try subscriptionManager.updateURL(for: region, newURL: savedURL)
 
-                #if DEBUG
-                print("[HolidaySourceSettings] URL updated in subscriptionManager")
-                #endif
 
                 // 7. 成功后自动同步
                 await subscriptionManager.syncAllEnabled()
@@ -460,9 +411,6 @@ struct HolidaySourceEditView: View {
                     dismiss()
                 }
             } catch {
-                #if DEBUG
-                print("[HolidaySourceSettings] save error =", error.localizedDescription)
-                #endif
                 await MainActor.run {
                     errorMessage = error.localizedDescription
                     showError = true
@@ -481,10 +429,6 @@ struct HolidaySourceEditView: View {
         host: String,
         downloadService: ICSDownloadService
     ) async throws -> (Data, String) {
-        #if DEBUG
-        print("[HolidaySourceEditView] downloadWithFallback started")
-        print("[HolidaySourceEditView] trying URL =", url.absoluteString)
-        #endif
 
         do {
             let data = try await downloadService.download(from: url, region: regionName, host: host)
@@ -492,23 +436,14 @@ struct HolidaySourceEditView: View {
             // 验证 ICS 内容（包括 VEVENT 检查）
             try downloadService.validateICSContent(data)
             
-            #if DEBUG
-            print("[HolidaySourceEditView] initial download succeeded and validated")
-            #endif
             return (data, url.absoluteString)
         } catch EnhancedICSError.invalidHTTPStatus(let statusCode) where statusCode == 500 {
             // HTTP 500 时尝试 fallback 到 clean URL
-            #if DEBUG
-            print("[HolidaySourceEditView] HTTP 500, trying fallback to clean URL...")
-            #endif
 
             // 获取对应地区的 clean URL
             let cleanSources = HolidayRecommendedSources.sources(for: region)
             guard let cleanSource = cleanSources.first(where: { $0.isCleanVersion }) else {
                 // 没有 clean URL，直接抛出错误
-                #if DEBUG
-                print("[HolidaySourceEditView] no clean URL available for fallback")
-                #endif
                 throw EnhancedICSError.invalidHTTPStatus(statusCode)
             }
 
@@ -516,9 +451,6 @@ struct HolidaySourceEditView: View {
                 throw EnhancedICSError.invalidURL
             }
 
-            #if DEBUG
-            print("[HolidaySourceEditView] Fallback URL:", cleanURL.absoluteString)
-            #endif
 
             let data = try await downloadService.download(from: cleanURL, region: regionName, host: host)
             
@@ -526,9 +458,6 @@ struct HolidaySourceEditView: View {
             // 如果 clean URL 没有事件，抛出错误而不是保存
             try downloadService.validateICSContent(data)
             
-            #if DEBUG
-            print("[HolidaySourceEditView] fallback download succeeded and validated")
-            #endif
             return (data, cleanURL.absoluteString)
         }
     }
@@ -563,10 +492,6 @@ struct HolidaySourceEditView: View {
                 throw EnhancedICSError.invalidURL
             }
 
-            #if DEBUG
-            print("[HolidaySync] actual download URL =", url.absoluteString)
-            print("[HolidaySync] region =", region.rawValue)
-            #endif
 
             let downloadService = ICSDownloadService()
             let parseService = ICSParseService()
@@ -575,21 +500,12 @@ struct HolidaySourceEditView: View {
             let regionName = region.localizedKey
             let data = try await downloadService.download(from: url, region: regionName, host: host)
 
-            #if DEBUG
-            print("[HolidaySync] download succeeded, data size =", data.count)
-            #endif
 
             // 验证 ICS 内容
             try downloadService.validateICSContent(data)
 
             let events = try parseService.parse(data: data, region: region, sourceURL: testURLString)
 
-            #if DEBUG
-            print("[HolidaySync] parsed holidays count =", events.count)
-            if let firstEvent = events.first {
-                print("[HolidaySync] first holiday =", firstEvent.name, "on", firstEvent.date)
-            }
-            #endif
 
             if events.isEmpty {
                 errorMessage = localization.localized(.holidaySourceNoEvents)
@@ -600,9 +516,6 @@ struct HolidaySourceEditView: View {
             }
 
         } catch {
-            #if DEBUG
-            print("[HolidaySync] error =", error.localizedDescription)
-            #endif
             errorMessage = error.localizedDescription
             showError = true
         }

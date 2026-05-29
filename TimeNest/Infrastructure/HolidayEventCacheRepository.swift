@@ -115,16 +115,10 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
     }
     
     func getEvents(in range: ClosedRange<DateOnly>, for regions: [HolidayRegion]) -> [HolidayEvent] {
-        #if DEBUG
-        print("[HolidayEventCacheRepository] getEvents(in:for:) called with regions =", regions.map { $0.rawValue })
-        #endif
         
         
         // 如果 regions 为空，直接返回空数组
         guard !regions.isEmpty else {
-            #if DEBUG
-            print("[HolidayEventCacheRepository] regions is empty, returning empty array")
-            #endif
             return []
         }
         let sorted = lockQueue.sync {
@@ -137,9 +131,6 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
             return events.sorted { $0.date < $1.date }
         }
         
-        #if DEBUG
-        print("[HolidayEventCacheRepository] getEvents(in:for:) returning total =", sorted.count)
-        #endif
         
         return sorted
     }

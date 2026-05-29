@@ -39,24 +39,14 @@ class ICSParseService: ICSParsing {
     private let maxEventCount: Int = 1000
 
     func parse(data: Data, region: HolidayRegion, sourceURL: String) throws -> [HolidayEvent] {
-        #if DEBUG
-        print("[ICSParseService] parse(data:) started, data size =", data.count)
-        print("[ICSParseService] region =", region.rawValue, "sourceURL =", sourceURL)
-        #endif
 
         guard let content = String(data: data, encoding: .utf8) else {
-            #if DEBUG
-            print("[ICSParseService] failed to decode data as UTF-8")
-            #endif
             throw ICSParseError.invalidFormat
         }
         return try parse(content: content, region: region, sourceURL: sourceURL)
     }
 
     func parse(content: String, region: HolidayRegion, sourceURL: String) throws -> [HolidayEvent] {
-        #if DEBUG
-        print("[ICSParseService] parse(content:) started")
-        #endif
 
         // 1. Normalize line endings: CRLF/CR -> LF
         let normalizedContent = content
@@ -65,18 +55,12 @@ class ICSParseService: ICSParsing {
 
         let trimmedContent = normalizedContent.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedContent.isEmpty else {
-            #if DEBUG
-            print("[ICSParseService] content is empty")
-            #endif
             throw ICSParseError.emptyContent
         }
 
         // 检查 VCALENDAR 开始和结束标记
         guard trimmedContent.contains("BEGIN:VCALENDAR"),
               trimmedContent.contains("END:VCALENDAR") else {
-            #if DEBUG
-            print("[ICSParseService] invalid VCALENDAR format")
-            #endif
             throw ICSParseError.invalidFormat
         }
 
@@ -84,11 +68,6 @@ class ICSParseService: ICSParsing {
         let unfoldedLines = unfoldICSLines(text: trimmedContent)
 
         // DEBUG: body 级别日志
-        #if DEBUG
-        let veventCount = unfoldedLines.filter { $0 == "BEGIN:VEVENT" }.count
-        print("[ICSParseService] unfoldedLines count =", unfoldedLines.count)
-        print("[ICSParseService] veventCount (BEGIN:VEVENT) =", veventCount)
-        #endif
 
         var events: [HolidayEvent] = []
         var inVEvent = false
@@ -126,22 +105,6 @@ class ICSParseService: ICSParsing {
         }
 
         // 4. DEBUG logs
-        #if DEBUG
-        print("[ICSParseService] veventBlocks =", vEventCount)
-        print("[ICSParseService] parsedCount =", events.count)
-        if !firstVEventLines.isEmpty {
-            print("[ICSParseService] firstEventRaw =", firstVEventLines.prefix(20).joined(separator: "\\n"))
-        }
-        if !events.isEmpty {
-            let firstDate = events.first?.date
-            let dateStr = firstDate != nil ? "\(firstDate!.year)-\(firstDate!.month)-\(firstDate!.day)" : "nil"
-            print("[ICSParseService] firstParsedSummary =", events.first?.name ?? "nil")
-            print("[ICSParseService] firstParsedDate =", dateStr)
-        }
-        // HolidaySync 级别的日志
-        print("[HolidaySync] parsed holidays count =", events.count)
-        print("[HolidaySync] first holiday =", events.first?.name ?? "nil")
-        #endif
 
         return events
     }
@@ -236,9 +199,6 @@ class ICSParseService: ICSParsing {
 
         // 解析日期 - 支持多种 DTSTART 格式
         guard let date = parseDate(from: properties) else {
-            #if DEBUG
-            print("[ICSParseService] failed to parse date from properties:", properties)
-            #endif
             return nil  // 无法解析日期则跳过
         }
 
@@ -282,23 +242,13 @@ class ICSParseService: ICSParsing {
 
         for key in possibleKeys {
             if let dateStr = properties[key] {
-                #if DEBUG
-                print("[ICSParseService] parseDate checking key =", key, "raw value =", dateStr)
-                #endif
                 let date = parseICSDate(dateStr)
                 if date != nil {
-                    #if DEBUG
-                    print("[ICSParseService] parseDate success for key =", key, "date =", date!)
-                    #endif
                     return date
                 }
             }
         }
 
-        #if DEBUG
-        print("[ICSParseService] failed to parse date from properties:", properties)
-        print("[ICSParseService] DTSTART raw =", properties["DTSTART"] ?? "nil")
-        #endif
 
         // 尝试从 RRULE 解析（跳过重复事件）
         return nil
@@ -308,9 +258,6 @@ class ICSParseService: ICSParsing {
     private func parseICSDate(_ text: String) -> DateOnly? {
         let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        #if DEBUG
-        print("[ICSParseService] parseICSDate input =", cleaned, "count =", cleaned.count)
-        #endif
 
         // 1. 格式：YYYYMMDD (DATE 格式) - Office Holidays 标准格式
         if cleaned.count == 8, cleaned.allSatisfy({ $0.isNumber }) {
@@ -318,9 +265,6 @@ class ICSParseService: ICSParsing {
                let month = Int(cleaned.substring(from: 4, length: 2) ?? ""),
                let day = Int(cleaned.substring(from: 6, length: 2) ?? ""),
                month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-                #if DEBUG
-                print("[ICSParseService] parseICSDate matched yyyyMMdd: year=\(year), month=\(month), day=\(day)")
-                #endif
                 return DateOnly(year: year, month: month, day: day)
             }
         }
@@ -333,9 +277,6 @@ class ICSParseService: ICSParsing {
            let month = Int(cleaned.substring(from: 4, length: 2) ?? ""),
            let day = Int(cleaned.substring(from: 6, length: 2) ?? ""),
            month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-            #if DEBUG
-            print("[ICSParseService] parseICSDate matched yyyyMMddTHHmmssZ: year=\(year), month=\(month), day=\(day)")
-            #endif
             return DateOnly(year: year, month: month, day: day)
         }
 
@@ -346,9 +287,6 @@ class ICSParseService: ICSParsing {
            let month = Int(cleaned.substring(from: 4, length: 2) ?? ""),
            let day = Int(cleaned.substring(from: 6, length: 2) ?? ""),
            month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-            #if DEBUG
-            print("[ICSParseService] parseICSDate matched yyyyMMddTHHmmss: year=\(year), month=\(month), day=\(day)")
-            #endif
             return DateOnly(year: year, month: month, day: day)
         }
 
@@ -359,15 +297,9 @@ class ICSParseService: ICSParsing {
            let month = Int(cleaned.substring(from: 5, length: 2) ?? ""),
            let day = Int(cleaned.substring(from: 8, length: 2) ?? ""),
            month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-            #if DEBUG
-            print("[ICSParseService] parseICSDate matched yyyy-MM-dd: year=\(year), month=\(month), day=\(day)")
-            #endif
             return DateOnly(year: year, month: month, day: day)
         }
 
-        #if DEBUG
-        print("[ICSParseService] parseICSDate failed for input =", cleaned)
-        #endif
         return nil
     }
 
