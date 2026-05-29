@@ -63,8 +63,11 @@ struct HolidayNameLocalizer {
             .japan: [
                 // 2026 年 5 月
                 "greenery day": "みどりの日",
+                "greenery day (in lieu)": "みどりの日 振替休日",
                 "constitution memorial day": "憲法記念日",
+                "constitution memorial day (in lieu)": "憲法記念日 振替休日",
                 "childrens day": "こどもの日",
+                "childrens day (in lieu)": "こどもの日 振替休日",
                 "substitute holiday": "振替休日",
                 // 其他日本节假日
                 "new years day": "元日",
@@ -84,6 +87,7 @@ struct HolidayNameLocalizer {
             .china: [
                 // 2026 年 5 月
                 "labor day": "劳动节",
+                "labour day": "劳动节",  // 英式拼写
                 "youth day": "青年节",
                 // 其他中国节假日
                 "new years day": "元旦",
