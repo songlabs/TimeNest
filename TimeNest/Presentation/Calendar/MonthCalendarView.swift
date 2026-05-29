@@ -119,7 +119,7 @@ struct MonthCalendarView: View {
 
                     // 第 1～6 行：日期
                     ForEach(0..<6, id: \.self) { rowIndex in
-                        HStack(spacing: 0) {
+                        HStack(alignment: .top, spacing: 0) {
                             ForEach(0..<7, id: \.self) { colIndex in
                                 let dayIndex = rowIndex * 7 + colIndex
                                 if dayIndex < grid.days.count {
@@ -271,6 +271,7 @@ struct DayCellView: View {
                         .padding(.bottom, 8)
                 }
             }
+            .frame(maxHeight: .infinity)
         }
         .frame(width: cellWidth, height: cellHeight)
         .opacity(cell.isInCurrentMonth ? 1.0 : 0.5)
