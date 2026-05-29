@@ -68,6 +68,8 @@ class MonthCalendarViewModel: ObservableObject {
             NotificationCenter.default.publisher(for: .holidaySubscriptionsDidChange)
                 .sink { [weak self] _ in
                     Task { @MainActor in
+                        // 先同步最新的 enabledRegions 到 currentSetting
+                        self?.currentSetting.selectedHolidayRegions = self?.subscriptionManager.enabledRegions ?? []
                         await self?.reloadMonth()
                     }
                 },
