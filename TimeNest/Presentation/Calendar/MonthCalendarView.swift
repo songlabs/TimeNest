@@ -353,11 +353,20 @@ struct DayCellView: View {
         }
     }
     
-    /// 获取节假日显示名称数组（按 UI 语言）
+    /// 获取节假日显示名称数组（按节假日来源地区语言）
     private var holidayDisplayNames: [String] {
-        let currentLanguage = LocalizationManager.shared.currentLanguage
-        return cell.holidays.map { holiday in
-            holiday.localizedNames.localized(for: currentLanguage)
+        cell.holidays.map { holiday in
+            // 根据节假日来源地区选择对应语言名称，不显示国家前缀
+            switch holiday.region {
+            case .japan:
+                holiday.localizedNames.ja
+            case .china:
+                holiday.localizedNames.zhHans
+            case .korea:
+                holiday.localizedNames.ko
+            case .unitedStates:
+                holiday.localizedNames.enUS
+            }
         }
     }
 }

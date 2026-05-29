@@ -17,6 +17,7 @@
 		1DCD49B77F33B9C8044BD8A1 /* DisplayLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0AAE7371D9CF578DA493F53E /* DisplayLanguage.swift */; };
 		1E5A03A74BDE0F365843AF5C /* CalendarDisplayUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1D25B9002E986BD277DE4D4 /* CalendarDisplayUseCase.swift */; };
 		1ED252B2287A7D40469BCCA5 /* ImportSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = 930B04AEF751C1556AC288C0 /* ImportSource.swift */; };
+		28D01B21F9B8EBB39950A36E /* HolidayNameLocalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 531E399A4B7A63C24EDA1DE9 /* HolidayNameLocalizer.swift */; };
 		28EA7B08CE5976E1EB5EE94D /* ja.lproj in Resources */ = {isa = PBXBuildFile; fileRef = 81008528D75F27AC81D854F1 /* ja.lproj */; };
 		2A452B2BF2815D6737317826 /* zh-Hans.lproj in Resources */ = {isa = PBXBuildFile; fileRef = E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */; };
 		2A526C0EE282FEE618AF455F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 989C24E133C49121F2E0A868 /* ContentView.swift */; };
@@ -115,6 +116,7 @@
 		4603B799DA0FFFFA2C133B71 /* TabBarVisibilityState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarVisibilityState.swift; sourceTree = "<group>"; };
 		4C80166B8FCD1DC798FF5FFB /* WeekStartPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStartPolicy.swift; sourceTree = "<group>"; };
 		4D874383574C35940A031B80 /* HolidayEventCacheRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayEventCacheRepository.swift; sourceTree = "<group>"; };
+		531E399A4B7A63C24EDA1DE9 /* HolidayNameLocalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayNameLocalizer.swift; sourceTree = "<group>"; };
 		545E9AB29A6BED89BE564B67 /* LocalizedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizedText.swift; sourceTree = "<group>"; };
 		599C8A59624D80B050018C90 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
 		5CD7A38AD5074A7707015200 /* AddEventButtonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButtonRow.swift; sourceTree = "<group>"; };
@@ -457,6 +459,7 @@
 		F506844DAAC238827B3E1D03 /* Application */ = {
 			isa = PBXGroup;
 			children = (
+				531E399A4B7A63C24EDA1DE9 /* HolidayNameLocalizer.swift */,
 				CBCA63CC7C9BE89781994D7F /* HolidaySubscriptionManager.swift */,
 				7EB3554D429EC87B34B76659 /* DTO */,
 				F553DA3B046ABE540226FB84 /* UseCases */,
@@ -651,6 +654,7 @@
 				9EEC3FB24083936C2D1086FF /* Holiday.swift in Sources */,
 				0D2C383A22DD5BF451C9DCA2 /* HolidayEvent.swift in Sources */,
 				EE5F68DDE343D2BA4F836A53 /* HolidayEventCacheRepository.swift in Sources */,
+				28D01B21F9B8EBB39950A36E /* HolidayNameLocalizer.swift in Sources */,
 				0F8303A8746CC4C17898EFBA /* HolidayProviding.swift in Sources */,
 				43B231DEE6EB612DD6D63EAA /* HolidayRecommendedSource.swift in Sources */,
 				C587454E6A253CA44E1F7536 /* HolidayRegion.swift in Sources */,
