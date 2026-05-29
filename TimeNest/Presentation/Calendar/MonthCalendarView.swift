@@ -178,10 +178,9 @@ struct MonthCalendarView: View {
 
         // 横线位置（不等高行）：
         // 第 0 条：0（顶部）
-        // 第 1 条：weekdayRowHeight（星期行底部）
-        // 第 2～7 条：weekdayRowHeight + dateCellHeight * 1～6（日期行底部）
-        // 共 8 条横线
-        let horizontalLines: [CGFloat] = [0, weekdayRowHeight] + (1...6).map { weekdayRowHeight + dateCellHeight * CGFloat($0) }
+        // 第 1～6 条：weekdayRowHeight + dateCellHeight * 1～6（日期行底部）
+        // 共 7 条横线（星期行底部不绘制，避免与 WeekdayHeaderView 背景重叠）
+        let horizontalLines: [CGFloat] = [0] + (1...6).map { weekdayRowHeight + dateCellHeight * CGFloat($0) }
 
         // 竖线位置：0, cellWidth, cellWidth*2, ..., cellWidth*7 (共 8 条)
         let verticalLines: [CGFloat] = (0...7).map { CGFloat($0) * cellWidth }
