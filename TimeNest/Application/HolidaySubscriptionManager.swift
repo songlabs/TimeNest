@@ -4,27 +4,21 @@ import Combine
 /// 订阅管理器错误
 enum SubscriptionManagerError: Error, LocalizedError {
     case maxLimitExceeded
-    case minLimitRequired
     case invalidURL
     case downloadFailed(Error)
     case parseFailed(Error)
-    case noEnabledSubscriptions
     case syncInProgress
 
     var errorDescription: String? {
         switch self {
         case .maxLimitExceeded:
             return "最多只能启用 2 个订阅"
-        case .minLimitRequired:
-            return "至少需要启用 1 个订阅"
         case .invalidURL:
             return "无效的 URL"
         case .downloadFailed(let error):
             return "下载失败：\(error.localizedDescription)"
         case .parseFailed(let error):
             return "解析失败：\(error.localizedDescription)"
-        case .noEnabledSubscriptions:
-            return "没有启用的订阅"
         case .syncInProgress:
             return "同步正在进行中"
         }
@@ -44,11 +38,14 @@ struct SyncResult {
 /// 节假日订阅管理器
 @MainActor
 class HolidaySubscriptionManager: ObservableObject {
+    
+    // MARK: - Shared Instance
+    
+    static let shared = HolidaySubscriptionManager()
 
     // MARK: - Constants
 
     private let maxEnabledSubscriptions = 2
-    private let minEnabledSubscriptions = 1
     private let syncCacheThresholdHours: TimeInterval = 24 * 60 * 60  // 24 小时
 
     // MARK: - Published Properties
@@ -56,6 +53,13 @@ class HolidaySubscriptionManager: ObservableObject {
     @Published private(set) var subscriptions: [HolidaySubscription] = []
     @Published private(set) var syncInProgress = false
     @Published private(set) var lastSyncError: Error?
+    
+    // MARK: - Computed Properties
+    
+    /// 获取已启用的地区
+    var enabledRegions: [HolidayRegion] {
+        enabledSubscriptions.map { $0.region }
+    }
 
     // MARK: - Dependencies
 
@@ -97,12 +101,18 @@ class HolidaySubscriptionManager: ObservableObject {
 
     /// 获取已启用的订阅
     var enabledSubscriptions: [HolidaySubscription] {
-        subscriptions.filter { $0.isEnabled }
-    }
-
-    /// 获取已启用的地区
-    var enabledRegions: [HolidayRegion] {
-        enabledSubscriptions.map { $0.region }
+        let enabled = subscriptions.filter { $0.isEnabled }
+        #if DEBUG
+        print("[HolidaySubscriptionManager] enabledSubscriptions count =", enabled.count)
+        for sub in enabled {
+            print("[HolidaySubscriptionManager] - region:", sub.region.rawValue)
+            print("[HolidaySubscriptionManager]   isEnabled:", sub.isEnabled)
+            print("[HolidaySubscriptionManager]   url:", sub.urlString.isEmpty ? "(empty)" : sub.urlString)
+            print("[HolidaySubscriptionManager]   lastSyncAt:", sub.lastUpdatedAt?.description ?? "nil")
+            print("[HolidaySubscriptionManager]   lastSyncStatus:", sub.syncStatus.rawValue)
+        }
+        #endif
+        return enabled
     }
 
     /// 检查是否可以启用新的订阅
@@ -110,10 +120,10 @@ class HolidaySubscriptionManager: ObservableObject {
         enabledSubscriptions.count < maxEnabledSubscriptions
     }
 
-    /// 检查是否可以禁用当前订阅
+    /// 检查是否可以禁用当前订阅（允许禁用所有订阅）
     func canDisable(subscription: HolidaySubscription) -> Bool {
-        let enabledCount = subscriptions.filter { $0.isEnabled && $0.id != subscription.id }.count
-        return enabledCount >= minEnabledSubscriptions
+        // 允许禁用所有订阅，返回 true
+        return true
     }
 
     /// 启用订阅
@@ -130,18 +140,24 @@ class HolidaySubscriptionManager: ObservableObject {
             }
         }
 
+        #if DEBUG
+        print("[HolidaySubscriptionManager] enable subscription - region =", subscription.region.rawValue)
+        print("[HolidaySubscriptionManager] enabled regions after enable =", enabledRegions.map { $0.rawValue })
+        #endif
+
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
     }
 
     /// 禁用订阅
     func disable(subscription: HolidaySubscription) throws {
-        if !canDisable(subscription: subscription) {
-            throw SubscriptionManagerError.minLimitRequired
-        }
-
         updateSubscription(subscription.id) {
             $0.isEnabled = false
         }
+
+        #if DEBUG
+        print("[HolidaySubscriptionManager] disable subscription - region =", subscription.region.rawValue)
+        print("[HolidaySubscriptionManager] enabled regions after disable =", enabledRegions.map { $0.rawValue })
+        #endif
 
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
     }

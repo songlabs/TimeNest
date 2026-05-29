@@ -15,22 +15,33 @@ class MonthCalendarViewModel: ObservableObject {
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
     private var currentSetting: CalendarDisplaySetting
+    private let subscriptionManager: HolidaySubscriptionManager
 
     private var languageObserver: AnyCancellable?
+    private var subscriptionObserver: AnyCancellable?
 
     private var notificationObservers: [AnyCancellable] = []
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
-        eventUseCase: EventUseCase
+        eventUseCase: EventUseCase,
+        subscriptionManager: HolidaySubscriptionManager = .shared
     ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
-        
-        // 初始化时从 LocalizationManager 读取当前语言
+        self.subscriptionManager = subscriptionManager
+
+        // 初始化时从 LocalizationManager 读取当前语言，从订阅管理器读取已启用的地区
         let initialLanguage = LocalizationManager.shared.currentLanguage
+        let enabledRegions = subscriptionManager.enabledRegions  // 允许空数组
+        
+        #if DEBUG
+        print("[MonthCalendarViewModel] init - initialLanguage =", initialLanguage.rawValue)
+        print("[MonthCalendarViewModel] init - enabledRegions =", enabledRegions.map { $0.rawValue })
+        #endif
+        
         self.currentSetting = .init(
             displayLanguage: initialLanguage,
-            selectedHolidayRegions: [.japan],
+            selectedHolidayRegions: enabledRegions,
             weekStartPolicy: .system,
             showLunarCalendar: false
         )
@@ -39,6 +50,8 @@ class MonthCalendarViewModel: ObservableObject {
         setupLanguageObserver()
         // 监听节假日订阅变化
         setupNotificationObserver()
+        // 监听订阅管理器的 region 变化
+        setupSubscriptionObserver()
     }
 
     private func setupLanguageObserver() {
@@ -67,6 +80,40 @@ class MonthCalendarViewModel: ObservableObject {
         ]
     }
 
+    private func setupSubscriptionObserver() {
+        subscriptionObserver = subscriptionManager.$subscriptions
+            .map { $0.filter { $0.isEnabled }.map { $0.region } }
+            .removeDuplicates()
+            .sink { [weak self] newRegions in
+                #if DEBUG
+                print("[MonthCalendarViewModel] subscriptionObserver triggered")
+                print("[MonthCalendarViewModel] subscriptionObserver - newRegions =", newRegions.map { $0.rawValue })
+                print("[MonthCalendarViewModel] subscriptionObserver - current selectedHolidayRegions =", self?.currentSetting.selectedHolidayRegions.map { $0.rawValue } ?? [])
+                #endif
+                Task { @MainActor in
+                    await self?.updateHolidayRegions(newRegions)
+                }
+            }
+    }
+
+    private func updateHolidayRegions(_ newRegions: [HolidayRegion]) {
+        let currentRegions = currentSetting.selectedHolidayRegions
+        if Set(currentRegions) != Set(newRegions) {
+            #if DEBUG
+            print("[MonthCalendarViewModel] updateHolidayRegions - old =", currentRegions.map { $0.rawValue })
+            print("[MonthCalendarViewModel] updateHolidayRegions - new =", newRegions.map { $0.rawValue })
+            #endif
+            currentSetting.selectedHolidayRegions = newRegions
+            Task {
+                await reloadMonth()
+            }
+        } else {
+            #if DEBUG
+            print("[MonthCalendarViewModel] updateHolidayRegions - regions unchanged, skipping reload")
+            #endif
+        }
+    }
+
     private func updateDisplayLanguage() {
         let newLanguage = LocalizationManager.shared.currentLanguage
         if currentSetting.displayLanguage != newLanguage {
@@ -86,7 +133,19 @@ class MonthCalendarViewModel: ObservableObject {
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
 
+        #if DEBUG
+        print("[MonthCalendarViewModel] reloadMonth started")
+        print("[MonthCalendarViewModel] year =", year, "month =", month)
+        print("[MonthCalendarViewModel] displayLanguage =", currentSetting.displayLanguage.rawValue)
+        print("[MonthCalendarViewModel] selectedHolidayRegions =", currentSetting.selectedHolidayRegions.map { $0.rawValue })
+        #endif
+
         do {
+            #if DEBUG
+            print("[MonthCalendarViewModel] About to call calendarDisplayUseCase.monthGrid")
+            print("[MonthCalendarViewModel] currentSetting.selectedHolidayRegions =", currentSetting.selectedHolidayRegions.map { $0.rawValue })
+            #endif
+
             let baseGrid = try await calendarDisplayUseCase.monthGrid(
                 year: year,
                 month: month,
@@ -94,9 +153,17 @@ class MonthCalendarViewModel: ObservableObject {
             )
             // 不添加 mock 排班数据，shift 内容应由用户输入
             grid = baseGrid
+
+            #if DEBUG
+            print("[MonthCalendarViewModel] reloadMonth succeeded, grid.days count =", baseGrid.days.count)
+            #endif
         } catch {
             errorMessage = error.localizedDescription
             grid = nil
+
+            #if DEBUG
+            print("[MonthCalendarViewModel] reloadMonth failed:", error.localizedDescription)
+            #endif
         }
 
         isLoading = false
