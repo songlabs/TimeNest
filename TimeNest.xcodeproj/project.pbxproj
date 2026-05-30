@@ -574,6 +574,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					2225269E6F32DE4DDE7D53EC = {
+						DevelopmentTeam = S5NA4Y24ZD;
 						ProvisioningStyle = Automatic;
 					};
 					6D6670E3FD1E0F27727D23A9 = {
@@ -792,6 +793,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -813,6 +816,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

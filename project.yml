@@ -42,6 +42,8 @@ targets:
         SKIP_INSTALL: NO
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: S5NA4Y24ZD
     scheme:
       shared: true
       environmentVariables:
