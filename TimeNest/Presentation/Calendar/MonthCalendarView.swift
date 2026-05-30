@@ -273,7 +273,7 @@ struct DayCellView: View {
 
     private var cellBackgroundColor: Color {
         if cell.isToday {
-            return Color(red: 0.96, green: 0.98, blue: 1.0)
+            return Color(red: 0.90, green: 0.94, blue: 1.0)
         }
         return .white
     }
