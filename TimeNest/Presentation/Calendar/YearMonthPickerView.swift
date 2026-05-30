@@ -3,6 +3,7 @@ import SwiftUI
 /// Year-Month Picker Sheet for selecting year and month
 struct YearMonthPickerView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var localization: LocalizationManager
 
     let currentDate: Date
     let onSelect: (Int, Int) -> Void
@@ -31,7 +32,7 @@ struct YearMonthPickerView: View {
     var body: some View {
         VStack(spacing: 20) {
             // Title
-            Text("select_year_month")
+            Text(localization.localized(.selectYearMonth))
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundColor(.primary)
             
@@ -39,7 +40,7 @@ struct YearMonthPickerView: View {
             HStack(spacing: 16) {
                 // Year Picker
                 VStack(spacing: 8) {
-                    Text("year_label")
+                    Text(localization.localized(.yearLabel))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                     
@@ -53,9 +54,9 @@ struct YearMonthPickerView: View {
                     .frame(width: 100, height: 140)
                 }
                 
-                // Month Picker
+               // Month Picker
                 VStack(spacing: 8) {
-                    Text("month_label")
+                    Text(localization.localized(.monthLabel))
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                     
@@ -72,11 +73,11 @@ struct YearMonthPickerView: View {
             
             // Buttons
             HStack(spacing: 12) {
-                // Cancel Button
+               // Cancel Button
                 Button(action: {
                     dismiss()
                 }) {
-                    Text("common.cancel")
+                    Text(localization.localized(.cancel))
                         .font(.system(size: 15, weight: .medium))
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
@@ -90,7 +91,7 @@ struct YearMonthPickerView: View {
                     onSelect(selectedYear, selectedMonth)
                     dismiss()
                 }) {
-                    Text("common.ok")
+                    Text(localization.localized(.ok))
                         .font(.system(size: 15, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
@@ -104,17 +105,7 @@ struct YearMonthPickerView: View {
     }
     
     private func monthLabel(for month: Int) -> String {
-        let calendar = Calendar(identifier: .gregorian)
-        var components = DateComponents()
-        components.year = selectedYear
-        components.month = month
-        if let date = calendar.date(from: components) {
-            let formatter = DateFormatter()
-            formatter.locale = Locale.current
-            formatter.dateFormat = "M"
-            return formatter.string(from: date)
-        }
-        return "\(month)"
+        localization.monthName(for: month)
     }
 }
 

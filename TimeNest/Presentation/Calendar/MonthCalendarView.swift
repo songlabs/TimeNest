@@ -3,6 +3,7 @@ import SwiftUI
 struct MonthCalendarView: View {
     @StateObject private var viewModel: MonthCalendarViewModel
     @State private var showingYearMonthPicker = false
+    @EnvironmentObject private var localization: LocalizationManager
 
     init(calendarDisplayUseCase: CalendarDisplayUseCase, eventUseCase: EventUseCase) {
         _viewModel = StateObject(
@@ -67,6 +68,7 @@ struct MonthCalendarView: View {
                     await viewModel.goToMonth(year: year, month: month)
                 }
             }
+            .environmentObject(localization)
         }
         .sheet(isPresented: $viewModel.showingEventEditor) {
             EventEditorView(
