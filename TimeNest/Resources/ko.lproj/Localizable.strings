@@ -68,6 +68,12 @@
 "common.detail" = "상세";
 "common.done" = "완료";
 "common.reset" = "기본값으로 복원";
+"common.today" = "오늘";
+
+/* Year Month Picker */
+"picker.select_year_month" = "년월 선택";
+"picker.year_label" = "년";
+"picker.month_label" = "월";
 
 /* Event Editor */
 "editor.title" = "제목";

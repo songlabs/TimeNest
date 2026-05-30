@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MonthCalendarView: View {
     @StateObject private var viewModel: MonthCalendarViewModel
+    @State private var showingYearMonthPicker = false
 
     init(calendarDisplayUseCase: CalendarDisplayUseCase, eventUseCase: EventUseCase) {
         _viewModel = StateObject(
@@ -29,6 +30,14 @@ struct MonthCalendarView: View {
                         Task {
                             await viewModel.goToNextMonth()
                         }
+                    },
+                    onTodayTapped: {
+                        Task {
+                            await viewModel.goToToday()
+                        }
+                    },
+                    onTitleTapped: {
+                        showingYearMonthPicker = true
                     }
                 )
 
@@ -50,6 +59,13 @@ struct MonthCalendarView: View {
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
+            }
+        }
+        .sheet(isPresented: $showingYearMonthPicker) {
+            YearMonthPickerView(currentDate: viewModel.selectedDate) { year, month in
+                Task {
+                    await viewModel.goToMonth(year: year, month: month)
+                }
             }
         }
         .sheet(isPresented: $viewModel.showingEventEditor) {

@@ -163,6 +163,19 @@ class MonthCalendarViewModel: ObservableObject {
         await reloadMonth()
     }
 
+    func goToMonth(year: Int, month: Int) async {
+        let calendar = Calendar(identifier: .gregorian)
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = 1
+        
+        if let newDate = calendar.date(from: components) {
+            selectedDate = newDate
+            await reloadMonth()
+        }
+    }
+
     func createEvent(title: String, date: Date, isAllDay: Bool) async throws {
         let calendar = Calendar(identifier: .gregorian)
         let startDate: Date

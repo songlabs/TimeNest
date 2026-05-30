@@ -68,6 +68,12 @@
 "common.detail" = "詳細";
 "common.done" = "完了";
 "common.reset" = "デフォルトにリセット";
+"common.today" = "今日";
+
+/* Year Month Picker */
+"picker.select_year_month" = "年月を選択";
+"picker.year_label" = "年";
+"picker.month_label" = "月";
 
 /* Event Editor */
 "editor.title" = "タイトル";

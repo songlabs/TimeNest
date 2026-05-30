@@ -68,6 +68,12 @@
 "common.detail" = "Details";
 "common.done" = "Done";
 "common.reset" = "Reset to Default";
+"common.today" = "Today";
+
+/* Year Month Picker */
+"picker.select_year_month" = "Select Year-Month";
+"picker.year_label" = "Year";
+"picker.month_label" = "Month";
 
 /* Event Editor */
 "editor.title" = "Title";

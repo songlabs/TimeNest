@@ -68,6 +68,12 @@
 "common.detail" = "详细";
 "common.done" = "完成";
 "common.reset" = "恢复默认";
+"common.today" = "今天";
+
+/* Year Month Picker */
+"picker.select_year_month" = "选择年月";
+"picker.year_label" = "年";
+"picker.month_label" = "月";
 
 /* Event Editor */
 "editor.title" = "标题";

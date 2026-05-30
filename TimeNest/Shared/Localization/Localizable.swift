@@ -77,6 +77,13 @@ enum LocalizedString: String {
     case detail = "common.detail"
     case done = "common.done"
     case reset = "common.reset"
+    case today = "common.today"
+    
+    // MARK: - Year Month Picker
+    
+    case selectYearMonth = "picker.select_year_month"
+    case yearLabel = "picker.year_label"
+    case monthLabel = "picker.month_label"
 
     // MARK: - Holiday Region Selection
 
