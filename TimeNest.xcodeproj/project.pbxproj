@@ -48,6 +48,7 @@
 		889EC769BE998CF66CC585FF /* MockReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = B634CD84962FD7D8064CAE65 /* MockReminderScheduler.swift */; };
 		8E524015AE53AC0BF2FD1FE1 /* ReminderTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4DBE2129C2403B064D8C0CB /* ReminderTemplate.swift */; };
 		92088F63F36701396CE8C4FD /* BottomTabBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1105BE29C0D768F231940282 /* BottomTabBarView.swift */; };
+		9244E98DE66883F611849ADD /* YearMonthPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C907B87645C90FCC613D96CE /* YearMonthPickerView.swift */; };
 		92912AB1C1197E29BB5229A9 /* HolidaySubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = 45DC2F8ABC0C12427F9D25FB /* HolidaySubscription.swift */; };
 		93EEE118E32D15D0185CAD37 /* AdBannerPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02CE474A2B66E0B8BD58BB72 /* AdBannerPlaceholderView.swift */; };
 		996823798FAE09F2030AD0E0 /* WeatherProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74FAF6DFBA5FFD0C3D513BB1 /* WeatherProviding.swift */; };
@@ -122,13 +123,13 @@
 		5CD7A38AD5074A7707015200 /* AddEventButtonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButtonRow.swift; sourceTree = "<group>"; };
 		5D8594EFD3EEC9D785D70FC1 /* HolidayUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayUseCase.swift; sourceTree = "<group>"; };
 		5EE07A17F3762284F455C9D8 /* SelectedDateDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedDateDetailView.swift; sourceTree = "<group>"; };
-		5FEAA0FECE743D61878BE79D /* TimeNest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		5FEAA0FECE743D61878BE79D /* TimeNest.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		67ADAD077EA077DD836ECFDF /* ReminderScheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduling.swift; sourceTree = "<group>"; };
 		735689838CC2044510B86E90 /* ReminderUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderUseCase.swift; sourceTree = "<group>"; };
 		74FAF6DFBA5FFD0C3D513BB1 /* WeatherProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherProviding.swift; sourceTree = "<group>"; };
 		7B9F2159B932C688AE90B53F /* TimeNestTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TimeNestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EF9C9B46FBE954C36BF0CB8 /* HolidaySubscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscriptionSettingsView.swift; sourceTree = "<group>"; };
-		81008528D75F27AC81D854F1 /* ja.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ja.lproj; sourceTree = "<group>"; };
+		81008528D75F27AC81D854F1 /* ja.lproj */ = {isa = PBXFileReference; path = ja.lproj; sourceTree = "<group>"; };
 		8A3C86D3041C26844E7991D5 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		8CD23027255CFC9D1EE49C5C /* InMemoryEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryEventRepository.swift; sourceTree = "<group>"; };
 		930B04AEF751C1556AC288C0 /* ImportSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSource.swift; sourceTree = "<group>"; };
@@ -146,6 +147,7 @@
 		BB7D1FCDFE583F4CADA13A0B /* Localizable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localizable.swift; sourceTree = "<group>"; };
 		C335AB34F6D0357AA0E30AF2 /* EventOccurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventOccurrence.swift; sourceTree = "<group>"; };
 		C4AAB341E4A8A28E14B0536C /* SelectedDateInfoBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedDateInfoBarView.swift; sourceTree = "<group>"; };
+		C907B87645C90FCC613D96CE /* YearMonthPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearMonthPickerView.swift; sourceTree = "<group>"; };
 		C91D5AD374D4C50C5C0A52A6 /* ICSParseServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSParseServiceTests.swift; sourceTree = "<group>"; };
 		C9EF37B2E1D6F0B7A9EBB589 /* CalendarLocalizationUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLocalizationUseCase.swift; sourceTree = "<group>"; };
 		CA45497203607D5D1B0506E8 /* HolidayType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayType.swift; sourceTree = "<group>"; };
@@ -161,15 +163,15 @@
 		D9DEA1E3A69AB607D62E1E69 /* HolidayRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRegion.swift; sourceTree = "<group>"; };
 		DF46837BBCDCF4238367EE27 /* ReminderStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStatus.swift; sourceTree = "<group>"; };
 		E529D090684264185A62D2DD /* BundleHolidayProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleHolidayProvider.swift; sourceTree = "<group>"; };
-		E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
+		E6C697DBAC450BBBF2638215 /* zh-Hans.lproj */ = {isa = PBXFileReference; path = "zh-Hans.lproj"; sourceTree = "<group>"; };
 		E78AC648768A087EBFC5FAF0 /* HolidayRecommendedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRecommendedSource.swift; sourceTree = "<group>"; };
-		E9CEA7091890BFAB3C7B58EF /* en.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = en.lproj; sourceTree = "<group>"; };
+		E9CEA7091890BFAB3C7B58EF /* en.lproj */ = {isa = PBXFileReference; path = en.lproj; sourceTree = "<group>"; };
 		EA537673E0FB2CA5435DF0F1 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EC4BC937DED38ACC686A57B4 /* ImportSourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSourceType.swift; sourceTree = "<group>"; };
 		EDD535FD2A3A66B1639FAE1F /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarView.swift; sourceTree = "<group>"; };
 		F556AE27004F0D2E0520B852 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		F786127B6D78F95EC1A11570 /* ReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRepository.swift; sourceTree = "<group>"; };
-		FD009AC9340826530FB78B78 /* ko.lproj */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ko.lproj; sourceTree = "<group>"; };
+		FD009AC9340826530FB78B78 /* ko.lproj */ = {isa = PBXFileReference; path = ko.lproj; sourceTree = "<group>"; };
 		FD81A481736AFAF2E5FBF110 /* EventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRepository.swift; sourceTree = "<group>"; };
 		FF6423E12AEFF20549A1DB96 /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -383,6 +385,7 @@
 				5EE07A17F3762284F455C9D8 /* SelectedDateDetailView.swift */,
 				C4AAB341E4A8A28E14B0536C /* SelectedDateInfoBarView.swift */,
 				9AF5DE3632C0B3995E70548A /* WeekdayHeaderView.swift */,
+				C907B87645C90FCC613D96CE /* YearMonthPickerView.swift */,
 			);
 			path = Calendar;
 			sourceTree = "<group>";
@@ -696,6 +699,7 @@
 				996823798FAE09F2030AD0E0 /* WeatherProviding.swift in Sources */,
 				D594A6245E016952B851D0FA /* WeekStartPolicy.swift in Sources */,
 				4ACEB9475F21BE11EB3AC70B /* WeekdayHeaderView.swift in Sources */,
+				9244E98DE66883F611849ADD /* YearMonthPickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -788,7 +792,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -810,7 +813,6 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				DEVELOPMENT_TEAM = S5NA4Y24ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;

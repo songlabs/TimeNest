@@ -38,12 +38,12 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
         // 加载现有缓存
         loadAllCaches()
     }
-    
+
     /// 获取缓存文件 URL
     private func cacheFileURL(for region: HolidayRegion) -> URL {
         cacheDirectory.appendingPathComponent("\(region.rawValue)_holidays.json")
     }
-    
+
     /// 加载所有缓存
     private func loadAllCaches() {
         for region in HolidayRegion.allCases {
@@ -54,43 +54,43 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
             }
         }
     }
-    
+
     /// 保存单个地区的缓存
     private func saveCache(for region: HolidayRegion) throws {
         guard let cache = cache[region.rawValue] else { return }
-        
+
         let fileURL = cacheFileURL(for: region)
         let data = try JSONEncoder().encode(cache)
         try data.write(to: fileURL)
     }
-    
+
     // MARK: - Public Methods
-    
+
     func saveEvents(_ events: [HolidayEvent], for region: HolidayRegion) async throws {
-        try await Task.detached(priority: .background) { [weak self] in
-            guard let self = self else { return }
-            
-            self.lockQueue.async(flags: .barrier) {
-                var existingCache = self.cache[region.rawValue] ?? HolidayEventCache()
-                
-                // 移除该地区已有的旧事件
-                existingCache.events.removeAll { $0.region == region }
-                
-                // 添加新事件
-                existingCache.events.append(contentsOf: events)
-                existingCache.lastSyncedAt = Date()
-                
+        try await Task.detached(priority: .background) { [cacheDirectory = self.cacheDirectory, lockQueue = self.lockQueue, cache = self.cache] in
+            var existingCache = cache[region.rawValue] ?? HolidayEventCache()
+
+            // 移除该地区已有的旧事件
+            existingCache.events.removeAll { $0.region == region }
+
+            // 添加新事件
+            existingCache.events.append(contentsOf: events)
+            existingCache.lastSyncedAt = Date()
+
+            // 保存到文件
+            let fileURL = cacheDirectory.appendingPathComponent("\(region.rawValue)_holidays.json")
+            let data = try JSONEncoder().encode(existingCache)
+            try data.write(to: fileURL)
+
+            lockQueue.async(flags: .barrier) {
                 self.cache[region.rawValue] = existingCache
-                
-                // 保存到文件
-                try? self.saveCache(for: region)
             }
         }.value
     }
-    
+
     func getEvents(for regions: [HolidayRegion]) -> [HolidayEvent] {
         var events: [HolidayEvent] = []
-        
+
         lockQueue.sync {
             for region in regions {
                 if let cache = self.cache[region.rawValue] {
@@ -98,10 +98,10 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
                 }
             }
         }
-        
+
         return events.sorted { $0.date < $1.date }
     }
-    
+
     func getEvents(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] {
         lockQueue.sync {
             var events: [HolidayEvent] = []
@@ -113,10 +113,8 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
             return events
         }
     }
-    
+
     func getEvents(in range: ClosedRange<DateOnly>, for regions: [HolidayRegion]) -> [HolidayEvent] {
-        
-        
         // 如果 regions 为空，直接返回空数组
         guard !regions.isEmpty else {
             return []
@@ -130,27 +128,25 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
             }
             return events.sorted { $0.date < $1.date }
         }
-        
-        
+
         return sorted
     }
-    
+
     func clearEvents() async throws {
-        try await Task.detached(priority: .background) { [weak self] in
-            guard let self = self else { return }
-            
-            self.lockQueue.async(flags: .barrier) {
+        try await Task.detached(priority: .background) { [cacheDirectory = self.cacheDirectory, lockQueue = self.lockQueue] in
+            // Clear cache
+            lockQueue.async(flags: .barrier) {
                 self.cache.removeAll()
-                
-                // 删除所有缓存文件
-                for region in HolidayRegion.allCases {
-                    let fileURL = self.cacheFileURL(for: region)
-                    try? self.fileManager.removeItem(at: fileURL)
-                }
+            }
+
+            // Delete all cache files
+            for region in HolidayRegion.allCases {
+                let fileURL = cacheDirectory.appendingPathComponent("\(region.rawValue)_holidays.json")
+                try? FileManager.default.removeItem(at: fileURL)
             }
         }.value
     }
-    
+
     func getLastSyncTime(for region: HolidayRegion) -> Date? {
         lockQueue.sync {
             return self.cache[region.rawValue]?.lastSyncedAt

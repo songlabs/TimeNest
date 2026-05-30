@@ -3,28 +3,29 @@ import SwiftUI
 /// Year-Month Picker Sheet for selecting year and month
 struct YearMonthPickerView: View {
     @Environment(\.dismiss) private var dismiss
-    
-    let currentYear: Int
-    let currentMonth: Int
-    let onConfirm: (Int, Int) -> Void
-    
+
+    let currentDate: Date
+    let onSelect: (Int, Int) -> Void
+
     @State private var selectedYear: Int
     @State private var selectedMonth: Int
-    
+
     private let yearRange: ClosedRange<Int>
     private let monthRange = 1...12
-    
-    init(currentDate: Date, onConfirm: @escaping (Int, Int) -> Void) {
+
+    init(currentDate: Date, onSelect: @escaping (Int, Int) -> Void) {
+        self.currentDate = currentDate
+        self.onSelect = onSelect
+
         let calendar = Calendar(identifier: .gregorian)
-        self.currentYear = calendar.component(.year, from: currentDate)
-        self.currentMonth = calendar.component(.month, from: currentDate)
-        self.onConfirm = onConfirm
-        
-        self.selectedYear = self.currentYear
-        self.selectedMonth = self.currentMonth
-        
+        let year = calendar.component(.year, from: currentDate)
+        let month = calendar.component(.month, from: currentDate)
+
+        self.selectedYear = year
+        self.selectedMonth = month
+
         // Year range: current year ± 10 years
-        self.yearRange = (currentYear - 10)...(currentYear + 10)
+        self.yearRange = (year - 10)...(year + 10)
     }
     
     var body: some View {
@@ -86,7 +87,7 @@ struct YearMonthPickerView: View {
                 
                 // Confirm Button
                 Button(action: {
-                    onConfirm(selectedYear, selectedMonth)
+                    onSelect(selectedYear, selectedMonth)
                     dismiss()
                 }) {
                     Text("common.ok")
@@ -120,9 +121,9 @@ struct YearMonthPickerView: View {
 // MARK: - Preview
 
 #Preview {
-    YearMonthPickerView(currentDate: Date()) { year, month in
+    YearMonthPickerView(currentDate: Date(), onSelect: { year, month in
         print("Selected: \(year)-\(month)")
-    }
+    })
     .padding()
     .background(ShiftCalendarColors.backgroundColor)
 }

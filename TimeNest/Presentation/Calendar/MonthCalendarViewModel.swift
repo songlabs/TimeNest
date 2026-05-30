@@ -24,17 +24,16 @@ class MonthCalendarViewModel: ObservableObject {
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
         eventUseCase: EventUseCase,
-        subscriptionManager: HolidaySubscriptionManager = .shared
+        subscriptionManager: HolidaySubscriptionManager? = nil
     ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
-        self.subscriptionManager = subscriptionManager
+        self.subscriptionManager = subscriptionManager ?? .shared
 
         // 初始化时从 LocalizationManager 读取当前语言，从订阅管理器读取已启用的地区
         let initialLanguage = LocalizationManager.shared.currentLanguage
-        let enabledRegions = subscriptionManager.enabledRegions  // 允许空数组
-        
-        
+        let enabledRegions = self.subscriptionManager.enabledRegions  // 允许空数组
+
         self.currentSetting = .init(
             displayLanguage: initialLanguage,
             selectedHolidayRegions: enabledRegions,
@@ -53,7 +52,7 @@ class MonthCalendarViewModel: ObservableObject {
     private func setupLanguageObserver() {
         languageObserver = LocalizationManager.shared.$selectedLanguageCode
             .sink { [weak self] _ in
-                Task { @MainActor in await 
+                Task { @MainActor in
                     self?.updateDisplayLanguage()
                 }
             }
@@ -85,9 +84,7 @@ class MonthCalendarViewModel: ObservableObject {
     /// 同步节假日地区并重新加载月份（统一入口）
     private func syncHolidayRegionsAndReload() async {
         let newRegions = subscriptionManager.enabledRegions
-        let oldRegions = currentSetting.selectedHolidayRegions
-        
-        
+
         currentSetting.selectedHolidayRegions = newRegions
         await reloadMonth()
     }
@@ -111,9 +108,7 @@ class MonthCalendarViewModel: ObservableObject {
         let year = calendar.component(.year, from: selectedDate)
         let month = calendar.component(.month, from: selectedDate)
 
-
         do {
-
             let baseGrid = try await calendarDisplayUseCase.monthGrid(
                 year: year,
                 month: month,
@@ -169,7 +164,7 @@ class MonthCalendarViewModel: ObservableObject {
         components.year = year
         components.month = month
         components.day = 1
-        
+
         if let newDate = calendar.date(from: components) {
             selectedDate = newDate
             await reloadMonth()
