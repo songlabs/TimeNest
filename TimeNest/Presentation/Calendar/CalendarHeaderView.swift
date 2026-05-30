@@ -24,7 +24,7 @@ struct CalendarHeaderView: View {
 
             // 中央年月 - "2026 年 5 月" 格式
             Text(title)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 30, weight: .bold))
                 .foregroundColor(ShiftCalendarColors.primaryText)
 
             Spacer(minLength: 4)
@@ -61,6 +61,7 @@ struct CalendarHeaderView: View {
             }
         }
         .padding(.horizontal, 12)
+        .padding(.vertical, 12)
         .frame(height: ShiftCalendarLayout.headerHeight)
         .background(ShiftCalendarColors.backgroundColor)
     }

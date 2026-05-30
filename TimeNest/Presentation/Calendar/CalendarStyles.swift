@@ -107,8 +107,8 @@ extension EventMarkerType {
 // MARK: - ナスカレ风格 布局常量
 
 struct ShiftCalendarLayout {
-    // Header 高度 - 压缩到 50pt
-    static let headerHeight: CGFloat = 50
+    // Header 高度 - 增加至 64pt，提供更充足的上下留白
+    static let headerHeight: CGFloat = 64
 
     // 星期行高度（网格内）- 32pt
     static let weekdayRowHeight: CGFloat = 32
