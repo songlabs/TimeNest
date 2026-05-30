@@ -116,8 +116,8 @@ struct ShiftCalendarLayout {
     // 月历网格
     static let calendarGridTopMargin: CGFloat = 0
     static let calendarGridHorizontalPadding: CGFloat = 0
-    static let dayCellMinHeight: CGFloat = 70
-    static let dayCellRecommendedHeight: CGFloat = 85
+    static let dayCellMinHeight: CGFloat = 88
+    static let dayCellRecommendedHeight: CGFloat = 105
 
     // 表格网格线
     static let gridLineWidth: CGFloat = 0.5

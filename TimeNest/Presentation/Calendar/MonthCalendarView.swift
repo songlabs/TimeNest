@@ -96,13 +96,12 @@ struct MonthCalendarView: View {
             // 月历表格 - 最大化占据空间
             GeometryReader { geometry in
                 let headerHeight: CGFloat = ShiftCalendarLayout.headerHeight
-                let infoBarHeight: CGFloat = ShiftCalendarLayout.selectedDateInfoHeight
                 let adBannerHeight: CGFloat = ShiftCalendarLayout.adBannerHeight
                 let tabBarHeight: CGFloat = ShiftCalendarLayout.tabBarHeight
                 let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
 
-                // 可用高度 = 总高度 - header - infoBar - adBanner - tabBar
-                let availableHeight = geometry.size.height - headerHeight - infoBarHeight - adBannerHeight - tabBarHeight
+                // 可用高度 = 总高度 - header - adBanner - tabBar
+                let availableHeight = geometry.size.height - headerHeight - adBannerHeight - tabBarHeight
                 // 星期行固定高度 + 6 行日期
                 let dateCellHeight = max(ShiftCalendarLayout.dayCellMinHeight, (availableHeight - weekdayRowHeight) / 6.0)
                 let containerWidth = geometry.size.width
@@ -162,9 +161,6 @@ struct MonthCalendarView: View {
             }
             .frame(maxHeight: .infinity)
 
-            // 选中日期信息条
-            selectedDateInfoBar(for: grid)
-
             // 广告 banner 占位
             AdBannerPlaceholderView()
         }
@@ -201,28 +197,7 @@ struct MonthCalendarView: View {
         .stroke(ShiftCalendarColors.gridLineColor, lineWidth: lineWidth)
     }
 
-    @ViewBuilder
-    private func selectedDateInfoBar(for grid: MonthGrid) -> some View {
-        if let selectedCell = viewModel.selectedDayCell {
-            SelectedDateInfoBarView(
-                cell: selectedCell,
-                onDetailTapped: {
-                    viewModel.showingDayDetail = true
-                }
-            )
-        } else {
-            // 默认显示今天
-            if let todayCell = grid.days.first(where: { $0.isToday }) {
-                SelectedDateInfoBarView(
-                    cell: todayCell,
-                    onDetailTapped: {
-                        viewModel.showingDayDetail = true
-                    }
-                )
-            }
-        }
-    }
-}
+ }
 
 // MARK: - DayCellView
 
