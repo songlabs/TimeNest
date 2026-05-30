@@ -29,9 +29,6 @@ struct MonthCalendarView: View {
                         Task {
                             await viewModel.goToNextMonth()
                         }
-                    },
-                    onAddButtonTapped: {
-                        viewModel.showingEventEditor = true
                     }
                 )
 
