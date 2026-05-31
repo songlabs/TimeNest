@@ -94,41 +94,62 @@ struct HolidayNameLocalizer {
         ChinaHoliday(canonicalName: "春节", aliases: [
             "spring festival", "spring festival holiday", "spring festival holiday 1",
             "spring festival holiday 2", "spring festival holiday 3", "spring festival holiday 4",
-            "spring festival holiday 5", "chinese new year", "chinese new year holiday",
-            "lunar new year", "lunar new year holiday"
+            "spring festival holiday 5", "spring festival holiday 6", "spring festival holiday 7",
+            "chinese new year", "chinese new year holiday",
+            "lunar new year", "lunar new year holiday",
+            "chinese new year's eve", "lunar new year's eve", "spring festival eve",
+            "chinese new year holiday 2", "chinese new year holiday 3", "chinese new year holiday 4",
+            "chinese new year holiday 5", "chinese new year holiday 6", "chinese new year holiday 7",
+            "lunar new year holiday 2", "lunar new year holiday 3", "lunar new year holiday 4",
+            "lunar new year holiday 5", "lunar new year holiday 6", "lunar new year holiday 7",
+            "spring festival golden week holiday"
         ]),
         // 清明节相关
         ChinaHoliday(canonicalName: "清明节", aliases: [
             "qingming festival", "ching ming festival", "qing ming festival",
             "tomb sweeping day", "tomb-sweeping day", "ching ming festival holiday",
-            "qingming festival holiday"
+            "qingming festival holiday", "ching ming festival (in lieu)",
+            "qingming festival (in lieu)", "tomb sweeping day (in lieu)"
         ]),
-        // 劳动节相关（已清理重复 alias：international workers day / workers day 各只保留无 apostrophe 版本）
+        // 劳动节相关
         ChinaHoliday(canonicalName: "劳动节", aliases: [
             "labor day", "labour day", "labour day holiday", "labor day holiday",
             "labour day holiday 1", "labour day holiday 2", "labour day holiday 3",
+            "labour day holiday 4", "labour day holiday 5",
             "labor day holiday 1", "labor day holiday 2", "labor day holiday 3",
-            "international workers day", "workers day"
+            "labor day holiday 4", "labor day holiday 5",
+            "international workers day", "workers day",
+            "may day", "may day holiday", "international labour day", "international labor day"
         ]),
         // 端午节相关
         ChinaHoliday(canonicalName: "端午节", aliases: [
-            "dragon boat festival", "dragon boat festival holiday", "tuen ng festival",
-            "tuen ng festival holiday"
+            "dragon boat festival", "dragon boat festival holiday", "dragon boat festival holiday 1",
+            "dragon boat festival holiday 2", "dragon boat festival holiday 3",
+            "dragon boat holiday", "tuen ng festival", "tuen ng festival holiday"
         ]),
-        // 中秋节相关（已清理重复 alias）
+        // 中秋节相关
         ChinaHoliday(canonicalName: "中秋节", aliases: [
             "mid-autumn festival", "mid autumn festival", "mid-autumn festival holiday",
-            "moon festival"
+            "mid-autumn festival holiday 1", "mid-autumn festival holiday 2", "mid-autumn festival holiday 3",
+            "mid autumn festival holiday 1", "mid autumn festival holiday 2", "mid autumn festival holiday 3",
+            "moon festival", "moon festival holiday"
         ]),
         // 国庆节相关
         ChinaHoliday(canonicalName: "国庆节", aliases: [
-            "national day", "chinese national day", "national day holiday",
-            "national day holiday 1", "national day holiday 2", "national day holiday 3",
-            "golden week holiday", "golden week"
+            "national day", "chinese national day", "chinese national day holiday",
+            "national day holiday", "national day holiday 1", "national day holiday 2",
+            "national day holiday 3", "national day holiday 4", "national day holiday 5",
+            "national day holiday 6", "national day holiday 7",
+            "chinese national day holiday 1", "chinese national day holiday 2",
+            "chinese national day holiday 3", "chinese national day holiday 4",
+            "chinese national day holiday 5", "chinese national day holiday 6",
+            "chinese national day holiday 7",
+            "golden week holiday", "golden week", "national day golden week holiday"
         ]),
         // 元旦相关
         ChinaHoliday(canonicalName: "元旦", aliases: [
-            "new years day", "new year holiday", "new year's day"
+            "new years day", "new year holiday", "new year's day",
+            "day after new years day holiday", "day after new year's day holiday"
         ]),
         // 其他中国节假日
         ChinaHoliday(canonicalName: "青年节", aliases: ["youth day"]),
@@ -179,15 +200,24 @@ struct HolidayNameLocalizer {
             ("coming of age day", "成人の日"),
             ("national foundation day", "建国記念の日"),
             ("emperors birthday", "天皇誕生日"),
+            ("the emperors birthday", "天皇誕生日"),
             ("vernal equinox day", "春分の日"),
+            ("vernal equinox day (in lieu)", "春分の日 振替休日"),
             ("showa day", "昭和の日"),
             ("marine day", "海の日"),
             ("mountain day", "山の日"),
             ("respect for the aged day", "敬老の日"),
             ("autumnal equinox day", "秋分の日"),
+            ("health-sports day", "スポーツの日"),
+            ("health sports day", "スポーツの日"),
             ("sports day", "スポーツの日"),
             ("culture day", "文化の日"),
-            ("thanksgiving day", "勤労感謝の日")
+            ("labour thanksgiving day", "勤労感謝の日"),
+            ("labor thanksgiving day", "勤労感謝の日"),
+            ("thanksgiving day", "勤労感謝の日"),
+            // Silver Week 相关
+            ("extra holiday for silver week", "シルバーウィーク 振替休日"),
+            ("silver week", "シルバーウィーク")
         ]
         for (key, value) in mappings {
             let normalizedKey = key.lowercased()
@@ -207,14 +237,30 @@ struct HolidayNameLocalizer {
             // 2026 年 5 月
             ("childrens day", "어린이날"),
             ("buddhas birthday", "부처님 오신 날"),
+            ("buddhas birthday (in lieu)", "부처님 오신 날 振替休日"),
             // 其他韩国节假日
-            ("new years day", "새해"),
+            ("new years day", "신정"),
             ("lunar new year", "설날"),
+            ("korean new year", "설날"),
+            ("korean new year holiday", "설날"),
             ("independence movement day", "3·1절"),
+            ("march 1st movement", "3·1 절"),
+            ("march 1st movement (in lieu)", "3·1 절 振替休日"),
             ("constitution day", "제헌절"),
             ("victory day", "광복절"),
+            ("liberation day", "광복절"),
+            ("liberation day (in lieu)", "광복절 振替休日"),
+            ("memorial day", "현충일"),
+            ("national foundation day", "개천절"),
+            ("national foundation day (in lieu)", "개천절 振替休日"),
+            ("hangul day", "한글날"),
+            ("hangeul day", "한글날"),
             ("chuseok", "추석"),
-            ("hangul day", "한글날")
+            ("harvest festival", "추수감사절"),
+            ("harvest festival holiday", "추수감사절"),
+            ("christmas day", "크리스마스"),
+            ("labor day", "노동절"),
+            ("labour day", "노동절")
         ]
         for (key, value) in mappings {
             let normalizedKey = key.lowercased()
@@ -234,14 +280,30 @@ struct HolidayNameLocalizer {
             ("new years day", "New Year's Day"),
             ("martin luther king jr day", "Martin Luther King Jr. Day"),
             ("presidents day", "Presidents' Day"),
+            ("president's day", "Presidents' Day"),
             ("memorial day", "Memorial Day"),
             ("independence day", "Independence Day"),
+            ("independence day (in lieu)", "Independence Day 振替休日"),
             ("labor day", "Labor Day"),
             ("columbus day", "Columbus Day"),
+            ("columbus day (regional holiday)", "Columbus Day"),
             ("halloween", "Halloween"),
             ("veterans day", "Veterans Day"),
+            ("veterans' day", "Veterans Day"),
+            ("veterans day (regional holiday)", "Veterans Day"),
+            ("veterans' day (regional holiday)", "Veterans Day"),
             ("thanksgiving", "Thanksgiving"),
-            ("christmas", "Christmas")
+            ("thanksgiving day", "Thanksgiving"),
+            ("day after thanksgiving", "Black Friday"),
+            ("day after thanksgiving (regional holiday)", "Black Friday"),
+            ("christmas", "Christmas"),
+            ("christmas day", "Christmas"),
+            ("juneteenth", "Juneteenth"),
+            ("juneteenth (regional holiday)", "Juneteenth"),
+            ("juneteenth (in lieu)", "Juneteenth 振替休日"),
+            ("juneteenth (in lieu) (regional holiday)", "Juneteenth 振替休日"),
+            ("us indigenous people's day", "Indigenous People's Day"),
+            ("us indigenous people's day (regional holiday)", "Indigenous People's Day")
         ]
         for (key, value) in mappings {
             let normalizedKey = key.lowercased()
