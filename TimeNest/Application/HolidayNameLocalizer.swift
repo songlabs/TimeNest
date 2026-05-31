@@ -63,6 +63,7 @@ struct HolidayNameLocalizer {
     private func normalizeName(_ name: String) -> String {
         name
             .replacingOccurrences(of: "'", with: "")  // 去掉 apostrophe
+            .replacingOccurrences(of: "-", with: " ")  // 连字符转为空格
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .lowercased()
     }

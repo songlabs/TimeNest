@@ -15,7 +15,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-matsuri-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 1, day: 12),
-            localizedNames: LocalizedText(zhHans: "成人节", ja: "成人の日", ko: "성인의 날", enUS: "Coming of Age Day"),
+            localizedNames: LocalizedText(zhHans: "成人节", ja: "成人の日", ko: "성인의 날", enUS: "Coming-of-Age Day"),
             type: .publicHoliday,
             isObserved: true
         ),

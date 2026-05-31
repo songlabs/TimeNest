@@ -145,6 +145,7 @@ struct MonthCalendarView: View {
                                         cellHeight: dateCellHeight,
                                         isSelected: viewModel.selectedDayCell?.id == cell.id
                                     )
+                                    .environmentObject(localization)
                                     .onTapGesture {
                                         viewModel.selectDay(cell)
                                     }
@@ -156,6 +157,7 @@ struct MonthCalendarView: View {
                                         cellHeight: dateCellHeight,
                                         isSelected: false
                                     )
+                                    .environmentObject(localization)
                                     .opacity(0)
                                 }
                             }
@@ -217,6 +219,7 @@ struct MonthCalendarView: View {
 // MARK: - DayCellView
 
 struct DayCellView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let cellWidth: CGFloat
     let cellHeight: CGFloat
@@ -343,20 +346,12 @@ struct DayCellView: View {
         }
     }
     
-    /// 获取节假日显示名称数组（按节假日来源地区语言）
+    /// 获取节假日显示名称数组（根据当前 App 语言选择）
     private var holidayDisplayNames: [String] {
-        cell.holidays.map { holiday in
-            // 根据节假日来源地区选择对应语言名称，不显示国家前缀
-            switch holiday.region {
-            case .japan:
-                holiday.localizedNames.ja
-            case .china:
-                holiday.localizedNames.zhHans
-            case .korea:
-                holiday.localizedNames.ko
-            case .unitedStates:
-                holiday.localizedNames.enUS
-            }
+        let language = localization.currentLanguage
+        return cell.holidays.map { holiday in
+            // 根据当前 App 语言选择对应语言名称，而不是根据节假日来源地区
+            holiday.localizedNames.localized(for: language)
         }
     }
 }
