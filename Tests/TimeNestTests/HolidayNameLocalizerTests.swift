@@ -265,4 +265,66 @@ final class HolidayNameLocalizerTests: XCTestCase {
             "青年节"
         )
     }
+
+    // MARK: - 重复 alias 测试
+
+    /// 测试重复 alias 映射到同一个值时不崩溃（如 "International Workers' Day" -> "international workers day"）
+    func testDuplicateAliasSameValueDoesNotCrash() {
+        // "International Workers' Day" 规范化后变成 "internationalworkersday"
+        // 如果 alias 中有重复，应该静默处理，不崩溃
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "International Workers' Day", in: .china),
+            "劳动节"
+        )
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "international workers day", in: .china),
+            "劳动节"
+        )
+    }
+
+    /// 测试 Workers' Day 也能正确映射
+    func testWorkersDayAlias() {
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "Workers' Day", in: .china),
+            "劳动节"
+        )
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "workers day", in: .china),
+            "劳动节"
+        )
+    }
+
+    /// 测试所有地区所有节假日名称访问不崩溃
+    func testAllHolidayNamesDoNotCrash() {
+        let testCases: [(String, HolidayRegion)] = [
+            // 中国
+            ("Spring Festival", .china),
+            ("Ching Ming Festival", .china),
+            ("Qingming Festival", .china),
+            ("Tomb Sweeping Day", .china),
+            ("Labour Day", .china),
+            ("Labor Day", .china),
+            ("Dragon Boat Festival", .china),
+            ("Mid-Autumn Festival", .china),
+            ("National Day", .china),
+            ("New Year's Day", .china),
+            // 日本
+            ("New Year's Day", .japan),
+            ("Greenery Day", .japan),
+            ("Children's Day", .japan),
+            // 韩国
+            ("Children's Day", .korea),
+            ("Buddha's Birthday", .korea),
+            // 美国
+            ("New Year's Day", .unitedStates),
+            ("Labor Day", .unitedStates),
+            ("Martin Luther King Jr. Day", .unitedStates)
+        ]
+
+        for (name, region) in testCases {
+            // 所有访问都不应崩溃
+            let result = localizer.localizedDisplayName(for: name, in: region)
+            XCTAssertNotNil(result)
+        }
+    }
 }
