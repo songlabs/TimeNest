@@ -306,17 +306,32 @@ struct HolidaySourceEditView: View {
         isValidURL = true
     }
 
-    /// 自动保存：仅在输入为有效 HTTPS URL 且与原值不同时保存
-    private func saveIfNeeded() async {
-        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+    /// 统一保存函数：保存当前 URL 到持久层
+    /// - Parameter url: 要保存的 URL 字符串
+    private func saveCurrentURL(_ url: String) async {
+        let trimmed = url.trimmingCharacters(in: .whitespacesAndNewlines)
         let originalURL = subscription?.urlString ?? ""
 
-        // 如果输入为空或与原值相同，不保存
-        if trimmed.isEmpty || trimmed == originalURL {
+        // 如果与原值相同，不保存
+        if trimmed == originalURL {
             return
         }
 
-        // 检查是否为 HTTPS URL
+        // 空字符串允许保存（用于清除 URL）
+        if trimmed.isEmpty {
+            do {
+                try subscriptionManager.updateURL(for: region, newURL: "")
+                await subscriptionManager.syncAllEnabled()
+            } catch {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    showError = true
+                }
+            }
+            return
+        }
+
+        // 检查是否为有效 URL
         guard let urlObj = URL(string: trimmed),
               let scheme = urlObj.scheme,
               scheme.lowercased() == "https" else {
@@ -355,9 +370,39 @@ struct HolidaySourceEditView: View {
 
         } catch {
             // 保存失败，显示错误提示
-            errorMessage = error.localizedDescription
-            showError = true
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+                showError = true
+            }
         }
+    }
+
+    /// 自动保存：仅在输入与原值不同时保存
+    /// 失焦时调用，支持空字符串保存
+    private func saveIfNeeded() async {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let originalURL = subscription?.urlString ?? ""
+
+        // 如果与原值相同，不保存
+        if trimmed == originalURL {
+            return
+        }
+
+        // 空字符串允许保存
+        if trimmed.isEmpty {
+            await saveCurrentURL("")
+            return
+        }
+
+        // 检查是否为 HTTPS URL
+        guard let urlObj = URL(string: trimmed),
+              let scheme = urlObj.scheme,
+              scheme.lowercased() == "https" else {
+            // 无效 URL 或不使用 HTTPS，不保存
+            return
+        }
+
+        await saveCurrentURL(trimmed)
     }
 
     private func saveURL() {
@@ -466,6 +511,11 @@ struct HolidaySourceEditView: View {
         guard let source = selectedRecommendedSource else { return }
         urlString = source.urlString
         validateURL(urlString)
+        
+        // 立即保存推荐源 URL 到持久层
+        Task {
+            await saveCurrentURL(urlString)
+        }
     }
 
     private func testSync() async {

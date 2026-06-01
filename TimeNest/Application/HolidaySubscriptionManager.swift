@@ -147,6 +147,19 @@ class HolidaySubscriptionManager: ObservableObject {
     func updateURL(for region: HolidayRegion, newURL: String) throws {
         let trimmedURL = newURL.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // 允许空字符串（用于清除 URL）
+        guard !trimmedURL.isEmpty else {
+            updateSubscriptionByRegion(region) {
+                $0.urlString = ""
+                // URL 更新后重置同步状态
+                $0.syncStatus = .neverSynced
+                $0.lastUpdatedAt = nil
+                $0.errorMessage = nil
+            }
+            NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
+            return
+        }
+
         // 验证 URL
         guard let url = URL(string: trimmedURL),
               let scheme = url.scheme,
