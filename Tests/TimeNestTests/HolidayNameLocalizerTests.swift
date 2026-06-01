@@ -475,6 +475,26 @@ final class HolidayNameLocalizerTests: XCTestCase {
         )
     }
 
+    func testCleanSouthKoreaPrefix() {
+        // 测试 Office Holidays 源的 "South Korea:" 前缀清理
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "South Korea: Children's Day", in: .korea),
+            "어린이날"
+        )
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "South Korea: New Year's Day", in: .korea),
+            "신정"
+        )
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "South Korea: Korean New Year", in: .korea),
+            "설날"
+        )
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "South Korea: Liberation Day", in: .korea),
+            "광복절"
+        )
+    }
+
     func testCleanUSAPrefix() {
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "US: Labor Day", in: .unitedStates),

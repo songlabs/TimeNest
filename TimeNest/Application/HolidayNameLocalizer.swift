@@ -42,7 +42,11 @@ struct HolidayNameLocalizer {
         case .china:
             prefixesToCheck = ["China:", "China : ", "China: ", "中国:", "中国：", "CN:", "CN: "]
         case .korea:
-            prefixesToCheck = ["Korea:", "Korea : ", "Korea: ", "韩国:", "韩国：", "KR:", "KR: "]
+            prefixesToCheck = [
+                "South Korea:", "South Korea : ", "South Korea: ",
+                "Korea:", "Korea : ", "Korea: ",
+                "韩国:", "韩国：", "KR:", "KR: "
+            ]
         case .unitedStates:
             prefixesToCheck = ["US:", "US : ", "US: ", "USA:", "USA : ", "USA: ", "United States:", "United States: ", "美国:", "美国：", "US: "]
         }
