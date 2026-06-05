@@ -124,6 +124,24 @@ struct SettingsView: View {
             } header: {
                 Text(localization.localized(.settingsAbout))
             }
+
+            // MARK: - File Sharing Section
+            Section {
+                NavigationLink {
+                    TimeNestFileSharingView()
+                        .environmentObject(localization)
+                } label: {
+                    HStack {
+                        Text(localization.localized(.fileSharingTitle))
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            } header: {
+                Text(localization.localized(.fileSharingTitle))
+            }
         }
         .navigationTitle(localization.localized(.settingsTitle))
         .foregroundColor(.primary)

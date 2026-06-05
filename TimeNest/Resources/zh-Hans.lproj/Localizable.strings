@@ -143,3 +143,17 @@
 "holiday_subscription.sync_success_title" = "同步成功";
 "holiday_subscription.sync_success_message" = "已成功刷新节假日订阅。";
 "holiday_subscription.sync_failed_title" = "同步失败";
+
+/* File Sharing */
+"file_sharing.title" = "数据共享";
+"file_sharing.export" = "导出时间表";
+"file_sharing.export_header" = "导出";
+"file_sharing.export_footer" = "将当前时间表导出为 .timenest 文件";
+"file_sharing.import" = "导入时间表";
+"file_sharing.import_header" = "导入";
+"file_sharing.import_footer" = "从 .timenest 文件导入事件";
+"file_sharing.import_result" = "导入结果";
+"file_sharing.imported_count" = "成功导入";
+"file_sharing.skipped_count" = "跳过/失败";
+"file_sharing.info" = "导出的文件可以通过 AirDrop、LINE、邮件等方式分享给其他设备。导入时会将事件追加到现有列表中，不会覆盖已有事件。";
+"file_sharing.share" = "分享";

@@ -1,8 +1,10 @@
 import Foundation
 
 actor InMemoryReminderRepository: ReminderRepository {
-    private var reminders: [UUID: ScheduledReminder] = [:]
+    static let shared = InMemoryReminderRepository()
     
+    private var reminders: [UUID: ScheduledReminder] = [:]
+
     func save(_ reminder: ScheduledReminder) async throws {
         reminders[reminder.id] = reminder
     }

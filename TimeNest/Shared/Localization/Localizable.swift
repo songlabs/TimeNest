@@ -154,6 +154,21 @@ enum LocalizedString: String {
     case dayDetailTitle = "day_detail.title"
     case dayDetailNoEvents = "day_detail.no_events"
 
+    // MARK: - File Sharing
+
+    case fileSharingTitle = "file_sharing.title"
+    case fileSharingExport = "file_sharing.export"
+    case fileSharingExportHeader = "file_sharing.export_header"
+    case fileSharingExportFooter = "file_sharing.export_footer"
+    case fileSharingImport = "file_sharing.import"
+    case fileSharingImportHeader = "file_sharing.import_header"
+    case fileSharingImportFooter = "file_sharing.import_footer"
+    case fileSharingImportResult = "file_sharing.import_result"
+    case fileSharingImportedCount = "file_sharing.imported_count"
+    case fileSharingSkippedCount = "file_sharing.skipped_count"
+    case fileSharingInfo = "file_sharing.info"
+    case fileSharingShare = "file_sharing.share"
+
     // MARK: - Placeholder
 
     case placeholderComingSoon = "placeholder.coming_soon"

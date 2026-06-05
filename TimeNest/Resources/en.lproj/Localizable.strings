@@ -143,3 +143,17 @@
 "holiday_subscription.sync_success_title" = "Sync Succeeded";
 "holiday_subscription.sync_success_message" = "Holiday subscriptions were refreshed successfully.";
 "holiday_subscription.sync_failed_title" = "Sync Failed";
+
+/* File Sharing */
+"file_sharing.title" = "Data Sharing";
+"file_sharing.export" = "Export Schedule";
+"file_sharing.export_header" = "Export";
+"file_sharing.export_footer" = "Export current schedule as .timenest file";
+"file_sharing.import" = "Import Schedule";
+"file_sharing.import_header" = "Import";
+"file_sharing.import_footer" = "Import events from .timenest file";
+"file_sharing.import_result" = "Import Result";
+"file_sharing.imported_count" = "Imported";
+"file_sharing.skipped_count" = "Skipped/Failed";
+"file_sharing.info" = "Exported files can be shared with other devices via AirDrop, LINE, Mail, etc. Importing will append events to the existing list without overwriting existing events.";
+"file_sharing.share" = "Share";

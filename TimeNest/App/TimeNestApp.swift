@@ -2,8 +2,8 @@ import SwiftUI
 
 @main
 struct TimeNestApp: App {
-    private let eventRepository: EventRepository = InMemoryEventRepository()
-    private let reminderRepository: ReminderRepository = InMemoryReminderRepository()
+    private let eventRepository: EventRepository = InMemoryEventRepository.shared
+    private let reminderRepository: ReminderRepository = InMemoryReminderRepository.shared
     private let reminderScheduler: ReminderScheduling = MockReminderScheduler()
     private let holidayProvider: HolidayProviding = BundleHolidayProvider()
 

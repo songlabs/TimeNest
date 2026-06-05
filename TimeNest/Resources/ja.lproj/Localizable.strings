@@ -143,3 +143,17 @@
 "holiday_subscription.sync_success_title" = "同期成功";
 "holiday_subscription.sync_success_message" = "祝日購読を更新しました。";
 "holiday_subscription.sync_failed_title" = "同期失敗";
+
+/* File Sharing */
+"file_sharing.title" = "データ共有";
+"file_sharing.export" = "スケジュールをエクスポート";
+"file_sharing.export_header" = "エクスポート";
+"file_sharing.export_footer" = "現在のスケジュールを .timenest ファイルとしてエクスポート";
+"file_sharing.import" = "スケジュールをインポート";
+"file_sharing.import_header" = "インポート";
+"file_sharing.import_footer" = ".timenest ファイルからイベントをインポート";
+"file_sharing.import_result" = "インポート結果";
+"file_sharing.imported_count" = "正常にインポート";
+"file_sharing.skipped_count" = "スキップ/失敗";
+"file_sharing.info" = "エクスポートしたファイルは AirDrop、LINE、メールなどで他のデバイスと共有できます。インポート時は既存のリストにイベントが追加され、既存のイベントは上書きされません。";
+"file_sharing.share" = "共有";

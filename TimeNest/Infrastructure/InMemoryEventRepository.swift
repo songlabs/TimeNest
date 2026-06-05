@@ -1,6 +1,8 @@
 import Foundation
 
 actor InMemoryEventRepository: EventRepository {
+    static let shared = InMemoryEventRepository()
+    
     private var events: [UUID: CalendarEvent] = [:]
     
     func create(_ event: CalendarEvent) async throws {
