@@ -37,6 +37,7 @@
 "week_start.system" = "システム標準";
 "week_start.sunday" = "日曜日";
 "week_start.monday" = "月曜日";
+"week_start.saturday" = "土曜日";
 
 /* Theme */
 "theme.light" = "ライト";

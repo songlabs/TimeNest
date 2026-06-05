@@ -19,6 +19,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     private var languageObserver: AnyCancellable?
     private var subscriptionObserver: AnyCancellable?
+    private var weekStartObserver: AnyCancellable?
 
     private var notificationObservers: [AnyCancellable] = []
     init(
@@ -33,11 +34,12 @@ class MonthCalendarViewModel: ObservableObject {
         // 初始化时从 LocalizationManager 读取当前语言，从订阅管理器读取已启用的地区
         let initialLanguage = LocalizationManager.shared.currentLanguage
         let enabledRegions = self.subscriptionManager.enabledRegions  // 允许空数组
+        let initialWeekStart = WeekStartPolicy(rawValue: UserDefaults.standard.string(forKey: "weekStart") ?? "system") ?? .system
 
         self.currentSetting = .init(
             displayLanguage: initialLanguage,
             selectedHolidayRegions: enabledRegions,
-            weekStartPolicy: .system,
+            weekStartPolicy: initialWeekStart,
             showLunarCalendar: false
         )
 
@@ -47,6 +49,8 @@ class MonthCalendarViewModel: ObservableObject {
         setupNotificationObserver()
         // 监听订阅管理器的 region 变化
         setupSubscriptionObserver()
+        // 监听 weekStart 设置变化
+        setupWeekStartObserver()
     }
 
     private func setupLanguageObserver() {
@@ -81,6 +85,16 @@ class MonthCalendarViewModel: ObservableObject {
         subscriptionObserver = nil
     }
 
+    private func setupWeekStartObserver() {
+        // 监听 weekStart AppStorage 变化
+        weekStartObserver = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.updateWeekStartPolicy()
+                }
+            }
+    }
+
     /// 同步节假日地区并重新加载月份（统一入口）
     private func syncHolidayRegionsAndReload() async {
         let newRegions = subscriptionManager.enabledRegions
@@ -93,6 +107,16 @@ class MonthCalendarViewModel: ObservableObject {
         let newLanguage = LocalizationManager.shared.currentLanguage
         if currentSetting.displayLanguage != newLanguage {
             currentSetting.displayLanguage = newLanguage
+            Task {
+                await reloadMonth()
+            }
+        }
+    }
+
+    private func updateWeekStartPolicy() {
+        let newWeekStart = WeekStartPolicy(rawValue: UserDefaults.standard.string(forKey: "weekStart") ?? "system") ?? .system
+        if currentSetting.weekStartPolicy != newWeekStart {
+            currentSetting.weekStartPolicy = newWeekStart
             Task {
                 await reloadMonth()
             }
@@ -133,8 +157,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     /// 获取当前语言对应的星期符号数组
     func weekdaySymbols() -> [String] {
-        let weekStartPolicy: WeekStartPolicy = currentSetting.weekStartPolicy == .monday ? .monday : .sunday
-        return LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: weekStartPolicy)
+        return LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: currentSetting.weekStartPolicy)
     }
 
     func goToPreviousMonth() async {

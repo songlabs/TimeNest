@@ -128,9 +128,25 @@ final class LocalizationManager: ObservableObject {
 
         var symbolsArray = symbols[language] ?? symbols[.zhHans]!
 
-        // 如果每周从周一开始，调整顺序
-        if weekStartPolicy == .monday {
+        // 根据 weekStartPolicy 调整顺序
+        switch weekStartPolicy {
+        case .sunday:
+            // 默认顺序：日 一 二 三 四 五 六
+            break
+        case .monday:
+            // 周一开始：一 二 三 四 五 六 日
             symbolsArray.append(symbolsArray.removeFirst())
+        case .saturday:
+            // 周六开始：六 日 一 二 三 四 五
+            // 先移到周一开始，再反转逻辑
+            // 原数组：日 一 二 三 四 五 六
+            // 目标：六 日 一 二 三 四 五
+            // 从末尾取出"六"放到开头
+            let last = symbolsArray.removeLast()
+            symbolsArray.insert(last, at: 0)
+        case .system:
+            // 系统默认，使用周日开始
+            break
         }
 
         return symbolsArray
@@ -151,9 +167,21 @@ final class LocalizationManager: ObservableObject {
 
         var symbolsArray = symbols[language] ?? symbols[.zhHans]!
 
-        // 如果每周从周一开始，调整顺序
-        if weekStartPolicy == .monday {
+        // 根据 weekStartPolicy 调整顺序
+        switch weekStartPolicy {
+        case .sunday:
+            // 默认顺序：星期日 星期一 星期二 星期三 星期四 星期五 星期六
+            break
+        case .monday:
+            // 周一开始：星期一 星期二 星期三 星期四 星期五 星期六 星期日
             symbolsArray.append(symbolsArray.removeFirst())
+        case .saturday:
+            // 周六开始：星期六 星期日 星期一 星期二 星期三 星期四 星期五
+            let last = symbolsArray.removeLast()
+            symbolsArray.insert(last, at: 0)
+        case .system:
+            // 系统默认，使用周日开始
+            break
         }
 
         return symbolsArray

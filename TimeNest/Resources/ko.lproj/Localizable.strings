@@ -37,6 +37,7 @@
 "week_start.system" = "시스템 기본";
 "week_start.sunday" = "일요일";
 "week_start.monday" = "월요일";
+"week_start.saturday" = "토요일";
 
 /* Theme */
 "theme.light" = "라이트";

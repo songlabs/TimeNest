@@ -37,6 +37,7 @@
 "week_start.system" = "System Default";
 "week_start.sunday" = "Sunday";
 "week_start.monday" = "Monday";
+"week_start.saturday" = "Saturday";
 
 /* Theme */
 "theme.light" = "Light";

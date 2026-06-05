@@ -161,6 +161,8 @@ class CalendarDisplayUseCase {
             actualWeekStart = 1
         case .monday:
             actualWeekStart = 2
+        case .saturday:
+            actualWeekStart = 7
         case .system:
             actualWeekStart = systemWeekStart
         }

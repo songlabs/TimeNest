@@ -41,6 +41,7 @@ enum LocalizedString: String {
     case weekStartSystem = "week_start.system"
     case weekStartSunday = "week_start.sunday"
     case weekStartMonday = "week_start.monday"
+    case weekStartSaturday = "week_start.saturday"
 
     // MARK: - Theme
 

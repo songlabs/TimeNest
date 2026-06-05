@@ -51,6 +51,7 @@ struct SettingsView: View {
                     Text(localization.localized(.weekStartSystem)).tag("system")
                     Text(localization.localized(.weekStartSunday)).tag("sunday")
                     Text(localization.localized(.weekStartMonday)).tag("monday")
+                    Text(localization.localized(.weekStartSaturday)).tag("saturday")
                 }
             } header: {
                 Text(localization.localized(.settingsWeekStart))
