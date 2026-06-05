@@ -64,9 +64,7 @@ enum LocalizedString: String {
 
     // MARK: - Calendar
 
-    case calendarSettings = "calendar.settings"
     case calendarFirstDay = "calendar.first_day"
-    case calendarShowWeekNumbers = "calendar.show_week_numbers"
 
     // MARK: - Common
 

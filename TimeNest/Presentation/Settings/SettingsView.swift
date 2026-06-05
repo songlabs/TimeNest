@@ -5,7 +5,6 @@ struct SettingsView: View {
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
     @AppStorage("notificationEnabled") private var notificationEnabled: Bool = true
-    @AppStorage("showWeekNumbers") private var showWeekNumbers: Bool = false
 
     @State private var showVersionInfo: Bool = false
     @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
@@ -55,13 +54,6 @@ struct SettingsView: View {
                 }
             } header: {
                 Text(localization.localized(.settingsWeekStart))
-            }
-
-            // MARK: - Week Numbers Section
-            Section {
-                Toggle(localization.localized(.calendarShowWeekNumbers), isOn: $showWeekNumbers)
-            } header: {
-                Text(localization.localized(.calendarSettings))
             }
 
             // MARK: - Notification Section
