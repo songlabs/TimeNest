@@ -30,6 +30,7 @@
 		3A8EBA9E102992354EB1FB4A /* EventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD81A481736AFAF2E5FBF110 /* EventRepository.swift */; };
 		3F81E0A8D90E6D4D55192D2C /* InMemoryReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17F01932A9BD416FFFFC322E /* InMemoryReminderRepository.swift */; };
 		43B231DEE6EB612DD6D63EAA /* HolidayRecommendedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = E78AC648768A087EBFC5FAF0 /* HolidayRecommendedSource.swift */; };
+		494A0F13B101F92803150695 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 777E44D6C52D2E84BB3A5906 /* Assets.xcassets */; };
 		4ACEB9475F21BE11EB3AC70B /* WeekdayHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AF5DE3632C0B3995E70548A /* WeekdayHeaderView.swift */; };
 		4D725366237C463AB1A9406A /* ImportSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC4BC937DED38ACC686A57B4 /* ImportSourceType.swift */; };
 		4E2DD46F8685576DACBEC676 /* CalendarHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100914DCC714075D43A228BC /* CalendarHeaderView.swift */; };
@@ -136,6 +137,7 @@
 		67ADAD077EA077DD836ECFDF /* ReminderScheduling.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduling.swift; sourceTree = "<group>"; };
 		735689838CC2044510B86E90 /* ReminderUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderUseCase.swift; sourceTree = "<group>"; };
 		74FAF6DFBA5FFD0C3D513BB1 /* WeatherProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherProviding.swift; sourceTree = "<group>"; };
+		777E44D6C52D2E84BB3A5906 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		7B9F2159B932C688AE90B53F /* TimeNestTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TimeNestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7EF9C9B46FBE954C36BF0CB8 /* HolidaySubscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscriptionSettingsView.swift; sourceTree = "<group>"; };
 		81008528D75F27AC81D854F1 /* ja.lproj */ = {isa = PBXFileReference; path = ja.lproj; sourceTree = "<group>"; };
@@ -426,6 +428,7 @@
 		CD9864983AAF796C5F5B3EC8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				777E44D6C52D2E84BB3A5906 /* Assets.xcassets */,
 				E9CEA7091890BFAB3C7B58EF /* en.lproj */,
 				81008528D75F27AC81D854F1 /* ja.lproj */,
 				FD009AC9340826530FB78B78 /* ko.lproj */,
@@ -639,6 +642,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				494A0F13B101F92803150695 /* Assets.xcassets in Resources */,
 				DE72508C123D5BACDB6F5A4C /* Localizable.strings in Resources */,
 				6839B6B779B1BCABBD773D1D /* en.lproj in Resources */,
 				28EA7B08CE5976E1EB5EE94D /* ja.lproj in Resources */,
