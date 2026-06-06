@@ -131,13 +131,7 @@ struct SettingsView: View {
                     TimeNestFileSharingView()
                         .environmentObject(localization)
                 } label: {
-                    HStack {
-                        Text(localization.localized(.fileSharingTitle))
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text(localization.localized(.fileSharingTitle))
                 }
             } header: {
                 Text(localization.localized(.fileSharingTitle))
