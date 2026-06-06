@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// 日历 Header - 左侧：左箭头 + 年月 + 右箭头 | 右侧：今日按钮
+/// 日历 Header - 左侧：左箭头 + 年月 + 右箭头 | 右侧：设置按钮
 struct CalendarHeaderView: View {
     @EnvironmentObject private var localization: LocalizationManager
 
@@ -9,6 +9,7 @@ struct CalendarHeaderView: View {
     let onNextMonth: () -> Void
     let onTodayTapped: () -> Void
     let onTitleTapped: () -> Void
+    let onSettingsTapped: () -> Void
 
     var body: some View {
         HStack(spacing: 0) {
@@ -44,18 +45,17 @@ struct CalendarHeaderView: View {
             }
             .padding(.leading, 12)
 
-            // 中间 Spacer - 将今日按钮推到右侧
+            // 中间 Spacer - 将右侧按钮推到右边
             Spacer()
 
-            // 右侧：今日按钮
-            Button(action: onTodayTapped) {
-                Text(verbatim: localization.localized(.today))
-                    .font(.system(size: 14, weight: .medium))
+            // 右侧：设置按钮
+            Button(action: onSettingsTapped) {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 18, weight: .medium))
                     .foregroundColor(ShiftCalendarColors.primaryBlue)
-                    .frame(height: 34)
-                    .padding(.horizontal, 16)
+                    .frame(width: 36, height: 36)
                     .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
-                    .cornerRadius(8)
+                    .clipShape(Circle())
             }
             .padding(.trailing, 12)
         }
@@ -73,7 +73,8 @@ struct CalendarHeaderView: View {
         onPreviousMonth: {},
         onNextMonth: {},
         onTodayTapped: {},
-        onTitleTapped: {}
+        onTitleTapped: {},
+        onSettingsTapped: {}
     )
     .padding()
     .background(ShiftCalendarColors.backgroundColor)

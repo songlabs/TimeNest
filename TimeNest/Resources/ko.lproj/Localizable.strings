@@ -60,6 +60,11 @@
 "calendar.first_day" = "주 시작";
 "calendar.show_week_numbers" = "주 번호 표시";
 
+/* View Mode */
+"view_mode.month" = "월";
+"view_mode.week" = "주";
+"view_mode.day" = "일";
+
 /* Common */
 "common.not_implemented" = "미구현";
 "common.save" = "저장";

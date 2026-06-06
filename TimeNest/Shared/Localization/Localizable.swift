@@ -66,6 +66,12 @@ enum LocalizedString: String {
 
     case calendarFirstDay = "calendar.first_day"
 
+    // MARK: - View Mode
+
+    case viewModeMonth = "view_mode.month"
+    case viewModeWeek = "view_mode.week"
+    case viewModeDay = "view_mode.day"
+
     // MARK: - Common
 
     case notImplemented = "common.not_implemented"

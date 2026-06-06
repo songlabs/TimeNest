@@ -60,6 +60,11 @@
 "calendar.first_day" = "週の開始日";
 "calendar.show_week_numbers" = "週番号を表示";
 
+/* View Mode */
+"view_mode.month" = "月";
+"view_mode.week" = "週";
+"view_mode.day" = "日";
+
 /* Common */
 "common.not_implemented" = "未実装";
 "common.save" = "保存";

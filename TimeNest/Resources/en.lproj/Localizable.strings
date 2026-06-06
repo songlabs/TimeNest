@@ -60,6 +60,11 @@
 "calendar.first_day" = "First Day of Week";
 "calendar.show_week_numbers" = "Show Week Numbers";
 
+/* View Mode */
+"view_mode.month" = "Month";
+"view_mode.week" = "Week";
+"view_mode.day" = "Day";
+
 /* Common */
 "common.not_implemented" = "Not Implemented";
 "common.save" = "Save";

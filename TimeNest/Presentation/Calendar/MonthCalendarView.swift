@@ -3,6 +3,8 @@ import SwiftUI
 struct MonthCalendarView: View {
     @StateObject private var viewModel: MonthCalendarViewModel
     @State private var showingYearMonthPicker = false
+    @State private var selectedViewMode: CalendarViewMode = .month
+    @State private var showingSettings = false
     @EnvironmentObject private var localization: LocalizationManager
 
     init(calendarDisplayUseCase: CalendarDisplayUseCase, eventUseCase: EventUseCase) {
@@ -39,6 +41,9 @@ struct MonthCalendarView: View {
                     },
                     onTitleTapped: {
                         showingYearMonthPicker = true
+                    },
+                    onSettingsTapped: {
+                        showingSettings = true
                     }
                 )
 
@@ -83,6 +88,12 @@ struct MonthCalendarView: View {
                 }
             )
         }
+        .sheet(isPresented: $showingSettings) {
+            NavigationView {
+                SettingsView()
+                    .environmentObject(localization)
+            }
+        }
         .sheet(isPresented: $viewModel.showingDayDetail) {
             if let cell = viewModel.selectedDayCell {
                 DayDetailView(
@@ -112,11 +123,11 @@ struct MonthCalendarView: View {
             GeometryReader { geometry in
                 let headerHeight: CGFloat = ShiftCalendarLayout.headerHeight
                 let adBannerHeight: CGFloat = ShiftCalendarLayout.adBannerHeight
-                let tabBarHeight: CGFloat = ShiftCalendarLayout.tabBarHeight
+                let toolbarHeight: CGFloat = CalendarBottomToolbarLayout.toolbarHeight
                 let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
 
-                // 可用高度 = 总高度 - header - adBanner - tabBar
-                let availableHeight = geometry.size.height - headerHeight - adBannerHeight - tabBarHeight
+                // 可用高度 = 总高度 - header - adBanner - toolbar
+                let availableHeight = geometry.size.height - headerHeight - adBannerHeight - toolbarHeight
                 // 星期行固定高度 + 6 行日期
                 let dateCellHeight = max(ShiftCalendarLayout.dayCellMinHeight, (availableHeight - weekdayRowHeight) / 6.0)
                 let containerWidth = geometry.size.width
@@ -180,6 +191,22 @@ struct MonthCalendarView: View {
 
             // 广告 banner 占位
             AdBannerPlaceholderView()
+
+            // 底部工具栏
+            CalendarBottomToolbarView(
+                selectedViewMode: $selectedViewMode,
+                onTodayTapped: {
+                    Task {
+                        await viewModel.goToToday()
+                    }
+                },
+                onAddEventTapped: {
+                    viewModel.showingEventEditor = true
+                },
+                onSettingsTapped: {
+                    showingSettings = true
+                }
+            )
         }
         .background(ShiftCalendarColors.backgroundColor)
     }

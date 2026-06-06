@@ -136,6 +136,18 @@ struct SettingsView: View {
             } header: {
                 Text(localization.localized(.fileSharingTitle))
             }
+
+            // MARK: - Shift Sharing Section
+            Section {
+                NavigationLink {
+                    ShiftSharePlaceholderView()
+                        .environmentObject(localization)
+                } label: {
+                    Text(localization.localized(.shiftShare))
+                }
+            } header: {
+                Text(localization.localized(.shiftShare))
+            }
         }
         .navigationTitle(localization.localized(.settingsTitle))
         .foregroundColor(.primary)

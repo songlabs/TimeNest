@@ -60,6 +60,11 @@
 "calendar.first_day" = "一周开始";
 "calendar.show_week_numbers" = "显示周号";
 
+/* View Mode */
+"view_mode.month" = "月";
+"view_mode.week" = "周";
+"view_mode.day" = "日";
+
 /* Common */
 "common.not_implemented" = "未实现";
 "common.save" = "保存";
