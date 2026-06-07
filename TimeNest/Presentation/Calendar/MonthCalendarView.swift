@@ -3,7 +3,6 @@ import SwiftUI
 struct MonthCalendarView: View {
     @StateObject private var viewModel: MonthCalendarViewModel
     @State private var showingYearMonthPicker = false
-    @State private var selectedViewMode: CalendarViewMode = .month
     @State private var showingSettings = false
     @EnvironmentObject private var localization: LocalizationManager
 
@@ -17,37 +16,37 @@ struct MonthCalendarView: View {
     }
 
     var body: some View {
-        ZStack {
+        ZStack(alignment: .top) {
+            // 背景色覆盖 safe area
             ShiftCalendarColors.backgroundColor
+                .ignoresSafeArea(edges: [.top, .bottom])
 
             VStack(spacing: 0) {
-                // 顶部 Header
+                // 顶部 Header（包含周视图 segmented control）
                 CalendarHeaderView(
-                    title: viewModel.monthTitle(),
-                    onPreviousMonth: {
-                        Task {
-                            await viewModel.goToPreviousMonth()
-                        }
-                    },
-                    onNextMonth: {
-                        Task {
-                            await viewModel.goToNextMonth()
-                        }
-                    },
-                    onTodayTapped: {
-                        Task {
-                            await viewModel.goToToday()
-                        }
-                    },
+                    title: currentTitle,
+                    displayMode: viewModel.displayMode,
+                    weekDisplayDays: viewModel.weekDisplayDays,
+                    onPrevious: handlePrevious,
+                    onNext: handleNext,
+                    onTodayTapped: handleTodayTapped,
                     onTitleTapped: {
-                        showingYearMonthPicker = true
+                        if viewModel.displayMode == .month {
+                            showingYearMonthPicker = true
+                        }
                     },
                     onSettingsTapped: {
                         showingSettings = true
+                    },
+                    onSearchTapped: {
+                        // TODO: 实现搜索功能
+                    },
+                    onWeekDaysChanged: { days in
+                        viewModel.setWeekDisplayDays(days)
                     }
                 )
 
-                // 月历 Grid + 底部区域
+                // 视图内容
                 if viewModel.isLoading {
                     ProgressView()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -55,13 +54,21 @@ struct MonthCalendarView: View {
                     Text(errorMessage)
                         .foregroundColor(ShiftCalendarColors.sundayRed)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let grid = viewModel.grid {
-                    calendarWithBottomSection(grid)
+                } else {
+                    switch viewModel.displayMode {
+                    case .month:
+                        if let grid = viewModel.grid {
+                            monthCalendarWithBottomSection(grid: grid)
+                        }
+                    case .week:
+                        weekCalendarWithBottomSection()
+                    case .day:
+                        dayCalendarWithBottomSection()
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .padding(.horizontal, ShiftCalendarLayout.calendarGridHorizontalPadding)
-        .ignoresSafeArea(edges: .bottom)
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
@@ -121,13 +128,12 @@ struct MonthCalendarView: View {
         VStack(spacing: 0) {
             // 月历表格 - 最大化占据空间
             GeometryReader { geometry in
-                let headerHeight: CGFloat = ShiftCalendarLayout.headerHeight
                 let adBannerHeight: CGFloat = ShiftCalendarLayout.adBannerHeight
                 let toolbarHeight: CGFloat = CalendarBottomToolbarLayout.toolbarHeight
                 let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
 
-                // 可用高度 = 总高度 - header - adBanner - toolbar
-                let availableHeight = geometry.size.height - headerHeight - adBannerHeight - toolbarHeight
+                // 可用高度 = 总高度 - adBanner - toolbar（header 已在 VStack 中占用）
+                let availableHeight = geometry.size.height - adBannerHeight - toolbarHeight
                 // 星期行固定高度 + 6 行日期
                 let dateCellHeight = max(ShiftCalendarLayout.dayCellMinHeight, (availableHeight - weekdayRowHeight) / 6.0)
                 let containerWidth = geometry.size.width
@@ -194,17 +200,20 @@ struct MonthCalendarView: View {
 
             // 底部工具栏
             CalendarBottomToolbarView(
-                selectedViewMode: $selectedViewMode,
-                onTodayTapped: {
-                    Task {
-                        await viewModel.goToToday()
-                    }
-                },
+                selectedViewMode: $viewModel.displayMode,
+                onTodayTapped: handleTodayTapped,
                 onAddEventTapped: {
                     viewModel.showingEventEditor = true
                 },
-                onSettingsTapped: {
-                    showingSettings = true
+                onModeChanged: { mode in
+                    switch mode {
+                    case .month:
+                        viewModel.switchToMonthView()
+                    case .week:
+                        viewModel.switchToWeekView()
+                    case .day:
+                        viewModel.switchToDayView()
+                    }
                 }
             )
         }
@@ -241,7 +250,163 @@ struct MonthCalendarView: View {
         .stroke(ShiftCalendarColors.gridLineColor, lineWidth: lineWidth)
     }
 
- }
+    // MARK: - 计算属性与方法
+
+    /// 当前标题 - 根据 displayMode 返回不同格式
+    private var currentTitle: String {
+        switch viewModel.displayMode {
+        case .month:
+            viewModel.monthTitle()
+        case .week:
+            viewModel.weekTitle()
+        case .day:
+            viewModel.dayTitle()
+        }
+    }
+
+    /// 处理上一按钮点击
+    private func handlePrevious() {
+        switch viewModel.displayMode {
+        case .month:
+            Task {
+                await viewModel.goToPreviousMonth()
+            }
+        case .week:
+            let calendar = Calendar(identifier: .gregorian)
+            if let newDate = calendar.date(byAdding: .day, value: -viewModel.weekDisplayDays, to: viewModel.selectedDate) {
+                viewModel.selectedDate = newDate
+                Task {
+                    await viewModel.reloadMonth()
+                }
+            }
+        case .day:
+            let calendar = Calendar(identifier: .gregorian)
+            if let newDate = calendar.date(byAdding: .day, value: -1, to: viewModel.selectedDate) {
+                viewModel.selectedDate = newDate
+                Task {
+                    await viewModel.reloadMonth()
+                }
+            }
+        }
+    }
+
+    /// 处理下一按钮点击
+    private func handleNext() {
+        switch viewModel.displayMode {
+        case .month:
+            Task {
+                await viewModel.goToNextMonth()
+            }
+        case .week:
+            let calendar = Calendar(identifier: .gregorian)
+            if let newDate = calendar.date(byAdding: .day, value: viewModel.weekDisplayDays, to: viewModel.selectedDate) {
+                viewModel.selectedDate = newDate
+                Task {
+                    await viewModel.reloadMonth()
+                }
+            }
+        case .day:
+            let calendar = Calendar(identifier: .gregorian)
+            if let newDate = calendar.date(byAdding: .day, value: 1, to: viewModel.selectedDate) {
+                viewModel.selectedDate = newDate
+                Task {
+                    await viewModel.reloadMonth()
+                }
+            }
+        }
+    }
+
+    /// 处理今日按钮点击
+    private func handleTodayTapped() {
+        Task {
+            await viewModel.goToToday()
+        }
+    }
+
+    /// 月视图容器
+    @ViewBuilder
+    private func monthCalendarWithBottomSection(grid: MonthGrid) -> some View {
+        calendarWithBottomSection(grid)
+    }
+
+    /// 周视图容器
+    @ViewBuilder
+    private func weekCalendarWithBottomSection() -> some View {
+        VStack(spacing: 0) {
+            // 周视图内容
+            WeekCalendarView(
+                selectedDate: viewModel.selectedDate,
+                displayDays: viewModel.weekDisplayDays,
+                cells: viewModel.weekCells,
+                onDateSelected: { date in
+                    viewModel.selectDate(date)
+                },
+                onTitleTapped: {}
+            )
+            .environmentObject(localization)
+
+            // 广告 banner 占位
+            AdBannerPlaceholderView()
+
+            // 底部工具栏 - 绑定到 viewModel.displayMode
+            CalendarBottomToolbarView(
+                selectedViewMode: $viewModel.displayMode,
+                onTodayTapped: handleTodayTapped,
+                onAddEventTapped: {
+                    viewModel.showingEventEditor = true
+                },
+                onModeChanged: { mode in
+                    switch mode {
+                    case .month:
+                        viewModel.switchToMonthView()
+                    case .week:
+                        viewModel.switchToWeekView()
+                    case .day:
+                        viewModel.switchToDayView()
+                    }
+                }
+            )
+        }
+        .background(ShiftCalendarColors.backgroundColor)
+    }
+
+    /// 日视图容器
+    @ViewBuilder
+    private func dayCalendarWithBottomSection() -> some View {
+        VStack(spacing: 0) {
+            // 日视图内容
+            DayCalendarView(
+                selectedDate: viewModel.selectedDate,
+                cell: viewModel.dayCell,
+                onTitleTapped: {}
+            )
+            .environmentObject(localization)
+
+            // 广告 banner 占位
+            AdBannerPlaceholderView()
+
+            // 底部工具栏 - 绑定到 viewModel.displayMode
+            CalendarBottomToolbarView(
+                selectedViewMode: $viewModel.displayMode,
+                onTodayTapped: handleTodayTapped,
+                onAddEventTapped: {
+                    viewModel.showingEventEditor = true
+                },
+                onModeChanged: { mode in
+                    switch mode {
+                    case .month:
+                        viewModel.switchToMonthView()
+                    case .week:
+                        viewModel.switchToWeekView()
+                    case .day:
+                        viewModel.switchToDayView()
+                    }
+                }
+            )
+        }
+        .background(ShiftCalendarColors.backgroundColor)
+    }
+}
 
 // MARK: - DayCellView
 

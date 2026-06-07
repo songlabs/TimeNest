@@ -4,13 +4,37 @@ import Combine
 
 @MainActor
 class MonthCalendarViewModel: ObservableObject {
-    @Published private(set) var selectedDate: Date = Date()
+    @Published var selectedDate: Date = Date()
     @Published private(set) var grid: MonthGrid?
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var errorMessage: String?
     @Published var showingEventEditor: Bool = false
     @Published var selectedDayCell: CalendarDayCell?
     @Published var showingDayDetail: Bool = false
+    
+    // 视图模式：month / week / day
+    @Published var displayMode: CalendarViewMode = .month
+    
+    // 周视图显示天数：7 / 5 / 3
+    @Published var weekDisplayDays: Int = 7
+    
+    // 周视图的日期单元格（计算属性，从 grid 生成）
+    var weekCells: [CalendarDayCell] {
+        guard let grid = grid else { return [] }
+        return generateWeekCells(for: selectedDate, displayDays: weekDisplayDays)
+    }
+    
+    // 日视图的日期单元格
+    var dayCell: CalendarDayCell? {
+        guard let grid = grid else { return nil }
+        let calendar = Calendar(identifier: .gregorian)
+        let year = calendar.component(.year, from: selectedDate)
+        let month = calendar.component(.month, from: selectedDate)
+        let day = calendar.component(.day, from: selectedDate)
+        
+        let targetDateOnly = DateOnly(year: year, month: month, day: day)
+        return grid.days.first { $0.date == targetDateOnly }
+    }
 
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
@@ -278,5 +302,169 @@ class MonthCalendarViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+    
+    // MARK: - 周视图/日视图支持
+    
+    /// 选择某一天，如果从周视图点击则切换到日视图
+    func selectDate(_ date: Date) {
+        let calendar = Calendar(identifier: .gregorian)
+        
+        // 更新 selectedDate
+        selectedDate = date
+        
+        // 切换到日视图
+        displayMode = .day
+        
+        // 重新加载月份数据以更新 grid
+        Task {
+            await reloadMonth()
+        }
+    }
+    
+    /// 切换到周视图
+    func switchToWeekView() {
+        displayMode = .week
+        // 确保周视图数据基于当前加载的 grid
+        // 如果 selectedDate 不在 grid 月份中，需要重新加载
+        Task {
+            await ensureDataLoadedForDate(selectedDate)
+        }
+    }
+    
+    /// 切换到日视图
+    func switchToDayView() {
+        displayMode = .day
+        // 确保日视图数据基于当前加载的 grid
+        // 如果 selectedDate 不在 grid 月份中，需要重新加载
+        Task {
+            await ensureDataLoadedForDate(selectedDate)
+        }
+    }
+    
+    /// 切换到月视图
+    func switchToMonthView() {
+        displayMode = .month
+    }
+    
+    /// 确保指定日期的数据已加载
+    private func ensureDataLoadedForDate(_ date: Date) async {
+        guard let grid = grid else {
+            await reloadMonth()
+            return
+        }
+        
+        let calendar = Calendar(identifier: .gregorian)
+        let currentYear = calendar.component(.year, from: selectedDate)
+        let currentMonth = calendar.component(.month, from: selectedDate)
+        let targetYear = calendar.component(.year, from: date)
+        let targetMonth = calendar.component(.month, from: date)
+        
+        // 如果日期不在当前加载的月份中，重新加载
+        if currentYear != targetYear || currentMonth != targetMonth {
+            selectedDate = date
+            await reloadMonth()
+        }
+    }
+    
+    /// 设置周视图显示天数
+    func setWeekDisplayDays(_ days: Int) {
+        weekDisplayDays = days
+    }
+    
+    /// 生成周视图的日期单元格数组
+    private func generateWeekCells(for selectedDate: Date, displayDays: Int) -> [CalendarDayCell] {
+        guard let grid = grid else { return [] }
+        let calendar = Calendar(identifier: .gregorian)
+        
+        // 找到当前周的第一天（周日）
+        guard let weekStart = calendar.date(from: calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: selectedDate)) else {
+            return []
+        }
+        
+        let selectedDateOnly = DateOnly(from: selectedDate) ?? DateOnly(year: 2000, month: 1, day: 1)
+        let weekStartOnly = DateOnly(from: weekStart) ?? DateOnly(year: 2000, month: 1, day: 1)
+        
+        // 计算选中日期在周中的偏移（0 = 周日，6 = 周六）
+        let offset = selectedDateOnly.day - weekStartOnly.day
+        
+        var cells: [CalendarDayCell] = []
+        
+        if displayDays == 7 {
+            // 7 日视图：显示整周
+            for i in 0..<7 {
+                if let date = calendar.date(byAdding: .day, value: i, to: weekStart) {
+                    if let cell = findCell(for: date) {
+                        cells.append(cell)
+                    } else {
+                        cells.append(createPlaceholderCell(for: date))
+                    }
+                }
+            }
+        } else {
+            // 5 日/3 日视图：居中显示
+            let centerOffset = (7 - displayDays) / 2
+            for i in 0..<displayDays {
+                let actualDay = i + centerOffset
+                if let date = calendar.date(byAdding: .day, value: actualDay, to: weekStart) {
+                    if let cell = findCell(for: date) {
+                        cells.append(cell)
+                    } else {
+                        cells.append(createPlaceholderCell(for: date))
+                    }
+                }
+            }
+        }
+        
+        return cells
+    }
+    
+    /// 在 grid 中查找指定日期的单元格
+    private func findCell(for date: Date) -> CalendarDayCell? {
+        guard let grid = grid else { return nil }
+        let dateOnly = DateOnly(from: date)
+        return grid.days.first { $0.date == dateOnly }
+    }
+    
+    /// 创建占位单元格
+    private func createPlaceholderCell(for date: Date) -> CalendarDayCell {
+        let dateOnly = DateOnly(from: date) ?? DateOnly(year: 2000, month: 1, day: 1)
+        let calendar = Calendar(identifier: .gregorian)
+        let weekdaySymbols = LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: .sunday)
+        let weekdayIndex = calendar.component(.weekday, from: date) - 1
+        
+        return CalendarDayCell(
+            id: dateOnly.id,
+            date: dateOnly,
+            dayText: "\(dateOnly.day)",
+            weekdayText: weekdaySymbols[weekdayIndex],
+            holidays: [],
+            events: [],
+            isToday: false,
+            isWeekend: false,
+            isInCurrentMonth: true,
+            shiftType: nil,
+            eventMarkers: []
+        )
+    }
+    
+    /// 获取周视图标题（年月格式）
+    func weekTitle() -> String {
+        let calendar = Calendar(identifier: .gregorian)
+        let year = calendar.component(.year, from: selectedDate)
+        let month = calendar.component(.month, from: selectedDate)
+        return LocalizationManager.shared.monthTitle(for: selectedDate)
+    }
+    
+    /// 获取日视图标题（年月日格式）
+    func dayTitle() -> String {
+        let calendar = Calendar(identifier: .gregorian)
+        let year = calendar.component(.year, from: selectedDate)
+        let month = calendar.component(.month, from: selectedDate)
+        let day = calendar.component(.day, from: selectedDate)
+        let weekdaySymbols = LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: .sunday)
+        let weekdayIndex = calendar.component(.weekday, from: selectedDate) - 1
+        let weekdayText = weekdaySymbols[weekdayIndex]
+        return "\(year)年\(month)月\(day)日（\(weekdayText)）"
     }
 }
