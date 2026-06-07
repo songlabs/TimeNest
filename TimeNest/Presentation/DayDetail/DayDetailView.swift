@@ -175,6 +175,7 @@ struct EventRowView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     DayDetailView(
         cell: CalendarDayCell(
@@ -195,3 +196,4 @@ struct EventRowView: View {
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }
+#endif
