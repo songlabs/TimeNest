@@ -1,9 +1,9 @@
 import SwiftUI
 
 /// 日历 Header - 支持月/周/日视图的不同布局
-/// 月视图：左箭头 + 年月 + 右箭头 | 右侧：搜索 + 设置
-/// 周视图：左箭头 + segmented control + 右箭头 | 右侧：搜索 + 设置
-/// 日视图：年月日（星期） | 右侧：搜索 + 设置
+/// 月视图：左箭头 + 年月 + 右箭头 | 右侧：设置
+/// 周视图：左箭头 + segmented control + 右箭头 | 右侧：设置
+/// 日视图：年月日（星期） | 右侧：设置
 struct CalendarHeaderView: View {
     @EnvironmentObject private var localization: LocalizationManager
 
@@ -15,7 +15,6 @@ struct CalendarHeaderView: View {
     let onTodayTapped: () -> Void
     let onTitleTapped: () -> Void
     let onSettingsTapped: () -> Void
-    let onSearchTapped: () -> Void
     let onWeekDaysChanged: (Int) -> Void
 
     var body: some View {
@@ -46,14 +45,17 @@ struct CalendarHeaderView: View {
     }
 
     /// 月视图 Header - 三段式布局确保标题视觉居中
+    /// 左侧占位 + 中间（左箭头 + 标题 + 右箭头）+ 右侧设置按钮
     private var monthHeaderView: some View {
         HStack(spacing: 0) {
-            // 左侧固定宽度区域：上一月按钮
-            leftNavigationArea
+            // 左侧占位区域（与设置按钮区域等宽，保证中间区域对称）
+            Color.clear
                 .frame(width: 44)
 
-            // 中间标题区域：年月标题 + 下一月按钮
-            HStack(spacing: 12) {
+            // 中间标题区域：左箭头 + 年月标题 + 右箭头
+            HStack(spacing: 18) {
+                navigationButton(icon: "chevron.left", action: onPrevious)
+
                 Button(action: onTitleTapped) {
                     Text(title)
                         .font(.system(size: 28, weight: .semibold))
@@ -65,9 +67,9 @@ struct CalendarHeaderView: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
-            // 右侧固定宽度区域：搜索 + 设置按钮
+            // 右侧固定宽度区域：设置按钮
             rightButtonsView
-                .frame(width: 76)
+                .frame(width: 44)
         }
     }
 
@@ -105,20 +107,12 @@ struct CalendarHeaderView: View {
         }
     }
 
-    /// 右侧按钮区域（搜索 + 设置）
+    /// 右侧按钮区域（设置）
     private var rightButtonsView: some View {
-        HStack(spacing: 10) {
-            Button(action: onSearchTapped) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(ShiftCalendarColors.primaryBlue)
-            }
-
-            Button(action: onSettingsTapped) {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundColor(ShiftCalendarColors.primaryBlue)
-            }
+        Button(action: onSettingsTapped) {
+            Image(systemName: "gearshape")
+                .font(.system(size: 22, weight: .medium))
+                .foregroundColor(ShiftCalendarColors.primaryBlue)
         }
     }
 
@@ -169,7 +163,6 @@ struct CalendarHeaderView: View {
         onTodayTapped: {},
         onTitleTapped: {},
         onSettingsTapped: {},
-        onSearchTapped: {},
         onWeekDaysChanged: { _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
@@ -186,7 +179,6 @@ struct CalendarHeaderView: View {
         onTodayTapped: {},
         onTitleTapped: {},
         onSettingsTapped: {},
-        onSearchTapped: {},
         onWeekDaysChanged: { _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
@@ -203,7 +195,6 @@ struct CalendarHeaderView: View {
         onTodayTapped: {},
         onTitleTapped: {},
         onSettingsTapped: {},
-        onSearchTapped: {},
         onWeekDaysChanged: { _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))

@@ -38,9 +38,6 @@ struct MonthCalendarView: View {
                     onSettingsTapped: {
                         showingSettings = true
                     },
-                    onSearchTapped: {
-                        // TODO: 实现搜索功能
-                    },
                     onWeekDaysChanged: { days in
                         viewModel.setWeekDisplayDays(days)
                     }
