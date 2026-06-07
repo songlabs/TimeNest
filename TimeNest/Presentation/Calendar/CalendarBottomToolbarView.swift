@@ -33,24 +33,24 @@ struct CalendarBottomToolbarView: View {
             HStack(spacing: 0) {
                 // 左侧：今日按钮
                 Button(action: onTodayTapped) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: "arrow.uturn.backward")
-                            .font(.system(size: 14, weight: .medium))
+                            .font(.system(size: ShiftCalendarLayout.footerButtonFontSize * 0.9, weight: ShiftCalendarLayout.footerButtonFontWeight))
                         Text(verbatim: localization.localized(.today))
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: ShiftCalendarLayout.footerButtonFontSize, weight: ShiftCalendarLayout.footerButtonFontWeight))
                     }
                     .foregroundColor(ShiftCalendarColors.primaryBlue)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
                     .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
-                    .cornerRadius(6)
+                    .cornerRadius(8)
                 }
 
                 // 中间弹性空间
                 Spacer()
 
                 // 中间：视图切换按钮
-                HStack(spacing: 4) {
+                HStack(spacing: 5) {
                     ForEach(CalendarViewMode.allCases) { mode in
                         Button(action: {
                             withAnimation(.easeInOut(duration: 0.2)) {
@@ -59,12 +59,12 @@ struct CalendarBottomToolbarView: View {
                             onModeChanged?(mode)
                         }) {
                             Text(verbatim: mode.displayName)
-                                .font(.system(size: 13, weight: selectedViewMode == mode ? .semibold : .regular))
+                                .font(.system(size: ShiftCalendarLayout.footerButtonFontSize, weight: selectedViewMode == mode ? .semibold : ShiftCalendarLayout.footerButtonFontWeight))
                                 .foregroundColor(selectedViewMode == mode ? ShiftCalendarColors.primaryBlue : ShiftCalendarColors.secondaryText)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 4)
+                                    RoundedRectangle(cornerRadius: 6)
                                         .fill(selectedViewMode == mode ? ShiftCalendarColors.primaryBlue.opacity(0.12) : Color.clear)
                                 )
                         }
@@ -86,7 +86,7 @@ struct CalendarBottomToolbarView: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 6)
+            .padding(.vertical, 8)
         }
         .background(ShiftCalendarColors.backgroundColor)
         .frame(height: CalendarBottomToolbarLayout.toolbarHeight)
@@ -97,7 +97,7 @@ struct CalendarBottomToolbarView: View {
 // MARK: - Layout Constants
 
 struct CalendarBottomToolbarLayout {
-    static let toolbarHeight: CGFloat = 56
+    static let toolbarHeight: CGFloat = 62
 }
 
 // MARK: - Preview

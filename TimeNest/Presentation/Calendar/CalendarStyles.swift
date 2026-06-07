@@ -116,8 +116,8 @@ struct ShiftCalendarLayout {
     // 月历网格
     static let calendarGridTopMargin: CGFloat = 0
     static let calendarGridHorizontalPadding: CGFloat = 0
-    static let dayCellMinHeight: CGFloat = 88
-    static let dayCellRecommendedHeight: CGFloat = 105
+    static let dayCellMinHeight: CGFloat = 90
+    static let dayCellRecommendedHeight: CGFloat = 100
 
     // 表格网格线
     static let gridLineWidth: CGFloat = 0.5
@@ -129,6 +129,10 @@ struct ShiftCalendarLayout {
     static let shiftLabelHorizontalPadding: CGFloat = 8
     static let dayNumberFontSize: CGFloat = 20
     static let dayNumberFontSizeToday: CGFloat = 22
+
+    // Footer 工具栏字体大小 - 接近 Header 区域按钮文字的视觉比例
+    static let footerButtonFontSize: CGFloat = 26
+    static let footerButtonFontWeight: Font.Weight = .medium
 
     // 选中日期信息条
     static let selectedDateInfoHeight: CGFloat = 40
