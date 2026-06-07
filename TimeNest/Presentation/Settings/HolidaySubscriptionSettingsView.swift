@@ -319,9 +319,11 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         HolidaySubscriptionSettingsView()
         .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     }
 }
+#endif

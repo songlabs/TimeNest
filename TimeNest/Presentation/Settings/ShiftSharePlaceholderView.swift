@@ -9,9 +9,13 @@ struct ShiftSharePlaceholderView: View {
     }
 }
 
+// MARK: - Preview
+
+#if DEBUG
 #Preview {
     NavigationView {
         ShiftSharePlaceholderView()
             .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     }
 }
+#endif

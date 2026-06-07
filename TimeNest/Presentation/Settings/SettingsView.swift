@@ -173,9 +173,11 @@ struct SettingsView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     NavigationView {
         SettingsView()
             .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     }
 }
+#endif

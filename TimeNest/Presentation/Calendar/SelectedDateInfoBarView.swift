@@ -63,6 +63,7 @@ struct SelectedDateInfoBarView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview("Japanese") {
     VStack {
         SelectedDateInfoBarView(
@@ -102,7 +103,9 @@ struct SelectedDateInfoBarView: View {
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     .background(ShiftCalendarColors.backgroundColor)
 }
+#endif
 
+#if DEBUG
 #Preview("Simplified Chinese") {
     VStack {
         SelectedDateInfoBarView(
@@ -148,3 +151,4 @@ struct SelectedDateInfoBarView: View {
     .environmentObject(LocalizationManager.preview(languageCode: "enUS"))
     .background(ShiftCalendarColors.backgroundColor)
 }
+#endif

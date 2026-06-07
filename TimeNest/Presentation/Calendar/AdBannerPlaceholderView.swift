@@ -25,6 +25,7 @@ struct AdBannerPlaceholderView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     VStack {
         Spacer()
@@ -34,3 +35,4 @@ struct AdBannerPlaceholderView: View {
     }
     .background(ShiftCalendarColors.backgroundColor)
 }
+#endif

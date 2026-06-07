@@ -24,6 +24,7 @@ struct ContentView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     ContentView(
         calendarDisplayUseCase: CalendarDisplayUseCase(
@@ -35,3 +36,4 @@ struct ContentView: View {
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }
+#endif

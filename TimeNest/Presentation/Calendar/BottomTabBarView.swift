@@ -95,6 +95,7 @@ struct TabButton: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     VStack {
         Spacer()
@@ -103,3 +104,4 @@ struct TabButton: View {
     }
     .background(ShiftCalendarColors.backgroundColor)
 }
+#endif

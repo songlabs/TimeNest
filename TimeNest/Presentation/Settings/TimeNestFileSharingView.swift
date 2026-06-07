@@ -198,9 +198,11 @@ extension UTType {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     NavigationView {
         TimeNestFileSharingView()
             .environmentObject(LocalizationManager.preview(languageCode: "zhHans"))
     }
 }
+#endif

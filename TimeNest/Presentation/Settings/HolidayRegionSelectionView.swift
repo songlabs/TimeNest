@@ -71,9 +71,11 @@ struct HolidayRegionSelectionView: View {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     NavigationStack {
         HolidayRegionSelectionView(selectedRegions: .constant([.japan, .china]))
             .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     }
 }
+#endif

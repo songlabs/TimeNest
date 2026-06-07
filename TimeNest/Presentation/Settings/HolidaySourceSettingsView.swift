@@ -605,6 +605,7 @@ struct RecommendedSourceRow: View {
     }
 }
 
+#if DEBUG
 #Preview {
     NavigationStack {
         HolidaySourceSettingsView(
@@ -615,3 +616,4 @@ struct RecommendedSourceRow: View {
         .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     }
 }
+#endif

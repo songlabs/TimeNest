@@ -87,6 +87,7 @@ struct CalendarBottomToolbarLayout {
 
 // MARK: - Preview
 
+#if DEBUG
 #Preview {
     VStack {
         Spacer()
@@ -100,3 +101,4 @@ struct CalendarBottomToolbarLayout {
     }
     .background(ShiftCalendarColors.backgroundColor)
 }
+#endif
