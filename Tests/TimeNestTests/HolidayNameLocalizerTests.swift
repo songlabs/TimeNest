@@ -981,4 +981,131 @@ final class HolidayNameLocalizerTests: XCTestCase {
             )
         }
     }
+
+    // MARK: - BundleHolidayProvider 2026-06 中国端午节测试
+
+    func testBundleHolidayProviderChinaDragonBoat2026() async throws {
+        let provider = BundleHolidayProvider()
+        let from = DateOnly(year: 2026, month: 6, day: 19)
+        let to = DateOnly(year: 2026, month: 6, day: 19)
+
+        let holidays = try await provider.holidays(region: .china, from: from, to: to)
+
+        XCTAssertEqual(holidays.count, 1, "2026-06-19 应该有 1 个中国节假日")
+        XCTAssertEqual(holidays.first?.id, "cn-dragonboat-2026")
+        XCTAssertEqual(holidays.first?.localizedNames.zhHans, "端午节")
+    }
+
+    func testBundleHolidayProviderChinaDragonBoatHolidayPeriod2026() async throws {
+        let provider = BundleHolidayProvider()
+        let from = DateOnly(year: 2026, month: 6, day: 19)
+        let to = DateOnly(year: 2026, month: 6, day: 21)
+
+        let holidays = try await provider.holidays(region: .china, from: from, to: to)
+
+        XCTAssertEqual(holidays.count, 3, "2026-06-19 到 2026-06-21 应该有 3 个中国节假日")
+        XCTAssertEqual(holidays[0].date, DateOnly(year: 2026, month: 6, day: 19))
+        XCTAssertEqual(holidays[1].date, DateOnly(year: 2026, month: 6, day: 20))
+        XCTAssertEqual(holidays[2].date, DateOnly(year: 2026, month: 6, day: 21))
+    }
+
+    func testBundleHolidayProviderJapanJune2026IsEmpty() async throws {
+        let provider = BundleHolidayProvider()
+        let from = DateOnly(year: 2026, month: 6, day: 1)
+        let to = DateOnly(year: 2026, month: 6, day: 30)
+
+        let holidays = try await provider.holidays(region: .japan, from: from, to: to)
+
+        XCTAssertEqual(holidays.count, 0, "2026-06 日本没有节假日")
+    }
+
+    // MARK: - HolidayUseCase fallback 测试
+
+    func testHolidayUseCaseFallbackToBundleProvider() async throws {
+        let provider = BundleHolidayProvider()
+        let cacheRepository = InMemoryHolidayEventCacheRepository() // 空缓存
+        let useCase = HolidayUseCase(holidayProvider: provider, cacheRepository: cacheRepository)
+
+        let from = DateOnly(year: 2026, month: 6, day: 19)
+        let to = DateOnly(year: 2026, month: 6, day: 19)
+        let setting = CalendarDisplaySetting(
+            displayLanguage: .zhHans,
+            selectedHolidayRegions: [.china, .japan],
+            weekStartPolicy: .system,
+            showLunarCalendar: false
+        )
+
+        let holidays = try await useCase.holidaysInDateRange(from: from, to: to, setting: setting)
+
+        XCTAssertEqual(holidays.count, 1, "应该从 BundleHolidayProvider fallback 加载 1 个节假日")
+        XCTAssertEqual(holidays.first?.localizedNames.zhHans, "端午节")
+    }
+
+    // MARK: - CalendarDisplayUseCase 测试
+
+    func testCalendarDisplayUseCaseShowsChinaDragonBoat2026() async throws {
+        let holidayUseCase = HolidayUseCase(holidayProvider: BundleHolidayProvider())
+        let localizationUseCase = CalendarLocalizationUseCase()
+        let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let useCase = CalendarDisplayUseCase(
+            holidayUseCase: holidayUseCase,
+            localizationUseCase: localizationUseCase,
+            eventUseCase: eventUseCase
+        )
+
+        let setting = CalendarDisplaySetting(
+            displayLanguage: .zhHans,
+            selectedHolidayRegions: [.china, .japan],
+            weekStartPolicy: .system,
+            showLunarCalendar: false
+        )
+
+        let grid = try await useCase.monthGrid(year: 2026, month: 6, setting: setting)
+
+        // 查找 2026-06-19 的 cell
+        let dragonBoatDay = grid.days.first { $0.date.year == 2026 && $0.date.month == 6 && $0.date.day == 19 }
+        XCTAssertNotNil(dragonBoatDay, "应该找到 2026-06-19 的 cell")
+        XCTAssertEqual(dragonBoatDay?.holidays.count, 1, "2026-06-19 应该有 1 个节假日")
+        XCTAssertEqual(dragonBoatDay?.holidays.first?.region, .china, "节假日应该来自 .china")
+        XCTAssertEqual(dragonBoatDay?.holidays.first?.localizedNames.zhHans, "端午节", "节假日名称应该是端午节")
+    }
+
+    func testCalendarDisplayUseCaseShowsChinaDragonBoatHolidayPeriod2026() async throws {
+        let holidayUseCase = HolidayUseCase(holidayProvider: BundleHolidayProvider())
+        let localizationUseCase = CalendarLocalizationUseCase()
+        let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let useCase = CalendarDisplayUseCase(
+            holidayUseCase: holidayUseCase,
+            localizationUseCase: localizationUseCase,
+            eventUseCase: eventUseCase
+        )
+
+        let setting = CalendarDisplaySetting(
+            displayLanguage: .zhHans,
+            selectedHolidayRegions: [.china, .japan],
+            weekStartPolicy: .system,
+            showLunarCalendar: false
+        )
+
+        let grid = try await useCase.monthGrid(year: 2026, month: 6, setting: setting)
+
+        // 验证 2026-06-19~21 都有节假日
+        for day in 19...21 {
+            let cell = grid.days.first { $0.date.year == 2026 && $0.date.month == 6 && $0.date.day == day }
+            XCTAssertNotNil(cell, "应该找到 2026-06-\(day) 的 cell")
+            XCTAssertEqual(cell?.holidays.count, 1, "2026-06-\(day) 应该有 1 个节假日")
+            XCTAssertEqual(cell?.holidays.first?.localizedNames.zhHans, "端午节", "2026-06-\(day) 节假日名称应该是端午节")
+        }
+    }
+}
+
+/// 空缓存实现，用于测试 fallback 逻辑
+class InMemoryHolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
+    func saveEvents(_ events: [HolidayEvent], for region: HolidayRegion) async throws {}
+    func getEvents(in interval: ClosedRange<DateOnly>, for regions: [HolidayRegion]) -> [HolidayEvent] { [] }
+    func getEvents(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] { [] }
+    func getEvents(for regions: [HolidayRegion]) -> [HolidayEvent] { [] }
+    func clear() async throws {}
+    func clearEvents() async throws {}
+    func getLastSyncTime(for region: HolidayRegion) -> Date? { nil }
 }

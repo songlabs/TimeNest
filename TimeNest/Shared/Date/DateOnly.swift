@@ -16,7 +16,8 @@ struct DateOnly: Codable, Hashable, Comparable, Identifiable {
     }
     
     init?(from date: Date, in timeZone: TimeZone = .current) {
-        var calendar = Calendar.current
+        // 使用 Gregorian calendar 确保年份始终是西历（避免日本和历等导致年份错误）
+        var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         
         let components = calendar.dateComponents([.year, .month, .day], from: date)

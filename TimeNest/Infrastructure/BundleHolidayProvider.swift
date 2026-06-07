@@ -140,6 +140,30 @@ actor BundleHolidayProvider: HolidayProviding {
             type: .traditional,
             isObserved: true
         ),
+        Holiday(
+            id: "cn-dragonboat-2026",
+            region: .china,
+            date: DateOnly(year: 2026, month: 6, day: 19),
+            localizedNames: LocalizedText(zhHans: "端午节", ja: "端午の節句", ko: "단오", enUS: "Dragon Boat Festival"),
+            type: .traditional,
+            isObserved: true
+        ),
+        Holiday(
+            id: "cn-dragonboat-holiday-2026",
+            region: .china,
+            date: DateOnly(year: 2026, month: 6, day: 20),
+            localizedNames: LocalizedText(zhHans: "端午节假", ja: "端午の節句休暇", ko: "단오 연휴", enUS: "Dragon Boat Festival Holiday"),
+            type: .traditional,
+            isObserved: true
+        ),
+        Holiday(
+            id: "cn-dragonboat-holiday2-2026",
+            region: .china,
+            date: DateOnly(year: 2026, month: 6, day: 21),
+            localizedNames: LocalizedText(zhHans: "端午节假", ja: "端午の節句休暇", ko: "단오 연휴", enUS: "Dragon Boat Festival Holiday"),
+            type: .traditional,
+            isObserved: true
+        ),
         // MARK: - Korea 2026
         Holiday(
             id: "kr-salnal-2026",

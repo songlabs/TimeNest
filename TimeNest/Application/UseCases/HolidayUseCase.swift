@@ -44,6 +44,16 @@ class HolidayUseCase {
             )
         }
 
+        // 如果缓存没有数据，尝试从 BundleHolidayProvider 读取
+        if holidays.isEmpty, let provider = holidayProvider {
+            do {
+                let bundleHolidays = try await provider.holidays(region: region, from: from, to: to)
+                holidays.append(contentsOf: bundleHolidays)
+            } catch {
+                // 静默处理错误，继续返回空数组
+            }
+        }
+
         return holidays.sorted { $0.date < $1.date }
     }
 
@@ -70,6 +80,18 @@ class HolidayUseCase {
                     isObserved: true
                 )
             )
+        }
+
+        // 如果缓存没有数据，尝试从 BundleHolidayProvider 读取
+        if holidays.isEmpty, let provider = holidayProvider {
+            for region in regions {
+                do {
+                    let bundleHolidays = try await provider.holidays(region: region, from: from, to: to)
+                    holidays.append(contentsOf: bundleHolidays)
+                } catch {
+                    // 静默处理错误，继续处理下一个地区
+                }
+            }
         }
 
         return holidays.sorted { $0.date < $1.date }
