@@ -1,12 +1,8 @@
 import SwiftUI
 
-/// 日历 Header - 支持月/周/日视图的不同布局
-/// 月视图：左箭头 + 年月 + 右箭头 | 右侧：设置
-/// 周视图：左箭头 + segmented control + 右箭头 | 右侧：设置
-/// 日视图：年月日（星期） | 右侧：设置
+/// 日历 Header - 月 / 周 / 日共用同一套导航布局。
+/// 结构统一为：左侧占位 + 中间（左箭头 + 标题 + 右箭头）+ 右侧设置按钮。
 struct CalendarHeaderView: View {
-    @EnvironmentObject private var localization: LocalizationManager
-
     let title: String
     let displayMode: CalendarViewMode
     let weekDisplayDays: Int
@@ -18,96 +14,72 @@ struct CalendarHeaderView: View {
     let onWeekDaysChanged: (Int) -> Void
 
     var body: some View {
-        Group {
-            switch displayMode {
-            case .month:
-                monthHeaderView
-            case .week:
-                weekHeaderView
-            case .day:
-                dayHeaderView
-            }
-        }
-        .padding(.horizontal, 16)
-        .frame(height: ShiftCalendarLayout.headerHeight)
-        .background(ShiftCalendarColors.backgroundColor)
+        unifiedHeaderView
+            .padding(.horizontal, 16)
+            .frame(height: ShiftCalendarLayout.headerHeight)
+            .background(ShiftCalendarColors.backgroundColor)
     }
 
-    /// 月视图 Header - 三段式布局确保标题视觉居中
-    /// 左侧占位 + 中间（左箭头 + 标题 + 右箭头）+ 右侧设置按钮
-    private var monthHeaderView: some View {
+    /// 月 / 周 / 日共用 Header。
+    /// 左侧保留与设置按钮等宽的占位，保证中间导航区域在视觉上延续月视图居中效果。
+    private var unifiedHeaderView: some View {
         HStack(spacing: 0) {
-            // 左侧占位区域（与设置按钮区域等宽，保证中间区域对称）
             Color.clear
                 .frame(width: 44)
 
-            // 中间标题区域：左箭头 + 年月标题 + 右箭头
-            HStack(spacing: 18) {
+            HStack(spacing: titleSpacing) {
                 navigationButton(icon: "chevron.left", action: onPrevious)
 
                 Button(action: onTitleTapped) {
                     Text(title)
-                        .font(.system(size: 28, weight: .semibold))
+                        .font(titleFont)
                         .foregroundColor(ShiftCalendarColors.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(titleMinimumScaleFactor)
+                        .allowsTightening(true)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .buttonStyle(PlainButtonStyle())
                 .contentShape(Rectangle())
 
                 navigationButton(icon: "chevron.right", action: onNext)
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
-            // 右侧固定宽度区域：设置按钮
-            rightButtonsView
+            settingsButton
                 .frame(width: 44)
         }
     }
 
-    /// 周视图 Header - 左侧年月标题，右侧 3/5/7 日切换与设置
-    private var weekHeaderView: some View {
-        HStack(spacing: 12) {
-            Button(action: onTitleTapped) {
-                Text(title)
-                    .font(.system(size: 30, weight: .semibold))
-                    .foregroundColor(ShiftCalendarColors.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            Spacer(minLength: 8)
-
-            weekSegmentedControl
-
-            rightButtonsView
-                .frame(width: 36)
+    private var titleFont: Font {
+        switch displayMode {
+        case .month, .week:
+            return .system(size: 28, weight: .semibold)
+        case .day:
+            return .system(size: 24, weight: .semibold)
         }
     }
 
-    /// 日视图 Header - 浅蓝圆形左右切换按钮 + 完整日期标题 + 设置
-    private var dayHeaderView: some View {
-        HStack(spacing: 10) {
-            navigationButton(icon: "chevron.left", action: onPrevious)
-
-            Button(action: onTitleTapped) {
-                Text(title)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundColor(ShiftCalendarColors.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.62)
-                    .allowsTightening(true)
-                    .frame(maxWidth: .infinity, alignment: .center)
-            }
-            .buttonStyle(PlainButtonStyle())
-
-            navigationButton(icon: "chevron.right", action: onNext)
-
-            rightButtonsView
-                .frame(width: 36)
+    private var titleSpacing: CGFloat {
+        switch displayMode {
+        case .month, .week:
+            return 18
+        case .day:
+            return 10
         }
     }
 
-    /// 右侧按钮区域（设置）
-    private var rightButtonsView: some View {
+    private var titleMinimumScaleFactor: CGFloat {
+        switch displayMode {
+        case .month, .week:
+            return 0.85
+        case .day:
+            return 0.70
+        }
+    }
+
+    /// 右侧设置按钮：沿用月视图的蓝色齿轮风格。
+    private var settingsButton: some View {
         Button(action: onSettingsTapped) {
             Image(systemName: "gearshape")
                 .font(.system(size: 28, weight: .medium))
@@ -117,33 +89,7 @@ struct CalendarHeaderView: View {
         .buttonStyle(PlainButtonStyle())
     }
 
-    private var weekSegmentedControl: some View {
-        HStack(spacing: 0) {
-            ForEach([3, 5, 7], id: \.self) { days in
-                Button(action: {
-                    onWeekDaysChanged(days)
-                }) {
-                    Text(verbatim: "\(days)日")
-                        .font(.system(size: 16, weight: weekDisplayDays == days ? .semibold : .regular))
-                        .foregroundColor(weekDisplayDays == days ? ShiftCalendarColors.primaryBlue : ShiftCalendarColors.secondaryText)
-                        .frame(width: 52, height: 34)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(weekDisplayDays == days ? ShiftCalendarColors.primaryBlue.opacity(0.12) : Color.clear)
-                        )
-                }
-                .buttonStyle(PlainButtonStyle())
-
-                if days != 7 {
-                    Rectangle()
-                        .fill(ShiftCalendarColors.separatorColor.opacity(0.5))
-                        .frame(width: 0.5, height: 22)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
+    /// 左右箭头按钮：沿用月视图的浅蓝色圆形背景。
     private func navigationButton(icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
@@ -153,6 +99,7 @@ struct CalendarHeaderView: View {
                 .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
                 .clipShape(Circle())
         }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -161,7 +108,7 @@ struct CalendarHeaderView: View {
 #if DEBUG
 #Preview("Month View") {
     CalendarHeaderView(
-        title: "2026 年 6 月",
+        title: "2026年6月",
         displayMode: .month,
         weekDisplayDays: 7,
         onPrevious: {},
@@ -177,7 +124,7 @@ struct CalendarHeaderView: View {
 
 #Preview("Week View") {
     CalendarHeaderView(
-        title: "2026 年 6 月",
+        title: "2026年6月",
         displayMode: .week,
         weekDisplayDays: 7,
         onPrevious: {},
@@ -193,7 +140,7 @@ struct CalendarHeaderView: View {
 
 #Preview("Day View") {
     CalendarHeaderView(
-        title: "2026 年 6 月 7 日（日）",
+        title: "2026年6月10日（三）",
         displayMode: .day,
         weekDisplayDays: 7,
         onPrevious: {},
