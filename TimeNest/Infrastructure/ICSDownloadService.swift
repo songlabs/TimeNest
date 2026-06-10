@@ -55,8 +55,8 @@ class ICSDownloadService: ICSDownloading {
     // 最大文件大小限制 (10MB)
     private let maxFileSize: Int = 10 * 1024 * 1024
 
-    // 允许 http 和 https
-    private let allowedSchemes = ["https", "http"]
+    // App Store/ATS 向けに、外部 ICS 取得は HTTPS のみに制限します。
+    private let allowedSchemes = ["https"]
 
     private let session: URLSession
 

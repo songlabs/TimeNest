@@ -17,8 +17,10 @@ let package = Package(
         .target(
             name: "TimeNest",
             path: "TimeNest",
+            exclude: ["Info.plist"],
             resources: [
-                .process("Resources")
+                .process("Resources"),
+                .process("PrivacyInfo.xcprivacy")
             ]
         ),
     ]

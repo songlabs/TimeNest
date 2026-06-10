@@ -101,26 +101,6 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                 }
 
-                // Placeholder links (not functional in preview)
-                Link(destination: URL(string: "https://example.com/privacy")!) {
-                    HStack {
-                        Text(localization.localized(.aboutPrivacy))
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-
-                Link(destination: URL(string: "https://example.com/terms")!) {
-                    HStack {
-                        Text(localization.localized(.aboutTerms))
-                        Spacer()
-                        Image(systemName: "arrow.up.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
             } header: {
                 Text(localization.localized(.settingsAbout))
             }
