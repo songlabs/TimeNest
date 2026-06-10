@@ -77,6 +77,7 @@ enum LocalizedString: String {
     // MARK: - Calendar
 
     case calendarAddEvent = "calendar.add_event"
+    case calendarMoreEventsCount = "calendar.more_events_count"
 
     // MARK: - Event Marker
 

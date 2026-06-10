@@ -458,7 +458,7 @@ struct DayCellView: View {
                 }
 
                 if hiddenCount > 0 {
-                    Text("+\(hiddenCount)")
+                    Text(moreEventsText(hiddenCount))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(ShiftCalendarColors.secondaryText)
                         .lineLimit(1)

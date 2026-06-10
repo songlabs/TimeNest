@@ -7,17 +7,65 @@ struct DayCalendarView: View {
 
     private let timeLabelWidth: CGFloat = 52
 
+    private var allDayEvents: [EventOccurrence] {
+        (cell?.events ?? []).filter { $0.isAllDay }.sorted { $0.title < $1.title }
+    }
+
     var body: some View {
         GeometryReader { geometry in
-            DayTimeAxisView(
-                cell: cell,
-                timeLabelWidth: timeLabelWidth,
-                contentWidth: geometry.size.width - timeLabelWidth,
-                timeAxisHeight: geometry.size.height
-            )
+            VStack(spacing: 0) {
+                if !allDayEvents.isEmpty {
+                    DayAllDayEventsSection(
+                        events: allDayEvents,
+                        timeLabelWidth: timeLabelWidth
+                    )
+                }
+
+                DayTimeAxisView(
+                    cell: cell,
+                    timeLabelWidth: timeLabelWidth,
+                    contentWidth: geometry.size.width - timeLabelWidth,
+                    timeAxisHeight: geometry.size.height
+                )
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(ShiftCalendarColors.backgroundColor)
+    }
+}
+
+// MARK: - 全天事件区域（日视图）
+
+struct DayAllDayEventsSection: View {
+    let events: [EventOccurrence]
+    let timeLabelWidth: CGFloat
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            Text(LocalizationManager.shared.localized(.editorAllDay))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(ShiftCalendarColors.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(width: timeLabelWidth - 8, alignment: .topTrailing)
+                .padding(.top, 12)
+                .padding(.trailing, 6)
+
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(events, id: \.id) { event in
+                    AllDayEventChipView(title: event.title, compact: false)
+                }
+            }
+            .padding(.vertical, 8)
+            .padding(.trailing, 10)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+        }
+        .background(ShiftCalendarColors.backgroundColor)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(ShiftCalendarColors.separatorColor)
+                .frame(height: 0.5)
+        }
     }
 }
 
