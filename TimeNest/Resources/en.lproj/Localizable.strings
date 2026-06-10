@@ -52,6 +52,17 @@
 /* Notification */
 "notification.enabled" = "Enable Notifications";
 "notification.time" = "Notification Time";
+"notification.event_starting_soon" = "Event starting soon";
+
+/* Reminder Options */
+"reminder.none" = "None";
+"reminder.at_start" = "At start";
+"reminder.five_minutes_before" = "5 minutes before";
+"reminder.ten_minutes_before" = "10 minutes before";
+"reminder.fifteen_minutes_before" = "15 minutes before";
+"reminder.thirty_minutes_before" = "30 minutes before";
+"reminder.one_hour_before" = "1 hour before";
+"reminder.one_day_before" = "1 day before";
 
 /* Calendar */
 "calendar.add_event" = "Add new event";
@@ -95,6 +106,10 @@
 "editor.cancel" = "Cancel";
 "editor.new_event" = "New Event";
 "editor.edit_event" = "Edit Event";
+"editor.start" = "Start";
+"editor.end" = "End";
+"editor.reminder" = "Reminder";
+"editor.invalid_date_range" = "End time must be after start time.";
 
 /* Day Detail */
 "day_detail.title" = "Events";

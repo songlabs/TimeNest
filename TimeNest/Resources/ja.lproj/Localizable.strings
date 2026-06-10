@@ -52,6 +52,17 @@
 /* Notification */
 "notification.enabled" = "通知を有効にする";
 "notification.time" = "通知時間";
+"notification.event_starting_soon" = "予定がまもなく始まります";
+
+/* Reminder Options */
+"reminder.none" = "なし";
+"reminder.at_start" = "開始時";
+"reminder.five_minutes_before" = "5分前";
+"reminder.ten_minutes_before" = "10分前";
+"reminder.fifteen_minutes_before" = "15分前";
+"reminder.thirty_minutes_before" = "30分前";
+"reminder.one_hour_before" = "1時間前";
+"reminder.one_day_before" = "1日前";
 
 /* Calendar */
 "calendar.add_event" = "新規の予定を入力する";
@@ -95,6 +106,10 @@
 "editor.cancel" = "キャンセル";
 "editor.new_event" = "新規予定";
 "editor.edit_event" = "予定を編集";
+"editor.start" = "開始";
+"editor.end" = "終了";
+"editor.reminder" = "通知";
+"editor.invalid_date_range" = "終了時刻は開始時刻より後にしてください。";
 
 /* Day Detail */
 "day_detail.title" = "予定";

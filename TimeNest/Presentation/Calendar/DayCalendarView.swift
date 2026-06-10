@@ -137,9 +137,12 @@ private func makePreviewCell() -> CalendarDayCell {
                 eventID: UUID(),
                 occurrenceDate: dateOnly,
                 startDate: today,
-                endDate: nil,
+                endDate: CalendarEvent.defaultEndDate(for: today, isAllDay: true),
+                isAllDay: true,
                 title: "测试全天事件",
-                categoryID: nil
+                categoryID: nil,
+                reminderOffsetMinutes: nil,
+                notificationID: nil
             )
         ],
         isToday: true,

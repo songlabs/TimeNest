@@ -60,6 +60,18 @@ enum LocalizedString: String {
 
     case notificationEnabled = "notification.enabled"
     case notificationTime = "notification.time"
+    case notificationEventStartingSoon = "notification.event_starting_soon"
+
+    // MARK: - Reminder Options
+
+    case reminderNone = "reminder.none"
+    case reminderAtStart = "reminder.at_start"
+    case reminderFiveMinutesBefore = "reminder.five_minutes_before"
+    case reminderTenMinutesBefore = "reminder.ten_minutes_before"
+    case reminderFifteenMinutesBefore = "reminder.fifteen_minutes_before"
+    case reminderThirtyMinutesBefore = "reminder.thirty_minutes_before"
+    case reminderOneHourBefore = "reminder.one_hour_before"
+    case reminderOneDayBefore = "reminder.one_day_before"
 
     // MARK: - Calendar
 
@@ -155,8 +167,12 @@ enum LocalizedString: String {
     case editorTitle = "editor.title"
     case editorBasicInfo = "editor.basic_info"
     case editorDate = "editor.date"
+    case editorStart = "editor.start"
+    case editorEnd = "editor.end"
     case editorTime = "editor.time"
     case editorAllDay = "editor.all_day"
+    case editorReminder = "editor.reminder"
+    case editorInvalidDateRange = "editor.invalid_date_range"
     case editorError = "editor.error"
     case editorSave = "editor.save"
     case editorCancel = "editor.cancel"

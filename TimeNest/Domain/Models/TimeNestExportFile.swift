@@ -14,10 +14,63 @@ struct TimeNestExportEvent: Codable {
     let title: String
     let note: String?
     let startDate: Date
-    let endDate: Date?
+    let endDate: Date
     let isAllDay: Bool
     let categoryID: UUID?
     let recurrenceRule: String?
+    let reminderOffsetMinutes: Int?
+    let notificationID: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case note
+        case startDate
+        case endDate
+        case isAllDay
+        case categoryID
+        case recurrenceRule
+        case reminderOffsetMinutes
+        case notificationID
+    }
+
+    init(
+        id: UUID,
+        title: String,
+        note: String?,
+        startDate: Date,
+        endDate: Date?,
+        isAllDay: Bool,
+        categoryID: UUID?,
+        recurrenceRule: String?,
+        reminderOffsetMinutes: Int?,
+        notificationID: String?
+    ) {
+        self.id = id
+        self.title = title
+        self.note = note
+        self.startDate = startDate
+        self.endDate = endDate ?? CalendarEvent.defaultEndDate(for: startDate, isAllDay: isAllDay)
+        self.isAllDay = isAllDay
+        self.categoryID = categoryID
+        self.recurrenceRule = recurrenceRule
+        self.reminderOffsetMinutes = reminderOffsetMinutes
+        self.notificationID = notificationID
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        note = try container.decodeIfPresent(String.self, forKey: .note)
+        startDate = try container.decode(Date.self, forKey: .startDate)
+        isAllDay = try container.decodeIfPresent(Bool.self, forKey: .isAllDay) ?? false
+        endDate = try container.decodeIfPresent(Date.self, forKey: .endDate) ?? CalendarEvent.defaultEndDate(for: startDate, isAllDay: isAllDay)
+        categoryID = try container.decodeIfPresent(UUID.self, forKey: .categoryID)
+        recurrenceRule = try container.decodeIfPresent(String.self, forKey: .recurrenceRule)
+        reminderOffsetMinutes = try container.decodeIfPresent(Int.self, forKey: .reminderOffsetMinutes)
+        notificationID = try container.decodeIfPresent(String.self, forKey: .notificationID)
+    }
 }
 
 extension TimeNestExportFile {
@@ -27,14 +80,18 @@ extension TimeNestExportFile {
 extension TimeNestExportEvent {
     /// 从 CalendarEvent 转换为导出事件
     init(from event: CalendarEvent) {
-        self.id = event.id
-        self.title = event.title
-        self.note = event.note
-        self.startDate = event.startDate
-        self.endDate = event.endDate
-        self.isAllDay = event.isAllDay
-        self.categoryID = event.categoryID
-        self.recurrenceRule = event.recurrenceRule.rawValue
+        self.init(
+            id: event.id,
+            title: event.title,
+            note: event.note,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            isAllDay: event.isAllDay,
+            categoryID: event.categoryID,
+            recurrenceRule: event.recurrenceRule.rawValue,
+            reminderOffsetMinutes: event.reminderOffsetMinutes,
+            notificationID: event.notificationID
+        )
     }
 
     /// 转换为 CalendarEvent（导入时使用）
@@ -49,6 +106,8 @@ extension TimeNestExportEvent {
             categoryID: categoryID,
             recurrenceRule: RecurrenceRule(rawValue: recurrenceRule ?? "none") ?? .none,
             reminderTemplateID: nil,
+            reminderOffsetMinutes: reminderOffsetMinutes,
+            notificationID: nil,
             importSource: nil,
             createdAt: Date(),
             updatedAt: Date()
