@@ -1,46 +1,97 @@
-# TimeNest App Store 发布前 Checklist
+# TimeNest App Store Release Checklist
 
-> 本文档用于代码仓库层面的发布准备检查，不代表 Apple 一定审核通过。最终仍需在 Apple Developer、App Store Connect 与 Xcode Organizer 中完成签名、归档、上传和人工元数据确认。
+> Release-preparation checklist only. It does not guarantee App Review approval. Confirm every item in Apple Developer, App Store Connect, Xcode Organizer, and the submitted build before release.
 
-## 1. 代码与配置结论草案
+## 1. App Store Connect Items
 
-- App 类型：iOS 日历 / 节假日订阅 MVP。
-- 最低系统版本：iOS 17.0。
-- Bundle ID：`com.song.TimeNest`。
-- 签名方式：Automatic Signing，开发团队 ID 已在工程配置中填写；证书、Profile、App Store Connect App 记录需要开发者账号人工确认。
-- 当前仓库未发现广告、分析、崩溃收集、IDFA 或跨 App 跟踪 SDK。
-- 当前仓库未发现 EventKit、提醒事项、相册、相机、定位、通讯录、麦克风、蓝牙、本地网络等系统权限 API 调用；因此不应在 `Info.plist` 中添加无实际用途的权限说明。
-- 已提供 `PrivacyInfo.xcprivacy`，声明不跟踪、不收集数据，并声明 `UserDefaults` 的 Required Reason API 用途。
+- Create or confirm the App Store Connect app record.
+- Confirm app name, subtitle, description, keywords, promotional text, release notes, category, and age rating in each supported locale.
+- Prepare iPhone screenshots for required display sizes.
+- Prepare Support URL and Privacy Policy URL. Do not submit placeholder URLs.
+- Confirm review contact information and demo/review notes.
+- Confirm pricing and availability.
+- Confirm TestFlight internal and external tester groups.
 
-## 2. App Store Connect 元数据待准备
+## 2. Bundle ID / Signing / Archive / Upload
 
-- App name：建议使用 `TimeNest`，并确认目标市场是否需要本地化名称。
-- Subtitle：准备 ja / zh-Hans / en / ko 四种语言的短副标题。
-- Description：说明本地日历、节假日订阅、文件导入导出能力；不要承诺云同步或未实现能力。
-- Keywords：围绕 calendar、holiday、schedule、日历、祝日、予定、캘린더 等准备，按各语言限制填写。
-- Support URL：必须提供可访问的真实支持页面。
-- Privacy Policy URL：必须提供可访问的真实隐私政策页面；不要使用占位 URL。
-- Marketing URL：可选。
-- Category：建议 `Productivity` 或 `Utilities`，最终由产品定位决定。
-- Age rating：根据无用户生成内容、无成人内容、无赌博等实际情况填写问卷。
-- Screenshots：按 App Store Connect 当前要求准备 iPhone 截图；至少覆盖月 / 周 / 日视图、节假日订阅设置、文件导入导出。
-- TestFlight：准备测试说明、反馈邮箱、已知限制说明。
+- Bundle ID: `com.song.TimeNest`.
+- Confirm the Bundle ID exists in Apple Developer.
+- Confirm capabilities in Apple Developer match the app target. Do not enable unused capabilities.
+- Confirm Automatic Signing or manual provisioning profile is valid for App Store distribution.
+- Confirm Team ID and certificate are correct in Xcode.
+- Increment `CFBundleShortVersionString` and `CFBundleVersion` for each upload.
+- Run a Release archive in Xcode Organizer.
+- Validate the archive before upload.
+- Upload to App Store Connect and confirm processing completes successfully.
 
-## 3. 隐私标签草案
+## 3. Privacy Manifest
 
-在当前代码仓库实现范围内：
+- Confirm `TimeNest/PrivacyInfo.xcprivacy` is included in the app target.
+- Current repository implementation does not include advertising, analytics, tracking SDKs, account sign-in, or cloud sync.
+- Current repository implementation uses local storage and `UserDefaults` for local settings and state.
+- If future builds add SDKs, cloud sync, push notifications, accounts, crash reporting, or analytics, update the Privacy Manifest before upload.
 
-- Tracking：No。
-- Data Used to Track You：None。
-- Data Linked to You：None（当前未发现账号、设备 ID、广告 ID、分析或第三方上传）。
-- Data Not Linked to You：None（当前未发现分析、崩溃收集或遥测 SDK）。
-- 本地数据：用户创建的日历事件、提醒模板/计划、节假日订阅 URL 与缓存文件、语言和周起始日设置保存在本地或 UserDefaults / 本地文件中；当前未发现上传到自有服务器或第三方分析服务的代码。
-- 网络访问：仅用于用户配置或内置推荐的 HTTPS ICS 节假日订阅下载。若未来增加云同步、账号、分析、崩溃收集、广告或推送，需要重新填写隐私标签并更新 Privacy Manifest。
+## 4. App Privacy Labels
 
-## 4. 发布前人工确认项
+Suggested draft for the current implementation:
 
-- 在 Apple Developer Portal 确认 Bundle ID、Signing Certificate、Provisioning Profile、App capability 与工程配置一致。
-- 在 Xcode Organizer 完成 Archive、Validate App、Distribute App，不要跳过 App Store Connect 的隐私问卷。
-- 确认 App 内“隐私政策 / 使用条款”入口不指向占位 URL；如保留入口，必须替换为真实 URL。
-- 使用真机或 TestFlight 验证外部 ICS 下载、无网络状态、无效 URL、文件导入导出、多语言切换和深色模式。
-- 确认 App Icon、启动页、版本号、构建号符合发布要求。
+- Tracking: No.
+- Data Used to Track You: None.
+- Data Linked to You: None, based on the current repository implementation.
+- Data Not Linked to You: None, based on the current repository implementation.
+- Local-only data: user-created schedules, settings, holiday subscription URLs, and cached holiday data are stored locally by default.
+- Network access: holiday subscription sync accesses public HTTPS ICS URLs selected or confirmed by the user.
+
+Reconfirm these labels if any implementation changes before submission.
+
+## 5. Screenshots
+
+Prepare screenshots that accurately match the submitted build:
+
+- Month calendar view.
+- Week calendar view.
+- Day calendar view.
+- Event creation or editing.
+- Holiday subscription settings.
+- Language / settings screen.
+- Optional file import/export screen if included in release messaging.
+
+Avoid screenshots that show placeholder URLs, debug text, simulator artifacts, or unimplemented features as if they were complete.
+
+## 6. Support URL
+
+- Provide a real public support page or contact page.
+- Include basic troubleshooting for holiday sync, offline behavior, language settings, and local data.
+- Ensure the URL is reachable without authentication.
+
+## 7. Privacy Policy URL
+
+- Publish the final privacy policy based on `Docs/PrivacyPolicyDraft.md`.
+- Replace `support@example.com` and placeholder effective dates.
+- Ensure the URL is reachable without authentication.
+- Ensure the policy explains local data, public ICS URL access, and absence/presence of ads, analytics, tracking, and SDKs.
+
+## 8. Age Rating
+
+- Complete the App Store Connect questionnaire honestly.
+- Current app concept is a personal calendar / schedule utility and should generally be suitable for a low age rating.
+- Reassess if future versions add user-generated sharing, web browsing, messaging, or external content beyond public ICS sync.
+
+## 9. Review Notes
+
+Draft review notes:
+
+- TimeNest does not require account login.
+- The app launches without network access and stores schedules locally by default.
+- Holiday subscription sync uses public HTTPS ICS URLs selected inside the app.
+- If holiday sync is tested, use a supported region and recommended source from the holiday settings screen.
+- No paid content, ads, analytics, tracking, or cloud sync are included in the current build.
+
+## 10. Final Manual Checks Before Submit
+
+- Build and unit tests pass on a macOS/Xcode environment.
+- Fresh install and upgrade install pass in TestFlight.
+- All supported languages show complete UI strings.
+- Placeholder, preview, mock, and debug-only views are either removed or intentionally excluded from user-facing production flows.
+- Invalid ICS URL and network failure show user-readable errors.
+- App icon, launch screen, display name, version, and build number are final.

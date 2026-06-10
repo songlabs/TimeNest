@@ -297,7 +297,9 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
             }
             updateSubscriptions()
         } catch {
+            #if DEBUG
             print("Toggle subscription failed: \(error)")
+            #endif
         }
     }
     
