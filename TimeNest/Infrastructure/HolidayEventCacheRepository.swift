@@ -13,17 +13,53 @@ protocol HolidayEventCacheRepositoryProtocol {
 /// 本地文件缓存仓库
 class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
 
-    private let fileManager: FileManager
-    private var cacheDirectory: URL
-    private let lockQueue: DispatchQueue
+    private final class CacheStorage: @unchecked Sendable {
+        private let lockQueue = DispatchQueue(label: "com.timenest.holidaycache", attributes: .concurrent)
+        private var cache: [String: HolidayEventCache] = [:]
 
-    // 缓存数据（内存中）
-    private var cache: [String: HolidayEventCache] = [:]
+        func cache(for region: HolidayRegion) -> HolidayEventCache? {
+            lockQueue.sync { cache[region.rawValue] }
+        }
+
+        func setCache(_ holidayCache: HolidayEventCache, for region: HolidayRegion) {
+            lockQueue.sync(flags: .barrier) {
+                cache[region.rawValue] = holidayCache
+            }
+        }
+
+        func removeAll() {
+            lockQueue.sync(flags: .barrier) {
+                cache.removeAll()
+            }
+        }
+
+        func events(for regions: [HolidayRegion]) -> [HolidayEvent] {
+            lockQueue.sync {
+                regions.flatMap { cache[$0.rawValue]?.events ?? [] }
+            }
+        }
+
+        func events(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] {
+            lockQueue.sync {
+                regions.flatMap { cache[$0.rawValue]?.events(on: date) ?? [] }
+            }
+        }
+
+        func events(in range: ClosedRange<DateOnly>, for regions: [HolidayRegion]) -> [HolidayEvent] {
+            lockQueue.sync {
+                regions.flatMap { cache[$0.rawValue]?.events(in: range) ?? [] }
+            }
+        }
+
+        func lastSyncTime(for region: HolidayRegion) -> Date? {
+            lockQueue.sync { cache[region.rawValue]?.lastSyncedAt }
+        }
+    }
+
+    private var cacheDirectory: URL
+    private let storage = CacheStorage()
 
     init(fileManager: FileManager = .default, cacheDirectory: URL? = nil) {
-        self.fileManager = fileManager
-        self.lockQueue = DispatchQueue(label: "com.timenest.holidaycache", attributes: .concurrent)
-
         // 确定缓存目录
         if let customDir = cacheDirectory {
             self.cacheDirectory = customDir
@@ -50,14 +86,14 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
             let fileURL = cacheFileURL(for: region)
             if let data = try? Data(contentsOf: fileURL),
                let cache = try? JSONDecoder().decode(HolidayEventCache.self, from: data) {
-                self.cache[region.rawValue] = cache
+                storage.setCache(cache, for: region)
             }
         }
     }
 
     /// 保存单个地区的缓存
     private func saveCache(for region: HolidayRegion) throws {
-        guard let cache = cache[region.rawValue] else { return }
+        guard let cache = storage.cache(for: region) else { return }
 
         let fileURL = cacheFileURL(for: region)
         let data = try JSONEncoder().encode(cache)
@@ -67,8 +103,11 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
     // MARK: - Public Methods
 
     func saveEvents(_ events: [HolidayEvent], for region: HolidayRegion) async throws {
-        try await Task.detached(priority: .background) { [cacheDirectory = self.cacheDirectory, lockQueue = self.lockQueue, cache = self.cache] in
-            var existingCache = cache[region.rawValue] ?? HolidayEventCache()
+        let cacheDirectory = self.cacheDirectory
+        let storage = self.storage
+
+        try await Task.detached(priority: .background) {
+            var existingCache = storage.cache(for: region) ?? HolidayEventCache()
 
             // 移除该地区已有的旧事件
             existingCache.events.removeAll { $0.region == region }
@@ -82,36 +121,16 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
             let data = try JSONEncoder().encode(existingCache)
             try data.write(to: fileURL)
 
-            lockQueue.async(flags: .barrier) {
-                self.cache[region.rawValue] = existingCache
-            }
+            storage.setCache(existingCache, for: region)
         }.value
     }
 
     func getEvents(for regions: [HolidayRegion]) -> [HolidayEvent] {
-        var events: [HolidayEvent] = []
-
-        lockQueue.sync {
-            for region in regions {
-                if let cache = self.cache[region.rawValue] {
-                    events.append(contentsOf: cache.events)
-                }
-            }
-        }
-
-        return events.sorted { $0.date < $1.date }
+        storage.events(for: regions).sorted { $0.date < $1.date }
     }
 
     func getEvents(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] {
-        lockQueue.sync {
-            var events: [HolidayEvent] = []
-            for region in regions {
-                if let cache = self.cache[region.rawValue] {
-                    events.append(contentsOf: cache.events(on: date))
-                }
-            }
-            return events
-        }
+        storage.events(on: date, for: regions)
     }
 
     func getEvents(in range: ClosedRange<DateOnly>, for regions: [HolidayRegion]) -> [HolidayEvent] {
@@ -119,25 +138,16 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
         guard !regions.isEmpty else {
             return []
         }
-        let sorted = lockQueue.sync {
-            var events: [HolidayEvent] = []
-            for region in regions {
-                if let cache = self.cache[region.rawValue] {
-                    events.append(contentsOf: cache.events(in: range))
-                }
-            }
-            return events.sorted { $0.date < $1.date }
-        }
-
-        return sorted
+        return storage.events(in: range, for: regions).sorted { $0.date < $1.date }
     }
 
     func clearEvents() async throws {
-        try await Task.detached(priority: .background) { [cacheDirectory = self.cacheDirectory, lockQueue = self.lockQueue] in
+        let cacheDirectory = self.cacheDirectory
+        let storage = self.storage
+
+        await Task.detached(priority: .background) {
             // Clear cache
-            lockQueue.async(flags: .barrier) {
-                self.cache.removeAll()
-            }
+            storage.removeAll()
 
             // Delete all cache files
             for region in HolidayRegion.allCases {
@@ -148,8 +158,6 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
     }
 
     func getLastSyncTime(for region: HolidayRegion) -> Date? {
-        lockQueue.sync {
-            return self.cache[region.rawValue]?.lastSyncedAt
-        }
+        storage.lastSyncTime(for: region)
     }
 }

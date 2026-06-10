@@ -321,7 +321,7 @@ struct HolidaySourceEditView: View {
         if trimmed.isEmpty {
             do {
                 try subscriptionManager.updateURL(for: region, newURL: "")
-                await subscriptionManager.syncAllEnabled()
+                _ = await subscriptionManager.syncAllEnabled()
             } catch {
                 await MainActor.run {
                     errorMessage = error.localizedDescription
@@ -366,7 +366,7 @@ struct HolidaySourceEditView: View {
             }
 
             try subscriptionManager.updateURL(for: region, newURL: savedURL)
-            await subscriptionManager.syncAllEnabled()
+            _ = await subscriptionManager.syncAllEnabled()
 
         } catch {
             // 保存失败，显示错误提示
@@ -448,7 +448,7 @@ struct HolidaySourceEditView: View {
 
 
                 // 7. 成功后自动同步
-                await subscriptionManager.syncAllEnabled()
+                _ = await subscriptionManager.syncAllEnabled()
 
                 logSaveSuccess(savedURL)
 

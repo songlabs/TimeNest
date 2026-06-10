@@ -187,14 +187,7 @@ class ICSDownloadService: ICSDownloading {
                     let fallbackURL = appendNoCacheQuery(to: url)
 
                     // 重试带 nocache 参数的 URL
-                    let (retryData, retryResponse) = try await fetchICS(from: fallbackURL, timeout: timeout)
-
-                    guard let retryHTTPResponse = retryResponse as? HTTPURLResponse else {
-                        #if DEBUG
-                        print("[EnhancedICS] fallback 响应类型无效")
-                        #endif
-                        throw EnhancedICSError.emptyResponse
-                    }
+                    let (retryData, retryHTTPResponse) = try await fetchICS(from: fallbackURL, timeout: timeout)
 
                     guard (200...299).contains(retryHTTPResponse.statusCode) else {
                         #if DEBUG

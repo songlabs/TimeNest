@@ -339,7 +339,7 @@ class MonthCalendarViewModel: ObservableObject {
     
     /// 确保指定日期的数据已加载
     private func ensureDataLoadedForDate(_ date: Date) async {
-        guard let grid = grid else {
+        guard self.grid != nil else {
             await reloadMonth()
             return
         }
