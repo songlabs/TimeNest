@@ -39,72 +39,77 @@ struct EventEditorView: View {
     }
 
     var body: some View {
-        Form {
-            Section {
-                TextField(localization.localized(.editorTitle), text: $title)
-            } header: {
-                Text(localization.localized(.editorBasicInfo))
-            }
-
-            Section {
-                DatePicker(
-                    localization.localized(.editorStart),
-                    selection: $startDate,
-                    displayedComponents: datePickerComponents
-                )
-                .onChange(of: startDate) { _, newValue in
-                    adjustEndDateIfNeeded(for: newValue)
-                }
-
-                DatePicker(
-                    localization.localized(.editorEnd),
-                    selection: $endDate,
-                    displayedComponents: datePickerComponents
-                )
-
-                Toggle(localization.localized(.editorAllDay), isOn: $isAllDay)
-                    .onChange(of: isAllDay) { _, newValue in
-                        normalizeForAllDayChange(newValue)
-                    }
-
-                Picker(localization.localized(.editorReminder), selection: $reminderOffsetMinutes) {
-                    ForEach(reminderOptions.indices, id: \.self) { index in
-                        let option = reminderOptions[index]
-                        Text(reminderTitle(for: option)).tag(option as Int?)
-                    }
-                }
-            } header: {
-                Text(localization.localized(.editorTime))
-            }
-
-            if let validationMessage = validationMessage ?? errorMessage {
+        NavigationStack {
+            Form {
                 Section {
-                    Text(validationMessage)
-                        .foregroundColor(.red)
+                    TextField(localization.localized(.editorTitle), text: $title)
                 } header: {
-                    Text(localization.localized(.editorError))
+                    Text(localization.localized(.editorBasicInfo))
                 }
-            }
 
-            Section {
-                Button(localization.localized(.editorSave)) {
-                    Task {
-                        await save()
+                Section {
+                    DatePicker(
+                        localization.localized(.editorStart),
+                        selection: $startDate,
+                        displayedComponents: datePickerComponents
+                    )
+                    .onChange(of: startDate) { _, newValue in
+                        adjustEndDateIfNeeded(for: newValue)
+                    }
+
+                    DatePicker(
+                        localization.localized(.editorEnd),
+                        selection: $endDate,
+                        displayedComponents: datePickerComponents
+                    )
+
+                    Toggle(localization.localized(.editorAllDay), isOn: $isAllDay)
+                        .onChange(of: isAllDay) { _, newValue in
+                            normalizeForAllDayChange(newValue)
+                        }
+
+                    Picker(localization.localized(.editorReminder), selection: $reminderOffsetMinutes) {
+                        ForEach(reminderOptions.indices, id: \.self) { index in
+                            let option = reminderOptions[index]
+                            Text(reminderTitle(for: option)).tag(option as Int?)
+                        }
+                    }
+                } header: {
+                    Text(localization.localized(.editorTime))
+                }
+
+                if let validationMessage = validationMessage ?? errorMessage {
+                    Section {
+                        Text(validationMessage)
+                            .foregroundColor(.red)
+                    } header: {
+                        Text(localization.localized(.editorError))
                     }
                 }
-                .disabled(!canSave || saving)
             }
+            .disabled(saving)
+            .navigationTitle(editorTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localization.localized(.editorCancel), role: .cancel) {
+                        isPresented = false
+                    }
+                    .disabled(saving)
+                }
 
-            Section {
-                Button(localization.localized(.editorCancel), role: .cancel) {
-                    isPresented = false
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localization.localized(.editorSave)) {
+                        Task {
+                            await save()
+                        }
+                    }
+                    .disabled(!canSave || saving)
                 }
             }
-        }
-        .navigationTitle(isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent))
-        .disabled(saving)
-        .onAppear {
-            setupInitialState()
+            .onAppear {
+                setupInitialState()
+            }
         }
     }
 
@@ -115,6 +120,10 @@ struct EventEditorView: View {
         case .edit:
             return true
         }
+    }
+
+    private var editorTitle: String {
+        isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
     }
 
     private var datePickerComponents: DatePickerComponents {
