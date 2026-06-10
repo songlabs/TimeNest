@@ -175,6 +175,28 @@ struct DayTimeAxisView: View {
     }
 }
 
+private struct CurrentTimeLineDay: View {
+    let timeLabelWidth: CGFloat
+    let contentWidth: CGFloat
+    let lineY: CGFloat
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Rectangle()
+                .fill(ShiftCalendarColors.sundayRed)
+                .frame(width: contentWidth, height: 2)
+                .offset(x: timeLabelWidth)
+
+            Circle()
+                .fill(ShiftCalendarColors.sundayRed)
+                .frame(width: 7, height: 7)
+                .offset(x: timeLabelWidth - 3.5)
+        }
+        .frame(width: timeLabelWidth + contentWidth, alignment: .topLeading)
+        .offset(y: lineY)
+    }
+}
+
 // MARK: - Preview
 
 #if DEBUG
