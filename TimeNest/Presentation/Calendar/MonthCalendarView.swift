@@ -408,8 +408,11 @@ struct DayCellView: View {
                     .padding(.leading, 8)
                     .padding(.top, 8)
 
+                eventLabelsView
+                    .padding(.top, 4)
+
                 // 弹性空间 - 将底部标签推到底部
-                Spacer()
+                Spacer(minLength: 2)
 
                 // 底部区域：节假日标签或排班标签
                 // 节假日标签 - 底部居中，优先于排班标签显示
@@ -431,6 +434,51 @@ struct DayCellView: View {
         }
         .frame(width: cellWidth, height: cellHeight)
         .opacity(cell.isInCurrentMonth ? 1.0 : 0.5)
+    }
+
+
+    @ViewBuilder
+    private var eventLabelsView: some View {
+        let visibleEvents = Array(cell.events.prefix(3))
+        let hiddenCount = max(0, cell.events.count - visibleEvents.count)
+
+        if !visibleEvents.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(visibleEvents, id: \.id) { event in
+                    Text(eventLabel(for: event))
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(ShiftCalendarColors.primaryBlueDark)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
+                        .cornerRadius(3)
+                }
+
+                if hiddenCount > 0 {
+                    Text("+\(hiddenCount)")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(ShiftCalendarColors.secondaryText)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 4)
+        }
+    }
+
+    private func eventLabel(for event: EventOccurrence) -> String {
+        if event.isAllDay {
+            return event.title
+        }
+        return "\(formatTime(event.startDate)) \(event.title)"
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
     }
 
     private var cellBackgroundColor: Color {

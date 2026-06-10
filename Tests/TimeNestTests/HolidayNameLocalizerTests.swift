@@ -1280,6 +1280,47 @@ final class HolidayNameLocalizerTests: XCTestCase {
         XCTAssertEqual(try await useCase.events(in: interval).map(\.title), ["Afternoon"])
     }
 
+    func testCalendarDisplayUseCaseIncludesLateNightEventInDayCell() async throws {
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(repository: repository)
+        let calendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 22, minute: 50)))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 23, minute: 46)))
+        let useCase = CalendarDisplayUseCase(
+            holidayUseCase: HolidayUseCase(cacheRepository: InMemoryHolidayEventCacheRepository()),
+            localizationUseCase: CalendarLocalizationUseCase(),
+            eventUseCase: eventUseCase
+        )
+        let setting = CalendarDisplaySetting(
+            displayLanguage: .zhHans,
+            selectedHolidayRegions: [],
+            weekStartPolicy: .sunday,
+            showLunarCalendar: false
+        )
+
+        try await eventUseCase.createEvent(CalendarEvent(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            title: "我",
+            note: nil,
+            startDate: start,
+            endDate: end,
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: start,
+            updatedAt: start
+        ))
+
+        let grid = try await useCase.monthGrid(year: 2026, month: 6, setting: setting)
+        let day = try XCTUnwrap(grid.days.first { $0.date == DateOnly(year: 2026, month: 6, day: 10) })
+
+        XCTAssertEqual(day.events.map(\.title), ["我"])
+        XCTAssertEqual(day.events.first?.startDate, start)
+        XCTAssertEqual(day.events.first?.endDate, end)
+    }
+
     @MainActor
     func testWeekViewGeneratesSevenDaysFromSelectedDate() async throws {
         let calendar = gregorianCalendar(timeZone: TimeZone(secondsFromGMT: 0)!)
