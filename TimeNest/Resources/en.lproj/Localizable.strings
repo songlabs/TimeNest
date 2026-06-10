@@ -65,6 +65,7 @@
 "reminder.one_day_before" = "1 day before";
 
 /* Calendar */
+"calendar.more_events_count" = "+%d";
 "calendar.add_event" = "Add new event";
 
 /* Event Marker */

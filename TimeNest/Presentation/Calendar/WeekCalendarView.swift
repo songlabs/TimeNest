@@ -8,6 +8,27 @@ struct WeekCalendarView: View {
 
     private let timeLabelWidth: CGFloat = 52
     private let dateHeaderHeight: CGFloat = 72
+    private let allDayRowVerticalPadding: CGFloat = 8
+    private let allDayChipHeight: CGFloat = 20
+    private let allDayChipSpacing: CGFloat = 4
+
+    private var hasAllDayEvents: Bool {
+        cells.contains { cell in
+            cell.events.contains { $0.isAllDay }
+        }
+    }
+
+    private var allDayRowHeight: CGFloat {
+        guard hasAllDayEvents else { return 0 }
+        let maxVisibleRows = cells.map { cell in
+            let count = cell.events.filter { $0.isAllDay }.count
+            if count > 2 { return 3 }
+            return count
+        }.max() ?? 1
+        return allDayRowVerticalPadding * 2
+            + CGFloat(max(1, maxVisibleRows)) * allDayChipHeight
+            + CGFloat(max(0, maxVisibleRows - 1)) * allDayChipSpacing
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -24,13 +45,24 @@ struct WeekCalendarView: View {
                 )
                 .frame(height: dateHeaderHeight)
 
+                if hasAllDayEvents {
+                    WeekAllDayEventsRow(
+                        cells: cells,
+                        timeLabelWidth: timeLabelWidth,
+                        columnWidth: columnWidth,
+                        selectedDate: selectedDate,
+                        rowHeight: allDayRowHeight
+                    )
+                    .frame(height: allDayRowHeight)
+                }
+
                 WeekTimeAxisView(
                     cells: cells,
                     timeLabelWidth: timeLabelWidth,
                     columnWidth: columnWidth,
                     selectedDate: selectedDate
                 )
-                .frame(height: max(0, geometry.size.height - dateHeaderHeight))
+                .frame(height: max(0, geometry.size.height - dateHeaderHeight - allDayRowHeight))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -116,6 +148,105 @@ struct WeekDateHeaderCell: View {
     private var weekendColor: Color? {
         ShiftCalendarColors.weekendTextColor(for: cell.weekdayText)
     }
+}
+
+// MARK: - 全天事件行
+
+struct WeekAllDayEventsRow: View {
+    let cells: [CalendarDayCell]
+    let timeLabelWidth: CGFloat
+    let columnWidth: CGFloat
+    let selectedDate: Date
+    let rowHeight: CGFloat
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            Text(LocalizationManager.shared.localized(.editorAllDay))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(ShiftCalendarColors.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .frame(width: timeLabelWidth - 8, height: rowHeight, alignment: .topTrailing)
+                .padding(.top, 10)
+                .padding(.trailing, 6)
+
+            ForEach(cells, id: \.id) { cell in
+                WeekAllDayColumn(
+                    events: allDayEvents(in: cell),
+                    isSelected: isDateSelected(cell.date)
+                )
+                .frame(width: columnWidth, height: rowHeight, alignment: .top)
+            }
+        }
+        .background(ShiftCalendarColors.backgroundColor)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(ShiftCalendarColors.separatorColor)
+                .frame(height: 0.5)
+        }
+    }
+
+    private func allDayEvents(in cell: CalendarDayCell) -> [EventOccurrence] {
+        cell.events.filter { $0.isAllDay }.sorted { $0.title < $1.title }
+    }
+
+    private func isDateSelected(_ dateOnly: DateOnly) -> Bool {
+        guard let selectedDateOnly = DateOnly(from: selectedDate) else {
+            return false
+        }
+        return dateOnly == selectedDateOnly
+    }
+}
+
+private struct WeekAllDayColumn: View {
+    let events: [EventOccurrence]
+    let isSelected: Bool
+
+    private var visibleEvents: [EventOccurrence] { Array(events.prefix(2)) }
+    private var hiddenCount: Int { max(0, events.count - visibleEvents.count) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(visibleEvents, id: \.id) { event in
+                AllDayEventChipView(title: event.title, compact: true)
+            }
+
+            if hiddenCount > 0 {
+                Text(moreEventsText(hiddenCount))
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundColor(ShiftCalendarColors.secondaryText)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 3)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(isSelected ? ShiftCalendarColors.primaryBlue.opacity(0.06) : Color.clear)
+        .clipped()
+    }
+}
+
+struct AllDayEventChipView: View {
+    let title: String
+    let compact: Bool
+
+    var body: some View {
+        Text(title)
+            .font(.system(size: compact ? 10 : 13, weight: .semibold))
+            .foregroundColor(ShiftCalendarColors.primaryBlueDark)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, compact ? 5 : 10)
+            .padding(.vertical, compact ? 3 : 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(ShiftCalendarColors.primaryBlue.opacity(0.14))
+            .cornerRadius(compact ? 5 : 8)
+    }
+}
+
+func moreEventsText(_ count: Int) -> String {
+    String(format: LocalizationManager.shared.localized(.calendarMoreEventsCount), count)
 }
 
 // MARK: - 时间轴区域
