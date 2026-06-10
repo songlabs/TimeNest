@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SelectedDateDetailView: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onAddEventTapped: () -> Void
 
@@ -59,14 +60,14 @@ struct SelectedDateDetailView: View {
                 .padding(.vertical, 6)
             }
 
-            // 第三行：＋ 新規の予定を入力する
+            // 第三行：添加日程入口
             Button(action: onAddEventTapped) {
                 HStack(spacing: 6) {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(ShiftCalendarColors.primaryBlue)
 
-                    Text("＋ 新規の予定を入力する")
+                    Text(verbatim: localization.localized(.calendarAddEvent))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(ShiftCalendarColors.primaryText)
 
@@ -90,15 +91,15 @@ struct SelectedDateDetailView: View {
     private func markerTypeToString(_ marker: EventMarkerType) -> String {
         switch marker {
         case .clover:
-            return "お休み"
+            return localization.localized(.eventMarkerDayOff)
         case .memo:
-            return "メモ"
+            return localization.localized(.eventMarkerMemo)
         case .car:
-            return "送迎"
+            return localization.localized(.eventMarkerTransport)
         case .health:
-            return "健康"
+            return localization.localized(.eventMarkerHealth)
         case .dot:
-            return "予定"
+            return localization.localized(.eventMarkerEvent)
         }
     }
 }
@@ -122,5 +123,6 @@ struct SelectedDateDetailView: View {
         ),
         onAddEventTapped: {}
     )
+    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     .background(ShiftCalendarColors.backgroundColor)
 }

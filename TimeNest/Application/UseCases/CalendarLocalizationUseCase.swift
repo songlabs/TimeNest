@@ -2,21 +2,17 @@ import Foundation
 
 class CalendarLocalizationUseCase {
     func monthTitle(year: Int, month: Int, language: DisplayLanguage) -> String {
-        let months: [DisplayLanguage: [String]] = [
-            .zhHans: ["1 月", "2 月", "3 月", "4 月", "5 月", "6 月", "7 月", "8 月", "9 月", "10 月", "11 月", "12 月"],
-            .ja: ["1 月", "2 月", "3 月", "4 月", "5 月", "6 月", "7 月", "8 月", "9 月", "10 月", "11 月", "12 月"],
-            .ko: ["1 월", "2 월", "3 월", "4 월", "5 월", "6 월", "7 월", "8 월", "9 월", "10 월", "11 월", "12 월"],
-            .enUS: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
-        ]
-        
-        let monthArray = months[language] ?? months[.zhHans]!
-        let title = monthArray[month - 1]
-        
         switch language {
-        case .system, .zhHans, .ja, .ko:
-            return "\(year)年 \(title)"
+        case .system, .zhHans, .ja:
+            return "\(year)年\(month)月"
+        case .ko:
+            return "\(year)년 \(month)월"
         case .enUS:
-            return "\(title) \(year)"
+            let months = [
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ]
+            return "\(months[month - 1]) \(year)"
         }
     }
     
@@ -30,10 +26,24 @@ class CalendarLocalizationUseCase {
         
         var symbolsArray = symbols[language] ?? symbols[.zhHans]!
         
-        if weekStartPolicy == .monday {
+        switch weekStartPolicy {
+        case .sunday:
+            break
+        case .monday:
             symbolsArray.append(symbolsArray.removeFirst())
+        case .saturday:
+            let last = symbolsArray.removeLast()
+            symbolsArray.insert(last, at: 0)
+        case .system:
+            let firstWeekday = Calendar.current.firstWeekday
+            if firstWeekday == 2 {
+                symbolsArray.append(symbolsArray.removeFirst())
+            } else if firstWeekday == 7 {
+                let last = symbolsArray.removeLast()
+                symbolsArray.insert(last, at: 0)
+            }
         }
-        
+
         return symbolsArray
     }
     

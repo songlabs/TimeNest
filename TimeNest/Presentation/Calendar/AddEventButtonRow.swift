@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AddEventButtonRow: View {
+    @EnvironmentObject private var localization: LocalizationManager
     let onTap: () -> Void
     
     var body: some View {
@@ -11,7 +12,7 @@ struct AddEventButtonRow: View {
                     .font(.system(size: 18, weight: .semibold))
                     .foregroundColor(ShiftCalendarColors.primaryBlue)
                 
-                Text("新規の予定を入力する")
+                Text(verbatim: localization.localized(.calendarAddEvent))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(ShiftCalendarColors.primaryText)
                 
@@ -37,5 +38,6 @@ struct AddEventButtonRow: View {
 
 #Preview {
     AddEventButtonRow(onTap: {})
+        .environmentObject(LocalizationManager.preview(languageCode: "ja"))
         .background(ShiftCalendarColors.backgroundColor)
 }

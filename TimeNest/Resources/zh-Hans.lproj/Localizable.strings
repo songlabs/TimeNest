@@ -56,9 +56,15 @@
 "notification.sound" = "提示音";
 
 /* Calendar */
-"calendar.settings" = "日历设置";
+"calendar.add_event" = "新建日程";
 "calendar.first_day" = "一周开始";
-"calendar.show_week_numbers" = "显示周号";
+
+/* Event Marker */
+"event_marker.day_off" = "休息";
+"event_marker.memo" = "备忘";
+"event_marker.transport" = "接送";
+"event_marker.health" = "健康";
+"event_marker.event" = "日程";
 
 /* View Mode */
 "view_mode.month" = "月";

@@ -152,8 +152,7 @@ class CalendarDisplayUseCase {
     }
 
     private func weekStartOffset(for weekday: Int, weekStartPolicy: WeekStartPolicy) -> Int {
-        let calendar = Calendar(identifier: .gregorian)
-        let systemWeekStart = calendar.firstWeekday
+        let systemWeekStart = Calendar.current.firstWeekday
 
         let actualWeekStart: Int
         switch weekStartPolicy {

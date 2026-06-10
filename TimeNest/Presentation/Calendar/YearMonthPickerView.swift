@@ -44,7 +44,7 @@ struct YearMonthPickerView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                     
-                    Picker("Year", selection: $selectedYear) {
+                    Picker(localization.localized(.yearLabel), selection: $selectedYear) {
                         ForEach(yearRange, id: \.self) { year in
                             Text("\(year)")
                                 .tag(year)
@@ -60,7 +60,7 @@ struct YearMonthPickerView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundColor(.secondary)
                     
-                    Picker("Month", selection: $selectedMonth) {
+                    Picker(localization.localized(.monthLabel), selection: $selectedMonth) {
                         ForEach(monthRange, id: \.self) { month in
                             Text(monthLabel(for: month))
                                 .tag(month)
@@ -113,8 +113,9 @@ struct YearMonthPickerView: View {
 
 #Preview {
     YearMonthPickerView(currentDate: Date(), onSelect: { year, month in
-        print("Selected: \(year)-\(month)")
+        _ = (year, month)
     })
+    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     .padding()
     .background(ShiftCalendarColors.backgroundColor)
 }

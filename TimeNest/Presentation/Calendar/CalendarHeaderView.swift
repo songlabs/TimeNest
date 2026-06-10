@@ -5,13 +5,10 @@ import SwiftUI
 struct CalendarHeaderView: View {
     let title: String
     let displayMode: CalendarViewMode
-    let weekDisplayDays: Int
     let onPrevious: () -> Void
     let onNext: () -> Void
-    let onTodayTapped: () -> Void
     let onTitleTapped: () -> Void
     let onSettingsTapped: () -> Void
-    let onWeekDaysChanged: (Int) -> Void
 
     var body: some View {
         unifiedHeaderView
@@ -110,13 +107,10 @@ struct CalendarHeaderView: View {
     CalendarHeaderView(
         title: "2026年6月",
         displayMode: .month,
-        weekDisplayDays: 7,
         onPrevious: {},
         onNext: {},
-        onTodayTapped: {},
         onTitleTapped: {},
-        onSettingsTapped: {},
-        onWeekDaysChanged: { _ in }
+        onSettingsTapped: {}
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     .background(ShiftCalendarColors.backgroundColor)
@@ -126,13 +120,10 @@ struct CalendarHeaderView: View {
     CalendarHeaderView(
         title: "2026年6月",
         displayMode: .week,
-        weekDisplayDays: 7,
         onPrevious: {},
         onNext: {},
-        onTodayTapped: {},
         onTitleTapped: {},
-        onSettingsTapped: {},
-        onWeekDaysChanged: { _ in }
+        onSettingsTapped: {}
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     .background(ShiftCalendarColors.backgroundColor)
@@ -142,13 +133,10 @@ struct CalendarHeaderView: View {
     CalendarHeaderView(
         title: "2026年6月10日（三）",
         displayMode: .day,
-        weekDisplayDays: 7,
         onPrevious: {},
         onNext: {},
-        onTodayTapped: {},
         onTitleTapped: {},
-        onSettingsTapped: {},
-        onWeekDaysChanged: { _ in }
+        onSettingsTapped: {}
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
     .background(ShiftCalendarColors.backgroundColor)

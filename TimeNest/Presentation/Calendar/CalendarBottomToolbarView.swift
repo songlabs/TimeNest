@@ -58,7 +58,7 @@ struct CalendarBottomToolbarView: View {
                             }
                             onModeChanged?(mode)
                         }) {
-                            Text(verbatim: mode.displayName)
+                            Text(verbatim: localization.localized(mode.localizedKey))
                                 .font(.system(size: ShiftCalendarLayout.footerButtonFontSize, weight: selectedViewMode == mode ? .semibold : ShiftCalendarLayout.footerButtonFontWeight))
                                 .foregroundColor(selectedViewMode == mode ? ShiftCalendarColors.primaryBlue : ShiftCalendarColors.secondaryText)
                                 .frame(width: 56, height: 50)
