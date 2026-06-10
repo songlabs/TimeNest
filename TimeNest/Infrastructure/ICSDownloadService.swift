@@ -18,7 +18,7 @@ enum EnhancedICSError: Error, LocalizedError {
         case .invalidURL:
             return "URL が正しくありません。"
         case .unsupportedScheme:
-            return "HTTPS または HTTP の URL を入力してください。"
+            return "HTTPS の URL を入力してください。"
         case .networkError(let error):
             return "ICS の取得に失敗しました：\(error.localizedDescription)"
         case .invalidHTTPStatus(let statusCode):
@@ -55,8 +55,8 @@ class ICSDownloadService: ICSDownloading {
     // 最大文件大小限制 (10MB)
     private let maxFileSize: Int = 10 * 1024 * 1024
 
-    // 允许 http 和 https
-    private let allowedSchemes = ["https", "http"]
+    // App Store/ATS 向けに、外部 ICS 取得は HTTPS のみに制限します。
+    private let allowedSchemes = ["https"]
 
     private let session: URLSession
 

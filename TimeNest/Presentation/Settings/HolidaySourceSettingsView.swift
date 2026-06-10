@@ -298,7 +298,7 @@ struct HolidaySourceEditView: View {
         guard !trimmed.isEmpty,
               let urlObj = URL(string: trimmed),
               let scheme = urlObj.scheme,
-              ["https", "http"].contains(scheme.lowercased()) else {
+              scheme.lowercased() == "https" else {
             isValidURL = false
             return
         }

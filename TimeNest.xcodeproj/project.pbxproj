@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A11111111111111111111111 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A22222222222222222222222 /* PrivacyInfo.xcprivacy */; };
 		030F4B625A30EC646FCAAC9F /* ReminderStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB0894E7E79370DACAF68DE4 /* ReminderStep.swift */; };
 		04D0B4B3961F3C11BC6D797A /* BundleHolidayProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E529D090684264185A62D2DD /* BundleHolidayProvider.swift */; };
 		059EC02C212EACF956EFBD2F /* ReminderStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF46837BBCDCF4238367EE27 /* ReminderStatus.swift */; };
@@ -107,6 +108,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		A22222222222222222222222 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		00E77805A7FD7651A7D51D2D /* RecurrenceRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRule.swift; sourceTree = "<group>"; };
 		02CE474A2B66E0B8BD58BB72 /* AdBannerPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBannerPlaceholderView.swift; sourceTree = "<group>"; };
 		030EF4730C918F3BE3C9CC91 /* HolidayEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayEvent.swift; sourceTree = "<group>"; };
@@ -367,6 +369,7 @@
 			isa = PBXGroup;
 			children = (
 				8A3C86D3041C26844E7991D5 /* Info.plist */,
+				A22222222222222222222222 /* PrivacyInfo.xcprivacy */,
 				236B6E494CD2F8FD60E728B7 /* App */,
 				F506844DAAC238827B3E1D03 /* Application */,
 				58F1464F0B8930F9BB265375 /* Domain */,
@@ -658,6 +661,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				494A0F13B101F92803150695 /* Assets.xcassets in Resources */,
+				A11111111111111111111111 /* PrivacyInfo.xcprivacy in Resources */,
 				DE72508C123D5BACDB6F5A4C /* Localizable.strings in Resources */,
 				6839B6B779B1BCABBD773D1D /* en.lproj in Resources */,
 				28EA7B08CE5976E1EB5EE94D /* ja.lproj in Resources */,
