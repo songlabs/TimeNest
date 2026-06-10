@@ -2,10 +2,8 @@ import SwiftUI
 
 /// 日视图 - 浅色时间轴样式日历
 struct DayCalendarView: View {
-    @EnvironmentObject private var localization: LocalizationManager
     let selectedDate: Date
     let cell: CalendarDayCell?
-    let onTitleTapped: () -> Void
 
     private let timeLabelWidth: CGFloat = 52
 
@@ -155,9 +153,7 @@ private func makePreviewCell() -> CalendarDayCell {
 #Preview {
     DayCalendarView(
         selectedDate: Date(),
-        cell: makePreviewCell(),
-        onTitleTapped: {}
+        cell: makePreviewCell()
     )
-    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }
 #endif

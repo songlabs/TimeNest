@@ -81,7 +81,11 @@ final class LocalizationManager: ObservableObject {
         case "ko":
             return "ko"
         case "system":
-            return Locale.current.language.languageCode?.identifier ?? "en"
+            let languageCode = Locale.current.language.languageCode?.identifier ?? "en"
+            if languageCode == "zh" {
+                return "zh-Hans"
+            }
+            return languageCode
         default:
             return languageCode
         }
@@ -208,6 +212,32 @@ final class LocalizationManager: ObservableObject {
             formatter.locale = Locale(identifier: "en_US")
             formatter.dateFormat = "MMMM yyyy"
             return formatter.string(from: date)
+        }
+    }
+
+    /// 获取日期标题
+    /// - Parameter date: 用于提取年月日
+    /// - Returns: 本地化后的日期标题
+    func dayTitle(for date: Date) -> String {
+        let calendar = Calendar(identifier: .gregorian)
+        let year = calendar.component(.year, from: date)
+        let month = calendar.component(.month, from: date)
+        let day = calendar.component(.day, from: date)
+        let weekdaySymbols = shortWeekdaySymbols(weekStartPolicy: .sunday)
+        let weekdayIndex = calendar.component(.weekday, from: date) - 1
+        let weekdayText = weekdaySymbols[weekdayIndex]
+
+        switch currentLanguage {
+        case .zhHans, .system, .ja:
+            return "\(year)年\(month)月\(day)日（\(weekdayText)）"
+        case .ko:
+            return "\(year)년 \(month)월 \(day)일 (\(weekdayText))"
+        case .enUS:
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "en_US")
+            formatter.calendar = calendar
+            formatter.dateFormat = "MMM d, yyyy"
+            return "\(formatter.string(from: date)) (\(weekdayText))"
         }
     }
 

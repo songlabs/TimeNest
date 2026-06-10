@@ -92,7 +92,7 @@ struct HolidaySubscriptionSettingsView: View {
                     // 订阅列表
                     if viewModel.allAvailableSubscriptions.isEmpty {
                         ContentUnavailableView {
-                            Label("holiday_subscription.no_subscriptions", systemImage: "calendar.badge.exclamationmark")
+                            Label(localization.localized(.holidaySubscriptionNoSubscriptions), systemImage: "calendar.badge.exclamationmark")
                         } description: {
                             Text(localization.localized(.holidaySubscriptionNoSubscriptionsDescription))
                         }

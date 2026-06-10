@@ -56,9 +56,15 @@
 "notification.sound" = "사운드";
 
 /* Calendar */
-"calendar.settings" = "캘린더 설정";
+"calendar.add_event" = "새 일정 추가";
 "calendar.first_day" = "주 시작";
-"calendar.show_week_numbers" = "주 번호 표시";
+
+/* Event Marker */
+"event_marker.day_off" = "휴무";
+"event_marker.memo" = "메모";
+"event_marker.transport" = "이동";
+"event_marker.health" = "건강";
+"event_marker.event" = "일정";
 
 /* View Mode */
 "view_mode.month" = "월";

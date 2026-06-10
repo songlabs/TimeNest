@@ -18,15 +18,4 @@ enum CalendarViewMode: String, CaseIterable, Identifiable {
             return .viewModeDay
         }
     }
-
-    var displayName: String {
-        switch self {
-        case .month:
-            return "月"
-        case .week:
-            return "周"
-        case .day:
-            return "日"
-        }
-    }
 }

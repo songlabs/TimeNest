@@ -42,7 +42,7 @@ struct DateOnly: Codable, Hashable, Comparable, Identifiable {
             components.second = 0
         }
         
-        var calendar = Calendar.current
+        var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         
         return calendar.date(from: components) ?? Date()

@@ -2,24 +2,21 @@ import SwiftUI
 
 /// 周视图 - 浅色时间轴样式日历
 struct WeekCalendarView: View {
-    @EnvironmentObject private var localization: LocalizationManager
     let selectedDate: Date
-    let displayDays: Int  // 7, 5, 或 3
     let cells: [CalendarDayCell]
     let onDateSelected: (Date) -> Void
-    let onTitleTapped: () -> Void
 
     private let timeLabelWidth: CGFloat = 52
     private let dateHeaderHeight: CGFloat = 72
 
     var body: some View {
         GeometryReader { geometry in
-            let displayCellCount = max(displayCells.count, 1)
+            let displayCellCount = max(cells.count, 1)
             let columnWidth = (geometry.size.width - timeLabelWidth) / CGFloat(displayCellCount)
 
             VStack(spacing: 0) {
                 WeekDateHeaderView(
-                    cells: displayCells,
+                    cells: cells,
                     timeLabelWidth: timeLabelWidth,
                     columnWidth: columnWidth,
                     selectedDate: selectedDate,
@@ -28,7 +25,7 @@ struct WeekCalendarView: View {
                 .frame(height: dateHeaderHeight)
 
                 WeekTimeAxisView(
-                    cells: displayCells,
+                    cells: cells,
                     timeLabelWidth: timeLabelWidth,
                     columnWidth: columnWidth,
                     selectedDate: selectedDate
@@ -38,24 +35,6 @@ struct WeekCalendarView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(ShiftCalendarColors.backgroundColor)
-    }
-
-    private var displayCells: [CalendarDayCell] {
-        guard displayDays != 7 else { return cells }
-
-        if let selectedDateOnly = DateOnly(from: selectedDate),
-           let selectedIndex = cells.firstIndex(where: { $0.date == selectedDateOnly }) {
-            let halfCount = displayDays / 2
-            let startIndex = min(max(0, selectedIndex - halfCount), max(0, cells.count - displayDays))
-            let endIndex = min(cells.count, startIndex + displayDays)
-            return Array(cells[startIndex..<endIndex])
-        }
-
-        let centerIndex = cells.count / 2
-        let halfCount = displayDays / 2
-        let startIndex = min(max(0, centerIndex - halfCount), max(0, cells.count - displayDays))
-        let endIndex = min(cells.count, startIndex + displayDays)
-        return Array(cells[startIndex..<endIndex])
     }
 }
 
@@ -310,11 +289,8 @@ private func makePreviewCells() -> [CalendarDayCell] {
 #Preview {
     WeekCalendarView(
         selectedDate: Date(),
-        displayDays: 7,
         cells: makePreviewCells(),
-        onDateSelected: { _ in },
-        onTitleTapped: {}
+        onDateSelected: { _ in }
     )
-    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }
 #endif

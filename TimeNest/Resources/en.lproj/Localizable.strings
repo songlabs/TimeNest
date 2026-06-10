@@ -56,9 +56,15 @@
 "notification.sound" = "Sound";
 
 /* Calendar */
-"calendar.settings" = "Calendar Settings";
+"calendar.add_event" = "Add new event";
 "calendar.first_day" = "First Day of Week";
-"calendar.show_week_numbers" = "Show Week Numbers";
+
+/* Event Marker */
+"event_marker.day_off" = "Day off";
+"event_marker.memo" = "Memo";
+"event_marker.transport" = "Transport";
+"event_marker.health" = "Health";
+"event_marker.event" = "Event";
 
 /* View Mode */
 "view_mode.month" = "Month";

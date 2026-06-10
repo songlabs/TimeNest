@@ -26,10 +26,8 @@ struct MonthCalendarView: View {
                 CalendarHeaderView(
                     title: currentTitle,
                     displayMode: viewModel.displayMode,
-                    weekDisplayDays: viewModel.weekDisplayDays,
                     onPrevious: handlePrevious,
                     onNext: handleNext,
-                    onTodayTapped: handleTodayTapped,
                     onTitleTapped: {
                         if viewModel.displayMode == .month {
                             showingYearMonthPicker = true
@@ -37,9 +35,6 @@ struct MonthCalendarView: View {
                     },
                     onSettingsTapped: {
                         showingSettings = true
-                    },
-                    onWeekDaysChanged: { days in
-                        viewModel.setWeekDisplayDays(days)
                     }
                 )
 
@@ -196,25 +191,31 @@ struct MonthCalendarView: View {
             AdBannerPlaceholderView()
 
             // 底部工具栏
-            CalendarBottomToolbarView(
-                selectedViewMode: $viewModel.displayMode,
-                onTodayTapped: handleTodayTapped,
-                onAddEventTapped: {
-                    viewModel.showingEventEditor = true
-                },
-                onModeChanged: { mode in
-                    switch mode {
-                    case .month:
-                        viewModel.switchToMonthView()
-                    case .week:
-                        viewModel.switchToWeekView()
-                    case .day:
-                        viewModel.switchToDayView()
-                    }
-                }
-            )
+            calendarBottomToolbar
         }
         .background(ShiftCalendarColors.backgroundColor)
+    }
+
+    private var calendarBottomToolbar: some View {
+        CalendarBottomToolbarView(
+            selectedViewMode: $viewModel.displayMode,
+            onTodayTapped: handleTodayTapped,
+            onAddEventTapped: {
+                viewModel.showingEventEditor = true
+            },
+            onModeChanged: handleModeChanged
+        )
+    }
+
+    private func handleModeChanged(_ mode: CalendarViewMode) {
+        switch mode {
+        case .month:
+            viewModel.switchToMonthView()
+        case .week:
+            viewModel.switchToWeekView()
+        case .day:
+            viewModel.switchToDayView()
+        }
     }
 
     /// 网格线 overlay - 使用 Path 精确绘制连续网格线
@@ -270,7 +271,7 @@ struct MonthCalendarView: View {
             }
         case .week:
             let calendar = Calendar(identifier: .gregorian)
-            if let newDate = calendar.date(byAdding: .day, value: -viewModel.weekDisplayDays, to: viewModel.selectedDate) {
+            if let newDate = calendar.date(byAdding: .day, value: -7, to: viewModel.selectedDate) {
                 viewModel.selectedDate = newDate
                 Task {
                     await viewModel.reloadMonth()
@@ -296,7 +297,7 @@ struct MonthCalendarView: View {
             }
         case .week:
             let calendar = Calendar(identifier: .gregorian)
-            if let newDate = calendar.date(byAdding: .day, value: viewModel.weekDisplayDays, to: viewModel.selectedDate) {
+            if let newDate = calendar.date(byAdding: .day, value: 7, to: viewModel.selectedDate) {
                 viewModel.selectedDate = newDate
                 Task {
                     await viewModel.reloadMonth()
@@ -333,12 +334,10 @@ struct MonthCalendarView: View {
             // 周视图内容
             WeekCalendarView(
                 selectedDate: viewModel.selectedDate,
-                displayDays: viewModel.weekDisplayDays,
                 cells: viewModel.weekCells,
                 onDateSelected: { date in
                     viewModel.selectDate(date)
-                },
-                onTitleTapped: {}
+                }
             )
             .environmentObject(localization)
 
@@ -346,23 +345,7 @@ struct MonthCalendarView: View {
             AdBannerPlaceholderView()
 
             // 底部工具栏 - 绑定到 viewModel.displayMode
-            CalendarBottomToolbarView(
-                selectedViewMode: $viewModel.displayMode,
-                onTodayTapped: handleTodayTapped,
-                onAddEventTapped: {
-                    viewModel.showingEventEditor = true
-                },
-                onModeChanged: { mode in
-                    switch mode {
-                    case .month:
-                        viewModel.switchToMonthView()
-                    case .week:
-                        viewModel.switchToWeekView()
-                    case .day:
-                        viewModel.switchToDayView()
-                    }
-                }
-            )
+            calendarBottomToolbar
         }
         .background(ShiftCalendarColors.backgroundColor)
     }
@@ -374,8 +357,7 @@ struct MonthCalendarView: View {
             // 日视图内容
             DayCalendarView(
                 selectedDate: viewModel.selectedDate,
-                cell: viewModel.dayCell,
-                onTitleTapped: {}
+                cell: viewModel.dayCell
             )
             .environmentObject(localization)
 
@@ -383,23 +365,7 @@ struct MonthCalendarView: View {
             AdBannerPlaceholderView()
 
             // 底部工具栏 - 绑定到 viewModel.displayMode
-            CalendarBottomToolbarView(
-                selectedViewMode: $viewModel.displayMode,
-                onTodayTapped: handleTodayTapped,
-                onAddEventTapped: {
-                    viewModel.showingEventEditor = true
-                },
-                onModeChanged: { mode in
-                    switch mode {
-                    case .month:
-                        viewModel.switchToMonthView()
-                    case .week:
-                        viewModel.switchToWeekView()
-                    case .day:
-                        viewModel.switchToDayView()
-                    }
-                }
-            )
+            calendarBottomToolbar
         }
         .background(ShiftCalendarColors.backgroundColor)
     }

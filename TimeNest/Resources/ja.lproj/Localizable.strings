@@ -56,9 +56,15 @@
 "notification.sound" = "サウンド";
 
 /* Calendar */
-"calendar.settings" = "カレンダー設定";
+"calendar.add_event" = "新規の予定を入力する";
 "calendar.first_day" = "週の開始日";
-"calendar.show_week_numbers" = "週番号を表示";
+
+/* Event Marker */
+"event_marker.day_off" = "お休み";
+"event_marker.memo" = "メモ";
+"event_marker.transport" = "送迎";
+"event_marker.health" = "健康";
+"event_marker.event" = "予定";
 
 /* View Mode */
 "view_mode.month" = "月";

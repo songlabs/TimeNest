@@ -65,6 +65,15 @@ enum LocalizedString: String {
     // MARK: - Calendar
 
     case calendarFirstDay = "calendar.first_day"
+    case calendarAddEvent = "calendar.add_event"
+
+    // MARK: - Event Marker
+
+    case eventMarkerDayOff = "event_marker.day_off"
+    case eventMarkerMemo = "event_marker.memo"
+    case eventMarkerTransport = "event_marker.transport"
+    case eventMarkerHealth = "event_marker.health"
+    case eventMarkerEvent = "event_marker.event"
 
     // MARK: - View Mode
 
