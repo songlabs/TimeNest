@@ -8,13 +8,11 @@
 
 /* Placeholder */
 "placeholder.coming_soon" = "近日公開";
-"placeholder.feature_not_implemented" = "未実装";
 
 /* Settings */
 "settings.title" = "設定";
 "settings.language" = "言語";
 "settings.notification" = "通知";
-"settings.calendar" = "カレンダー設定";
 "settings.theme" = "テーマ";
 "settings.about" = "アプリ情報";
 "settings.holiday_region" = "祝祭日";
@@ -47,17 +45,16 @@
 /* About */
 "about.version" = "バージョン";
 "about.developer" = "開発者";
+"about.developer_name" = "TimeNest チーム";
 "about.privacy" = "プライバシーポリシー";
 "about.terms" = "利用規約";
 
 /* Notification */
 "notification.enabled" = "通知を有効にする";
 "notification.time" = "通知時間";
-"notification.sound" = "サウンド";
 
 /* Calendar */
 "calendar.add_event" = "新規の予定を入力する";
-"calendar.first_day" = "週の開始日";
 
 /* Event Marker */
 "event_marker.day_off" = "お休み";
@@ -110,28 +107,24 @@
 
 /* Holiday Subscription */
 "holiday_subscription.settings_title" = "祝祭日订阅";
-"holiday_subscription.list_header" = "订阅的地区";
-"holiday_subscription.source_settings" = "订阅源设置";
-"holiday_subscription.refresh" = "手动刷新";
-"holiday_subscription.max_limit_note" = "最多可启用 2 个订阅";
-"holiday_subscription.none" = "未启用";
-"holiday_subscription.no_subscriptions" = "没有订阅";
-"holiday_subscription.no_subscriptions_description" = "请添加订阅源";
+"holiday_subscription.list_header" = "購読中の地域";
+"holiday_subscription.source_settings" = "購読元設定";
+"holiday_subscription.refresh" = "手動更新";
+"holiday_subscription.max_limit_note" = "最大 2 件の購読を有効にできます";
+"holiday_subscription.none" = "未有効";
+"holiday_subscription.no_subscriptions" = "購読はありません";
+"holiday_subscription.no_subscriptions_description" = "購読元を追加してください";
 "holiday_subscription.synced" = "同期済み";
 "holiday_subscription.sync_failed" = "同期失敗";
 "holiday_subscription.not_synced" = "未同期";
-"holiday_subscription.sync_error" = "同步错误";
-"holiday_subscription.no_url" = "未设置";
+"holiday_subscription.sync_error" = "同期エラー";
+"holiday_subscription.no_url" = "未設定";
 
 /* Holiday Source Settings */
 "holiday_source.url_header" = "ICS URL";
 "holiday_source.url_footer" = "有効な HTTPS URL を入力してください";
-"holiday_source.current_url" = "現在の URL";
-"holiday_source.reset_default" = "デフォルト URL にリセット";
 "holiday_source.test_sync" = "同期テスト";
 "holiday_source.error" = "エラー";
-"holiday_source.reset_confirm" = "デフォルトにリセットしますか？";
-"holiday_source.reset_message" = "デフォルトの購読元 URL にリセットされます";
 "holiday_source.enable_first" = "まずこの購読を有効にしてください";
 "holiday_source.no_events" = "ダウンロードした ICS に予定はありません";
 "holiday_source.test_success" = "%d 個の予定を正常に解析しました";
@@ -148,7 +141,14 @@
 "holiday_source.office_holidays_clean_description" = "Office Holidays (Clean) (officeholidays.com) 提供";
 
 /* Holiday Subscription Errors */
-"holiday_subscription.source_not_found" = "订阅源が見つかりません";
+"holiday_subscription.source_not_found" = "購読元が見つかりません";
+
+/* Holiday Subscription Manager Errors */
+"holiday_subscription.error.max_limit_exceeded" = "有効にできる購読は最大 2 件です";
+"holiday_subscription.error.invalid_url" = "無効な URL です";
+"holiday_subscription.error.download_failed" = "ダウンロードに失敗しました：%@";
+"holiday_subscription.error.parse_failed" = "解析に失敗しました：%@";
+"holiday_subscription.error.sync_in_progress" = "同期中です";
 
 /* Holiday Subscription Sync Alert */
 "holiday_subscription.sync_success_title" = "同期成功";
@@ -160,6 +160,7 @@
 "file_sharing.export" = "スケジュールをエクスポート";
 "file_sharing.export_header" = "エクスポート";
 "file_sharing.export_footer" = "現在のスケジュールを .timenest ファイルとしてエクスポート";
+"file_sharing.export_title" = "TimeNest スケジュール";
 "file_sharing.import" = "スケジュールをインポート";
 "file_sharing.import_header" = "インポート";
 "file_sharing.import_footer" = ".timenest ファイルからイベントをインポート";
@@ -167,4 +168,40 @@
 "file_sharing.imported_count" = "正常にインポート";
 "file_sharing.skipped_count" = "スキップ/失敗";
 "file_sharing.info" = "エクスポートしたファイルは AirDrop、LINE、メールなどで他のデバイスと共有できます。インポート時は既存のリストにイベントが追加され、既存のイベントは上書きされません。";
-"file_sharing.share" = "共有";
+
+/* File Sharing Errors */
+"file_sharing.error.decode_failed" = "ファイルの解析に失敗しました";
+"file_sharing.error.import_failed" = "イベントのインポートに失敗しました";
+"file_sharing.error.no_events" = "ファイルにインポート可能なイベントがありません";
+"file_sharing.error.partial_import_failed" = "一部のイベントをインポートできませんでした";
+"file_sharing.error.file_not_found" = "ファイルが見つかりません";
+"file_sharing.error.invalid_data" = "ファイル形式が無効です";
+"file_sharing.error.schema_version_mismatch" = "サポートされていないファイルバージョンです";
+"file_sharing.error.serialization_failed" = "エクスポートファイルの整形に失敗しました";
+"file_sharing.error.write_failed" = "ファイルの書き込みに失敗しました";
+"file_sharing.error.parse_failed" = "解析に失敗しました";
+
+/* ICS Errors */
+"ics.error.invalid_url" = "URL が正しくありません。";
+"ics.error.unsupported_scheme" = "HTTPS または HTTP の URL を入力してください。";
+"ics.error.network" = "ICS の取得に失敗しました：%@";
+"ics.error.invalid_http_status" = "ICS の取得に失敗しました。HTTP ステータス：%d";
+"ics.error.empty_response" = "ICS データが空です。";
+"ics.error.invalid_encoding" = "ICS データの文字コードを読み取れませんでした。";
+"ics.error.invalid_content" = "取得したデータが有効な iCalendar 形式ではありません。";
+"ics.error.no_events" = "ダウンロードした ICS に祝日データがありません。別の URL をお試しください。";
+"ics.error.parse_failed" = "ICS の解析に失敗しました：%@";
+"ics.error.too_large" = "ICS サイズが大きすぎます（%d bytes > %d bytes）";
+"ics_parse.error.invalid_format" = "無効な ICS 形式です";
+"ics_parse.error.empty_content" = "ICS の内容が空です";
+"ics_parse.error.parse_failed" = "%d 行目の解析に失敗しました：%@";
+"ics_parse.error.invalid_date" = "無効な日付形式です：%@";
+"ics_parse.error.missing_required_field" = "必須項目がありません：%@";
+
+/* App Errors */
+"app_error.persistence" = "保存処理に失敗しました";
+"app_error.validation" = "検証に失敗しました";
+"app_error.permission_denied" = "権限が拒否されました";
+"app_error.notification" = "通知処理に失敗しました";
+"app_error.holiday_data" = "祝日データの取得に失敗しました";
+"app_error.unknown" = "不明なエラーです";

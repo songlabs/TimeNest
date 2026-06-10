@@ -114,21 +114,7 @@ struct WeekDateHeaderCell: View {
     }
 
     private var weekendColor: Color? {
-        if isSunday(weekdayText: cell.weekdayText) {
-            return ShiftCalendarColors.sundayRed
-        }
-        if isSaturday(weekdayText: cell.weekdayText) {
-            return ShiftCalendarColors.saturdayBlue
-        }
-        return nil
-    }
-
-    private func isSunday(weekdayText: String) -> Bool {
-        ["日", "Sun", "Sunday", "일", "dom"].contains(weekdayText)
-    }
-
-    private func isSaturday(weekdayText: String) -> Bool {
-        ["土", "Sat", "Saturday", "토", "sab"].contains(weekdayText)
+        ShiftCalendarColors.weekendTextColor(for: cell.weekdayText)
     }
 }
 

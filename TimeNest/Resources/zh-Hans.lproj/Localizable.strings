@@ -8,13 +8,11 @@
 
 /* Placeholder */
 "placeholder.coming_soon" = "近日公开";
-"placeholder.feature_not_implemented" = "未实现";
 
 /* Settings */
 "settings.title" = "设置";
 "settings.language" = "语言";
 "settings.notification" = "通知";
-"settings.calendar" = "日历设置";
 "settings.theme" = "主题";
 "settings.about" = "应用信息";
 "settings.holiday_region" = "节假日";
@@ -47,17 +45,16 @@
 /* About */
 "about.version" = "版本";
 "about.developer" = "开发者";
+"about.developer_name" = "TimeNest 团队";
 "about.privacy" = "隐私政策";
 "about.terms" = "使用条款";
 
 /* Notification */
 "notification.enabled" = "启用通知";
 "notification.time" = "通知时间";
-"notification.sound" = "提示音";
 
 /* Calendar */
 "calendar.add_event" = "新建日程";
-"calendar.first_day" = "一周开始";
 
 /* Event Marker */
 "event_marker.day_off" = "休息";
@@ -126,12 +123,8 @@
 /* Holiday Source Settings */
 "holiday_source.url_header" = "ICS URL";
 "holiday_source.url_footer" = "请输入有效的 HTTPS URL";
-"holiday_source.current_url" = "当前 URL";
-"holiday_source.reset_default" = "恢复默认 URL";
 "holiday_source.test_sync" = "测试同步";
 "holiday_source.error" = "错误";
-"holiday_source.reset_confirm" = "确认恢复默认？";
-"holiday_source.reset_message" = "这将恢复为默认订阅源 URL";
 "holiday_source.enable_first" = "请先启用此订阅";
 "holiday_source.no_events" = "下载的 ICS 中没有事件";
 "holiday_source.test_success" = "成功解析 %d 个事件";
@@ -150,6 +143,13 @@
 /* Holiday Subscription Errors */
 "holiday_subscription.source_not_found" = "订阅源未找到";
 
+/* Holiday Subscription Manager Errors */
+"holiday_subscription.error.max_limit_exceeded" = "最多只能启用 2 个订阅";
+"holiday_subscription.error.invalid_url" = "无效的 URL";
+"holiday_subscription.error.download_failed" = "下载失败：%@";
+"holiday_subscription.error.parse_failed" = "解析失败：%@";
+"holiday_subscription.error.sync_in_progress" = "同步正在进行中";
+
 /* Holiday Subscription Sync Alert */
 "holiday_subscription.sync_success_title" = "同步成功";
 "holiday_subscription.sync_success_message" = "已成功刷新节假日订阅。";
@@ -160,6 +160,7 @@
 "file_sharing.export" = "导出时间表";
 "file_sharing.export_header" = "导出";
 "file_sharing.export_footer" = "将当前时间表导出为 .timenest 文件";
+"file_sharing.export_title" = "TimeNest 时间表";
 "file_sharing.import" = "导入时间表";
 "file_sharing.import_header" = "导入";
 "file_sharing.import_footer" = "从 .timenest 文件导入事件";
@@ -167,4 +168,40 @@
 "file_sharing.imported_count" = "成功导入";
 "file_sharing.skipped_count" = "跳过/失败";
 "file_sharing.info" = "导出的文件可以通过 AirDrop、LINE、邮件等方式分享给其他设备。导入时会将事件追加到现有列表中，不会覆盖已有事件。";
-"file_sharing.share" = "分享";
+
+/* File Sharing Errors */
+"file_sharing.error.decode_failed" = "文件解析失败";
+"file_sharing.error.import_failed" = "事件导入失败";
+"file_sharing.error.no_events" = "文件中没有可导入的事件";
+"file_sharing.error.partial_import_failed" = "部分事件导入失败";
+"file_sharing.error.file_not_found" = "文件未找到";
+"file_sharing.error.invalid_data" = "文件格式无效";
+"file_sharing.error.schema_version_mismatch" = "不支持的文件版本";
+"file_sharing.error.serialization_failed" = "导出文件格式化失败";
+"file_sharing.error.write_failed" = "文件写入失败";
+"file_sharing.error.parse_failed" = "解析失败";
+
+/* ICS Errors */
+"ics.error.invalid_url" = "URL 不正确。";
+"ics.error.unsupported_scheme" = "请输入 HTTPS 或 HTTP URL。";
+"ics.error.network" = "ICS 获取失败：%@";
+"ics.error.invalid_http_status" = "ICS 获取失败。HTTP 状态：%d";
+"ics.error.empty_response" = "ICS 数据为空。";
+"ics.error.invalid_encoding" = "无法读取 ICS 数据编码。";
+"ics.error.invalid_content" = "获取的数据不是有效的 iCalendar 格式。";
+"ics.error.no_events" = "下载的 ICS 中没有节假日数据，请尝试其他 URL。";
+"ics.error.parse_failed" = "ICS 解析失败：%@";
+"ics.error.too_large" = "ICS 文件过大（%d bytes > %d bytes）";
+"ics_parse.error.invalid_format" = "无效的 ICS 格式";
+"ics_parse.error.empty_content" = "ICS 内容为空";
+"ics_parse.error.parse_failed" = "第 %d 行解析失败：%@";
+"ics_parse.error.invalid_date" = "无效的日期格式：%@";
+"ics_parse.error.missing_required_field" = "缺少必填字段：%@";
+
+/* App Errors */
+"app_error.persistence" = "持久化操作失败";
+"app_error.validation" = "验证失败";
+"app_error.permission_denied" = "权限被拒绝";
+"app_error.notification" = "通知操作失败";
+"app_error.holiday_data" = "节假日数据获取失败";
+"app_error.unknown" = "未知错误";

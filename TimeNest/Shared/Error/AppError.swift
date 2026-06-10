@@ -11,17 +11,17 @@ enum AppError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .persistence:
-            return "持久化操作失败"
+            return LocalizationManager.shared.localized(.appErrorPersistence)
         case .validation:
-            return "验证失败"
+            return LocalizationManager.shared.localized(.appErrorValidation)
         case .permissionDenied:
-            return "权限被拒绝"
+            return LocalizationManager.shared.localized(.appErrorPermissionDenied)
         case .notification:
-            return "通知操作失败"
+            return LocalizationManager.shared.localized(.appErrorNotification)
         case .holidayData:
-            return "节假日数据获取失败"
+            return LocalizationManager.shared.localized(.appErrorHolidayData)
         case .unknown:
-            return "未知错误"
+            return LocalizationManager.shared.localized(.appErrorUnknown)
         }
     }
 }

@@ -97,7 +97,7 @@ struct SettingsView: View {
                 HStack {
                     Text(localization.localized(.aboutDeveloper))
                     Spacer()
-                    Text("TimeNest Team")
+                    Text(localization.localized(.aboutDeveloperName))
                         .foregroundColor(.secondary)
                 }
 

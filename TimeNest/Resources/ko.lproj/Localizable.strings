@@ -8,13 +8,11 @@
 
 /* Placeholder */
 "placeholder.coming_soon" = "곧 공개";
-"placeholder.feature_not_implemented" = "미구현";
 
 /* Settings */
 "settings.title" = "설정";
 "settings.language" = "언어";
 "settings.notification" = "알림";
-"settings.calendar" = "캘린더 설정";
 "settings.theme" = "테마";
 "settings.about" = "앱 정보";
 "settings.holiday_region" = "공휴일";
@@ -47,17 +45,16 @@
 /* About */
 "about.version" = "버전";
 "about.developer" = "개발자";
+"about.developer_name" = "TimeNest 팀";
 "about.privacy" = "개인정보 보호 정책";
 "about.terms" = "이용 약관";
 
 /* Notification */
 "notification.enabled" = "알림 활성화";
 "notification.time" = "알림 시간";
-"notification.sound" = "사운드";
 
 /* Calendar */
 "calendar.add_event" = "새 일정 추가";
-"calendar.first_day" = "주 시작";
 
 /* Event Marker */
 "event_marker.day_off" = "휴무";
@@ -126,12 +123,8 @@
 /* Holiday Source Settings */
 "holiday_source.url_header" = "ICS URL";
 "holiday_source.url_footer" = "유효한 HTTPS URL 을 입력하세요";
-"holiday_source.current_url" = "현재 URL";
-"holiday_source.reset_default" = "기본 URL 로 복원";
 "holiday_source.test_sync" = "동기화 테스트";
 "holiday_source.error" = "오류";
-"holiday_source.reset_confirm" = "기본값으로 복원하시겠습니까?";
-"holiday_source.reset_message" = "기본 구독원 URL 로 복원됩니다";
 "holiday_source.enable_first" = "먼저 이 구독을 활성화하세요";
 "holiday_source.no_events" = "다운로드한 ICS 에 이벤트가 없습니다";
 "holiday_source.test_success" = "%d 개의 이벤트를 성공적으로 파싱했습니다";
@@ -150,6 +143,13 @@
 /* Holiday Subscription Errors */
 "holiday_subscription.source_not_found" = "구독원을 찾을 수 없습니다";
 
+/* Holiday Subscription Manager Errors */
+"holiday_subscription.error.max_limit_exceeded" = "최대 2 개의 구독만 활성화할 수 있습니다";
+"holiday_subscription.error.invalid_url" = "유효하지 않은 URL";
+"holiday_subscription.error.download_failed" = "다운로드 실패: %@";
+"holiday_subscription.error.parse_failed" = "파싱 실패: %@";
+"holiday_subscription.error.sync_in_progress" = "동기화가 진행 중입니다";
+
 /* Holiday Subscription Sync Alert */
 "holiday_subscription.sync_success_title" = "동기화 성공";
 "holiday_subscription.sync_success_message" = "공휴일 구독을 새로고침했습니다.";
@@ -160,6 +160,7 @@
 "file_sharing.export" = "일정 내보내기";
 "file_sharing.export_header" = "내보내기";
 "file_sharing.export_footer" = "현재 일정을 .timenest 파일로 내보내기";
+"file_sharing.export_title" = "TimeNest 일정";
 "file_sharing.import" = "일정 가져오기";
 "file_sharing.import_header" = "가져오기";
 "file_sharing.import_footer" = ".timenest 파일에서 이벤트 가져오기";
@@ -167,4 +168,40 @@
 "file_sharing.imported_count" = "가져옴";
 "file_sharing.skipped_count" = "건너뜀/실패";
 "file_sharing.info" = "내보낸 파일은 AirDrop, LINE, 이메일 등을 통해 다른 기기와 공유할 수 있습니다. 가져오기 시 기존 목록에 이벤트가 추가되며 기존 이벤트는 덮어쓰기되지 않습니다.";
-"file_sharing.share" = "공유";
+
+/* File Sharing Errors */
+"file_sharing.error.decode_failed" = "파일을 파싱하지 못했습니다";
+"file_sharing.error.import_failed" = "이벤트를 가져오지 못했습니다";
+"file_sharing.error.no_events" = "파일에 가져올 수 있는 이벤트가 없습니다";
+"file_sharing.error.partial_import_failed" = "일부 이벤트를 가져오지 못했습니다";
+"file_sharing.error.file_not_found" = "파일을 찾을 수 없습니다";
+"file_sharing.error.invalid_data" = "파일 형식이 올바르지 않습니다";
+"file_sharing.error.schema_version_mismatch" = "지원하지 않는 파일 버전입니다";
+"file_sharing.error.serialization_failed" = "내보내기 파일 형식화에 실패했습니다";
+"file_sharing.error.write_failed" = "파일 쓰기에 실패했습니다";
+"file_sharing.error.parse_failed" = "파싱에 실패했습니다";
+
+/* ICS Errors */
+"ics.error.invalid_url" = "URL 이 올바르지 않습니다.";
+"ics.error.unsupported_scheme" = "HTTPS 또는 HTTP URL 을 입력하세요.";
+"ics.error.network" = "ICS 를 가져오지 못했습니다: %@";
+"ics.error.invalid_http_status" = "ICS 를 가져오지 못했습니다. HTTP 상태: %d";
+"ics.error.empty_response" = "ICS 데이터가 비어 있습니다.";
+"ics.error.invalid_encoding" = "ICS 데이터 인코딩을 읽을 수 없습니다.";
+"ics.error.invalid_content" = "가져온 데이터가 유효한 iCalendar 형식이 아닙니다.";
+"ics.error.no_events" = "다운로드한 ICS 에 공휴일 데이터가 없습니다. 다른 URL 을 시도하세요.";
+"ics.error.parse_failed" = "ICS 파싱 실패: %@";
+"ics.error.too_large" = "ICS 크기가 너무 큽니다(%d bytes > %d bytes)";
+"ics_parse.error.invalid_format" = "유효하지 않은 ICS 형식";
+"ics_parse.error.empty_content" = "ICS 내용이 비어 있습니다";
+"ics_parse.error.parse_failed" = "%d 번째 줄 파싱 실패: %@";
+"ics_parse.error.invalid_date" = "유효하지 않은 날짜 형식: %@";
+"ics_parse.error.missing_required_field" = "필수 필드가 없습니다: %@";
+
+/* App Errors */
+"app_error.persistence" = "저장 작업에 실패했습니다";
+"app_error.validation" = "유효성 검사에 실패했습니다";
+"app_error.permission_denied" = "권한이 거부되었습니다";
+"app_error.notification" = "알림 작업에 실패했습니다";
+"app_error.holiday_data" = "공휴일 데이터를 가져오지 못했습니다";
+"app_error.unknown" = "알 수 없는 오류";

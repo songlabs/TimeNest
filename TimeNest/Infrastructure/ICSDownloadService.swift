@@ -16,25 +16,25 @@ enum EnhancedICSError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "URL が正しくありません。"
+            return LocalizationManager.shared.localized(.icsErrorInvalidURL)
         case .unsupportedScheme:
-            return "HTTPS の URL を入力してください。"
+            return LocalizationManager.shared.localized(.icsErrorUnsupportedScheme)
         case .networkError(let error):
-            return "ICS の取得に失敗しました：\(error.localizedDescription)"
+            return String(format: LocalizationManager.shared.localized(.icsErrorNetwork), error.localizedDescription)
         case .invalidHTTPStatus(let statusCode):
-            return "ICS の取得に失敗しました。HTTP ステータス：\(statusCode)"
+            return String(format: LocalizationManager.shared.localized(.icsErrorInvalidHTTPStatus), statusCode)
         case .emptyResponse:
-            return "ICS データが空です。"
+            return LocalizationManager.shared.localized(.icsErrorEmptyResponse)
         case .invalidEncoding:
-            return "ICS データの文字コードを読み取れませんでした。"
+            return LocalizationManager.shared.localized(.icsErrorInvalidEncoding)
         case .invalidICSContent:
-            return "取得したデータが有効な iCalendar 形式ではありません。"
+            return LocalizationManager.shared.localized(.icsErrorInvalidContent)
         case .noEvents:
-            return "ダウンロードした ICS に祝日データがありません。別の URL をお試しください。"
+            return LocalizationManager.shared.localized(.icsErrorNoEvents)
         case .parseFailed(let reason):
-            return "ICS の解析に失敗しました：\(reason)"
+            return String(format: LocalizationManager.shared.localized(.icsErrorParseFailed), reason)
         case .tooLarge(let size, let limit):
-            return "ICS サイズが大きすぎます（\(size) bytes > \(limit) bytes）"
+            return String(format: LocalizationManager.shared.localized(.icsErrorTooLarge), size, limit)
         }
     }
 }

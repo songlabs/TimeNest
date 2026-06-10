@@ -15,7 +15,6 @@ enum LocalizedString: String {
     case settingsTitle = "settings.title"
     case settingsLanguage = "settings.language"
     case settingsNotification = "settings.notification"
-    case settingsCalendar = "settings.calendar"
     case settingsTheme = "settings.theme"
     case settingsAbout = "settings.about"
     case settingsHolidayRegion = "settings.holiday_region"
@@ -53,6 +52,7 @@ enum LocalizedString: String {
 
     case aboutVersion = "about.version"
     case aboutDeveloper = "about.developer"
+    case aboutDeveloperName = "about.developer_name"
     case aboutPrivacy = "about.privacy"
     case aboutTerms = "about.terms"
 
@@ -60,11 +60,9 @@ enum LocalizedString: String {
 
     case notificationEnabled = "notification.enabled"
     case notificationTime = "notification.time"
-    case notificationSound = "notification.sound"
 
     // MARK: - Calendar
 
-    case calendarFirstDay = "calendar.first_day"
     case calendarAddEvent = "calendar.add_event"
 
     // MARK: - Event Marker
@@ -128,12 +126,8 @@ enum LocalizedString: String {
 
     case holidaySourceURLHeader = "holiday_source.url_header"
     case holidaySourceURLFooter = "holiday_source.url_footer"
-    case holidaySourceCurrentURL = "holiday_source.current_url"
-    case holidaySourceResetDefault = "holiday_source.reset_default"
     case holidaySourceTestSync = "holiday_source.test_sync"
     case holidaySourceError = "holiday_source.error"
-    case holidaySourceResetConfirm = "holiday_source.reset_confirm"
-    case holidaySourceResetMessage = "holiday_source.reset_message"
     case holidaySourceEnableFirst = "holiday_source.enable_first"
     case holidaySourceNoEvents = "holiday_source.no_events"
     case holidaySourceTestSuccess = "holiday_source.test_success"
@@ -150,6 +144,11 @@ enum LocalizedString: String {
     case holidaySourceOfficeHolidaysDescription = "holiday_source.office_holidays_description"
     case holidaySourceOfficeHolidaysCleanDescription = "holiday_source.office_holidays_clean_description"
     case holidaySubscriptionSourceNotFound = "holiday_subscription.source_not_found"
+    case holidaySubscriptionErrorMaxLimitExceeded = "holiday_subscription.error.max_limit_exceeded"
+    case holidaySubscriptionErrorInvalidURL = "holiday_subscription.error.invalid_url"
+    case holidaySubscriptionErrorDownloadFailed = "holiday_subscription.error.download_failed"
+    case holidaySubscriptionErrorParseFailed = "holiday_subscription.error.parse_failed"
+    case holidaySubscriptionErrorSyncInProgress = "holiday_subscription.error.sync_in_progress"
 
     // MARK: - Event Editor
 
@@ -175,6 +174,7 @@ enum LocalizedString: String {
     case fileSharingExport = "file_sharing.export"
     case fileSharingExportHeader = "file_sharing.export_header"
     case fileSharingExportFooter = "file_sharing.export_footer"
+    case fileSharingExportTitle = "file_sharing.export_title"
     case fileSharingImport = "file_sharing.import"
     case fileSharingImportHeader = "file_sharing.import_header"
     case fileSharingImportFooter = "file_sharing.import_footer"
@@ -182,12 +182,50 @@ enum LocalizedString: String {
     case fileSharingImportedCount = "file_sharing.imported_count"
     case fileSharingSkippedCount = "file_sharing.skipped_count"
     case fileSharingInfo = "file_sharing.info"
-    case fileSharingShare = "file_sharing.share"
+
+    // MARK: - File Sharing Errors
+
+    case fileSharingErrorDecodeFailed = "file_sharing.error.decode_failed"
+    case fileSharingErrorImportFailed = "file_sharing.error.import_failed"
+    case fileSharingErrorNoEvents = "file_sharing.error.no_events"
+    case fileSharingErrorPartialImportFailed = "file_sharing.error.partial_import_failed"
+    case fileSharingErrorFileNotFound = "file_sharing.error.file_not_found"
+    case fileSharingErrorInvalidData = "file_sharing.error.invalid_data"
+    case fileSharingErrorSchemaVersionMismatch = "file_sharing.error.schema_version_mismatch"
+    case fileSharingErrorSerializationFailed = "file_sharing.error.serialization_failed"
+    case fileSharingErrorWriteFailed = "file_sharing.error.write_failed"
+    case fileSharingErrorParseFailed = "file_sharing.error.parse_failed"
+
+    // MARK: - ICS Errors
+
+    case icsErrorInvalidURL = "ics.error.invalid_url"
+    case icsErrorUnsupportedScheme = "ics.error.unsupported_scheme"
+    case icsErrorNetwork = "ics.error.network"
+    case icsErrorInvalidHTTPStatus = "ics.error.invalid_http_status"
+    case icsErrorEmptyResponse = "ics.error.empty_response"
+    case icsErrorInvalidEncoding = "ics.error.invalid_encoding"
+    case icsErrorInvalidContent = "ics.error.invalid_content"
+    case icsErrorNoEvents = "ics.error.no_events"
+    case icsErrorParseFailed = "ics.error.parse_failed"
+    case icsErrorTooLarge = "ics.error.too_large"
+    case icsParseErrorInvalidFormat = "ics_parse.error.invalid_format"
+    case icsParseErrorEmptyContent = "ics_parse.error.empty_content"
+    case icsParseErrorParseFailed = "ics_parse.error.parse_failed"
+    case icsParseErrorInvalidDate = "ics_parse.error.invalid_date"
+    case icsParseErrorMissingRequiredField = "ics_parse.error.missing_required_field"
+
+    // MARK: - App Errors
+
+    case appErrorPersistence = "app_error.persistence"
+    case appErrorValidation = "app_error.validation"
+    case appErrorPermissionDenied = "app_error.permission_denied"
+    case appErrorNotification = "app_error.notification"
+    case appErrorHolidayData = "app_error.holiday_data"
+    case appErrorUnknown = "app_error.unknown"
 
     // MARK: - Placeholder
 
     case placeholderComingSoon = "placeholder.coming_soon"
-    case placeholderFeatureNotImplemented = "placeholder.feature_not_implemented"
 }
 
 // MARK: - EnvironmentObject Extension

@@ -12,15 +12,21 @@ enum SubscriptionManagerError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .maxLimitExceeded:
-            return "最多只能启用 2 个订阅"
+            return LocalizationManager.shared.localized(.holidaySubscriptionErrorMaxLimitExceeded)
         case .invalidURL:
-            return "无效的 URL"
+            return LocalizationManager.shared.localized(.holidaySubscriptionErrorInvalidURL)
         case .downloadFailed(let error):
-            return "下载失败：\(error.localizedDescription)"
+            return String(
+                format: LocalizationManager.shared.localized(.holidaySubscriptionErrorDownloadFailed),
+                error.localizedDescription
+            )
         case .parseFailed(let error):
-            return "解析失败：\(error.localizedDescription)"
+            return String(
+                format: LocalizationManager.shared.localized(.holidaySubscriptionErrorParseFailed),
+                error.localizedDescription
+            )
         case .syncInProgress:
-            return "同步正在进行中"
+            return LocalizationManager.shared.localized(.holidaySubscriptionErrorSyncInProgress)
         }
     }
 }
