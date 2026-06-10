@@ -55,25 +55,19 @@ struct EventEditorView: View {
                 }
 
                 Section {
-                    DatePicker(
-                        localization.localized(.editorStart),
-                        selection: $startDate,
-                        displayedComponents: datePickerComponents
+                    EventTimeCompactRow(
+                        startDate: $startDate,
+                        endDate: $endDate,
+                        isAllDay: $isAllDay,
+                        allDayTitle: localization.localized(.editorAllDay),
+                        datePickerComponents: datePickerComponents
                     )
                     .onChange(of: startDate) { _, newValue in
                         adjustEndDateIfNeeded(for: newValue)
                     }
-
-                    DatePicker(
-                        localization.localized(.editorEnd),
-                        selection: $endDate,
-                        displayedComponents: datePickerComponents
-                    )
-
-                    Toggle(localization.localized(.editorAllDay), isOn: $isAllDay)
-                        .onChange(of: isAllDay) { _, newValue in
-                            normalizeForAllDayChange(newValue)
-                        }
+                    .onChange(of: isAllDay) { _, newValue in
+                        normalizeForAllDayChange(newValue)
+                    }
 
                     Picker(localization.localized(.editorReminder), selection: $reminderOffsetMinutes) {
                         ForEach(reminderOptions.indices, id: \.self) { index in
@@ -311,5 +305,140 @@ struct EventEditorView: View {
         default:
             return localization.localized(.reminderNone)
         }
+    }
+}
+
+private struct EventTimeCompactRow: View {
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    @Binding var isAllDay: Bool
+    let allDayTitle: String
+    let datePickerComponents: DatePickerComponents
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            row(format: .full)
+            row(format: .short)
+            row(format: .compact)
+        }
+        .font(.subheadline)
+        .frame(minHeight: 36)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func row(format: TimeDisplayFormat) -> some View {
+        HStack(spacing: format.spacing) {
+            EditableDateText(
+                date: $startDate,
+                text: formatted(startDate, role: .start, format: format),
+                components: datePickerComponents
+            )
+
+            Text(format.separator)
+                .foregroundStyle(.secondary)
+                .fixedSize()
+
+            EditableDateText(
+                date: $endDate,
+                text: formatted(endDate, role: .end, format: format),
+                components: datePickerComponents
+            )
+
+            Spacer(minLength: 4)
+
+            Toggle(isOn: $isAllDay) {
+                Text(allDayTitle)
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .toggleStyle(.switch)
+            .fixedSize()
+            .controlSize(.small)
+        }
+        .lineLimit(1)
+    }
+
+    private func formatted(_ date: Date, role: TimeRole, format: TimeDisplayFormat) -> String {
+        if isAllDay {
+            switch format {
+            case .full:
+                return date.formatted(with: "yyyy/MM/dd")
+            case .short, .compact:
+                return date.formatted(with: "MM/dd")
+            }
+        }
+
+        switch format {
+        case .full:
+            return date.formatted(with: "yyyy/MM/dd H:mm")
+        case .short:
+            return date.formatted(with: "MM/dd H:mm")
+        case .compact:
+            if role == .end && Calendar.current.isDate(startDate, inSameDayAs: endDate) {
+                return date.formatted(with: "HH:mm")
+            }
+            return date.formatted(with: "MM/dd HH:mm")
+        }
+    }
+}
+
+private struct EditableDateText: View {
+    @Binding var date: Date
+    let text: String
+    let components: DatePickerComponents
+
+    var body: some View {
+        Text(text)
+            .foregroundStyle(.primary)
+            .monospacedDigit()
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
+            .overlay {
+                DatePicker("", selection: $date, displayedComponents: components)
+                    .datePickerStyle(.compact)
+                    .labelsHidden()
+                    .opacity(0.02)
+            }
+    }
+}
+
+private enum TimeDisplayFormat {
+    case full
+    case short
+    case compact
+
+    var separator: String {
+        switch self {
+        case .full, .short:
+            return "～"
+        case .compact:
+            return "～"
+        }
+    }
+
+    var spacing: CGFloat {
+        switch self {
+        case .full, .short:
+            return 6
+        case .compact:
+            return 0
+        }
+    }
+}
+
+private enum TimeRole {
+    case start
+    case end
+}
+
+private extension Date {
+    func formatted(with dateFormat: String) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = dateFormat
+        return formatter.string(from: self)
     }
 }
