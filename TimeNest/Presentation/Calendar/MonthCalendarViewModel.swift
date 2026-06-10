@@ -450,10 +450,7 @@ class MonthCalendarViewModel: ObservableObject {
     
     /// 获取周视图标题（年月格式）
     func weekTitle() -> String {
-        let calendar = Calendar(identifier: .gregorian)
-        let year = calendar.component(.year, from: selectedDate)
-        let month = calendar.component(.month, from: selectedDate)
-        return LocalizationManager.shared.monthTitle(for: selectedDate)
+        LocalizationManager.shared.monthTitle(for: selectedDate)
     }
     
     /// 获取日视图标题（年月日格式）

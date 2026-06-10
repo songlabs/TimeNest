@@ -22,7 +22,7 @@ struct MonthCalendarView: View {
                 .ignoresSafeArea(edges: [.top, .bottom])
 
             VStack(spacing: 0) {
-                // 顶部 Header（包含周视图 segmented control）
+                // 顶部 Header（月 / 周 / 日共用导航布局）
                 CalendarHeaderView(
                     title: currentTitle,
                     displayMode: viewModel.displayMode,
