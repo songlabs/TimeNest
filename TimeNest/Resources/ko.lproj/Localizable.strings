@@ -220,3 +220,13 @@
 "app_error.notification" = "알림 작업에 실패했습니다";
 "app_error.holiday_data" = "공휴일 데이터를 가져오지 못했습니다";
 "app_error.unknown" = "알 수 없는 오류";
+
+/* Shift Time */
+"shift_time.settings_title" = "근무 시간 설정";
+"shift.common" = "자주 쓰는 근무";
+"shift.day" = "주간";
+"shift.night" = "야간";
+"shift.start" = "시작";
+"shift.end" = "종료";
+"shift.enabled" = "사용";
+"shift.disabled" = "사용 안 함";

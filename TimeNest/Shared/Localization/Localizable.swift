@@ -19,6 +19,7 @@ enum LocalizedString: String {
     case settingsAbout = "settings.about"
     case settingsHolidayRegion = "settings.holiday_region"
     case settingsWeekStart = "settings.week_start"
+    case shiftTimeSettingsTitle = "shift_time.settings_title"
 
     // MARK: - Language Options
 
@@ -178,6 +179,16 @@ enum LocalizedString: String {
     case editorCancel = "editor.cancel"
     case editorNewEvent = "editor.new_event"
     case editorEditEvent = "editor.edit_event"
+
+    // MARK: - Shift Time
+
+    case shiftCommon = "shift.common"
+    case shiftDay = "shift.day"
+    case shiftNight = "shift.night"
+    case shiftStart = "shift.start"
+    case shiftEnd = "shift.end"
+    case shiftEnabled = "shift.enabled"
+    case shiftDisabled = "shift.disabled"
 
     // MARK: - Day Detail
 

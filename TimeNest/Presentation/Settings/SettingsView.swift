@@ -56,6 +56,18 @@ struct SettingsView: View {
                 Text(localization.localized(.settingsWeekStart))
             }
 
+            // MARK: - Shift Time Section
+            Section {
+                NavigationLink {
+                    ShiftTimeSettingsView()
+                        .environmentObject(localization)
+                } label: {
+                    Text(localization.localized(.shiftTimeSettingsTitle))
+                }
+            } header: {
+                Text(localization.localized(.shiftTimeSettingsTitle))
+            }
+
             // MARK: - Notification Section
             Section {
                 Toggle(localization.localized(.notificationEnabled), isOn: $notificationEnabled)
@@ -161,3 +173,167 @@ struct SettingsView: View {
     }
 }
 #endif
+
+// MARK: - Shift Time Settings
+
+enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
+    case day
+    case night
+
+    var id: String { rawValue }
+
+    var nameKey: LocalizedString {
+        switch self {
+        case .day:
+            return .shiftDay
+        case .night:
+            return .shiftNight
+        }
+    }
+
+    var defaultStartTime: String {
+        switch self {
+        case .day:
+            return "08:30"
+        case .night:
+            return "17:00"
+        }
+    }
+
+    var defaultEndTime: String {
+        switch self {
+        case .day:
+            return "17:30"
+        case .night:
+            return "09:00"
+        }
+    }
+
+    var startTimeKey: String {
+        "shiftTime.\(rawValue).start"
+    }
+
+    var endTimeKey: String {
+        "shiftTime.\(rawValue).end"
+    }
+
+    var isEnabledKey: String {
+        "shiftTime.\(rawValue).isEnabled"
+    }
+}
+
+struct ShiftTimeTemplate: Identifiable {
+    let id: ShiftTimeTemplateID
+    let nameKey: LocalizedString
+    let startTime: String
+    let endTime: String
+    let isEnabled: Bool
+
+    var displayTime: String {
+        "\(startTime)～\(endTime)"
+    }
+
+    var startHourMinute: (hour: Int, minute: Int)? {
+        Self.hourMinute(from: startTime)
+    }
+
+    var endHourMinute: (hour: Int, minute: Int)? {
+        Self.hourMinute(from: endTime)
+    }
+
+    static func all(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
+        ShiftTimeTemplateID.allCases.map { id in
+            ShiftTimeTemplate(
+                id: id,
+                nameKey: id.nameKey,
+                startTime: defaults.string(forKey: id.startTimeKey) ?? id.defaultStartTime,
+                endTime: defaults.string(forKey: id.endTimeKey) ?? id.defaultEndTime,
+                isEnabled: defaults.object(forKey: id.isEnabledKey) as? Bool ?? true
+            )
+        }
+    }
+
+    static func enabled(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
+        all(from: defaults).filter(\.isEnabled)
+    }
+
+    static func normalizedTimeString(from date: Date, calendar: Calendar = Calendar(identifier: .gregorian)) -> String {
+        let hour = calendar.component(.hour, from: date)
+        let minute = calendar.component(.minute, from: date)
+        return String(format: "%02d:%02d", hour, minute)
+    }
+
+    static func date(from timeString: String, calendar: Calendar = Calendar(identifier: .gregorian)) -> Date {
+        let components = hourMinute(from: timeString) ?? (0, 0)
+        return calendar.date(bySettingHour: components.hour, minute: components.minute, second: 0, of: Date()) ?? Date()
+    }
+
+    static func hourMinute(from timeString: String) -> (hour: Int, minute: Int)? {
+        let parts = timeString.split(separator: ":")
+        guard parts.count == 2,
+              let hour = Int(parts[0]),
+              let minute = Int(parts[1]),
+              (0...23).contains(hour),
+              (0...59).contains(minute) else {
+            return nil
+        }
+        return (hour, minute)
+    }
+}
+
+struct ShiftTimeSettingsView: View {
+    @EnvironmentObject private var localization: LocalizationManager
+
+    var body: some View {
+        Form {
+            ForEach(ShiftTimeTemplateID.allCases) { shiftID in
+                Section {
+                    ShiftTimeTemplateSettingsRow(shiftID: shiftID)
+                } header: {
+                    Text(localization.localized(shiftID.nameKey))
+                }
+            }
+        }
+        .navigationTitle(localization.localized(.shiftTimeSettingsTitle))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct ShiftTimeTemplateSettingsRow: View {
+    @EnvironmentObject private var localization: LocalizationManager
+    let shiftID: ShiftTimeTemplateID
+
+    @AppStorage private var startTime: String
+    @AppStorage private var endTime: String
+    @AppStorage private var isEnabled: Bool
+
+    init(shiftID: ShiftTimeTemplateID) {
+        self.shiftID = shiftID
+        _startTime = AppStorage(wrappedValue: shiftID.defaultStartTime, shiftID.startTimeKey)
+        _endTime = AppStorage(wrappedValue: shiftID.defaultEndTime, shiftID.endTimeKey)
+        _isEnabled = AppStorage(wrappedValue: true, shiftID.isEnabledKey)
+    }
+
+    var body: some View {
+        Toggle(localization.localized(.shiftEnabled), isOn: $isEnabled)
+
+        DatePicker(
+            localization.localized(.shiftStart),
+            selection: timeBinding(for: $startTime),
+            displayedComponents: .hourAndMinute
+        )
+
+        DatePicker(
+            localization.localized(.shiftEnd),
+            selection: timeBinding(for: $endTime),
+            displayedComponents: .hourAndMinute
+        )
+    }
+
+    private func timeBinding(for value: Binding<String>) -> Binding<Date> {
+        Binding(
+            get: { ShiftTimeTemplate.date(from: value.wrappedValue) },
+            set: { value.wrappedValue = ShiftTimeTemplate.normalizedTimeString(from: $0) }
+        )
+    }
+}

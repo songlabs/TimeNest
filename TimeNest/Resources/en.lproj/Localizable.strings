@@ -220,3 +220,13 @@
 "app_error.notification" = "Notification operation failed";
 "app_error.holiday_data" = "Failed to fetch holiday data";
 "app_error.unknown" = "Unknown error";
+
+/* Shift Time */
+"shift_time.settings_title" = "Shift Time Settings";
+"shift.common" = "Common Shifts";
+"shift.day" = "Day Shift";
+"shift.night" = "Night Shift";
+"shift.start" = "Start";
+"shift.end" = "End";
+"shift.enabled" = "Enabled";
+"shift.disabled" = "Disabled";

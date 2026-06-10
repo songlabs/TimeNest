@@ -26,6 +26,13 @@ struct EventEditorView: View {
     @State private var saving: Bool = false
     @State private var errorMessage: String?
 
+    @AppStorage(ShiftTimeTemplateID.day.startTimeKey) private var dayShiftStartTime: String = ShiftTimeTemplateID.day.defaultStartTime
+    @AppStorage(ShiftTimeTemplateID.day.endTimeKey) private var dayShiftEndTime: String = ShiftTimeTemplateID.day.defaultEndTime
+    @AppStorage(ShiftTimeTemplateID.day.isEnabledKey) private var dayShiftIsEnabled: Bool = true
+    @AppStorage(ShiftTimeTemplateID.night.startTimeKey) private var nightShiftStartTime: String = ShiftTimeTemplateID.night.defaultStartTime
+    @AppStorage(ShiftTimeTemplateID.night.endTimeKey) private var nightShiftEndTime: String = ShiftTimeTemplateID.night.defaultEndTime
+    @AppStorage(ShiftTimeTemplateID.night.isEnabledKey) private var nightShiftIsEnabled: Bool = true
+
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
 
     init(
@@ -76,6 +83,28 @@ struct EventEditorView: View {
                     }
                 } header: {
                     Text(localization.localized(.editorTime))
+                }
+
+                if !enabledShiftTemplates.isEmpty {
+                    Section {
+                        ForEach(enabledShiftTemplates) { template in
+                            Button {
+                                applyShiftTemplate(template)
+                            } label: {
+                                HStack {
+                                    Text(localization.localized(template.nameKey))
+                                        .foregroundColor(.primary)
+                                    Spacer()
+                                    Text(template.displayTime)
+                                        .foregroundColor(.secondary)
+                                        .monospacedDigit()
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } header: {
+                        Text(localization.localized(.shiftCommon))
+                    }
                 }
 
                 if let validationMessage = validationMessage ?? errorMessage {
@@ -134,6 +163,26 @@ struct EventEditorView: View {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && validationMessage == nil
     }
 
+    private var enabledShiftTemplates: [ShiftTimeTemplate] {
+        [
+            ShiftTimeTemplate(
+                id: .day,
+                nameKey: ShiftTimeTemplateID.day.nameKey,
+                startTime: dayShiftStartTime,
+                endTime: dayShiftEndTime,
+                isEnabled: dayShiftIsEnabled
+            ),
+            ShiftTimeTemplate(
+                id: .night,
+                nameKey: ShiftTimeTemplateID.night.nameKey,
+                startTime: nightShiftStartTime,
+                endTime: nightShiftEndTime,
+                isEnabled: nightShiftIsEnabled
+            )
+        ]
+        .filter(\.isEnabled)
+    }
+
     private var validationMessage: String? {
         let normalized = normalizedDates()
         guard normalized.end > normalized.start else {
@@ -189,6 +238,38 @@ struct EventEditorView: View {
     private func adjustEndDateIfNeeded(for newStartDate: Date) {
         guard !isAllDay, endDate <= newStartDate else { return }
         endDate = CalendarEvent.defaultEndDate(for: newStartDate, isAllDay: false)
+    }
+
+    private func applyShiftTemplate(_ template: ShiftTimeTemplate) {
+        guard let startTime = template.startHourMinute,
+              let endTime = template.endHourMinute else { return }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let baseDate = calendar.startOfDay(for: startDate)
+        let start = calendar.date(
+            bySettingHour: startTime.hour,
+            minute: startTime.minute,
+            second: 0,
+            of: baseDate
+        ) ?? startDate
+
+        let endBaseDate: Date
+        if endTime.hour < startTime.hour || (endTime.hour == startTime.hour && endTime.minute <= startTime.minute) {
+            endBaseDate = calendar.date(byAdding: .day, value: 1, to: baseDate) ?? baseDate
+        } else {
+            endBaseDate = baseDate
+        }
+
+        let end = calendar.date(
+            bySettingHour: endTime.hour,
+            minute: endTime.minute,
+            second: 0,
+            of: endBaseDate
+        ) ?? CalendarEvent.defaultEndDate(for: start, isAllDay: false)
+
+        isAllDay = false
+        startDate = start
+        endDate = end
     }
 
     private func normalizeForAllDayChange(_ allDay: Bool) {
