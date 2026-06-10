@@ -118,7 +118,8 @@ struct WeekDateHeaderCell: View {
                 .font(.system(size: 15, weight: .regular))
                 .foregroundColor(weekdayTextColor)
         }
-        .frame(width: columnWidth, maxHeight: .infinity)
+        .frame(width: columnWidth)
+        .frame(maxHeight: .infinity)
         .background(isSelected ? ShiftCalendarColors.primaryBlue.opacity(0.10) : Color.clear)
     }
 
