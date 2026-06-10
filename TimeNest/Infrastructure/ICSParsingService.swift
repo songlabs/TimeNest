@@ -75,8 +75,6 @@ class ICSParseService: ICSParsing {
         var vEventCount = 0
 
         // 3. Parse by VEVENT blocks
-        var firstVEventLines: [String] = []
-        var isFirstVEvent = true
 
         for line in unfoldedLines {
             if line == "BEGIN:VEVENT" {
@@ -87,11 +85,6 @@ class ICSParseService: ICSParsing {
                 inVEvent = false
                 if let event = try parseVEventLines(lines: currentEventLines, region: region, sourceURL: sourceURL) {
                     events.append(event)
-                }
-                // 保存第一个 VEVENT 的原始 lines 用于 debug
-                if isFirstVEvent && !currentEventLines.isEmpty {
-                    firstVEventLines = currentEventLines
-                    isFirstVEvent = false
                 }
                 currentEventLines = []
             } else if inVEvent {
