@@ -77,12 +77,14 @@ struct MonthCalendarView: View {
         .sheet(isPresented: $viewModel.showingEventEditor) {
             EventEditorView(
                 isPresented: $viewModel.showingEventEditor,
-                mode: .create(initialDate: Date()),
-                onSave: { title, date, isAllDay in
+                mode: .create(initialDate: viewModel.selectedDate),
+                onSave: { title, startDate, endDate, isAllDay, reminderOffsetMinutes in
                     try await viewModel.createEvent(
                         title: title,
-                        date: date,
-                        isAllDay: isAllDay
+                        startDate: startDate,
+                        endDate: endDate,
+                        isAllDay: isAllDay,
+                        reminderOffsetMinutes: reminderOffsetMinutes
                     )
                 }
             )
@@ -102,12 +104,14 @@ struct MonthCalendarView: View {
                             await viewModel.deleteEvent(id: eventID)
                         }
                     },
-                    onUpdateEvent: { eventID, title, date, isAllDay in
+                    onUpdateEvent: { eventID, title, startDate, endDate, isAllDay, reminderOffsetMinutes in
                         await viewModel.updateEvent(
                             id: eventID,
                             title: title,
-                            date: date,
-                            isAllDay: isAllDay
+                            startDate: startDate,
+                            endDate: endDate,
+                            isAllDay: isAllDay,
+                            reminderOffsetMinutes: reminderOffsetMinutes
                         )
                     }
                 )

@@ -52,6 +52,17 @@
 /* Notification */
 "notification.enabled" = "알림 활성화";
 "notification.time" = "알림 시간";
+"notification.event_starting_soon" = "일정이 곧 시작됩니다";
+
+/* Reminder Options */
+"reminder.none" = "없음";
+"reminder.at_start" = "시작 시";
+"reminder.five_minutes_before" = "5분 전";
+"reminder.ten_minutes_before" = "10분 전";
+"reminder.fifteen_minutes_before" = "15분 전";
+"reminder.thirty_minutes_before" = "30분 전";
+"reminder.one_hour_before" = "1시간 전";
+"reminder.one_day_before" = "1일 전";
 
 /* Calendar */
 "calendar.add_event" = "새 일정 추가";
@@ -95,6 +106,10 @@
 "editor.cancel" = "취소";
 "editor.new_event" = "새 일정";
 "editor.edit_event" = "일정 편집";
+"editor.start" = "시작";
+"editor.end" = "종료";
+"editor.reminder" = "알림";
+"editor.invalid_date_range" = "종료 시간은 시작 시간보다 늦어야 합니다.";
 
 /* Day Detail */
 "day_detail.title" = "이벤트";

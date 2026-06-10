@@ -6,6 +6,7 @@ struct TimeNestApp: App {
     private let reminderRepository: ReminderRepository = InMemoryReminderRepository.shared
     private let reminderScheduler: ReminderScheduling = MockReminderScheduler()
     private let holidayProvider: HolidayProviding = BundleHolidayProvider()
+    private let notificationScheduler: LocalNotificationScheduling = LocalNotificationService()
 
     private let eventUseCase: EventUseCase
     private let reminderUseCase: ReminderUseCase
@@ -14,7 +15,10 @@ struct TimeNestApp: App {
     private let localizationUseCase: CalendarLocalizationUseCase
 
     init() {
-        self.eventUseCase = EventUseCase(repository: eventRepository)
+        self.eventUseCase = EventUseCase(
+            repository: eventRepository,
+            notificationScheduler: notificationScheduler
+        )
         self.reminderUseCase = ReminderUseCase(
             reminderRepository: reminderRepository,
             reminderScheduler: reminderScheduler

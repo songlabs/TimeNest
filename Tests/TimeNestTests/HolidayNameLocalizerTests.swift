@@ -1425,3 +1425,134 @@ final class LocalizationResourceParityTests: XCTestCase {
         }
     }
 }
+
+final class EventSchedulingUseCaseTests: XCTestCase {
+    func testDefaultEndDateIsOneHourAfterStartDate() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 21)))
+        let end = CalendarEvent.defaultEndDate(for: start, isAllDay: false)
+
+        XCTAssertEqual(end, calendar.date(byAdding: .hour, value: 1, to: start))
+    }
+
+    func testEndDateBeforeStartDateFailsToSave() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository, notificationScheduler: EventNotificationSchedulerSpy())
+        let calendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 21)))
+        let event = makeEvent(startDate: start, endDate: start)
+
+        do {
+            try await useCase.createEvent(event)
+            XCTFail("Expected invalid date range to fail")
+        } catch EventUseCaseError.invalidDateRange {
+            XCTAssertNil(try await repository.event(id: event.id))
+        }
+    }
+
+    func testReminderOffsetCanBeSavedAndRead() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository, notificationScheduler: EventNotificationSchedulerSpy())
+        let start = Date().addingTimeInterval(3600)
+        let event = makeEvent(startDate: start, reminderOffsetMinutes: 10)
+
+        try await useCase.createEvent(event)
+
+        let savedEvent = try await XCTUnwrap(repository.event(id: event.id))
+        XCTAssertEqual(savedEvent.reminderOffsetMinutes, 10)
+        XCTAssertNotNil(savedEvent.notificationID)
+    }
+
+    func testUpdatingReminderReplacesOldNotificationID() async throws {
+        let scheduler = EventNotificationSchedulerSpy()
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+        let start = Date().addingTimeInterval(3600)
+        var event = makeEvent(startDate: start, reminderOffsetMinutes: 10)
+        try await useCase.createEvent(event)
+        let firstID = try await XCTUnwrap(repository.event(id: event.id)?.notificationID)
+
+        event.notificationID = firstID
+        event.reminderOffsetMinutes = 30
+        event.updatedAt = Date()
+        try await useCase.updateEvent(event)
+
+        let updatedEvent = try await XCTUnwrap(repository.event(id: event.id))
+        XCTAssertNotEqual(updatedEvent.notificationID, firstID)
+        XCTAssertEqual(scheduler.cancelledIDs, [firstID])
+    }
+
+    func testDeletingEventCancelsNotification() async throws {
+        let scheduler = EventNotificationSchedulerSpy()
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+        let event = makeEvent(startDate: Date().addingTimeInterval(3600), reminderOffsetMinutes: 10)
+        try await useCase.createEvent(event)
+        let notificationID = try await XCTUnwrap(repository.event(id: event.id)?.notificationID)
+
+        try await useCase.deleteEvent(id: event.id)
+
+        XCTAssertEqual(scheduler.cancelledIDs, [notificationID])
+        XCTAssertNil(try await repository.event(id: event.id))
+    }
+
+    func testAllDayEventSaveNormalizesToFullDayRange() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository, notificationScheduler: EventNotificationSchedulerSpy())
+        let calendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10)))
+        let end = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: start))
+        let event = makeEvent(startDate: start, endDate: end, isAllDay: true)
+
+        try await useCase.createEvent(event)
+
+        let savedEvent = try await XCTUnwrap(repository.event(id: event.id))
+        XCTAssertTrue(savedEvent.isAllDay)
+        XCTAssertEqual(savedEvent.startDate, start)
+        XCTAssertEqual(savedEvent.endDate, end)
+    }
+
+    private func makeEvent(
+        startDate: Date,
+        endDate: Date? = nil,
+        isAllDay: Bool = false,
+        reminderOffsetMinutes: Int? = nil
+    ) -> CalendarEvent {
+        CalendarEvent(
+            id: UUID(),
+            title: "Test Event",
+            note: nil,
+            startDate: startDate,
+            endDate: endDate ?? CalendarEvent.defaultEndDate(for: startDate, isAllDay: isAllDay),
+            isAllDay: isAllDay,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            reminderOffsetMinutes: reminderOffsetMinutes,
+            notificationID: nil,
+            importSource: nil,
+            createdAt: Date(),
+            updatedAt: Date()
+        )
+    }
+}
+
+final class EventNotificationSchedulerSpy: LocalNotificationScheduling {
+    private(set) var scheduledEvents: [CalendarEvent] = []
+    private(set) var cancelledIDs: [String] = []
+    var isAuthorized = true
+
+    func requestAuthorizationIfNeeded() async -> Bool {
+        isAuthorized
+    }
+
+    func scheduleEventNotification(event: CalendarEvent) async throws -> String? {
+        guard isAuthorized else { return nil }
+        scheduledEvents.append(event)
+        return "notification-\(scheduledEvents.count)"
+    }
+
+    func cancelNotification(id: String) {
+        cancelledIDs.append(id)
+    }
+}

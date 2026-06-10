@@ -52,6 +52,17 @@
 /* Notification */
 "notification.enabled" = "启用通知";
 "notification.time" = "通知时间";
+"notification.event_starting_soon" = "日程即将开始";
+
+/* Reminder Options */
+"reminder.none" = "无";
+"reminder.at_start" = "开始时";
+"reminder.five_minutes_before" = "5分钟前";
+"reminder.ten_minutes_before" = "10分钟前";
+"reminder.fifteen_minutes_before" = "15分钟前";
+"reminder.thirty_minutes_before" = "30分钟前";
+"reminder.one_hour_before" = "1小时前";
+"reminder.one_day_before" = "1天前";
 
 /* Calendar */
 "calendar.add_event" = "新建日程";
@@ -95,6 +106,10 @@
 "editor.cancel" = "取消";
 "editor.new_event" = "新建日程";
 "editor.edit_event" = "编辑日程";
+"editor.start" = "开始";
+"editor.end" = "结束";
+"editor.reminder" = "提醒";
+"editor.invalid_date_range" = "结束时间必须晚于开始时间。";
 
 /* Day Detail */
 "day_detail.title" = "日程";

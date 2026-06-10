@@ -214,35 +214,25 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func createEvent(title: String, date: Date, isAllDay: Bool) async throws {
-        let calendar = Calendar(identifier: .gregorian)
-        let startDate: Date
-        let endDate: Date?
-
-        if isAllDay {
-            // 全天事件：从当日 00:00 到次日 00:00
-            let startComponents = calendar.dateComponents([.year, .month, .day], from: date)
-            startDate = calendar.date(from: startComponents) ?? date
-            endDate = calendar.date(byAdding: .day, value: 1, to: startDate)
-        } else {
-            // 非全天：默认 1 小时
-            startDate = date
-            endDate = calendar.date(byAdding: .hour, value: 1, to: date)
-        }
+    func createEvent(title: String, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async throws {
+        let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+        let now = Date()
 
         let event = CalendarEvent(
             id: UUID(),
             title: title,
             note: nil,
-            startDate: startDate,
-            endDate: endDate,
+            startDate: normalized.start,
+            endDate: normalized.end,
             isAllDay: isAllDay,
             categoryID: nil,
             recurrenceRule: .none,
             reminderTemplateID: nil,
+            reminderOffsetMinutes: reminderOffsetMinutes,
+            notificationID: nil,
             importSource: nil,
-            createdAt: Date(),
-            updatedAt: Date()
+            createdAt: now,
+            updatedAt: now
         )
 
         try await eventUseCase.createEvent(event)
@@ -263,34 +253,27 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func updateEvent(id: UUID, title: String, date: Date, isAllDay: Bool) async {
+    func updateEvent(id: UUID, title: String, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async {
         do {
-            let calendar = Calendar(identifier: .gregorian)
-            let startDate: Date
-            let endDate: Date?
-
-            if isAllDay {
-                let startComponents = calendar.dateComponents([.year, .month, .day], from: date)
-                startDate = calendar.date(from: startComponents) ?? date
-                endDate = calendar.date(byAdding: .day, value: 1, to: startDate)
-            } else {
-                startDate = date
-                endDate = calendar.date(byAdding: .hour, value: 1, to: date)
-            }
+            let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+            let existingEvent = try await eventUseCase.event(id: id)
+            let now = Date()
 
             let updatedEvent = CalendarEvent(
                 id: id,
                 title: title,
-                note: nil,
-                startDate: startDate,
-                endDate: endDate,
+                note: existingEvent?.note,
+                startDate: normalized.start,
+                endDate: normalized.end,
                 isAllDay: isAllDay,
-                categoryID: nil,
-                recurrenceRule: .none,
-                reminderTemplateID: nil,
-                importSource: nil,
-                createdAt: Date(),
-                updatedAt: Date()
+                categoryID: existingEvent?.categoryID,
+                recurrenceRule: existingEvent?.recurrenceRule ?? .none,
+                reminderTemplateID: existingEvent?.reminderTemplateID,
+                reminderOffsetMinutes: reminderOffsetMinutes,
+                notificationID: existingEvent?.notificationID,
+                importSource: existingEvent?.importSource,
+                createdAt: existingEvent?.createdAt ?? now,
+                updatedAt: now
             )
 
             try await eventUseCase.updateEvent(updatedEvent)
@@ -298,6 +281,18 @@ class MonthCalendarViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func normalizedEventDates(startDate: Date, endDate: Date, isAllDay: Bool) -> (start: Date, end: Date) {
+        let calendar = Calendar(identifier: .gregorian)
+        if isAllDay {
+            let start = calendar.startOfDay(for: startDate)
+            let selectedEndDay = calendar.startOfDay(for: endDate)
+            let safeEndDay = max(selectedEndDay, start)
+            let end = calendar.date(byAdding: .day, value: 1, to: safeEndDay) ?? safeEndDay
+            return (start, end)
+        }
+        return (startDate, endDate)
     }
     
     // MARK: - 周视图/日视图支持

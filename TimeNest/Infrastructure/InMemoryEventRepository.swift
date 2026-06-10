@@ -19,7 +19,7 @@ actor InMemoryEventRepository: EventRepository {
     
     func events(in range: DateInterval) async throws -> [CalendarEvent] {
         events.values.filter {
-            $0.startDate >= range.start && $0.startDate <= range.end
+            $0.startDate < range.end && $0.endDate > range.start
         }.sorted { $0.startDate < $1.startDate }
     }
     

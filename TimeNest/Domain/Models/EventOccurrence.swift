@@ -5,7 +5,10 @@ struct EventOccurrence: Identifiable, Hashable {
     let eventID: UUID
     let occurrenceDate: DateOnly
     let startDate: Date
-    let endDate: Date?
+    let endDate: Date
+    let isAllDay: Bool
     let title: String
     let categoryID: UUID?
+    let reminderOffsetMinutes: Int?
+    let notificationID: String?
 }

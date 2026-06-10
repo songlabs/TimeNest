@@ -4,13 +4,15 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
-    let onUpdateEvent: (UUID, String, Date, Bool) async -> Void
+    let onUpdateEvent: (UUID, String, Date, Date, Bool, Int?) async -> Void
 
     @State private var showingEditor: Bool = false
     @State private var editingEventID: UUID?
     @State private var editingEventTitle: String = ""
-    @State private var editingEventDate: Date = Date()
+    @State private var editingEventStartDate: Date = Date()
+    @State private var editingEventEndDate: Date = Date().addingTimeInterval(3600)
     @State private var editingEventIsAllDay: Bool = false
+    @State private var editingEventReminderOffsetMinutes: Int?
 
     var body: some View {
         NavigationView {
@@ -32,11 +34,13 @@ struct DayDetailView: View {
                         mode: .edit(
                             eventID: eventID,
                             initialTitle: editingEventTitle,
-                            initialDate: editingEventDate,
-                            initialIsAllDay: editingEventIsAllDay
+                            initialStartDate: editingEventStartDate,
+                            initialEndDate: editingEventEndDate,
+                            initialIsAllDay: editingEventIsAllDay,
+                            initialReminderOffsetMinutes: editingEventReminderOffsetMinutes
                         ),
-                        onSave: { newTitle, newDate, newIsAllDay in
-                            await onUpdateEvent(eventID, newTitle, newDate, newIsAllDay)
+                        onSave: { newTitle, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes in
+                            await onUpdateEvent(eventID, newTitle, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes)
                         }
                     )
                 }
@@ -92,8 +96,10 @@ struct DayDetailView: View {
     private func openEditor(for event: EventOccurrence) {
         editingEventID = event.eventID
         editingEventTitle = event.title
-        editingEventDate = event.startDate
-        editingEventIsAllDay = false
+        editingEventStartDate = event.startDate
+        editingEventEndDate = event.endDate
+        editingEventIsAllDay = event.isAllDay
+        editingEventReminderOffsetMinutes = event.reminderOffsetMinutes
         showingEditor = true
     }
 
@@ -141,8 +147,12 @@ struct EventRowView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
 
-                if let start = formatTime(event.startDate),
-                   let end = formatTime(event.endDate ?? event.startDate) {
+                if event.isAllDay {
+                    Text(LocalizationManager.shared.localized(.editorAllDay))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else if let start = formatTime(event.startDate),
+                          let end = formatTime(event.endDate) {
                     Text("\(start) - \(end)")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -192,7 +202,7 @@ struct EventRowView: View {
             eventMarkers: []
         ),
         onDeleteEvent: { _ in },
-        onUpdateEvent: { _, _, _, _ in }
+        onUpdateEvent: { _, _, _, _, _, _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }

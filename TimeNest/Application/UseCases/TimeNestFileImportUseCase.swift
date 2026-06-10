@@ -69,6 +69,8 @@ class TimeNestFileImportUseCase {
                 categoryID: event.categoryID,
                 recurrenceRule: event.recurrenceRule,
                 reminderTemplateID: event.reminderTemplateID,
+                reminderOffsetMinutes: event.reminderOffsetMinutes,
+                notificationID: nil,
                 importSource: event.importSource,
                 createdAt: event.createdAt,
                 updatedAt: event.updatedAt
