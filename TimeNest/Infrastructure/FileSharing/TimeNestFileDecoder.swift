@@ -12,13 +12,13 @@ struct TimeNestFileDecoder {
         var errorDescription: String? {
             switch self {
             case .fileNotFound:
-                return "文件未找到"
+                return LocalizationManager.shared.localized(.fileSharingErrorFileNotFound)
             case .invalidData:
-                return "文件格式无效"
+                return LocalizationManager.shared.localized(.fileSharingErrorInvalidData)
             case .schemaVersionMismatch:
-                return "不支持的文件版本"
+                return LocalizationManager.shared.localized(.fileSharingErrorSchemaVersionMismatch)
             case .parseFailed:
-                return "解析失败"
+                return LocalizationManager.shared.localized(.fileSharingErrorParseFailed)
             }
         }
     }

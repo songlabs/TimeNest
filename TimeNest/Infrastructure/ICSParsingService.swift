@@ -11,15 +11,15 @@ enum ICSParseError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidFormat:
-            return "无效的 ICS 格式"
+            return LocalizationManager.shared.localized(.icsParseErrorInvalidFormat)
         case .emptyContent:
-            return "ICS 内容为空"
+            return LocalizationManager.shared.localized(.icsParseErrorEmptyContent)
         case .parseFailed(let line, let content):
-            return "第 \(line) 行解析失败：\(content)"
+            return String(format: LocalizationManager.shared.localized(.icsParseErrorParseFailed), line, content)
         case .invalidDate(let dateStr):
-            return "无效的日期格式：\(dateStr)"
+            return String(format: LocalizationManager.shared.localized(.icsParseErrorInvalidDate), dateStr)
         case .missingRequiredField(let field):
-            return "缺少必填字段：\(field)"
+            return String(format: LocalizationManager.shared.localized(.icsParseErrorMissingRequiredField), field)
         }
     }
 }

@@ -8,13 +8,11 @@
 
 /* Placeholder */
 "placeholder.coming_soon" = "Coming Soon";
-"placeholder.feature_not_implemented" = "Not Implemented";
 
 /* Settings */
 "settings.title" = "Settings";
 "settings.language" = "Language";
 "settings.notification" = "Notification";
-"settings.calendar" = "Calendar Settings";
 "settings.theme" = "Theme";
 "settings.about" = "About";
 "settings.holiday_region" = "Holiday Region";
@@ -47,17 +45,16 @@
 /* About */
 "about.version" = "Version";
 "about.developer" = "Developer";
+"about.developer_name" = "TimeNest Team";
 "about.privacy" = "Privacy Policy";
 "about.terms" = "Terms of Service";
 
 /* Notification */
 "notification.enabled" = "Enable Notifications";
 "notification.time" = "Notification Time";
-"notification.sound" = "Sound";
 
 /* Calendar */
 "calendar.add_event" = "Add new event";
-"calendar.first_day" = "First Day of Week";
 
 /* Event Marker */
 "event_marker.day_off" = "Day off";
@@ -126,12 +123,8 @@
 /* Holiday Source Settings */
 "holiday_source.url_header" = "ICS URL";
 "holiday_source.url_footer" = "Please enter a valid HTTPS URL";
-"holiday_source.current_url" = "Current URL";
-"holiday_source.reset_default" = "Reset to Default URL";
 "holiday_source.test_sync" = "Test Sync";
 "holiday_source.error" = "Error";
-"holiday_source.reset_confirm" = "Confirm Reset?";
-"holiday_source.reset_message" = "This will restore the default subscription source URL";
 "holiday_source.enable_first" = "Please enable this subscription first";
 "holiday_source.no_events" = "No events in the downloaded ICS";
 "holiday_source.test_success" = "Successfully parsed %d events";
@@ -150,6 +143,13 @@
 /* Holiday Subscription Errors */
 "holiday_subscription.source_not_found" = "Subscription source not found";
 
+/* Holiday Subscription Manager Errors */
+"holiday_subscription.error.max_limit_exceeded" = "You can enable up to 2 subscriptions";
+"holiday_subscription.error.invalid_url" = "Invalid URL";
+"holiday_subscription.error.download_failed" = "Download failed: %@";
+"holiday_subscription.error.parse_failed" = "Parse failed: %@";
+"holiday_subscription.error.sync_in_progress" = "Sync is already in progress";
+
 /* Holiday Subscription Sync Alert */
 "holiday_subscription.sync_success_title" = "Sync Succeeded";
 "holiday_subscription.sync_success_message" = "Holiday subscriptions were refreshed successfully.";
@@ -160,6 +160,7 @@
 "file_sharing.export" = "Export Schedule";
 "file_sharing.export_header" = "Export";
 "file_sharing.export_footer" = "Export current schedule as .timenest file";
+"file_sharing.export_title" = "TimeNest Schedule";
 "file_sharing.import" = "Import Schedule";
 "file_sharing.import_header" = "Import";
 "file_sharing.import_footer" = "Import events from .timenest file";
@@ -167,4 +168,40 @@
 "file_sharing.imported_count" = "Imported";
 "file_sharing.skipped_count" = "Skipped/Failed";
 "file_sharing.info" = "Exported files can be shared with other devices via AirDrop, LINE, Mail, etc. Importing will append events to the existing list without overwriting existing events.";
-"file_sharing.share" = "Share";
+
+/* File Sharing Errors */
+"file_sharing.error.decode_failed" = "Failed to parse file";
+"file_sharing.error.import_failed" = "Failed to import events";
+"file_sharing.error.no_events" = "No importable events found in the file";
+"file_sharing.error.partial_import_failed" = "Some events failed to import";
+"file_sharing.error.file_not_found" = "File not found";
+"file_sharing.error.invalid_data" = "Invalid file format";
+"file_sharing.error.schema_version_mismatch" = "Unsupported file version";
+"file_sharing.error.serialization_failed" = "Failed to format export file";
+"file_sharing.error.write_failed" = "Failed to write file";
+"file_sharing.error.parse_failed" = "Failed to parse file";
+
+/* ICS Errors */
+"ics.error.invalid_url" = "Invalid URL.";
+"ics.error.unsupported_scheme" = "Please enter an HTTPS or HTTP URL.";
+"ics.error.network" = "Failed to fetch ICS: %@";
+"ics.error.invalid_http_status" = "Failed to fetch ICS. HTTP status: %d";
+"ics.error.empty_response" = "ICS data is empty.";
+"ics.error.invalid_encoding" = "Could not read the ICS data encoding.";
+"ics.error.invalid_content" = "The downloaded data is not valid iCalendar content.";
+"ics.error.no_events" = "The downloaded ICS has no holiday data. Please try another URL.";
+"ics.error.parse_failed" = "Failed to parse ICS: %@";
+"ics.error.too_large" = "ICS size is too large (%d bytes > %d bytes)";
+"ics_parse.error.invalid_format" = "Invalid ICS format";
+"ics_parse.error.empty_content" = "ICS content is empty";
+"ics_parse.error.parse_failed" = "Failed to parse line %d: %@";
+"ics_parse.error.invalid_date" = "Invalid date format: %@";
+"ics_parse.error.missing_required_field" = "Missing required field: %@";
+
+/* App Errors */
+"app_error.persistence" = "Persistence operation failed";
+"app_error.validation" = "Validation failed";
+"app_error.permission_denied" = "Permission denied";
+"app_error.notification" = "Notification operation failed";
+"app_error.holiday_data" = "Failed to fetch holiday data";
+"app_error.unknown" = "Unknown error";

@@ -10,9 +10,9 @@ struct TimeNestFileEncoder {
         var errorDescription: String? {
             switch self {
             case .serializationFailed:
-                return "导出文件格式化失败"
+                return LocalizationManager.shared.localized(.fileSharingErrorSerializationFailed)
             case .writeFailed:
-                return "文件写入失败"
+                return LocalizationManager.shared.localized(.fileSharingErrorWriteFailed)
             }
         }
     }

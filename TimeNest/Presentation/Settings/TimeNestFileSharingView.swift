@@ -152,7 +152,7 @@ struct TimeNestFileSharingView: View {
         }
 
         do {
-            let url = try await exportUseCase.exportAllEvents(title: "TimeNest 时间表")
+            let url = try await exportUseCase.exportAllEvents(title: localization.localized(.fileSharingExportTitle))
             await MainActor.run {
                 shareURL = url
             }

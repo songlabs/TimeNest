@@ -445,30 +445,12 @@ struct DayCellView: View {
             return ShiftCalendarColors.sundayRed
         }
         // 使用 isWeekend 属性判断周末，而不是硬编码星期文字
-        if cell.isWeekend {
-            // Sunday = red, Saturday = blue
-            // 根据 weekdayText 判断是周日还是周六（跨语言）
-            // 使用 cell.isWeekend 已经正确标识周末
-            // 需要进一步区分周日和周六
-            if isSunday(weekdayText: cell.weekdayText) {
-                return ShiftCalendarColors.sundayRed
-            }
-            if isSaturday(weekdayText: cell.weekdayText) {
-                return ShiftCalendarColors.saturdayBlue
-            }
+        if cell.isWeekend, let weekendColor = ShiftCalendarColors.weekendTextColor(for: cell.weekdayText) {
+            return weekendColor
         }
         return ShiftCalendarColors.primaryText
     }
 
-    /// 判断是否为周日（支持多语言）
-    private func isSunday(weekdayText: String) -> Bool {
-        ["日", "Sun", "Sunday", "일", "dom"].contains(weekdayText)
-    }
-
-    /// 判断是否为周六（支持多语言）
-    private func isSaturday(weekdayText: String) -> Bool {
-        ["土", "Sat", "Saturday", "토", "sab"].contains(weekdayText)
-    }
     
     /// 节假日标签视图 - 支持多国节假日显示
     @ViewBuilder
