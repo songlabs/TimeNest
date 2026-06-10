@@ -18,25 +18,14 @@ struct CalendarHeaderView: View {
     let onWeekDaysChanged: (Int) -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            if displayMode == .month {
-                // 月视图：三段式布局，确保标题视觉居中
+        Group {
+            switch displayMode {
+            case .month:
                 monthHeaderView
-            } else {
-                // 周视图/日视图：左侧导航 + 标题 + 右侧按钮
-                HStack(spacing: 0) {
-                    // 左侧导航区域
-                    leftNavigationArea
-                        .frame(width: 44)
-
-                    // 中间内容区域
-                    middleContentView
-                        .frame(maxWidth: .infinity, alignment: .center)
-
-                    // 右侧按钮区域
-                    rightButtonsView
-                        .frame(width: 76)
-                }
+            case .week:
+                weekHeaderView
+            case .day:
+                dayHeaderView
             }
         }
         .padding(.horizontal, 16)
@@ -73,37 +62,47 @@ struct CalendarHeaderView: View {
         }
     }
 
-    /// 中间内容区域（周视图/日视图共用）
-    @ViewBuilder
-    private var middleContentView: some View {
-        if displayMode == .week {
-            // 周视图：左箭头 + segmented control + 右箭头
-            HStack(spacing: 12) {
-                navigationButton(icon: "chevron.left", action: onPrevious)
-
-                weekSegmentedControl
-
-                navigationButton(icon: "chevron.right", action: onNext)
-            }
-        } else {
-            // 日视图：居中显示完整日期
-            HStack(spacing: 12) {
-                navigationButton(icon: "chevron.left", action: onPrevious)
-
+    /// 周视图 Header - 左侧年月标题，右侧 3/5/7 日切换与设置
+    private var weekHeaderView: some View {
+        HStack(spacing: 12) {
+            Button(action: onTitleTapped) {
                 Text(title)
-                    .font(.system(size: 28, weight: .semibold))
+                    .font(.system(size: 30, weight: .semibold))
                     .foregroundColor(ShiftCalendarColors.primaryText)
-
-                navigationButton(icon: "chevron.right", action: onNext)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
             }
-            .frame(maxWidth: .infinity, alignment: .center)
+            .buttonStyle(PlainButtonStyle())
+
+            Spacer(minLength: 8)
+
+            weekSegmentedControl
+
+            rightButtonsView
+                .frame(width: 36)
         }
     }
 
-    /// 左侧导航区域（上一月按钮）
-    private var leftNavigationArea: some View {
-        HStack(spacing: 12) {
+    /// 日视图 Header - 浅蓝圆形左右切换按钮 + 完整日期标题 + 设置
+    private var dayHeaderView: some View {
+        HStack(spacing: 10) {
             navigationButton(icon: "chevron.left", action: onPrevious)
+
+            Button(action: onTitleTapped) {
+                Text(title)
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundColor(ShiftCalendarColors.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.62)
+                    .allowsTightening(true)
+                    .frame(maxWidth: .infinity, alignment: .center)
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            navigationButton(icon: "chevron.right", action: onNext)
+
+            rightButtonsView
+                .frame(width: 36)
         }
     }
 
@@ -111,28 +110,35 @@ struct CalendarHeaderView: View {
     private var rightButtonsView: some View {
         Button(action: onSettingsTapped) {
             Image(systemName: "gearshape")
-                .font(.system(size: 22, weight: .medium))
+                .font(.system(size: 28, weight: .medium))
                 .foregroundColor(ShiftCalendarColors.primaryBlue)
+                .frame(width: 36, height: 36)
         }
+        .buttonStyle(PlainButtonStyle())
     }
 
     private var weekSegmentedControl: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 0) {
             ForEach([3, 5, 7], id: \.self) { days in
                 Button(action: {
                     onWeekDaysChanged(days)
                 }) {
-                    Text(verbatim: "\(days) 日")
-                        .font(.system(size: 13, weight: weekDisplayDays == days ? .semibold : .regular))
-                        .foregroundColor(weekDisplayDays == days ? .white : ShiftCalendarColors.primaryBlue)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 4)
+                    Text(verbatim: "\(days)日")
+                        .font(.system(size: 16, weight: weekDisplayDays == days ? .semibold : .regular))
+                        .foregroundColor(weekDisplayDays == days ? ShiftCalendarColors.primaryBlue : ShiftCalendarColors.secondaryText)
+                        .frame(width: 52, height: 34)
                         .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(weekDisplayDays == days ? ShiftCalendarColors.primaryBlue : ShiftCalendarColors.primaryBlue.opacity(0.12))
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(weekDisplayDays == days ? ShiftCalendarColors.primaryBlue.opacity(0.12) : Color.clear)
                         )
                 }
                 .buttonStyle(PlainButtonStyle())
+
+                if days != 7 {
+                    Rectangle()
+                        .fill(ShiftCalendarColors.separatorColor.opacity(0.5))
+                        .frame(width: 0.5, height: 22)
+                }
             }
         }
     }
@@ -141,9 +147,9 @@ struct CalendarHeaderView: View {
     private func navigationButton(icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 14, weight: .medium))
+                .font(.system(size: 22, weight: .medium))
                 .foregroundColor(ShiftCalendarColors.primaryBlue)
-                .frame(width: 28, height: 28)
+                .frame(width: 42, height: 42)
                 .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
                 .clipShape(Circle())
         }

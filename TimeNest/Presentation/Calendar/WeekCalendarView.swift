@@ -1,15 +1,6 @@
 import SwiftUI
 
-/// 周视图 - 时间轴样式日历
-/// 布局结构（使用 GeometryReader 统一计算宽度）：
-/// 1. 日期 header：左侧空白占位列 + 7 列日期（7 日/8 日/...）
-/// 2. 全天事件区域：左侧空白占位列 + 7 列全天事件条
-/// 3. 时间轴区域：左侧小时刻度列 + 7 列时间网格
-///
-/// 列宽计算：
-/// - timeLabelWidth: 左侧小时刻度列宽度（固定 52pt）
-/// - columnWidth: (容器宽度 - timeLabelWidth) / 显示天数
-/// - 所有区域共享同一组宽度计算
+/// 周视图 - 浅色时间轴样式日历
 struct WeekCalendarView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let selectedDate: Date
@@ -18,58 +9,53 @@ struct WeekCalendarView: View {
     let onDateSelected: (Date) -> Void
     let onTitleTapped: () -> Void
 
-    private let timeLabelWidth: CGFloat = 52  // 左侧小时刻度列固定宽度
+    private let timeLabelWidth: CGFloat = 52
+    private let dateHeaderHeight: CGFloat = 72
 
     var body: some View {
         GeometryReader { geometry in
-            let totalWidth = geometry.size.width
-            let displayCellCount = displayCells.count
-            let availableWidth = totalWidth - timeLabelWidth
-            let columnWidth = availableWidth / CGFloat(displayCellCount)
+            let displayCellCount = max(displayCells.count, 1)
+            let columnWidth = (geometry.size.width - timeLabelWidth) / CGFloat(displayCellCount)
 
             VStack(spacing: 0) {
-                // 日期 header 行
                 WeekDateHeaderView(
                     cells: displayCells,
                     timeLabelWidth: timeLabelWidth,
                     columnWidth: columnWidth,
-                    selectedDate: selectedDate
+                    selectedDate: selectedDate,
+                    onDateSelected: onDateSelected
                 )
-                .frame(height: 32)
+                .frame(height: dateHeaderHeight)
 
-                // 全天事件区域
-                AllDayEventsSection(
-                    cells: displayCells,
-                    timeLabelWidth: timeLabelWidth,
-                    columnWidth: columnWidth,
-                    selectedDate: selectedDate
-                )
-                .frame(height: 60)
-
-                // 时间轴区域
                 WeekTimeAxisView(
                     cells: displayCells,
                     timeLabelWidth: timeLabelWidth,
                     columnWidth: columnWidth,
                     selectedDate: selectedDate
                 )
-                .frame(height: geometry.size.height - 32 - 60)
+                .frame(height: max(0, geometry.size.height - dateHeaderHeight))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(ShiftCalendarColors.backgroundColor)
     }
 
     private var displayCells: [CalendarDayCell] {
-        if displayDays == 7 {
-            return cells
-        } else {
-            // 5 日/3 日视图：居中显示
-            let centerIndex = cells.count / 2
+        guard displayDays != 7 else { return cells }
+
+        if let selectedDateOnly = DateOnly(from: selectedDate),
+           let selectedIndex = cells.firstIndex(where: { $0.date == selectedDateOnly }) {
             let halfCount = displayDays / 2
-            let startIndex = max(0, centerIndex - halfCount)
+            let startIndex = min(max(0, selectedIndex - halfCount), max(0, cells.count - displayDays))
             let endIndex = min(cells.count, startIndex + displayDays)
             return Array(cells[startIndex..<endIndex])
         }
+
+        let centerIndex = cells.count / 2
+        let halfCount = displayDays / 2
+        let startIndex = min(max(0, centerIndex - halfCount), max(0, cells.count - displayDays))
+        let endIndex = min(cells.count, startIndex + displayDays)
+        return Array(cells[startIndex..<endIndex])
     }
 }
 
@@ -80,33 +66,33 @@ struct WeekDateHeaderView: View {
     let timeLabelWidth: CGFloat
     let columnWidth: CGFloat
     let selectedDate: Date
+    let onDateSelected: (Date) -> Void
 
     var body: some View {
         HStack(spacing: 0) {
-            // 左侧空白占位列（与小时刻度列对齐）
             Rectangle()
-                .fill(ShiftCalendarColors.primaryBlue)
-                .frame(width: timeLabelWidth, height: 32)
+                .fill(ShiftCalendarColors.backgroundColor)
+                .frame(width: timeLabelWidth)
 
-            // 日期列
             ForEach(cells, id: \.id) { cell in
                 WeekDateHeaderCell(
                     cell: cell,
                     columnWidth: columnWidth,
                     isSelected: isDateSelected(cell.date)
                 )
-                .frame(width: columnWidth, height: 32)
-            }
-
-            // 如果显示天数少于 7 天，添加空占位
-            let emptyCount = 7 - cells.count
-            ForEach(0..<emptyCount, id: \.self) { _ in
-                Rectangle()
-                    .fill(ShiftCalendarColors.primaryBlue)
-                    .frame(width: columnWidth, height: 32)
+                .frame(width: columnWidth)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onDateSelected(cell.date.toDate())
+                }
             }
         }
-        .background(ShiftCalendarColors.primaryBlue)
+        .background(ShiftCalendarColors.backgroundColor)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(ShiftCalendarColors.separatorColor)
+                .frame(height: 0.5)
+        }
     }
 
     private func isDateSelected(_ dateOnly: DateOnly) -> Bool {
@@ -123,34 +109,38 @@ struct WeekDateHeaderCell: View {
     let isSelected: Bool
 
     var body: some View {
-        VStack(spacing: 2) {
-            // 日期数字
+        VStack(spacing: 6) {
             Text(cell.dayText)
-                .font(.system(size: 14, weight: isSelected ? .semibold : .medium))
-                .foregroundColor(isSelected ? ShiftCalendarColors.primaryBlue : .white)
+                .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
+                .foregroundColor(dateTextColor)
 
-            // 星期
             Text(cell.weekdayText)
-                .font(.system(size: 11, weight: .regular))
+                .font(.system(size: 15, weight: .regular))
                 .foregroundColor(weekdayTextColor)
         }
-        .frame(width: columnWidth, height: 32)
-        .background(isSelected ? ShiftCalendarColors.primaryBlue.opacity(0.15) : Color.clear)
+        .frame(width: columnWidth, maxHeight: .infinity)
+        .background(isSelected ? ShiftCalendarColors.primaryBlue.opacity(0.10) : Color.clear)
+    }
+
+    private var dateTextColor: Color {
+        if isSelected {
+            return ShiftCalendarColors.primaryBlue
+        }
+        return weekendColor ?? ShiftCalendarColors.secondaryText
     }
 
     private var weekdayTextColor: Color {
-        if !cell.holidays.isEmpty {
+        weekendColor ?? ShiftCalendarColors.secondaryText
+    }
+
+    private var weekendColor: Color? {
+        if isSunday(weekdayText: cell.weekdayText) {
             return ShiftCalendarColors.sundayRed
         }
-        if cell.isWeekend {
-            if isSunday(weekdayText: cell.weekdayText) {
-                return ShiftCalendarColors.sundayRed
-            }
-            if isSaturday(weekdayText: cell.weekdayText) {
-                return ShiftCalendarColors.saturdayBlue
-            }
+        if isSaturday(weekdayText: cell.weekdayText) {
+            return ShiftCalendarColors.saturdayBlue
         }
-        return .white
+        return nil
     }
 
     private func isSunday(weekdayText: String) -> Bool {
@@ -162,108 +152,6 @@ struct WeekDateHeaderCell: View {
     }
 }
 
-// MARK: - 全天事件区域
-
-struct AllDayEventsSection: View {
-    let cells: [CalendarDayCell]
-    let timeLabelWidth: CGFloat
-    let columnWidth: CGFloat
-    let selectedDate: Date
-
-    var body: some View {
-        HStack(spacing: 0) {
-            // 左侧空白占位列（与小时刻度列对齐）
-            Rectangle()
-                .fill(ShiftCalendarColors.backgroundColor)
-                .frame(width: timeLabelWidth)
-
-            // 日期列
-            ForEach(cells, id: \.id) { cell in
-                AllDayEventsColumn(
-                    cell: cell,
-                    columnWidth: columnWidth,
-                    isSelected: isDateSelected(cell.date)
-                )
-                .frame(width: columnWidth)
-            }
-
-            // 空占位
-            let emptyCount = 7 - cells.count
-            ForEach(0..<emptyCount, id: \.self) { _ in
-                Rectangle()
-                    .fill(ShiftCalendarColors.backgroundColor)
-                    .frame(width: columnWidth)
-            }
-        }
-        .background(ShiftCalendarColors.backgroundColor)
-    }
-
-    private func isDateSelected(_ dateOnly: DateOnly) -> Bool {
-        guard let selectedDateOnly = DateOnly(from: selectedDate) else {
-            return false
-        }
-        return dateOnly == selectedDateOnly
-    }
-}
-
-struct AllDayEventsColumn: View {
-    let cell: CalendarDayCell
-    let columnWidth: CGFloat
-    let isSelected: Bool
-
-    var body: some View {
-        VStack(spacing: 4) {
-            // 全天事件条（包括六曜如"先勝"）
-            if !cell.events.isEmpty || !cell.holidays.isEmpty {
-                ForEach(displayEvents, id: \.id) { event in
-                    AllDayEventBar(event: event, columnWidth: columnWidth - 8)
-                }
-            }
-            Spacer()
-        }
-        .padding(.horizontal, 4)
-        .background(isSelected ? ShiftCalendarColors.primaryBlue.opacity(0.08) : Color.clear)
-    }
-
-    private var displayEvents: [EventOccurrence] {
-        // 将六曜作为特殊事件显示
-        var events = cell.events
-        // 如果有六曜信息，添加到事件列表
-        if let shiftType = cell.shiftType, !shiftType.isEmpty {
-            // 创建六曜事件
-            let yokoEvent = EventOccurrence(
-                id: "yoho_\(cell.date.id)",
-                eventID: UUID(),
-                occurrenceDate: cell.date,
-                startDate: cell.date.toDate(),
-                endDate: nil,
-                title: shiftType,
-                categoryID: nil
-            )
-            events.insert(yokoEvent, at: 0)
-        }
-        return Array(events.prefix(3))
-    }
-}
-
-struct AllDayEventBar: View {
-    let event: EventOccurrence
-    let columnWidth: CGFloat
-
-    var body: some View {
-        Text(event.title)
-            .font(.system(size: 11, weight: .medium))
-            .foregroundColor(.white)
-            .lineLimit(1)
-            .truncationMode(.tail)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
-            .background(ShiftCalendarColors.primaryBlue.opacity(0.85))
-            .cornerRadius(4)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
 // MARK: - 时间轴区域
 
 struct WeekTimeAxisView: View {
@@ -272,87 +160,92 @@ struct WeekTimeAxisView: View {
     let columnWidth: CGFloat
     let selectedDate: Date
 
-    private var timeAxisHeight: CGFloat {
-        // 由父视图控制高度
-        0
-    }
+    private let startHour = 9
+    private let endHour = 17
+    private var hourCount: Int { endHour - startHour + 1 }
 
     var body: some View {
         GeometryReader { geometry in
             let height = geometry.size.height
-            let hourHeight = height / 24.0
+            let contentWidth = columnWidth * CGFloat(cells.count)
+            let rowHeight = height / CGFloat(hourCount)
 
             ZStack(alignment: .topLeading) {
-                // 背景
-                Rectangle()
-                    .fill(ShiftCalendarColors.backgroundColor)
+                ShiftCalendarColors.backgroundColor
 
-                // 左侧小时刻度列
-                HStack(spacing: 0) {
-                    ForEach(0..<24, id: \.self) { hour in
-                        Text("\(hour)")
-                            .font(.system(size: 11, weight: .regular))
-                            .foregroundColor(ShiftCalendarColors.secondaryText)
-                            .frame(width: timeLabelWidth - 8, alignment: .trailing)
-                            .padding(.trailing, 4)
-                            .frame(height: hourHeight)
-                    }
-                }
-                .frame(width: timeLabelWidth, alignment: .trailing)
-
-                // 日期列区域
-                HStack(spacing: 0) {
-                    // 纵向日期分隔线
-                    ForEach(0..<cells.count, id: \.self) { index in
-                        Rectangle()
-                            .fill(ShiftCalendarColors.separatorColor)
-                            .frame(width: 0.5, height: height)
-
-                        // 选中日期列背景
-                        if let selectedIndex = cells.firstIndex(where: { isDateSelected($0.date) }),
-                           index == selectedIndex {
-                            Rectangle()
-                                .fill(ShiftCalendarColors.primaryBlue.opacity(0.05))
-                                .frame(width: columnWidth, height: height)
-                        }
-                    }
-
-                    // 横向小时网格线
-                    VStack(spacing: 0) {
-                        ForEach(0..<24, id: \.self) { hour in
-                            HStack(spacing: 0) {
-                                // 横向网格线
-                                Rectangle()
-                                    .fill(ShiftCalendarColors.separatorColor)
-                                    .frame(height: 0.5)
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .frame(height: hourHeight)
-                        }
-                    }
-                    .frame(width: columnWidth * CGFloat(cells.count))
+                if let selectedIndex = selectedColumnIndex {
+                    Rectangle()
+                        .fill(ShiftCalendarColors.primaryBlue.opacity(0.08))
+                        .frame(width: columnWidth, height: height)
+                        .offset(x: timeLabelWidth + columnWidth * CGFloat(selectedIndex))
                 }
 
-                // 当前时间红线（仅在当前日期显示）
-                if let today = DateOnly(from: Date()),
-                   let selectedIndex = cells.firstIndex(where: { $0.date == today }) {
+                timeLabels(rowHeight: rowHeight)
+                    .frame(width: timeLabelWidth, height: height, alignment: .topLeading)
+
+                gridLines(contentWidth: contentWidth, height: height, rowHeight: rowHeight)
+                    .offset(x: timeLabelWidth)
+
+                if let todayIndex = todayColumnIndex,
+                   let lineOffset = currentTimeOffset(rowHeight: rowHeight) {
                     CurrentTimeLine(
                         timeLabelWidth: timeLabelWidth,
                         columnWidth: columnWidth,
                         cellsCount: cells.count,
-                        hourHeight: hourHeight,
-                        selectedIndex: selectedIndex
+                        selectedIndex: todayIndex,
+                        lineY: lineOffset
                     )
                 }
             }
         }
     }
 
-    private func isDateSelected(_ dateOnly: DateOnly) -> Bool {
-        guard let selectedDateOnly = DateOnly(from: selectedDate) else {
-            return false
+    private var selectedColumnIndex: Int? {
+        guard let selectedDateOnly = DateOnly(from: selectedDate) else { return nil }
+        return cells.firstIndex(where: { $0.date == selectedDateOnly })
+    }
+
+    private var todayColumnIndex: Int? {
+        guard let today = DateOnly(from: Date()) else { return nil }
+        return cells.firstIndex(where: { $0.date == today })
+    }
+
+    private func currentTimeOffset(rowHeight: CGFloat) -> CGFloat? {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        guard hour >= startHour, hour <= endHour else { return nil }
+        return (CGFloat(hour - startHour) + CGFloat(minute) / 60.0) * rowHeight
+    }
+
+    private func timeLabels(rowHeight: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            ForEach(startHour...endHour, id: \.self) { hour in
+                Text("\(hour)")
+                    .font(.system(size: 16, weight: .regular))
+                    .foregroundColor(ShiftCalendarColors.secondaryText)
+                    .frame(width: timeLabelWidth - 10, height: rowHeight, alignment: .topTrailing)
+                    .padding(.trailing, 6)
+            }
         }
-        return dateOnly == selectedDateOnly
+    }
+
+    private func gridLines(contentWidth: CGFloat, height: CGFloat, rowHeight: CGFloat) -> some View {
+        Path { path in
+            for row in 0...hourCount {
+                let y = CGFloat(row) * rowHeight
+                path.move(to: CGPoint(x: 0, y: y))
+                path.addLine(to: CGPoint(x: contentWidth, y: y))
+            }
+
+            for column in 0...cells.count {
+                let x = CGFloat(column) * columnWidth
+                path.move(to: CGPoint(x: x, y: 0))
+                path.addLine(to: CGPoint(x: x, y: height))
+            }
+        }
+        .stroke(ShiftCalendarColors.separatorColor, lineWidth: 0.5)
+        .frame(width: contentWidth, height: height)
     }
 }
 
@@ -360,50 +253,24 @@ struct CurrentTimeLine: View {
     let timeLabelWidth: CGFloat
     let columnWidth: CGFloat
     let cellsCount: Int
-    let hourHeight: CGFloat
     let selectedIndex: Int
+    let lineY: CGFloat
 
     var body: some View {
-        let now = Date()
-        let components = Calendar.current.dateComponents([.hour, .minute], from: now)
-        let hour = components.hour ?? 0
-        let minute = components.minute ?? 0
-        let totalMinutes = hour * 60 + minute
-        let lineHeight = CGFloat(totalMinutes) * hourHeight / 60
-        let lineY = CGFloat(totalMinutes) * hourHeight / 60
+        HStack(spacing: 0) {
+            Color.clear
+                .frame(width: timeLabelWidth + columnWidth * CGFloat(selectedIndex))
 
-        VStack(spacing: 0) {
-            Spacer()
-                .frame(height: lineY)
+            Circle()
+                .fill(ShiftCalendarColors.sundayRed)
+                .frame(width: 7, height: 7)
+                .offset(x: -3.5)
 
-            HStack(spacing: 0) {
-                // 左侧空白（跳过小时刻度列）
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(width: timeLabelWidth)
-
-                // 左侧空白（跳过前面的日期列）
-                Rectangle()
-                    .fill(Color.clear)
-                    .frame(width: columnWidth * CGFloat(selectedIndex))
-
-                // 时间指示器圆点（在日期列左边界）
-                Circle()
-                    .fill(ShiftCalendarColors.sundayRed)
-                    .frame(width: 6, height: 6)
-
-                // 红线（贯穿当前日期列到最后一列）
-                Rectangle()
-                    .fill(ShiftCalendarColors.sundayRed)
-                    .frame(height: 2)
-                    .frame(width: columnWidth * CGFloat(cellsCount - selectedIndex))
-            }
-            .frame(height: 2)
-
-            // 剩余空间
-            Spacer()
+            Rectangle()
+                .fill(ShiftCalendarColors.sundayRed)
+                .frame(width: columnWidth * CGFloat(cellsCount - selectedIndex) + 3.5, height: 2)
         }
-        .frame(height: hourHeight * 24)
+        .offset(y: lineY)
     }
 }
 
@@ -421,35 +288,17 @@ private func makePreviewCells() -> [CalendarDayCell] {
             let weekdayIndex = Calendar.current.component(.weekday, from: date) - 1
             let weekdaySymbols = LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: .sunday)
 
-            // 为今天添加六曜和事件
-            var shiftType: String? = nil
-            var events: [EventOccurrence] = []
-            if offset == 0 {
-                shiftType = "先勝"
-                events = [
-                    EventOccurrence(
-                        id: "test_event_1",
-                        eventID: UUID(),
-                        occurrenceDate: dateOnly,
-                        startDate: date,
-                        endDate: nil,
-                        title: "测试事件",
-                        categoryID: nil
-                    )
-                ]
-            }
-
             cells.append(CalendarDayCell(
                 id: dateOnly.id,
                 date: dateOnly,
                 dayText: "\(dateOnly.day)",
                 weekdayText: weekdaySymbols[weekdayIndex],
                 holidays: [],
-                events: events,
+                events: [],
                 isToday: offset == 0,
                 isWeekend: weekdayIndex == 0 || weekdayIndex == 6,
                 isInCurrentMonth: true,
-                shiftType: shiftType,
+                shiftType: nil,
                 eventMarkers: []
             ))
         }
