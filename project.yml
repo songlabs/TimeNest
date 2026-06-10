@@ -46,6 +46,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: S5NA4Y24ZD
+        TARGETED_DEVICE_FAMILY: 1
     scheme:
       shared: true
       environmentVariables:
