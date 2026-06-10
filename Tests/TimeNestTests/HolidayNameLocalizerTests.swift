@@ -1097,15 +1097,331 @@ final class HolidayNameLocalizerTests: XCTestCase {
             XCTAssertEqual(cell?.holidays.first?.localizedNames.zhHans, "端午节", "2026-06-\(day) 节假日名称应该是端午节")
         }
     }
+
+    // MARK: - Release Readiness Regression Tests
+
+    func testDateOnlyRoundTripUsesFixedTimeZone() throws {
+        let timeZone = try XCTUnwrap(TimeZone(secondsFromGMT: 9 * 60 * 60))
+        let calendar = gregorianCalendar(timeZone: timeZone)
+        let sourceDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 12, day: 31, hour: 23, minute: 30)))
+
+        let dateOnly = try XCTUnwrap(DateOnly(from: sourceDate, in: timeZone))
+        XCTAssertEqual(dateOnly, DateOnly(year: 2026, month: 12, day: 31))
+
+        let roundTripped = dateOnly.toDate(in: timeZone)
+        let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: roundTripped)
+        XCTAssertEqual(components.year, 2026)
+        XCTAssertEqual(components.month, 12)
+        XCTAssertEqual(components.day, 31)
+        XCTAssertEqual(components.hour, 0)
+        XCTAssertEqual(components.minute, 0)
+        XCTAssertEqual(components.second, 0)
+    }
+
+    func testMonthGridHandlesMonthStartEndAndCrossYearForSundayStart() async throws {
+        let useCase = makeCalendarDisplayUseCase()
+        let setting = CalendarDisplaySetting(
+            displayLanguage: .enUS,
+            selectedHolidayRegions: [],
+            weekStartPolicy: .sunday,
+            showLunarCalendar: false
+        )
+
+        let grid = try await useCase.monthGrid(year: 2027, month: 1, setting: setting)
+
+        XCTAssertEqual(grid.title, "January 2027")
+        XCTAssertEqual(grid.weekdaySymbols, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])
+        XCTAssertEqual(grid.days.count, 42)
+        XCTAssertEqual(grid.days.first?.date, DateOnly(year: 2026, month: 12, day: 27))
+        XCTAssertEqual(grid.days.last?.date, DateOnly(year: 2027, month: 2, day: 6))
+        XCTAssertEqual(grid.days.filter(\.isInCurrentMonth).count, 31)
+    }
+
+    func testMonthGridWeekStartPolicySundayMondaySaturdayAndSystem() async throws {
+        let useCase = makeCalendarDisplayUseCase()
+        let policies: [(WeekStartPolicy, [String], DateOnly)] = [
+            (.sunday, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"], DateOnly(year: 2026, month: 5, day: 31)),
+            (.monday, ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], DateOnly(year: 2026, month: 6, day: 1)),
+            (.saturday, ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"], DateOnly(year: 2026, month: 5, day: 30))
+        ]
+
+        for (policy, expectedSymbols, expectedFirstDate) in policies {
+            let setting = CalendarDisplaySetting(
+                displayLanguage: .enUS,
+                selectedHolidayRegions: [],
+                weekStartPolicy: policy,
+                showLunarCalendar: false
+            )
+
+            let grid = try await useCase.monthGrid(year: 2026, month: 6, setting: setting)
+            XCTAssertEqual(grid.weekdaySymbols, expectedSymbols)
+            XCTAssertEqual(grid.days.first?.date, expectedFirstDate)
+        }
+
+        let systemSetting = CalendarDisplaySetting(
+            displayLanguage: .enUS,
+            selectedHolidayRegions: [],
+            weekStartPolicy: .system,
+            showLunarCalendar: false
+        )
+        let systemGrid = try await useCase.monthGrid(year: 2026, month: 6, setting: systemSetting)
+        XCTAssertEqual(systemGrid.days.count, 42)
+        XCTAssertEqual(systemGrid.weekdaySymbols.count, 7)
+    }
+
+    func testCalendarLocalizationFormatsMonthAndWeekdayTitles() {
+        let useCase = CalendarLocalizationUseCase()
+
+        XCTAssertEqual(useCase.monthTitle(year: 2026, month: 6, language: .ja), "2026年6月")
+        XCTAssertEqual(useCase.monthTitle(year: 2026, month: 6, language: .zhHans), "2026年6月")
+        XCTAssertEqual(useCase.monthTitle(year: 2026, month: 6, language: .ko), "2026년 6월")
+        XCTAssertEqual(useCase.monthTitle(year: 2026, month: 6, language: .enUS), "June 2026")
+        XCTAssertEqual(useCase.weekdaySymbols(language: .ja, weekStartPolicy: .monday), ["月", "火", "水", "木", "金", "土", "日"])
+    }
+
+    func testCalendarViewModeUsesLocalizedKeys() {
+        XCTAssertEqual(CalendarViewMode.month.localizedKey.rawValue, "view_mode.month")
+        XCTAssertEqual(CalendarViewMode.week.localizedKey.rawValue, "view_mode.week")
+        XCTAssertEqual(CalendarViewMode.day.localizedKey.rawValue, "view_mode.day")
+    }
+
+    func testHolidayUseCaseReturnsNoHolidaysWhenRegionsAreEmpty() async throws {
+        let cacheRepository = InMemoryHolidayEventCacheRepository(events: [
+            HolidayEvent(
+                id: "cached-us-new-year",
+                region: .unitedStates,
+                date: DateOnly(year: 2026, month: 1, day: 1),
+                name: "New Year's Day",
+                translatedNames: [:],
+                type: .publicHoliday,
+                sourceURL: "https://example.com/us.ics"
+            )
+        ])
+        let useCase = HolidayUseCase(cacheRepository: cacheRepository)
+        let setting = CalendarDisplaySetting(
+            displayLanguage: .enUS,
+            selectedHolidayRegions: [],
+            weekStartPolicy: .sunday,
+            showLunarCalendar: false
+        )
+
+        let holidays = try await useCase.holidaysInDateRange(
+            from: DateOnly(year: 2026, month: 1, day: 1),
+            to: DateOnly(year: 2026, month: 1, day: 1),
+            setting: setting
+        )
+
+        XCTAssertTrue(holidays.isEmpty)
+    }
+
+    func testRecommendedHolidaySourceURLsAreHTTPSAndRegionScoped() {
+        for region in HolidayRegion.allCases {
+            let sources = HolidayRecommendedSources.sources(for: region)
+            XCTAssertFalse(sources.isEmpty)
+            XCTAssertTrue(sources.allSatisfy { $0.region == region })
+            XCTAssertTrue(sources.allSatisfy { URL(string: $0.urlString)?.scheme == "https" })
+        }
+    }
+
+    func testEventUseCaseCreateUpdateDeleteAndStableSameDayOrdering() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository)
+        let calendar = gregorianCalendar(timeZone: TimeZone(secondsFromGMT: 0)!)
+        let morning = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 9)))
+        let afternoon = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 15)))
+        let interval = DateInterval(
+            start: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10))),
+            end: try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 11)))
+        )
+        let eventID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let laterEventID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+
+        let event = CalendarEvent(
+            id: eventID,
+            title: "Morning",
+            note: nil,
+            startDate: morning,
+            endDate: calendar.date(byAdding: .hour, value: 1, to: morning),
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: morning,
+            updatedAt: morning
+        )
+        let laterEvent = CalendarEvent(
+            id: laterEventID,
+            title: "Afternoon",
+            note: nil,
+            startDate: afternoon,
+            endDate: calendar.date(byAdding: .hour, value: 1, to: afternoon),
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: afternoon,
+            updatedAt: afternoon
+        )
+
+        try await useCase.createEvent(laterEvent)
+        try await useCase.createEvent(event)
+        XCTAssertEqual(try await useCase.events(in: interval).map(\.title), ["Morning", "Afternoon"])
+        XCTAssertEqual(try await useCase.occurrences(in: interval).map(\.title), ["Morning", "Afternoon"])
+
+        var updatedEvent = event
+        updatedEvent.title = "Updated Morning"
+        try await useCase.updateEvent(updatedEvent)
+        XCTAssertEqual(try await repository.event(id: eventID)?.title, "Updated Morning")
+
+        try await useCase.deleteEvent(id: eventID)
+        XCTAssertNil(try await repository.event(id: eventID))
+        XCTAssertEqual(try await useCase.events(in: interval).map(\.title), ["Afternoon"])
+    }
+
+    @MainActor
+    func testWeekViewGeneratesSevenDaysFromSelectedDate() async throws {
+        let calendar = gregorianCalendar(timeZone: TimeZone(secondsFromGMT: 0)!)
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(repository: repository)
+        let viewModel = MonthCalendarViewModel(
+            calendarDisplayUseCase: CalendarDisplayUseCase(
+                holidayUseCase: HolidayUseCase(holidayProvider: BundleHolidayProvider()),
+                localizationUseCase: CalendarLocalizationUseCase(),
+                eventUseCase: eventUseCase
+            ),
+            eventUseCase: eventUseCase
+        )
+
+        viewModel.selectedDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10)))
+        await viewModel.reloadMonth()
+
+        let weekDates = viewModel.weekCells.map(\.date)
+        XCTAssertEqual(weekDates.count, 7)
+        XCTAssertTrue(weekDates.contains(DateOnly(year: 2026, month: 6, day: 10)))
+    }
+
+    private func makeCalendarDisplayUseCase() -> CalendarDisplayUseCase {
+        CalendarDisplayUseCase(
+            holidayUseCase: HolidayUseCase(cacheRepository: InMemoryHolidayEventCacheRepository()),
+            localizationUseCase: CalendarLocalizationUseCase(),
+            eventUseCase: EventUseCase(repository: InMemoryEventRepository())
+        )
+    }
+
+    private func gregorianCalendar(timeZone: TimeZone) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = timeZone
+        return calendar
+    }
+
 }
 
 /// 空缓存实现，用于测试 fallback 逻辑
 class InMemoryHolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
-    func saveEvents(_ events: [HolidayEvent], for region: HolidayRegion) async throws {}
-    func getEvents(in interval: ClosedRange<DateOnly>, for regions: [HolidayRegion]) -> [HolidayEvent] { [] }
-    func getEvents(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] { [] }
-    func getEvents(for regions: [HolidayRegion]) -> [HolidayEvent] { [] }
+    private var storedEvents: [HolidayEvent]
+
+    init(events: [HolidayEvent] = []) {
+        self.storedEvents = events
+    }
+
+    func saveEvents(_ events: [HolidayEvent], for region: HolidayRegion) async throws {
+        storedEvents.removeAll { $0.region == region }
+        storedEvents.append(contentsOf: events)
+    }
+
+    func getEvents(in interval: ClosedRange<DateOnly>, for regions: [HolidayRegion]) -> [HolidayEvent] {
+        guard !regions.isEmpty else { return [] }
+        return storedEvents.filter { regions.contains($0.region) && interval.contains($0.date) }.sorted { $0.date < $1.date }
+    }
+
+    func getEvents(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] {
+        guard !regions.isEmpty else { return [] }
+        return storedEvents.filter { regions.contains($0.region) && $0.date == date }
+    }
+
+    func getEvents(for regions: [HolidayRegion]) -> [HolidayEvent] {
+        guard !regions.isEmpty else { return [] }
+        return storedEvents.filter { regions.contains($0.region) }.sorted { $0.date < $1.date }
+    }
     func clear() async throws {}
     func clearEvents() async throws {}
     func getLastSyncTime(for region: HolidayRegion) -> Date? { nil }
+}
+
+final class LocalizationResourceParityTests: XCTestCase {
+    func testLocalizableStringsKeysAreCompleteAndUniqueAcrossLanguages() throws {
+        let resourceRoot = try sourceURL(for: "TimeNest/Resources")
+        let languageFolders = ["ja.lproj", "zh-Hans.lproj", "en.lproj", "ko.lproj"]
+        var keySets: [String: Set<String>] = [:]
+
+        for folder in languageFolders {
+            let fileURL = resourceRoot.appendingPathComponent(folder).appendingPathComponent("Localizable.strings")
+            let keys = try localizationKeys(in: fileURL)
+            XCTAssertEqual(keys.count, Set(keys).count, "\(folder) should not contain duplicate keys")
+            keySets[folder] = Set(keys)
+        }
+
+        let expectedKeys = try XCTUnwrap(keySets["en.lproj"])
+        for folder in languageFolders {
+            XCTAssertEqual(keySets[folder], expectedKeys, "\(folder) should match en.lproj keys")
+        }
+    }
+
+    func testLocalizableSwiftEnumKeysExistInResources() throws {
+        let resourceRoot = try sourceURL(for: "TimeNest/Resources")
+        let swiftURL = try sourceURL(for: "TimeNest/Shared/Localization/Localizable.swift")
+        let swiftText = try String(contentsOf: swiftURL, encoding: .utf8)
+        let enumKeys = Set(matches(in: swiftText, pattern: #"case\s+\w+\s*=\s*\"([^\"]+)\""#))
+        let resourceKeys = Set(try localizationKeys(in: resourceRoot.appendingPathComponent("en.lproj/Localizable.strings")))
+
+        XCTAssertFalse(enumKeys.isEmpty)
+        XCTAssertTrue(enumKeys.isSubset(of: resourceKeys), "Localizable.swift keys should exist in Localizable.strings")
+    }
+
+    func testDisplayLanguageCodesMapToExpectedLocales() {
+        let cases: [(String, DisplayLanguage, String)] = [
+            ("ja", .ja, "ja"),
+            ("zhHans", .zhHans, "zh_Hans"),
+            ("enUS", .enUS, "en_US"),
+            ("ko", .ko, "ko"),
+            ("system", .system, Locale.current.identifier)
+        ]
+
+        for (code, language, localeIdentifier) in cases {
+            let manager = LocalizationManager(savedCode: code)
+            XCTAssertEqual(manager.currentLanguage, language)
+            XCTAssertEqual(manager.currentLanguageCode, code)
+            if code != "system" {
+                XCTAssertEqual(manager.currentLocale.identifier, localeIdentifier)
+            }
+        }
+    }
+
+    private func sourceURL(for relativePath: String) throws -> URL {
+        var url = URL(fileURLWithPath: #filePath)
+        while url.path != "/" {
+            let candidate = url.deletingLastPathComponent().appendingPathComponent(relativePath)
+            if FileManager.default.fileExists(atPath: candidate.path) {
+                return candidate
+            }
+            url.deleteLastPathComponent()
+        }
+        throw NSError(domain: "LocalizationResourceParityTests", code: 1, userInfo: [NSLocalizedDescriptionKey: "Could not find \(relativePath)"])
+    }
+
+    private func localizationKeys(in fileURL: URL) throws -> [String] {
+        let text = try String(contentsOf: fileURL, encoding: .utf8)
+        return matches(in: text, pattern: #"(?m)^\s*\"([^\"]+)\"\s*="#)
+    }
+
+    private func matches(in text: String, pattern: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard let keyRange = Range(match.range(at: 1), in: text) else { return nil }
+            return String(text[keyRange])
+        }
+    }
 }
