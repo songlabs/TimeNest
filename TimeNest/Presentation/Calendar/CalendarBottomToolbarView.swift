@@ -40,10 +40,10 @@ struct CalendarBottomToolbarView: View {
                             .font(.system(size: ShiftCalendarLayout.footerButtonFontSize, weight: ShiftCalendarLayout.footerButtonFontWeight))
                     }
                     .foregroundColor(ShiftCalendarColors.primaryBlue)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
                     .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
-                    .cornerRadius(8)
+                    .cornerRadius(10)
                 }
 
                 // 中间弹性空间
@@ -61,10 +61,9 @@ struct CalendarBottomToolbarView: View {
                             Text(verbatim: mode.displayName)
                                 .font(.system(size: ShiftCalendarLayout.footerButtonFontSize, weight: selectedViewMode == mode ? .semibold : ShiftCalendarLayout.footerButtonFontWeight))
                                 .foregroundColor(selectedViewMode == mode ? ShiftCalendarColors.primaryBlue : ShiftCalendarColors.secondaryText)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
+                                .frame(width: 56, height: 50)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 6)
+                                    RoundedRectangle(cornerRadius: 10)
                                         .fill(selectedViewMode == mode ? ShiftCalendarColors.primaryBlue.opacity(0.12) : Color.clear)
                                 )
                         }
@@ -80,12 +79,12 @@ struct CalendarBottomToolbarView: View {
                     Image(systemName: "plus")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundColor(.white)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 54, height: 54)
                         .background(ShiftCalendarColors.primaryBlue)
                         .clipShape(Circle())
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 14)
             .padding(.vertical, 8)
         }
         .background(ShiftCalendarColors.backgroundColor)
@@ -97,7 +96,7 @@ struct CalendarBottomToolbarView: View {
 // MARK: - Layout Constants
 
 struct CalendarBottomToolbarLayout {
-    static let toolbarHeight: CGFloat = 62
+    static let toolbarHeight: CGFloat = 76
 }
 
 // MARK: - Preview

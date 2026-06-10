@@ -18,10 +18,10 @@ struct ShiftCalendarColors {
     static let otherMonthGray = Color(red: 0.75, green: 0.75, blue: 0.75)
 
     // 分隔线 - 浅灰/浅米色
-    static let separatorColor = Color(red: 0.88, green: 0.88, blue: 0.88)
+    static let separatorColor = Color(red: 0.88, green: 0.88, blue: 0.90)
 
     // 月历网格线 - 浅灰色，清晰但柔和
-    static let gridLineColor = Color(red: 0.67, green: 0.67, blue: 0.67) // #AAAAAA
+    static let gridLineColor = Color(red: 0.86, green: 0.86, blue: 0.88)
 
     // 背景色
     static let backgroundColor = Color.white
@@ -138,7 +138,7 @@ struct ShiftCalendarLayout {
     static let selectedDateInfoHeight: CGFloat = 40
 
     // 广告 banner
-    static let adBannerHeight: CGFloat = 50
+    static let adBannerHeight: CGFloat = 58
 
     // 底部 TabBar
     static let tabBarHeight: CGFloat = 64
