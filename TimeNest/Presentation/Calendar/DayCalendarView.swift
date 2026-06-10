@@ -29,27 +29,41 @@ struct DayTimeAxisView: View {
     let contentWidth: CGFloat
     let timeAxisHeight: CGFloat
 
-    private let startHour = 9
-    private let endHour = 17
-    private var hourCount: Int { endHour - startHour + 1 }
-    private var rowHeight: CGFloat { timeAxisHeight / CGFloat(hourCount) }
+    private let startHour = 0
+    private let endHour = 24
+    private let defaultVisibleHour = 9
+    private let hourHeight: CGFloat = 64
+    private var contentHeight: CGFloat { CGFloat(endHour - startHour) * hourHeight }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            ShiftCalendarColors.backgroundColor
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: true) {
+                ZStack(alignment: .topLeading) {
+                    ShiftCalendarColors.backgroundColor
 
-            timeLabels
-                .frame(width: timeLabelWidth, height: timeAxisHeight, alignment: .topLeading)
+                    hourAnchors
 
-            gridLines
-                .offset(x: timeLabelWidth)
+                    timeLabels
+                        .frame(width: timeLabelWidth, height: contentHeight, alignment: .topLeading)
 
-            if isToday, let lineOffset = currentTimeOffset {
-                CurrentTimeLineDay(
-                    timeLabelWidth: timeLabelWidth,
-                    contentWidth: contentWidth,
-                    lineY: lineOffset
-                )
+                    gridLines
+                        .offset(x: timeLabelWidth)
+
+                    eventBlocks
+                        .offset(x: timeLabelWidth)
+
+                    if isToday, let lineOffset = currentTimeOffset {
+                        CurrentTimeLineDay(
+                            timeLabelWidth: timeLabelWidth,
+                            contentWidth: contentWidth,
+                            lineY: lineOffset
+                        )
+                    }
+                }
+                .frame(width: timeLabelWidth + contentWidth, height: contentHeight, alignment: .topLeading)
+            }
+            .onAppear {
+                proxy.scrollTo(hourID(defaultVisibleHour), anchor: .top)
             }
         }
     }
@@ -60,61 +74,104 @@ struct DayTimeAxisView: View {
     }
 
     private var currentTimeOffset: CGFloat? {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let components = Calendar(identifier: .gregorian).dateComponents([.hour, .minute], from: Date())
         let hour = components.hour ?? 0
         let minute = components.minute ?? 0
-        guard hour >= startHour, hour <= endHour else { return nil }
-        return (CGFloat(hour - startHour) + CGFloat(minute) / 60.0) * rowHeight
+        guard hour >= startHour, hour < endHour else { return nil }
+        return (CGFloat(hour - startHour) + CGFloat(minute) / 60.0) * hourHeight
+    }
+
+    private var hourAnchors: some View {
+        VStack(spacing: 0) {
+            ForEach(startHour..<endHour, id: \.self) { hour in
+                Color.clear
+                    .frame(height: hourHeight)
+                    .id(hourID(hour))
+            }
+        }
+        .frame(width: 1)
     }
 
     private var timeLabels: some View {
         VStack(spacing: 0) {
-            ForEach(startHour...endHour, id: \.self) { hour in
-                Text("\(hour)")
-                    .font(.system(size: 16, weight: .regular))
+            ForEach(startHour..<endHour, id: \.self) { hour in
+                Text(String(format: "%02d:00", hour))
+                    .font(.system(size: 12, weight: .regular))
                     .foregroundColor(ShiftCalendarColors.secondaryText)
-                    .frame(width: timeLabelWidth - 10, height: rowHeight, alignment: .topTrailing)
+                    .frame(width: timeLabelWidth - 8, height: hourHeight, alignment: .topTrailing)
                     .padding(.trailing, 6)
             }
         }
     }
 
+    private var eventBlocks: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(timedEvents, id: \.id) { event in
+                CalendarEventBlockView(
+                    title: event.title,
+                    timeText: eventTimeText(for: event),
+                    compact: false
+                )
+                .frame(
+                    width: max(0, contentWidth - 10),
+                    height: eventHeight(for: event),
+                    alignment: .topLeading
+                )
+                .offset(x: 5, y: eventOffset(for: event))
+            }
+        }
+        .frame(width: contentWidth, height: contentHeight, alignment: .topLeading)
+    }
+
+    private var timedEvents: [EventOccurrence] {
+        (cell?.events ?? []).filter { !$0.isAllDay }.sorted { $0.startDate < $1.startDate }
+    }
+
     private var gridLines: some View {
         Path { path in
-            for row in 0...hourCount {
-                let y = CGFloat(row) * rowHeight
+            for row in 0...(endHour - startHour) {
+                let y = CGFloat(row) * hourHeight
                 path.move(to: CGPoint(x: 0, y: y))
                 path.addLine(to: CGPoint(x: contentWidth, y: y))
             }
 
             path.move(to: CGPoint(x: 0, y: 0))
-            path.addLine(to: CGPoint(x: 0, y: timeAxisHeight))
+            path.addLine(to: CGPoint(x: 0, y: contentHeight))
         }
         .stroke(ShiftCalendarColors.separatorColor, lineWidth: 0.5)
-        .frame(width: contentWidth, height: timeAxisHeight)
+        .frame(width: contentWidth, height: contentHeight)
     }
-}
 
-struct CurrentTimeLineDay: View {
-    let timeLabelWidth: CGFloat
-    let contentWidth: CGFloat
-    let lineY: CGFloat
+    private func eventOffset(for event: EventOccurrence) -> CGFloat {
+        CGFloat(minutesFromStartOfDay(event.startDate)) / 60.0 * hourHeight
+    }
 
-    var body: some View {
-        HStack(spacing: 0) {
-            Color.clear
-                .frame(width: timeLabelWidth)
+    private func eventHeight(for event: EventOccurrence) -> CGFloat {
+        let duration = max(15, minutesBetween(event.startDate, event.endDate))
+        return max(28, CGFloat(duration) / 60.0 * hourHeight)
+    }
 
-            Circle()
-                .fill(ShiftCalendarColors.sundayRed)
-                .frame(width: 7, height: 7)
-                .offset(x: -3.5)
+    private func eventTimeText(for event: EventOccurrence) -> String {
+        "\(formatTime(event.startDate)) - \(formatTime(event.endDate))"
+    }
 
-            Rectangle()
-                .fill(ShiftCalendarColors.sundayRed)
-                .frame(width: contentWidth + 3.5, height: 2)
-        }
-        .offset(y: lineY)
+    private func minutesFromStartOfDay(_ date: Date) -> Int {
+        let components = Calendar(identifier: .gregorian).dateComponents([.hour, .minute], from: date)
+        return max(0, min(24 * 60, (components.hour ?? 0) * 60 + (components.minute ?? 0)))
+    }
+
+    private func minutesBetween(_ start: Date, _ end: Date) -> Int {
+        max(0, Calendar(identifier: .gregorian).dateComponents([.minute], from: start, to: end).minute ?? 0)
+    }
+
+    private func formatTime(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: date)
+    }
+
+    private func hourID(_ hour: Int) -> String {
+        "day-hour-\(hour)"
     }
 }
 
