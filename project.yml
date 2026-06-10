@@ -33,6 +33,8 @@ targets:
         buildPhase: resources
       - path: TimeNest/Resources/ko.lproj
         buildPhase: resources
+      - path: TimeNest/PrivacyInfo.xcprivacy
+        buildPhase: resources
     settings:
       base:
         INFOPLIST_FILE: TimeNest/Info.plist
