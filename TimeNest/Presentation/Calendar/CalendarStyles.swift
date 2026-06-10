@@ -148,3 +148,34 @@ struct ShiftCalendarLayout {
     static let tabBarIconSize: CGFloat = 22
     static let tabBarIconSelectedSize: CGFloat = 24
 }
+
+// MARK: - Weekday Helpers
+
+enum CalendarWeekdayKind {
+    case sunday
+    case saturday
+    case weekday
+}
+
+extension ShiftCalendarColors {
+    static func weekdayKind(for weekdayText: String) -> CalendarWeekdayKind {
+        if ["日", "Sun", "Sunday", "일", "dom"].contains(weekdayText) {
+            return .sunday
+        }
+        if ["土", "Sat", "Saturday", "토", "sab"].contains(weekdayText) {
+            return .saturday
+        }
+        return .weekday
+    }
+
+    static func weekendTextColor(for weekdayText: String) -> Color? {
+        switch weekdayKind(for: weekdayText) {
+        case .sunday:
+            return sundayRed
+        case .saturday:
+            return saturdayBlue
+        case .weekday:
+            return nil
+        }
+    }
+}

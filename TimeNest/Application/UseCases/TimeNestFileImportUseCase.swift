@@ -15,11 +15,11 @@ class TimeNestFileImportUseCase {
         var errorDescription: String? {
             switch self {
             case .decodeFailed:
-                return "文件解析失败"
+                return LocalizationManager.shared.localized(.fileSharingErrorDecodeFailed)
             case .importFailed:
-                return "事件导入失败"
+                return LocalizationManager.shared.localized(.fileSharingErrorImportFailed)
             case .noEvents:
-                return "文件中没有可导入的事件"
+                return LocalizationManager.shared.localized(.fileSharingErrorNoEvents)
             }
         }
     }
@@ -84,7 +84,7 @@ class TimeNestFileImportUseCase {
         return ImportResult(
             importedCount: importedCount,
             skippedCount: skippedCount,
-            errorMessage: skippedCount > 0 ? "部分事件导入失败" : nil
+            errorMessage: skippedCount > 0 ? LocalizationManager.shared.localized(.fileSharingErrorPartialImportFailed) : nil
         )
     }
 }
