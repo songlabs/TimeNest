@@ -220,3 +220,13 @@
 "app_error.notification" = "通知操作失败";
 "app_error.holiday_data" = "节假日数据获取失败";
 "app_error.unknown" = "未知错误";
+
+/* Shift Time */
+"shift_time.settings_title" = "自定义班次时间";
+"shift.common" = "常用班次";
+"shift.day" = "白班";
+"shift.night" = "夜班";
+"shift.start" = "开始";
+"shift.end" = "结束";
+"shift.enabled" = "启用";
+"shift.disabled" = "未启用";

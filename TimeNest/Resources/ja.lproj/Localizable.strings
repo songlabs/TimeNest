@@ -220,3 +220,13 @@
 "app_error.notification" = "通知処理に失敗しました";
 "app_error.holiday_data" = "祝日データの取得に失敗しました";
 "app_error.unknown" = "不明なエラーです";
+
+/* Shift Time */
+"shift_time.settings_title" = "シフト時間設定";
+"shift.common" = "よく使うシフト";
+"shift.day" = "日勤";
+"shift.night" = "夜勤";
+"shift.start" = "開始";
+"shift.end" = "終了";
+"shift.enabled" = "有効";
+"shift.disabled" = "無効";
