@@ -305,29 +305,43 @@ private struct ShiftTimeTemplateSettingsRow: View {
 
     @AppStorage private var startTime: String
     @AppStorage private var endTime: String
-    @AppStorage private var isEnabled: Bool
 
     init(shiftID: ShiftTimeTemplateID) {
         self.shiftID = shiftID
         _startTime = AppStorage(wrappedValue: shiftID.defaultStartTime, shiftID.startTimeKey)
         _endTime = AppStorage(wrappedValue: shiftID.defaultEndTime, shiftID.endTimeKey)
-        _isEnabled = AppStorage(wrappedValue: true, shiftID.isEnabledKey)
     }
 
     var body: some View {
-        Toggle(localization.localized(.shiftEnabled), isOn: $isEnabled)
-
         DatePicker(
-            localization.localized(.shiftStart),
+            localization.localized(startTimeLabelKey),
             selection: timeBinding(for: $startTime),
             displayedComponents: .hourAndMinute
         )
 
         DatePicker(
-            localization.localized(.shiftEnd),
+            localization.localized(endTimeLabelKey),
             selection: timeBinding(for: $endTime),
             displayedComponents: .hourAndMinute
         )
+    }
+
+    private var startTimeLabelKey: LocalizedString {
+        switch shiftID {
+        case .day:
+            return .shiftDayStart
+        case .night:
+            return .shiftNightStart
+        }
+    }
+
+    private var endTimeLabelKey: LocalizedString {
+        switch shiftID {
+        case .day:
+            return .shiftDayEnd
+        case .night:
+            return .shiftNightEnd
+        }
     }
 
     private func timeBinding(for value: Binding<String>) -> Binding<Date> {

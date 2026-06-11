@@ -231,6 +231,10 @@
 "shift.day" = "白班";
 "shift.night" = "夜班";
 "shift.start" = "开始";
+"shift.day_start" = "白班开始时间";
+"shift.day_end" = "白班结束时间";
+"shift.night_start" = "夜班开始时间";
+"shift.night_end" = "夜班结束时间";
 "shift.end" = "结束";
 "shift.enabled" = "启用";
 "shift.disabled" = "未启用";

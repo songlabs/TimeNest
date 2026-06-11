@@ -226,11 +226,15 @@
 "app_error.unknown" = "Unknown error";
 
 /* Shift Time */
-"shift_time.settings_title" = "Shift Time Settings";
+"shift_time.settings_title" = "Customize Shift Times";
 "shift.common" = "Common Shifts";
 "shift.day" = "Day Shift";
 "shift.night" = "Night Shift";
 "shift.start" = "Start";
+"shift.day_start" = "Day shift start time";
+"shift.day_end" = "Day shift end time";
+"shift.night_start" = "Night shift start time";
+"shift.night_end" = "Night shift end time";
 "shift.end" = "End";
 "shift.enabled" = "Enabled";
 "shift.disabled" = "Disabled";
