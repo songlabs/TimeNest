@@ -194,9 +194,9 @@ enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
     var defaultDisplayName: String {
         switch self {
         case .day:
-            return "白"
+            return "白班"
         case .night:
-            return "夜"
+            return "夜班"
         }
     }
 
@@ -280,10 +280,14 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
 
     static func all(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
         ShiftTimeTemplateID.allCases.map { id in
-            ShiftTimeTemplate(
+            let displayName = migrateDisplayName(
+                stored: defaults.string(forKey: id.displayNameKey),
+                template: id
+            )
+            return ShiftTimeTemplate(
                 id: id,
                 nameKey: id.nameKey,
-                displayName: defaults.string(forKey: id.displayNameKey) ?? id.defaultDisplayName,
+                displayName: displayName,
                 note: defaults.string(forKey: id.noteKey) ?? "",
                 colorHex: defaults.string(forKey: id.colorHexKey) ?? id.defaultColorHex,
                 startTime: defaults.string(forKey: id.startTimeKey) ?? id.defaultStartTime,
@@ -291,6 +295,25 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                 enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true
             )
         }
+    }
+
+    /// 迁移旧默认值：白→白班，夜→夜班
+    private static func migrateDisplayName(stored: String?, template: ShiftTimeTemplateID) -> String {
+        guard let stored = stored else {
+            return template.defaultDisplayName
+        }
+        // 只对旧默认值做迁移，用户自定义的值保持不变
+        switch template {
+        case .day:
+            if stored == "白" || stored == "日勤" {
+                return "白班"
+            }
+        case .night:
+            if stored == "夜" || stored == "夜勤" {
+                return "夜班"
+            }
+        }
+        return stored
     }
 
     static func enabled(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
@@ -545,48 +568,40 @@ private struct ShiftTimeEditSheet: View {
 
                 // 时间
                 Section {
-                    VStack(alignment: .leading, spacing: 16) {
+                    VStack(alignment: .leading, spacing: 12) {
                         HStack {
                             Text(localization.localized(.shiftTimeStartTime))
                                 .font(.subheadline)
                             Spacer()
-                            Text(startTime)
-                                .font(.title3)
-                                .monospacedDigit()
-                                .foregroundColor(.primary)
+                            DatePicker(
+                                "",
+                                selection: Binding(
+                                    get: { ShiftTimeTemplate.date(from: startTime) },
+                                    set: { startTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
+                                ),
+                                displayedComponents: .hourAndMinute
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
                         }
 
-                        DatePicker(
-                            "",
-                            selection: Binding(
-                                get: { ShiftTimeTemplate.date(from: startTime) },
-                                set: { startTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
-                            ),
-                            displayedComponents: .hourAndMinute
-                        )
-                        .labelsHidden()
+                        HStack {
+                            Text(localization.localized(.shiftTimeEndTime))
+                                .font(.subheadline)
+                            Spacer()
+                            DatePicker(
+                                "",
+                                selection: Binding(
+                                    get: { ShiftTimeTemplate.date(from: endTime) },
+                                    set: { endTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
+                                ),
+                                displayedComponents: .hourAndMinute
+                            )
+                            .labelsHidden()
+                            .datePickerStyle(.compact)
+                        }
                     }
                     .padding(.vertical, 8)
-
-                    HStack {
-                        Text(localization.localized(.shiftTimeEndTime))
-                            .font(.subheadline)
-                        Spacer()
-                        Text(endTime)
-                            .font(.title3)
-                            .monospacedDigit()
-                            .foregroundColor(.primary)
-                    }
-
-                    DatePicker(
-                        "",
-                        selection: Binding(
-                            get: { ShiftTimeTemplate.date(from: endTime) },
-                            set: { endTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
-                        ),
-                        displayedComponents: .hourAndMinute
-                    )
-                    .labelsHidden()
                 } header: {
                     Text(localization.localized(shiftID.nameKey))
                 } footer: {
