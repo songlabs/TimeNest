@@ -68,6 +68,8 @@
 "calendar.more_events_count" = "+%d";
 "calendar.add_event" = "新建日程";
 
+"event.not_found" = "未找到日程。";
+
 /* Event Marker */
 "event_marker.day_off" = "休息";
 "event_marker.memo" = "备忘";
@@ -97,6 +99,7 @@
 "picker.month_label" = "月";
 
 /* Event Editor */
+"editor.note" = "备注";
 "editor.title" = "标题";
 "editor.basic_info" = "基本信息";
 "editor.date" = "日期";

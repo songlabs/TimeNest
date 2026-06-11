@@ -78,6 +78,7 @@ enum LocalizedString: String {
 
     case calendarAddEvent = "calendar.add_event"
     case calendarMoreEventsCount = "calendar.more_events_count"
+    case eventNotFound = "event.not_found"
 
     // MARK: - Event Marker
 
@@ -167,6 +168,7 @@ enum LocalizedString: String {
     // MARK: - Event Editor
 
     case editorTitle = "editor.title"
+    case editorNote = "editor.note"
     case editorBasicInfo = "editor.basic_info"
     case editorDate = "editor.date"
     case editorStart = "editor.start"

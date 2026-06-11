@@ -8,6 +8,7 @@ struct EventOccurrence: Identifiable, Hashable {
     let endDate: Date
     let isAllDay: Bool
     let title: String
+    let note: String?
     let categoryID: UUID?
     let reminderOffsetMinutes: Int?
     let notificationID: String?

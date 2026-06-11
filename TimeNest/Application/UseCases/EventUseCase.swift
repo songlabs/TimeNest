@@ -2,11 +2,14 @@ import Foundation
 
 enum EventUseCaseError: Error, LocalizedError {
     case invalidDateRange
+    case eventNotFound
 
     var errorDescription: String? {
         switch self {
         case .invalidDateRange:
             return LocalizationManager.shared.localized(.editorInvalidDateRange)
+        case .eventNotFound:
+            return LocalizationManager.shared.localized(.eventNotFound)
         }
     }
 }
@@ -32,8 +35,10 @@ class EventUseCase {
 
     func updateEvent(_ event: CalendarEvent) async throws {
         try validate(event)
-        let oldEvent = try await repository.event(id: event.id)
-        if let oldNotificationID = oldEvent?.notificationID {
+        guard let oldEvent = try await repository.event(id: event.id) else {
+            throw EventUseCaseError.eventNotFound
+        }
+        if let oldNotificationID = oldEvent.notificationID {
             notificationScheduler?.cancelNotification(id: oldNotificationID)
         }
 
@@ -68,6 +73,7 @@ class EventUseCase {
                 endDate: event.endDate,
                 isAllDay: event.isAllDay,
                 title: event.title,
+                note: event.note,
                 categoryID: event.categoryID,
                 reminderOffsetMinutes: event.reminderOffsetMinutes,
                 notificationID: event.notificationID
