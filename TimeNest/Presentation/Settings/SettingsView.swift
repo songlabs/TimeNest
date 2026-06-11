@@ -191,6 +191,15 @@ enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
         }
     }
 
+    var defaultDisplayName: String {
+        switch self {
+        case .day:
+            return "白"
+        case .night:
+            return "夜"
+        }
+    }
+
     var defaultStartTime: String {
         switch self {
         case .day:
@@ -209,6 +218,15 @@ enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
         }
     }
 
+    var defaultColorHex: String {
+        switch self {
+        case .day:
+            return "#FFD54F"
+        case .night:
+            return "#5C6BC0"
+        }
+    }
+
     var startTimeKey: String {
         "shiftTime.\(rawValue).start"
     }
@@ -220,17 +238,36 @@ enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
     var enabledKey: String {
         "shiftTime.\(rawValue).enabled"
     }
+
+    var displayNameKey: String {
+        "shiftTime.\(rawValue).displayName"
+    }
+
+    var noteKey: String {
+        "shiftTime.\(rawValue).note"
+    }
+
+    var colorHexKey: String {
+        "shiftTime.\(rawValue).colorHex"
+    }
 }
 
 struct ShiftTimeTemplate: Identifiable, Equatable {
     let id: ShiftTimeTemplateID
     let nameKey: LocalizedString
-    let startTime: String
-    let endTime: String
+    var displayName: String
+    var note: String
+    var colorHex: String
+    var startTime: String
+    var endTime: String
     var enabled: Bool
 
     var displayTime: String {
         "\(startTime)〜\(endTime)"
+    }
+
+    var color: Color {
+        Color(hex: colorHex) ?? .gray
     }
 
     var startHourMinute: (hour: Int, minute: Int)? {
@@ -246,6 +283,9 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
             ShiftTimeTemplate(
                 id: id,
                 nameKey: id.nameKey,
+                displayName: defaults.string(forKey: id.displayNameKey) ?? id.defaultDisplayName,
+                note: defaults.string(forKey: id.noteKey) ?? "",
+                colorHex: defaults.string(forKey: id.colorHexKey) ?? id.defaultColorHex,
                 startTime: defaults.string(forKey: id.startTimeKey) ?? id.defaultStartTime,
                 endTime: defaults.string(forKey: id.endTimeKey) ?? id.defaultEndTime,
                 enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true
@@ -282,9 +322,56 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
 
     static func == (lhs: ShiftTimeTemplate, rhs: ShiftTimeTemplate) -> Bool {
         lhs.id == rhs.id &&
+        lhs.displayName == rhs.displayName &&
+        lhs.note == rhs.note &&
+        lhs.colorHex == rhs.colorHex &&
         lhs.startTime == rhs.startTime &&
         lhs.endTime == rhs.endTime &&
         lhs.enabled == rhs.enabled
+    }
+}
+
+// MARK: - Color Hex Extension
+
+extension Color {
+    init?(hex: String) {
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+
+        var rgb: UInt64 = 0
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else {
+            return nil
+        }
+
+        let length = hexSanitized.count
+        switch length {
+        case 6:
+            let r = Double((rgb & 0xFF0000) >> 16) / 255.0
+            let g = Double((rgb & 0x00FF00) >> 8) / 255.0
+            let b = Double(rgb & 0x0000FF) / 255.0
+            self.init(red: r, green: g, blue: b)
+        case 8:
+            let r = Double((rgb & 0xFF000000) >> 24) / 255.0
+            let g = Double((rgb & 0x00FF0000) >> 16) / 255.0
+            let b = Double((rgb & 0x0000FF00) >> 8) / 255.0
+            self.init(red: r, green: g, blue: b)
+        default:
+            return nil
+        }
+    }
+
+    func toHex() -> String {
+        // Extract RGBA components using UIColor
+        let uiColor = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        
+        let red = Int(r * 255)
+        let green = Int(g * 255)
+        let blue = Int(b * 255)
+        let alpha = Int(a * 255)
+        
+        return String(format: "#%02X%02X%02X%02X", red, green, blue, alpha)
     }
 }
 
@@ -341,6 +428,9 @@ struct ShiftTimeSettingsView: View {
     private func saveShiftTemplates() {
         let defaults = UserDefaults.standard
         for template in shiftTemplates {
+            defaults.set(template.displayName, forKey: template.id.displayNameKey)
+            defaults.set(template.note, forKey: template.id.noteKey)
+            defaults.set(template.colorHex, forKey: template.id.colorHexKey)
             defaults.set(template.startTime, forKey: template.id.startTimeKey)
             defaults.set(template.endTime, forKey: template.id.endTimeKey)
             defaults.set(template.enabled, forKey: template.id.enabledKey)
@@ -402,6 +492,9 @@ private struct ShiftTimeEditSheet: View {
     let shiftID: ShiftTimeTemplateID
     let onSave: (ShiftTimeTemplate) -> Void
 
+    @State private var displayName: String
+    @State private var note: String
+    @State private var color: Color
     @State private var startTime: String
     @State private var endTime: String
 
@@ -409,6 +502,10 @@ private struct ShiftTimeEditSheet: View {
         self.shiftID = shiftID
         self.onSave = onSave
         let defaults = UserDefaults.standard
+        _displayName = State(initialValue: defaults.string(forKey: shiftID.displayNameKey) ?? shiftID.defaultDisplayName)
+        _note = State(initialValue: defaults.string(forKey: shiftID.noteKey) ?? "")
+        let defaultHex = defaults.string(forKey: shiftID.colorHexKey) ?? shiftID.defaultColorHex
+        _color = State(initialValue: Color(hex: defaultHex) ?? .blue)
         _startTime = State(initialValue: defaults.string(forKey: shiftID.startTimeKey) ?? shiftID.defaultStartTime)
         _endTime = State(initialValue: defaults.string(forKey: shiftID.endTimeKey) ?? shiftID.defaultEndTime)
     }
@@ -416,6 +513,37 @@ private struct ShiftTimeEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                // 显示名称
+                Section {
+                    HStack {
+                        Text(localization.localized(.shiftTimeDisplayName))
+                        Spacer()
+                        TextField("", text: $displayName)
+                            .textFieldStyle(.plain)
+                            .onChange(of: displayName) { oldValue, newValue in
+                                if newValue.count > 2 {
+                                    displayName = String(newValue.prefix(2))
+                                }
+                            }
+                    }
+                }
+
+                // 备注
+                Section {
+                    TextField(localization.localized(.shiftTimeNote), text: $note, axis: .vertical)
+                        .lineLimit(1...4)
+                }
+
+                // 颜色
+                Section {
+                    HStack {
+                        Text(localization.localized(.shiftTimeColor))
+                        Spacer()
+                        ColorPicker("", selection: $color)
+                    }
+                }
+
+                // 时间
                 Section {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack {
@@ -484,9 +612,14 @@ private struct ShiftTimeEditSheet: View {
     }
 
     private func save() {
+        let colorHex = color.toHex()
+        
         let template = ShiftTimeTemplate(
             id: shiftID,
             nameKey: shiftID.nameKey,
+            displayName: displayName,
+            note: note,
+            colorHex: colorHex,
             startTime: startTime,
             endTime: endTime,
             enabled: true

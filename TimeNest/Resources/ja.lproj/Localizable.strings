@@ -242,3 +242,6 @@
 "shift_time.end_time" = "終了時刻";
 "shift_time.edit_title" = "シフト時間編集";
 "shift_time.edit_footer" = "開始時刻と終了時刻を設定します。夜勤のように跨ぐ場合は、終了時刻が始業時刻より前でも構いません。";
+"shift_time.display_name" = "表示名";
+"shift_time.note" = "メモ";
+"shift_time.color" = "色";

@@ -200,6 +200,9 @@ enum LocalizedString: String {
     case shiftTimeEndTime = "shift_time.end_time"
     case shiftTimeEditTitle = "shift_time.edit_title"
     case shiftTimeEditFooter = "shift_time.edit_footer"
+    case shiftTimeDisplayName = "shift_time.display_name"
+    case shiftTimeNote = "shift_time.note"
+    case shiftTimeColor = "shift_time.color"
 
     // MARK: - Day Detail
 
