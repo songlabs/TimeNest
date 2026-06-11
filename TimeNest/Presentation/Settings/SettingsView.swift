@@ -217,20 +217,20 @@ enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
         "shiftTime.\(rawValue).end"
     }
 
-    var isEnabledKey: String {
-        "shiftTime.\(rawValue).isEnabled"
+    var enabledKey: String {
+        "shiftTime.\(rawValue).enabled"
     }
 }
 
-struct ShiftTimeTemplate: Identifiable {
+struct ShiftTimeTemplate: Identifiable, Equatable {
     let id: ShiftTimeTemplateID
     let nameKey: LocalizedString
     let startTime: String
     let endTime: String
-    let isEnabled: Bool
+    var enabled: Bool
 
     var displayTime: String {
-        "\(startTime)～\(endTime)"
+        "\(startTime)〜\(endTime)"
     }
 
     var startHourMinute: (hour: Int, minute: Int)? {
@@ -248,13 +248,13 @@ struct ShiftTimeTemplate: Identifiable {
                 nameKey: id.nameKey,
                 startTime: defaults.string(forKey: id.startTimeKey) ?? id.defaultStartTime,
                 endTime: defaults.string(forKey: id.endTimeKey) ?? id.defaultEndTime,
-                isEnabled: defaults.object(forKey: id.isEnabledKey) as? Bool ?? true
+                enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true
             )
         }
     }
 
     static func enabled(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
-        all(from: defaults).filter(\.isEnabled)
+        all(from: defaults).filter(\.enabled)
     }
 
     static func normalizedTimeString(from date: Date, calendar: Calendar = Calendar(identifier: .gregorian)) -> String {
@@ -279,75 +279,219 @@ struct ShiftTimeTemplate: Identifiable {
         }
         return (hour, minute)
     }
+
+    static func == (lhs: ShiftTimeTemplate, rhs: ShiftTimeTemplate) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.startTime == rhs.startTime &&
+        lhs.endTime == rhs.endTime &&
+        lhs.enabled == rhs.enabled
+    }
 }
 
 struct ShiftTimeSettingsView: View {
     @EnvironmentObject private var localization: LocalizationManager
+    @State private var selectedShift: ShiftTimeTemplateID?
+    @State private var shiftTemplates: [ShiftTimeTemplate] = []
 
     var body: some View {
-        Form {
-            ForEach(ShiftTimeTemplateID.allCases) { shiftID in
-                Section {
-                    ShiftTimeTemplateSettingsRow(shiftID: shiftID)
-                } header: {
-                    Text(localization.localized(shiftID.nameKey))
-                }
+        List {
+            ForEach(shiftTemplates) { template in
+                ShiftTimeSettingsRow(
+                    template: template,
+                    onToggle: toggleEnabled,
+                    onTap: { selectedShift = template.id }
+                )
             }
         }
         .navigationTitle(localization.localized(.shiftTimeSettingsTitle))
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $selectedShift) { shiftID in
+            ShiftTimeEditSheet(
+                shiftID: shiftID,
+                onSave: updateShiftTemplate
+            )
+            .environmentObject(localization)
+        }
+        .onAppear {
+            loadShiftTemplates()
+        }
+        .onChange(of: shiftTemplates) { _, _ in
+            saveShiftTemplates()
+        }
+    }
+
+    private func loadShiftTemplates() {
+        shiftTemplates = ShiftTimeTemplate.all()
+    }
+
+    private func toggleEnabled(_ template: ShiftTimeTemplate) {
+        if let index = shiftTemplates.firstIndex(where: { $0.id == template.id }) {
+            var updated = shiftTemplates[index]
+            updated.enabled.toggle()
+            shiftTemplates[index] = updated
+        }
+    }
+
+    private func updateShiftTemplate(_ template: ShiftTimeTemplate) {
+        if let index = shiftTemplates.firstIndex(where: { $0.id == template.id }) {
+            shiftTemplates[index] = template
+        }
+    }
+
+    private func saveShiftTemplates() {
+        let defaults = UserDefaults.standard
+        for template in shiftTemplates {
+            defaults.set(template.startTime, forKey: template.id.startTimeKey)
+            defaults.set(template.endTime, forKey: template.id.endTimeKey)
+            defaults.set(template.enabled, forKey: template.id.enabledKey)
+        }
     }
 }
 
-private struct ShiftTimeTemplateSettingsRow: View {
+private struct ShiftTimeSettingsRow: View {
+    let template: ShiftTimeTemplate
+    let onToggle: (ShiftTimeTemplate) -> Void
+    let onTap: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // ON/OFF Button
+            Button {
+                onToggle(template)
+            } label: {
+                Text(template.enabled ? "ON" : "OFF")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 28)
+                    .background(template.enabled ? Color.blue : Color.gray)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+
+            // Shift Name
+            Text(LocalizedStringKey(template.nameKey.rawValue))
+                .font(.body.weight(.medium))
+                .foregroundColor(.primary)
+
+            Spacer()
+
+            // Time Range
+            Text(template.displayTime)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .monospacedDigit()
+
+            // Chevron
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.leading, 8)
+        }
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap()
+        }
+    }
+}
+
+private struct ShiftTimeEditSheet: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
+
     let shiftID: ShiftTimeTemplateID
+    let onSave: (ShiftTimeTemplate) -> Void
 
-    @AppStorage private var startTime: String
-    @AppStorage private var endTime: String
+    @State private var startTime: String
+    @State private var endTime: String
 
-    init(shiftID: ShiftTimeTemplateID) {
+    init(shiftID: ShiftTimeTemplateID, onSave: @escaping (ShiftTimeTemplate) -> Void) {
         self.shiftID = shiftID
-        _startTime = AppStorage(wrappedValue: shiftID.defaultStartTime, shiftID.startTimeKey)
-        _endTime = AppStorage(wrappedValue: shiftID.defaultEndTime, shiftID.endTimeKey)
+        self.onSave = onSave
+        let defaults = UserDefaults.standard
+        _startTime = State(initialValue: defaults.string(forKey: shiftID.startTimeKey) ?? shiftID.defaultStartTime)
+        _endTime = State(initialValue: defaults.string(forKey: shiftID.endTimeKey) ?? shiftID.defaultEndTime)
     }
 
     var body: some View {
-        DatePicker(
-            localization.localized(startTimeLabelKey),
-            selection: timeBinding(for: $startTime),
-            displayedComponents: .hourAndMinute
-        )
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text(localization.localized(.shiftTimeStartTime))
+                                .font(.subheadline)
+                            Spacer()
+                            Text(startTime)
+                                .font(.title3)
+                                .monospacedDigit()
+                                .foregroundColor(.primary)
+                        }
 
-        DatePicker(
-            localization.localized(endTimeLabelKey),
-            selection: timeBinding(for: $endTime),
-            displayedComponents: .hourAndMinute
-        )
-    }
+                        DatePicker(
+                            "",
+                            selection: Binding(
+                                get: { ShiftTimeTemplate.date(from: startTime) },
+                                set: { startTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
+                            ),
+                            displayedComponents: .hourAndMinute
+                        )
+                        .labelsHidden()
+                    }
+                    .padding(.vertical, 8)
 
-    private var startTimeLabelKey: LocalizedString {
-        switch shiftID {
-        case .day:
-            return .shiftDayStart
-        case .night:
-            return .shiftNightStart
+                    HStack {
+                        Text(localization.localized(.shiftTimeEndTime))
+                            .font(.subheadline)
+                        Spacer()
+                        Text(endTime)
+                            .font(.title3)
+                            .monospacedDigit()
+                            .foregroundColor(.primary)
+                    }
+
+                    DatePicker(
+                        "",
+                        selection: Binding(
+                            get: { ShiftTimeTemplate.date(from: endTime) },
+                            set: { endTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
+                        ),
+                        displayedComponents: .hourAndMinute
+                    )
+                    .labelsHidden()
+                } header: {
+                    Text(localization.localized(shiftID.nameKey))
+                } footer: {
+                    Text(localization.localized(.shiftTimeEditFooter))
+                }
+            }
+            .navigationTitle(localization.localized(.shiftTimeEditTitle))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localization.localized(.cancel)) {
+                        dismiss()
+                    }
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localization.localized(.save)) {
+                        save()
+                    }
+                }
+            }
         }
     }
 
-    private var endTimeLabelKey: LocalizedString {
-        switch shiftID {
-        case .day:
-            return .shiftDayEnd
-        case .night:
-            return .shiftNightEnd
-        }
-    }
-
-    private func timeBinding(for value: Binding<String>) -> Binding<Date> {
-        Binding(
-            get: { ShiftTimeTemplate.date(from: value.wrappedValue) },
-            set: { value.wrappedValue = ShiftTimeTemplate.normalizedTimeString(from: $0) }
+    private func save() {
+        let template = ShiftTimeTemplate(
+            id: shiftID,
+            nameKey: shiftID.nameKey,
+            startTime: startTime,
+            endTime: endTime,
+            enabled: true
         )
+        onSave(template)
+        dismiss()
     }
 }

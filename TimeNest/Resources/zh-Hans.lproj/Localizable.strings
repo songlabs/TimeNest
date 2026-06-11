@@ -238,3 +238,7 @@
 "shift.end" = "结束";
 "shift.enabled" = "启用";
 "shift.disabled" = "未启用";
+"shift_time.start_time" = "开始时间";
+"shift_time.end_time" = "结束时间";
+"shift_time.edit_title" = "编辑班次时间";
+"shift_time.edit_footer" = "设置开始和结束时间。对于跨夜班次，结束时间可以早于开始时间。";

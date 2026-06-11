@@ -28,11 +28,7 @@ struct EventEditorView: View {
     @State private var saving: Bool = false
     @State private var errorMessage: String?
 
-    @AppStorage(ShiftTimeTemplateID.day.startTimeKey) private var dayShiftStartTime: String = ShiftTimeTemplateID.day.defaultStartTime
-    @AppStorage(ShiftTimeTemplateID.day.endTimeKey) private var dayShiftEndTime: String = ShiftTimeTemplateID.day.defaultEndTime
-    @AppStorage(ShiftTimeTemplateID.night.startTimeKey) private var nightShiftStartTime: String = ShiftTimeTemplateID.night.defaultStartTime
-    @AppStorage(ShiftTimeTemplateID.night.endTimeKey) private var nightShiftEndTime: String = ShiftTimeTemplateID.night.defaultEndTime
-
+ 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
 
     init(
@@ -158,22 +154,7 @@ struct EventEditorView: View {
     }
 
     private var shiftTemplates: [ShiftTimeTemplate] {
-        [
-            ShiftTimeTemplate(
-                id: .day,
-                nameKey: ShiftTimeTemplateID.day.nameKey,
-                startTime: dayShiftStartTime,
-                endTime: dayShiftEndTime,
-                isEnabled: true
-            ),
-            ShiftTimeTemplate(
-                id: .night,
-                nameKey: ShiftTimeTemplateID.night.nameKey,
-                startTime: nightShiftStartTime,
-                endTime: nightShiftEndTime,
-                isEnabled: true
-            )
-        ]
+        ShiftTimeTemplate.enabled()
     }
 
     private var validationMessage: String? {

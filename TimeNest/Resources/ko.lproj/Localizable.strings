@@ -238,3 +238,7 @@
 "shift.end" = "종료";
 "shift.enabled" = "사용";
 "shift.disabled" = "사용 안 함";
+"shift_time.start_time" = "시작 시간";
+"shift_time.end_time" = "종료 시간";
+"shift_time.edit_title" = "근무 시간 편집";
+"shift_time.edit_footer" = "시작 및 종료 시간을 설정하세요. 자정을 넘는 야간 근무의 경우 종료 시간이 시작 시간보다 앞서 있을 수 있습니다.";

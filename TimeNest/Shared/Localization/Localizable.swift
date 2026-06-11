@@ -196,6 +196,10 @@ enum LocalizedString: String {
     case shiftNightEnd = "shift.night_end"
     case shiftEnabled = "shift.enabled"
     case shiftDisabled = "shift.disabled"
+    case shiftTimeStartTime = "shift_time.start_time"
+    case shiftTimeEndTime = "shift_time.end_time"
+    case shiftTimeEditTitle = "shift_time.edit_title"
+    case shiftTimeEditFooter = "shift_time.edit_footer"
 
     // MARK: - Day Detail
 
