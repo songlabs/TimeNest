@@ -30,10 +30,8 @@ struct EventEditorView: View {
 
     @AppStorage(ShiftTimeTemplateID.day.startTimeKey) private var dayShiftStartTime: String = ShiftTimeTemplateID.day.defaultStartTime
     @AppStorage(ShiftTimeTemplateID.day.endTimeKey) private var dayShiftEndTime: String = ShiftTimeTemplateID.day.defaultEndTime
-    @AppStorage(ShiftTimeTemplateID.day.isEnabledKey) private var dayShiftIsEnabled: Bool = true
     @AppStorage(ShiftTimeTemplateID.night.startTimeKey) private var nightShiftStartTime: String = ShiftTimeTemplateID.night.defaultStartTime
     @AppStorage(ShiftTimeTemplateID.night.endTimeKey) private var nightShiftEndTime: String = ShiftTimeTemplateID.night.defaultEndTime
-    @AppStorage(ShiftTimeTemplateID.night.isEnabledKey) private var nightShiftIsEnabled: Bool = true
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
 
@@ -60,9 +58,6 @@ struct EventEditorView: View {
             Form {
                 Section {
                     TextField(localization.localized(.editorTitle), text: $title)
-
-                    TextField(localization.localized(.editorNote), text: $note, axis: .vertical)
-                        .lineLimit(3...6)
                 } header: {
                     Text(localization.localized(.editorBasicInfo))
                 }
@@ -92,26 +87,21 @@ struct EventEditorView: View {
                     Text(localization.localized(.editorTime))
                 }
 
-                if !enabledShiftTemplates.isEmpty {
-                    Section {
-                        ForEach(enabledShiftTemplates) { template in
-                            Button {
-                                applyShiftTemplate(template)
-                            } label: {
-                                HStack {
-                                    Text(localization.localized(template.nameKey))
-                                        .foregroundColor(.primary)
-                                    Spacer()
-                                    Text(template.displayTime)
-                                        .foregroundColor(.secondary)
-                                        .monospacedDigit()
-                                }
-                            }
-                            .buttonStyle(.plain)
+                Section {
+                    ForEach(shiftTemplates) { template in
+                        Button {
+                            applyShiftTemplate(template)
+                        } label: {
+                            Text("\(localization.localized(template.nameKey)) \(template.displayTime)")
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                                .frame(maxWidth: .infinity)
                         }
-                    } header: {
-                        Text(localization.localized(.shiftCommon))
+                        .buttonStyle(.bordered)
+                        .controlSize(.regular)
                     }
+                } header: {
+                    Text(localization.localized(.shiftCommon))
                 }
 
                 if let validationMessage = validationMessage ?? errorMessage {
@@ -167,24 +157,23 @@ struct EventEditorView: View {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && validationMessage == nil
     }
 
-    private var enabledShiftTemplates: [ShiftTimeTemplate] {
+    private var shiftTemplates: [ShiftTimeTemplate] {
         [
             ShiftTimeTemplate(
                 id: .day,
                 nameKey: ShiftTimeTemplateID.day.nameKey,
                 startTime: dayShiftStartTime,
                 endTime: dayShiftEndTime,
-                isEnabled: dayShiftIsEnabled
+                isEnabled: true
             ),
             ShiftTimeTemplate(
                 id: .night,
                 nameKey: ShiftTimeTemplateID.night.nameKey,
                 startTime: nightShiftStartTime,
                 endTime: nightShiftEndTime,
-                isEnabled: nightShiftIsEnabled
+                isEnabled: true
             )
         ]
-        .filter(\.isEnabled)
     }
 
     private var validationMessage: String? {

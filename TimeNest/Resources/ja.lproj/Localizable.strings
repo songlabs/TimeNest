@@ -226,11 +226,15 @@
 "app_error.unknown" = "不明なエラーです";
 
 /* Shift Time */
-"shift_time.settings_title" = "シフト時間設定";
+"shift_time.settings_title" = "シフト時間をカスタマイズ";
 "shift.common" = "よく使うシフト";
 "shift.day" = "日勤";
 "shift.night" = "夜勤";
 "shift.start" = "開始";
+"shift.day_start" = "日勤開始時刻";
+"shift.day_end" = "日勤終了時刻";
+"shift.night_start" = "夜勤開始時刻";
+"shift.night_end" = "夜勤終了時刻";
 "shift.end" = "終了";
 "shift.enabled" = "有効";
 "shift.disabled" = "無効";
