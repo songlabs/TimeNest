@@ -68,6 +68,8 @@
 "calendar.more_events_count" = "+%d";
 "calendar.add_event" = "Add new event";
 
+"event.not_found" = "Event not found.";
+
 /* Event Marker */
 "event_marker.day_off" = "Day off";
 "event_marker.memo" = "Memo";
@@ -97,6 +99,7 @@
 "picker.month_label" = "Month";
 
 /* Event Editor */
+"editor.note" = "Note";
 "editor.title" = "Title";
 "editor.basic_info" = "Basic Info";
 "editor.date" = "Date";

@@ -68,6 +68,8 @@
 "calendar.more_events_count" = "+%d";
 "calendar.add_event" = "새 일정 추가";
 
+"event.not_found" = "일정을 찾을 수 없습니다.";
+
 /* Event Marker */
 "event_marker.day_off" = "휴무";
 "event_marker.memo" = "메모";
@@ -97,6 +99,7 @@
 "picker.month_label" = "월";
 
 /* Event Editor */
+"editor.note" = "메모";
 "editor.title" = "제목";
 "editor.basic_info" = "기본 정보";
 "editor.date" = "날짜";

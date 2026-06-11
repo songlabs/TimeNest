@@ -5,6 +5,7 @@ enum EventEditorMode {
     case edit(
         eventID: UUID,
         initialTitle: String,
+        initialNote: String?,
         initialStartDate: Date,
         initialEndDate: Date,
         initialIsAllDay: Bool,
@@ -16,12 +17,13 @@ struct EventEditorView: View {
     @Environment(\.localization) private var localization
     @Binding var isPresented: Bool
     let mode: EventEditorMode
-    var onSave: (String, Date, Date, Bool, Int?) async throws -> Void
+    var onSave: (String, String?, Date, Date, Bool, Int?) async throws -> Void
 
-    @State private var title: String = ""
-    @State private var startDate: Date = Date()
-    @State private var endDate: Date = Date().addingTimeInterval(3600)
-    @State private var isAllDay: Bool = false
+    @State private var title: String
+    @State private var note: String
+    @State private var startDate: Date
+    @State private var endDate: Date
+    @State private var isAllDay: Bool
     @State private var reminderOffsetMinutes: Int?
     @State private var saving: Bool = false
     @State private var errorMessage: String?
@@ -38,11 +40,19 @@ struct EventEditorView: View {
     init(
         isPresented: Binding<Bool>,
         mode: EventEditorMode,
-        onSave: @escaping (String, Date, Date, Bool, Int?) async throws -> Void
+        onSave: @escaping (String, String?, Date, Date, Bool, Int?) async throws -> Void
     ) {
         _isPresented = isPresented
         self.mode = mode
         self.onSave = onSave
+
+        let initialState = EventEditorView.initialState(for: mode)
+        _title = State(initialValue: initialState.title)
+        _note = State(initialValue: initialState.note ?? "")
+        _startDate = State(initialValue: initialState.startDate)
+        _endDate = State(initialValue: initialState.endDate)
+        _isAllDay = State(initialValue: initialState.isAllDay)
+        _reminderOffsetMinutes = State(initialValue: initialState.reminderOffsetMinutes)
     }
 
     var body: some View {
@@ -50,6 +60,9 @@ struct EventEditorView: View {
             Form {
                 Section {
                     TextField(localization.localized(.editorTitle), text: $title)
+
+                    TextField(localization.localized(.editorNote), text: $note, axis: .vertical)
+                        .lineLimit(3...6)
                 } header: {
                     Text(localization.localized(.editorBasicInfo))
                 }
@@ -130,9 +143,6 @@ struct EventEditorView: View {
                     .disabled(!canSave || saving)
                 }
             }
-            .onAppear {
-                setupInitialState()
-            }
         }
     }
 
@@ -185,20 +195,26 @@ struct EventEditorView: View {
         return nil
     }
 
-    private func setupInitialState() {
+    private static func initialState(for mode: EventEditorMode) -> (title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) {
         switch mode {
         case .create(let initialDate):
-            title = ""
-            startDate = initialDate
-            endDate = CalendarEvent.defaultEndDate(for: initialDate, isAllDay: false)
-            isAllDay = false
-            reminderOffsetMinutes = nil
-        case .edit(_, let initialTitle, let initialStartDate, let initialEndDate, let initialIsAllDay, let initialReminderOffsetMinutes):
-            title = initialTitle
-            startDate = initialStartDate
-            endDate = initialEndDate
-            isAllDay = initialIsAllDay
-            reminderOffsetMinutes = initialReminderOffsetMinutes
+            return (
+                title: "",
+                note: nil,
+                startDate: initialDate,
+                endDate: CalendarEvent.defaultEndDate(for: initialDate, isAllDay: false),
+                isAllDay: false,
+                reminderOffsetMinutes: nil
+            )
+        case .edit(_, let initialTitle, let initialNote, let initialStartDate, let initialEndDate, let initialIsAllDay, let initialReminderOffsetMinutes):
+            return (
+                title: initialTitle,
+                note: initialNote,
+                startDate: initialStartDate,
+                endDate: initialEndDate,
+                isAllDay: initialIsAllDay,
+                reminderOffsetMinutes: initialReminderOffsetMinutes
+            )
         }
     }
 
@@ -209,7 +225,8 @@ struct EventEditorView: View {
 
         do {
             let normalized = normalizedDates()
-            try await onSave(title, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes)
+            let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes)
             isPresented = false
         } catch {
             errorMessage = error.localizedDescription

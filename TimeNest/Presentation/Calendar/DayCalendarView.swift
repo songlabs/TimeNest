@@ -267,6 +267,7 @@ private func makePreviewCell() -> CalendarDayCell {
                 endDate: CalendarEvent.defaultEndDate(for: today, isAllDay: true),
                 isAllDay: true,
                 title: "测试全天事件",
+                note: nil,
                 categoryID: nil,
                 reminderOffsetMinutes: nil,
                 notificationID: nil

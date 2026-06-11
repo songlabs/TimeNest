@@ -4,15 +4,9 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
-    let onUpdateEvent: (UUID, String, Date, Date, Bool, Int?) async -> Void
+    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?) async throws -> Void
 
-    @State private var showingEditor: Bool = false
-    @State private var editingEventID: UUID?
-    @State private var editingEventTitle: String = ""
-    @State private var editingEventStartDate: Date = Date()
-    @State private var editingEventEndDate: Date = Date().addingTimeInterval(3600)
-    @State private var editingEventIsAllDay: Bool = false
-    @State private var editingEventReminderOffsetMinutes: Int?
+    @State private var editingEvent: EditingEvent?
 
     var body: some View {
         NavigationView {
@@ -27,23 +21,22 @@ struct DayDetailView: View {
                 .padding()
             }
             .navigationTitle(localization.localized(.dayDetailTitle))
-            .sheet(isPresented: $showingEditor) {
-                if let eventID = editingEventID {
-                    EventEditorView(
-                        isPresented: $showingEditor,
-                        mode: .edit(
-                            eventID: eventID,
-                            initialTitle: editingEventTitle,
-                            initialStartDate: editingEventStartDate,
-                            initialEndDate: editingEventEndDate,
-                            initialIsAllDay: editingEventIsAllDay,
-                            initialReminderOffsetMinutes: editingEventReminderOffsetMinutes
-                        ),
-                        onSave: { newTitle, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes in
-                            await onUpdateEvent(eventID, newTitle, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes)
-                        }
-                    )
-                }
+            .sheet(item: $editingEvent) { event in
+                EventEditorView(
+                    isPresented: editingPresentationBinding,
+                    mode: .edit(
+                        eventID: event.eventID,
+                        initialTitle: event.title,
+                        initialNote: event.note,
+                        initialStartDate: event.startDate,
+                        initialEndDate: event.endDate,
+                        initialIsAllDay: event.isAllDay,
+                        initialReminderOffsetMinutes: event.reminderOffsetMinutes
+                    ),
+                    onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes in
+                        try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes)
+                    }
+                )
             }
         }
     }
@@ -94,13 +87,18 @@ struct DayDetailView: View {
     }
 
     private func openEditor(for event: EventOccurrence) {
-        editingEventID = event.eventID
-        editingEventTitle = event.title
-        editingEventStartDate = event.startDate
-        editingEventEndDate = event.endDate
-        editingEventIsAllDay = event.isAllDay
-        editingEventReminderOffsetMinutes = event.reminderOffsetMinutes
-        showingEditor = true
+        editingEvent = EditingEvent(event)
+    }
+
+    private var editingPresentationBinding: Binding<Bool> {
+        Binding(
+            get: { editingEvent != nil },
+            set: { isPresented in
+                if !isPresented {
+                    editingEvent = nil
+                }
+            }
+        )
     }
 
     private var dateTitle: String {
@@ -132,6 +130,28 @@ struct DayDetailView: View {
         if !names.enUS.isEmpty { return names.enUS }
         if !names.ko.isEmpty { return names.ko }
         return ""
+    }
+}
+
+private struct EditingEvent: Identifiable {
+    let id: String
+    let eventID: UUID
+    let title: String
+    let note: String?
+    let startDate: Date
+    let endDate: Date
+    let isAllDay: Bool
+    let reminderOffsetMinutes: Int?
+
+    init(_ event: EventOccurrence) {
+        id = event.id
+        eventID = event.eventID
+        title = event.title
+        note = event.note
+        startDate = event.startDate
+        endDate = event.endDate
+        isAllDay = event.isAllDay
+        reminderOffsetMinutes = event.reminderOffsetMinutes
     }
 }
 
@@ -202,7 +222,7 @@ struct EventRowView: View {
             eventMarkers: []
         ),
         onDeleteEvent: { _ in },
-        onUpdateEvent: { _, _, _, _, _, _ in }
+        onUpdateEvent: { _, _, _, _, _, _, _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }

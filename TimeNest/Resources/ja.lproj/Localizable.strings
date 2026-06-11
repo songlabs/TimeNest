@@ -68,6 +68,8 @@
 "calendar.more_events_count" = "+%d";
 "calendar.add_event" = "新規の予定を入力する";
 
+"event.not_found" = "予定が見つかりません。";
+
 /* Event Marker */
 "event_marker.day_off" = "お休み";
 "event_marker.memo" = "メモ";
@@ -97,6 +99,7 @@
 "picker.month_label" = "月";
 
 /* Event Editor */
+"editor.note" = "メモ";
 "editor.title" = "タイトル";
 "editor.basic_info" = "基本情報";
 "editor.date" = "日付";

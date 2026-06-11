@@ -160,6 +160,7 @@ class MonthCalendarViewModel: ObservableObject {
             )
             // 完全替换旧的 grid，不要 append / merge
             self.grid = baseGrid
+            refreshSelectedDayCell()
 
         } catch {
             errorMessage = error.localizedDescription
@@ -214,14 +215,14 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func createEvent(title: String, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async throws {
+    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async throws {
         let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
         let now = Date()
 
         let event = CalendarEvent(
             id: UUID(),
             title: title,
-            note: nil,
+            note: note,
             startDate: normalized.start,
             endDate: normalized.end,
             isAllDay: isAllDay,
@@ -244,6 +245,11 @@ class MonthCalendarViewModel: ObservableObject {
         showingDayDetail = true
     }
 
+    private func refreshSelectedDayCell() {
+        guard let selectedDayCell else { return }
+        self.selectedDayCell = grid?.days.first { $0.id == selectedDayCell.id } ?? selectedDayCell
+    }
+
     func deleteEvent(id: UUID) async {
         do {
             try await eventUseCase.deleteEvent(id: id)
@@ -253,7 +259,7 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func updateEvent(id: UUID, title: String, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async {
+    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async throws {
         do {
             let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
             let existingEvent = try await eventUseCase.event(id: id)
@@ -262,7 +268,7 @@ class MonthCalendarViewModel: ObservableObject {
             let updatedEvent = CalendarEvent(
                 id: id,
                 title: title,
-                note: existingEvent?.note,
+                note: note,
                 startDate: normalized.start,
                 endDate: normalized.end,
                 isAllDay: isAllDay,
@@ -280,6 +286,7 @@ class MonthCalendarViewModel: ObservableObject {
             await reloadMonth()
         } catch {
             errorMessage = error.localizedDescription
+            throw error
         }
     }
 
