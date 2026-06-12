@@ -473,10 +473,12 @@ struct DayCellView: View {
     }
 
     private func eventLabel(for event: EventOccurrence) -> String {
-        if event.isAllDay {
+        // 优先显示标题，标题为空时才 fallback 到时间
+        if !event.title.isEmpty {
             return event.title
         }
-        return "\(formatTime(event.startDate)) \(event.title)"
+        // Fallback: 标题为空时显示时间
+        return formatTime(event.startDate)
     }
 
     private func eventLabelTextColor(for event: EventOccurrence) -> Color {
