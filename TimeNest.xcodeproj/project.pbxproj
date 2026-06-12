@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		030693C09B9F4289D5D6BA8B /* HolidayNameLocalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */; };
 		054172C57AFFEE2FE3920BDC /* HolidayRecommendedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7EB68E188CDED73B8AE135E /* HolidayRecommendedSource.swift */; };
 		0577A149497FC5B4732CFA3A /* RecurrenceRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E3A9728F3DA57418BB27CD /* RecurrenceRule.swift */; };
 		0697AC19C6BDFFAFFF94B278 /* BundleHolidayProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E799759E69C33C7F7D00BA68 /* BundleHolidayProvider.swift */; };
@@ -22,12 +23,11 @@
 		1D387706340E1269D7657A49 /* HolidayNameLocalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2402FC9F05631D686365D6EE /* HolidayNameLocalizer.swift */; };
 		1DE97C99308A4D7C3FE1738B /* InMemoryEventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D506BFDB5D4E6C2C4B100221 /* InMemoryEventRepository.swift */; };
 		213AF874F3964CEB0CAE9B05 /* HolidaySourceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F719FA6BB1CF0D06E842DAA /* HolidaySourceSettingsView.swift */; };
-		29D932DE0BCEF50652F17D31 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C782E37B736D8E03823F101 /* Localizable.strings */; };
+		2A29C0D5BAF560D733D461B1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C782E37B736D8E03823F101 /* Localizable.strings */; };
 		2E6816AB0A09DC4A5E7070D7 /* ReminderScheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189AE518B84EB9C17417160 /* ReminderScheduling.swift */; };
 		36D36BCDEDD761782DD873B9 /* ICSDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91FD96863142DA3FDD3A281 /* ICSDownloadService.swift */; };
 		372212AF537165E73DB6B549 /* AdBannerPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 610A1877EFDC6D2C2C45E0DD /* AdBannerPlaceholderView.swift */; };
 		3885194124E81A81E3EA5AEB /* ReminderUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9DAAC92C759FA388396D515 /* ReminderUseCase.swift */; };
-		3AD9E4E34C6414525022D02A /* Assets.xcassets in Sources */ = {isa = PBXBuildFile; fileRef = 061140EC91CE348A8FB6AFC5 /* Assets.xcassets */; };
 		3C0DBB33175D0EDD6186D401 /* TimeNestApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 698213AABC972D7419FB4E0E /* TimeNestApp.swift */; };
 		4074AD7DF76D72FAB10081D3 /* MonthCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 255F8DF37315D59AA95EB8C6 /* MonthCalendarView.swift */; };
 		41AA263B87C25050420F8DFB /* HolidaySubscriptionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5EE6E4F10655EAE53BA61ADD /* HolidaySubscriptionSettingsView.swift */; };
@@ -35,7 +35,6 @@
 		48D249C0BB2A2BC62E43E911 /* CalendarLocalizationUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 147592319C4EF3130F3B90D0 /* CalendarLocalizationUseCase.swift */; };
 		4A061045B7EAA24F1C062967 /* AppNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA46B364BC330AA96ECC935C /* AppNotifications.swift */; };
 		4AA33E476853373EFB6D2BB2 /* TabBarVisibilityState.swift in Sources */ = {isa = PBXBuildFile; fileRef = D910A4E18FE4C880A554FDF1 /* TabBarVisibilityState.swift */; };
-		4AD9B79DE49AAE5CD1A1489C /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 061140EC91CE348A8FB6AFC5 /* Assets.xcassets */; };
 		4B386DF10ADB393B6C8C18B0 /* EventEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3F835D134D55777A57BA9A8 /* EventEditorView.swift */; };
 		4C05ECED3CEC78063A9E5FE9 /* Holiday.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3671B3DFE68C094CACAAE047 /* Holiday.swift */; };
 		4E071716B26297F551C81A38 /* DayCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F0E80203EF1356D852C7E9F /* DayCalendarView.swift */; };
@@ -49,9 +48,9 @@
 		71AE462561F299D3BE23BF2E /* EventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56173AE8F9BFC1AD236F1583 /* EventRepository.swift */; };
 		72EED81598A18C89AFD5A773 /* ImportSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1546D58C384E44B67DD07CB /* ImportSourceType.swift */; };
 		778EE6232DFEB476EB517FF5 /* WeekStartPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EC25C8B962498EDDACE984E /* WeekStartPolicy.swift */; };
-		7AECA2D4C914BB74C0A6C520 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1932E070BAE2E6B701259C8D /* InfoPlist.strings */; };
 		7C9FA04770DB178237B20382 /* AddEventButtonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A17461C709E8F5516FD5BE8 /* AddEventButtonRow.swift */; };
 		7D2A69B2C63C1D5EB259EBB7 /* HolidayType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49D6CD7EBA48907AD28AE6B /* HolidayType.swift */; };
+		7D94668215024A4C620771B9 /* ICSParseServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F13F5A7D39130718BFA3D8C /* ICSParseServiceTests.swift */; };
 		7DCAA106627C03514833909F /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3812DA86CFA7341C6005EADC /* CalendarEvent.swift */; };
 		807B38278C4BC50554C76052 /* TimeNestFileEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1785C977E3904B8C0105619 /* TimeNestFileEncoder.swift */; };
 		81F909FCB7CE48C8146A7408 /* ReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929ABE66D20FB8733BAE61C3 /* ReminderRepository.swift */; };
@@ -66,13 +65,14 @@
 		97CB10665E539980B5A08533 /* ICSParsingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0063E05B7A32EFB216D87281 /* ICSParsingService.swift */; };
 		9C99DD8100D2974E11B65A0C /* TuistBundle+TimeNest.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF5DA116854EE5B6E0F28A5A /* TuistBundle+TimeNest.swift */; };
 		9EFD24FE873FB4B2B51AE3BF /* HolidayUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD8EA6A72E89D0CF8F82BDA /* HolidayUseCase.swift */; };
-		9F493244B1166E64DB8579AD /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 572E3EA9D52F0C5443BFA9B7 /* PrivacyInfo.xcprivacy */; };
+		A3792216AB0BDD08E37C1C2F /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1932E070BAE2E6B701259C8D /* InfoPlist.strings */; };
 		A9E11E45B8FBC59C96450959 /* ImportSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC262AAD2C2D84F38F692A7A /* ImportSource.swift */; };
 		AA041746F2F4582BE0B36431 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23C741E9AFC95D68570F8BF9 /* ContentView.swift */; };
 		AB1F7307661E76B84A1C8B7A /* HolidayRegion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54397E24A5C183E8B958D162 /* HolidayRegion.swift */; };
 		ACA3D108F580596D59013108 /* HolidaySubscription.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA8102DC9C2AED69BA14461F /* HolidaySubscription.swift */; };
 		AFD5AB6646F8B79541912863 /* CalendarDisplayUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 523DBD26D2047F7710E61B9F /* CalendarDisplayUseCase.swift */; };
 		B061FE6E7B430B8B6707FB1F /* DateOnly.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA2228372C167FC36E85066E /* DateOnly.swift */; };
+		B2F4B58C1DD420D2B5C5911D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 572E3EA9D52F0C5443BFA9B7 /* PrivacyInfo.xcprivacy */; };
 		B89B1698AB583D10078BFFEB /* InMemoryReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF57316C5D15E12E25C46D3D /* InMemoryReminderRepository.swift */; };
 		B8B80BF31BF9FE8D09334BE6 /* TimeNestFileImportUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39DBADCC8DFAC83240E7052 /* TimeNestFileImportUseCase.swift */; };
 		BFC2E4071046602758FE794B /* WeekdayHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88C62841639AC38F232A51D /* WeekdayHeaderView.swift */; };
@@ -89,6 +89,7 @@
 		DF4E022EDA878C2B86680F04 /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C109F88ABA8B7460D5381E89 /* LocalizationManager.swift */; };
 		E3F5D37201B9CC7AC2B20A1E /* MockWeatherProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EC1E527E978E1282C8B12DD /* MockWeatherProvider.swift */; };
 		E49E6EB29A391ECB00088F4D /* CalendarStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B79C74CDC902B76AD477B0 /* CalendarStyles.swift */; };
+		EACD70DA0475843CFE1EFC26 /* TuistStrings+TimeNest.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD60AC012AFD4FB0D80E74A4 /* TuistStrings+TimeNest.swift */; };
 		ED55F5AA8BA20313B0D4A40D /* ReminderStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2112727B74951811FF87468E /* ReminderStep.swift */; };
 		F070011046E45E3F7915ACCD /* ShiftTimeTemplateID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */; };
 		F6926445027ACF53819DE6D7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D916BD562FD27692278BE08C /* SettingsView.swift */; };
@@ -96,17 +97,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
-		65265587D9D2ED8566A49764 /* PBXContainerItemProxy */ = {
+		D4B1CADE2759CBDA437A974A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 6A6959C8840239CBDDE58058 /* Project object */;
 			proxyType = 1;
-			remoteGlobalIDString = 35057D576A51E067C35F2CFF;
-			remoteInfo = TimeNest_TimeNest;
+			remoteGlobalIDString = 2225269E6F32DE4DDE7D53EC;
+			remoteInfo = TimeNest;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		495DD2403004B089C322959C /* Embed Frameworks */ = {
+		3254E66F182087A499CBBEF7 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = "";
@@ -131,11 +132,10 @@
 /* Begin PBXFileReference section */
 		0063E05B7A32EFB216D87281 /* ICSParsingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSParsingService.swift; sourceTree = "<group>"; };
 		016F0667ED1D15B10C1A3256 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
-		0322651B7B3BE380A660C3F5 /* TimeNest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		04A35D8C4C8E7C99F7504CF8 /* DisplayLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayLanguage.swift; sourceTree = "<group>"; };
 		055E266712ABAAFF393EB476 /* ScheduledReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledReminder.swift; sourceTree = "<group>"; };
 		05993F01B0DB122B6BA1A789 /* MonthGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthGrid.swift; sourceTree = "<group>"; };
-		061140EC91CE348A8FB6AFC5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayNameLocalizerTests.swift; sourceTree = "<group>"; };
 		11B471485AB6829F00A33BC2 /* TimeNestFileExportUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileExportUseCase.swift; sourceTree = "<group>"; };
 		140976DC595D14B416FD6220 /* SelectedDateDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedDateDetailView.swift; sourceTree = "<group>"; };
 		147592319C4EF3130F3B90D0 /* CalendarLocalizationUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarLocalizationUseCase.swift; sourceTree = "<group>"; };
@@ -146,7 +146,6 @@
 		2112727B74951811FF87468E /* ReminderStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStep.swift; sourceTree = "<group>"; };
 		23C741E9AFC95D68570F8BF9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2402FC9F05631D686365D6EE /* HolidayNameLocalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayNameLocalizer.swift; sourceTree = "<group>"; };
-		242959B4E4E4155F23834E33 /* TimeNest-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimeNest-Info.plist"; sourceTree = "<group>"; };
 		255F8DF37315D59AA95EB8C6 /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarView.swift; sourceTree = "<group>"; };
 		2A06BBF22976DDC130A4D262 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		2D5F74197DEF56FB12A7CBCE /* HolidayEventCacheRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayEventCacheRepository.swift; sourceTree = "<group>"; };
@@ -158,6 +157,7 @@
 		375A1C42A512ADA3DFDB2AC4 /* TimeNestExportFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestExportFile.swift; sourceTree = "<group>"; };
 		3812DA86CFA7341C6005EADC /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
 		3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftTimeTemplateID.swift; sourceTree = "<group>"; };
+		439F0F42610DAABCB1A9BEF8 /* TimeNestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeNestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4589C00AEF24CE62BB657401 /* EventUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventUseCase.swift; sourceTree = "<group>"; };
 		523DBD26D2047F7710E61B9F /* CalendarDisplayUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDisplayUseCase.swift; sourceTree = "<group>"; };
 		54397E24A5C183E8B958D162 /* HolidayRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRegion.swift; sourceTree = "<group>"; };
@@ -165,9 +165,11 @@
 		572E3EA9D52F0C5443BFA9B7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		5C542F8ABD886FDBF6BE6E30 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
 		5EE6E4F10655EAE53BA61ADD /* HolidaySubscriptionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscriptionSettingsView.swift; sourceTree = "<group>"; };
+		5F13F5A7D39130718BFA3D8C /* ICSParseServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSParseServiceTests.swift; sourceTree = "<group>"; };
 		6014366204119534448DB749 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		610A1877EFDC6D2C2C45E0DD /* AdBannerPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdBannerPlaceholderView.swift; sourceTree = "<group>"; };
 		64D3E6933979EFF7091C4719 /* Localizable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localizable.swift; sourceTree = "<group>"; };
+		68EE4CC06CB1727FBB90F994 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		698213AABC972D7419FB4E0E /* TimeNestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestApp.swift; sourceTree = "<group>"; };
 		6A17461C709E8F5516FD5BE8 /* AddEventButtonRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddEventButtonRow.swift; sourceTree = "<group>"; };
 		6BFFD56050E1512F5607B0CE /* ReminderTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderTemplate.swift; sourceTree = "<group>"; };
@@ -175,6 +177,7 @@
 		74DD9EB269476F6F4BF47DEB /* HolidayProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayProviding.swift; sourceTree = "<group>"; };
 		7B40494292AA8D28240524F2 /* WeekCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekCalendarView.swift; sourceTree = "<group>"; };
 		7C13D7D01D8B0BE74AB549A4 /* EventOccurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventOccurrence.swift; sourceTree = "<group>"; };
+		7C1DD313D8600C2F558390F4 /* TimeNest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TimeNest.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7C4251982C80EB3BB5CEEF79 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		7ECE250FA345A1F3AD59B44C /* HolidayEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayEvent.swift; sourceTree = "<group>"; };
 		7F0E80203EF1356D852C7E9F /* DayCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayCalendarView.swift; sourceTree = "<group>"; };
@@ -197,6 +200,7 @@
 		B39DBADCC8DFAC83240E7052 /* TimeNestFileImportUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileImportUseCase.swift; sourceTree = "<group>"; };
 		B88C62841639AC38F232A51D /* WeekdayHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayHeaderView.swift; sourceTree = "<group>"; };
 		BBEF5120F75D73162FE7EDC5 /* EventCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCategory.swift; sourceTree = "<group>"; };
+		BDFA6A3E0D35F63848D80E52 /* TimeNestTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimeNestTests-Info.plist"; sourceTree = "<group>"; };
 		BF164A3A542847D9266063B7 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
 		C109F88ABA8B7460D5381E89 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		C1546D58C384E44B67DD07CB /* ImportSourceType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSourceType.swift; sourceTree = "<group>"; };
@@ -204,13 +208,13 @@
 		CC262AAD2C2D84F38F692A7A /* ImportSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportSource.swift; sourceTree = "<group>"; };
 		CF6156A25585B758EA3C71B1 /* DayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailView.swift; sourceTree = "<group>"; };
 		D16ECA3CEB72D0A1534FC5FB /* SelectedDateInfoBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedDateInfoBarView.swift; sourceTree = "<group>"; };
-		D49063D787EDC414426D3080 /* TimeNest_TimeNest.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeNest_TimeNest.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		D506BFDB5D4E6C2C4B100221 /* InMemoryEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryEventRepository.swift; sourceTree = "<group>"; };
 		D7EB68E188CDED73B8AE135E /* HolidayRecommendedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRecommendedSource.swift; sourceTree = "<group>"; };
 		D910A4E18FE4C880A554FDF1 /* TabBarVisibilityState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarVisibilityState.swift; sourceTree = "<group>"; };
 		D916BD562FD27692278BE08C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		DA46B364BC330AA96ECC935C /* AppNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNotifications.swift; sourceTree = "<group>"; };
 		DC65350465702DE0C940C60B /* LocalizedText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizedText.swift; sourceTree = "<group>"; };
+		DD60AC012AFD4FB0D80E74A4 /* TuistStrings+TimeNest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TuistStrings+TimeNest.swift"; sourceTree = "<group>"; };
 		DF5DA116854EE5B6E0F28A5A /* TuistBundle+TimeNest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TuistBundle+TimeNest.swift"; sourceTree = "<group>"; };
 		E1785C977E3904B8C0105619 /* TimeNestFileEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileEncoder.swift; sourceTree = "<group>"; };
 		E2513065C4258C1A299CC35D /* HolidaySubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscriptionManager.swift; sourceTree = "<group>"; };
@@ -222,7 +226,6 @@
 		F91FD96863142DA3FDD3A281 /* ICSDownloadService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSDownloadService.swift; sourceTree = "<group>"; };
 		FBCEC70F2B3E77FD47089A18 /* ReminderStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStatus.swift; sourceTree = "<group>"; };
 		FCCB9B14D63BBB681C058FEA /* CalendarHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarHeaderView.swift; sourceTree = "<group>"; };
-		FEB4AE6B01060900FDB08D54 /* TimeNest_TimeNest-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimeNest_TimeNest-Info.plist"; sourceTree = "<group>"; };
 		FF57316C5D15E12E25C46D3D /* InMemoryReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryReminderRepository.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -234,7 +237,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		2AB74DE6C55A3B2AB1A36B50 /* Frameworks */ = {
+		A135D58E01550A74D1667A17 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -244,6 +247,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0603B6D65CD6CE953868EB76 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				F6BD5D04B1BB0D3C97747325 /* TimeNestTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
 		17DA94F6675D2CAC4F2F239A /* App */ = {
 			isa = PBXGroup;
 			children = (
@@ -280,6 +291,7 @@
 				B315190FBDEB1BA55157BB60 /* Presentation */,
 				8C55B52376103616BEE60B06 /* Resources */,
 				36DB8E74105768A643D1CF83 /* Shared */,
+				68EE4CC06CB1727FBB90F994 /* Info.plist */,
 				572E3EA9D52F0C5443BFA9B7 /* PrivacyInfo.xcprivacy */,
 			);
 			path = TimeNest;
@@ -363,6 +375,7 @@
 			isa = PBXGroup;
 			children = (
 				3E59B36EC552FDCDE3FF823C /* Derived */,
+				0603B6D65CD6CE953868EB76 /* Tests */,
 				2EF9F567FF69333F46FFC074 /* TimeNest */,
 			);
 			name = Project;
@@ -371,8 +384,7 @@
 		5976D0D42CBF9972A0EA77EE /* InfoPlists */ = {
 			isa = PBXGroup;
 			children = (
-				FEB4AE6B01060900FDB08D54 /* TimeNest_TimeNest-Info.plist */,
-				242959B4E4E4155F23834E33 /* TimeNest-Info.plist */,
+				BDFA6A3E0D35F63848D80E52 /* TimeNestTests-Info.plist */,
 			);
 			path = InfoPlists;
 			sourceTree = "<group>";
@@ -381,6 +393,7 @@
 			isa = PBXGroup;
 			children = (
 				DF5DA116854EE5B6E0F28A5A /* TuistBundle+TimeNest.swift */,
+				DD60AC012AFD4FB0D80E74A4 /* TuistStrings+TimeNest.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -420,7 +433,6 @@
 			children = (
 				1932E070BAE2E6B701259C8D /* InfoPlist.strings */,
 				9C782E37B736D8E03823F101 /* Localizable.strings */,
-				061140EC91CE348A8FB6AFC5 /* Assets.xcassets */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -478,8 +490,8 @@
 		BE8799076891908CE115F40E /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				D49063D787EDC414426D3080 /* TimeNest_TimeNest.bundle */,
-				0322651B7B3BE380A660C3F5 /* TimeNest.app */,
+				7C1DD313D8600C2F558390F4 /* TimeNest.app */,
+				439F0F42610DAABCB1A9BEF8 /* TimeNestTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -547,6 +559,15 @@
 			path = Settings;
 			sourceTree = "<group>";
 		};
+		F6BD5D04B1BB0D3C97747325 /* TimeNestTests */ = {
+			isa = PBXGroup;
+			children = (
+				101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */,
+				5F13F5A7D39130718BFA3D8C /* ICSParseServiceTests.swift */,
+			);
+			path = TimeNestTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -562,34 +583,34 @@
 			buildRules = (
 			);
 			dependencies = (
-				5B032DC6B82A2D402B63DA5E /* PBXTargetDependency */,
 			);
 			name = TimeNest;
 			packageProductDependencies = (
 			);
 			productName = TimeNest;
-			productReference = 0322651B7B3BE380A660C3F5 /* TimeNest.app */;
+			productReference = 7C1DD313D8600C2F558390F4 /* TimeNest.app */;
 			productType = "com.apple.product-type.application";
 		};
-		35057D576A51E067C35F2CFF /* TimeNest_TimeNest */ = {
+		6D6670E3FD1E0F27727D23A9 /* TimeNestTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 6916CBE00796B9A34D767D27 /* Build configuration list for PBXNativeTarget "TimeNest_TimeNest" */;
+			buildConfigurationList = 45A8629EDF2B751356C8B129 /* Build configuration list for PBXNativeTarget "TimeNestTests" */;
 			buildPhases = (
-				7672FFE1ABDBDDDE8C1B6ADC /* Sources */,
-				95D504779A2938F11BD138D5 /* Resources */,
-				2AB74DE6C55A3B2AB1A36B50 /* Frameworks */,
-				495DD2403004B089C322959C /* Embed Frameworks */,
+				9359E37251722921FCA97B86 /* Sources */,
+				79652117B02A814C7416E210 /* Resources */,
+				A135D58E01550A74D1667A17 /* Frameworks */,
+				3254E66F182087A499CBBEF7 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				87008AA570AC5D1F79FB0C13 /* PBXTargetDependency */,
 			);
-			name = TimeNest_TimeNest;
+			name = TimeNestTests;
 			packageProductDependencies = (
 			);
-			productName = TimeNest_TimeNest;
-			productReference = D49063D787EDC414426D3080 /* TimeNest_TimeNest.bundle */;
-			productType = "com.apple.product-type.bundle";
+			productName = TimeNestTests;
+			productReference = 439F0F42610DAABCB1A9BEF8 /* TimeNestTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -599,6 +620,9 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				TargetAttributes = {
+					6D6670E3FD1E0F27727D23A9 = {
+						TestTargetID = 2225269E6F32DE4DDE7D53EC;
+					};
 				};
 			};
 			buildConfigurationList = DBFA16F0102D09E51528942D /* Build configuration list for PBXProject "TimeNest" */;
@@ -618,7 +642,7 @@
 			projectRoot = "";
 			targets = (
 				2225269E6F32DE4DDE7D53EC /* TimeNest */,
-				35057D576A51E067C35F2CFF /* TimeNest_TimeNest */,
+				6D6670E3FD1E0F27727D23A9 /* TimeNestTests */,
 			);
 		};
 /* End PBXProject section */
@@ -628,27 +652,28 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				B2F4B58C1DD420D2B5C5911D /* PrivacyInfo.xcprivacy in Resources */,
+				A3792216AB0BDD08E37C1C2F /* InfoPlist.strings in Resources */,
+				2A29C0D5BAF560D733D461B1 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		95D504779A2938F11BD138D5 /* Resources */ = {
+		79652117B02A814C7416E210 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				9F493244B1166E64DB8579AD /* PrivacyInfo.xcprivacy in Resources */,
-				4AD9B79DE49AAE5CD1A1489C /* Assets.xcassets in Resources */,
-				7AECA2D4C914BB74C0A6C520 /* InfoPlist.strings in Resources */,
-				29D932DE0BCEF50652F17D31 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		7672FFE1ABDBDDDE8C1B6ADC /* Sources */ = {
+		9359E37251722921FCA97B86 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				030693C09B9F4289D5D6BA8B /* HolidayNameLocalizerTests.swift in Sources */,
+				7D94668215024A4C620771B9 /* ICSParseServiceTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -657,6 +682,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				9C99DD8100D2974E11B65A0C /* TuistBundle+TimeNest.swift in Sources */,
+				EACD70DA0475843CFE1EFC26 /* TuistStrings+TimeNest.swift in Sources */,
 				AA041746F2F4582BE0B36431 /* ContentView.swift in Sources */,
 				072BD37222AA2BEA5AFDB16B /* PlaceholderView.swift in Sources */,
 				3C0DBB33175D0EDD6186D401 /* TimeNestApp.swift in Sources */,
@@ -731,7 +757,6 @@
 				F6926445027ACF53819DE6D7 /* SettingsView.swift in Sources */,
 				925CBAECEB04660F30CA4798 /* ShiftSharePlaceholderView.swift in Sources */,
 				C87249AB16F4E371618911FD /* TimeNestFileSharingView.swift in Sources */,
-				3AD9E4E34C6414525022D02A /* Assets.xcassets in Sources */,
 				B061FE6E7B430B8B6707FB1F /* DateOnly.swift in Sources */,
 				6423FEA66D4E3409CAB550F0 /* AppError.swift in Sources */,
 				534AC542EFF8EF9FB8834004 /* Localizable.swift in Sources */,
@@ -744,11 +769,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
-		5B032DC6B82A2D402B63DA5E /* PBXTargetDependency */ = {
+		87008AA570AC5D1F79FB0C13 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			name = TimeNest_TimeNest;
-			target = 35057D576A51E067C35F2CFF /* TimeNest_TimeNest */;
-			targetProxy = 65265587D9D2ED8566A49764 /* PBXContainerItemProxy */;
+			name = TimeNest;
+			target = 2225269E6F32DE4DDE7D53EC /* TimeNest */;
+			targetProxy = D4B1CADE2759CBDA437A974A /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -781,7 +806,7 @@
 		04069DD09718FB44A699E176 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = YES;
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -789,7 +814,7 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -805,7 +830,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = NO;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -816,170 +841,132 @@
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = NO;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
-				);
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
-				GCC_NO_COMMON_BLOCKS = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"SWIFT_PACKAGE=1",
-				);
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_INHIBIT_ALL_WARNINGS = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				OTHER_SWIFT_FLAGS = (
-					"$(inherited)",
-					"-package-name",
-					TimeNest,
-				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
-					"$(inherited)",
-					SWIFT_PACKAGE,
-				);
-				SWIFT_SUPPRESS_WARNINGS = YES;
-				SWIFT_VERSION = 5;
-				USE_HEADERMAP = NO;
 				VALIDATE_PRODUCT = YES;
-			};
-			name = Release;
-		};
-		15A076868B23EF21292B3813 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CODE_SIGNING_ALLOWED = NO;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				GENERATE_MASTER_OBJECT_FILE = NO;
-				INFOPLIST_FILE = "Derived/InfoPlists/TimeNest_TimeNest-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				PACKAGE_RESOURCE_TARGET_KIND = resource;
-				PRODUCT_BUNDLE_IDENTIFIER = TimeNest.generated.resources;
-				PRODUCT_NAME = TimeNest_TimeNest;
-				SDKROOT = auto;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx watchos watchsimulator xros xrsimulator";
-				SUPPORTS_MACCATALYST = YES;
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SWIFT_COMPILATION_MODE = wholemodule;
-				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				TARGETED_DEVICE_FAMILY = "1,2,3,4,6,7";
-				TVOS_DEPLOYMENT_TARGET = 12.0;
-				VERSIONING_SYSTEM = "";
-				WATCHOS_DEPLOYMENT_TARGET = 4.0;
-				XROS_DEPLOYMENT_TARGET = 1.0;
 			};
 			name = Release;
 		};
 		BA9F46B6EC17DF0D99F46342 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = "Derived/InfoPlists/TimeNest-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
 				);
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+				MACH_O_TYPE = mh_execute;
+				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@loader_path/../Frameworks",
+					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
 				);
-				MACH_O_TYPE = staticlib;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				OTHER_SWIFT_FLAGS = "$(inherited)";
-				PACKAGE_RESOURCE_BUNDLE_NAME = TimeNest_TimeNest;
-				PACKAGE_RESOURCE_TARGET_KIND = regular;
-				PRODUCT_BUNDLE_IDENTIFIER = TimeNest;
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNest;
+				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
 				PRODUCT_NAME = TimeNest;
-				SDKROOT = auto;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx watchos watchsimulator xros xrsimulator";
-				SUPPORTS_MACCATALYST = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
-				TARGETED_DEVICE_FAMILY = "1,2,3,4,6,7";
-				TVOS_DEPLOYMENT_TARGET = 12.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-				WATCHOS_DEPLOYMENT_TARGET = 4.0;
-				XROS_DEPLOYMENT_TARGET = 1.0;
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
 		BF773E8BA86A0CA9DF340081 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				CURRENT_PROJECT_VERSION = 1;
-				DEFINES_MODULE = YES;
-				DYLIB_COMPATIBILITY_VERSION = 1;
-				DYLIB_CURRENT_VERSION = 1;
-				DYLIB_INSTALL_NAME_BASE = "@rpath";
-				INFOPLIST_FILE = "Derived/InfoPlists/TimeNest-Info.plist";
-				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = S5NA4Y24ZD;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = TimeNest/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
 				);
-				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+				MACH_O_TYPE = mh_execute;
+				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"@executable_path/../Frameworks",
-					"@loader_path/../Frameworks",
+					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
 				);
-				MACH_O_TYPE = staticlib;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				OTHER_SWIFT_FLAGS = "$(inherited)";
-				PACKAGE_RESOURCE_BUNDLE_NAME = TimeNest_TimeNest;
-				PACKAGE_RESOURCE_TARGET_KIND = regular;
-				PRODUCT_BUNDLE_IDENTIFIER = TimeNest;
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNest;
+				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
 				PRODUCT_NAME = TimeNest;
-				SDKROOT = auto;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx watchos watchsimulator xros xrsimulator";
-				SUPPORTS_MACCATALYST = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = NO;
+				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
 					"$(inherited)",
 					DEBUG,
 				);
 				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				TARGETED_DEVICE_FAMILY = "1,2,3,4,6,7";
-				TVOS_DEPLOYMENT_TARGET = 12.0;
-				VERSIONING_SYSTEM = "apple-generic";
-				VERSION_INFO_PREFIX = "";
-				WATCHOS_DEPLOYMENT_TARGET = 4.0;
-				XROS_DEPLOYMENT_TARGET = 1.0;
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
+		};
+		C6EEA7A19A1C096B1CA6B32A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "Derived/InfoPlists/TimeNestTests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNestTests;
+				PRODUCT_NAME = TimeNestTests;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TimeNest.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TimeNest";
+				TEST_TARGET_NAME = TimeNest;
+			};
+			name = Release;
 		};
 		CEFD87B728DE8C5C070264F1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = YES;
+				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -987,7 +974,7 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = NO;
+				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -1003,7 +990,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
-				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = NO;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -1013,86 +1000,71 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				ENABLE_STRICT_OBJC_MSGSEND = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				FRAMEWORK_SEARCH_PATHS = (
-					"$(inherited)",
-					"$(PLATFORM_DIR)/Developer/Library/Frameworks",
-				);
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_NO_COMMON_BLOCKS = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
 					"DEBUG=1",
-					"SWIFT_PACKAGE=1",
+					"$(inherited)",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
-				GCC_WARN_INHIBIT_ALL_WARNINGS = YES;
 				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
-				OTHER_SWIFT_FLAGS = (
-					"$(inherited)",
-					"-package-name",
-					TimeNest,
-				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
-					"$(inherited)",
-					SWIFT_PACKAGE,
-				);
-				SWIFT_SUPPRESS_WARNINGS = YES;
-				SWIFT_VERSION = 5;
-				USE_HEADERMAP = NO;
 			};
 			name = Debug;
 		};
-		E26544254849F2DBB015E7F8 /* Debug */ = {
+		D5090DA1E43BAD63E225A774 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGNING_ALLOWED = NO;
-				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
-				GENERATE_MASTER_OBJECT_FILE = NO;
-				INFOPLIST_FILE = "Derived/InfoPlists/TimeNest_TimeNest-Info.plist";
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				INFOPLIST_FILE = "Derived/InfoPlists/TimeNestTests-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				PACKAGE_RESOURCE_TARGET_KIND = resource;
-				PRODUCT_BUNDLE_IDENTIFIER = TimeNest.generated.resources;
-				PRODUCT_NAME = TimeNest_TimeNest;
-				SDKROOT = auto;
-				SKIP_INSTALL = YES;
-				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx watchos watchsimulator xros xrsimulator";
-				SUPPORTS_MACCATALYST = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNestTests;
+				PRODUCT_NAME = TimeNestTests;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
-				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = (
 					"$(inherited)",
 					DEBUG,
 				);
 				SWIFT_COMPILATION_MODE = singlefile;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				TARGETED_DEVICE_FAMILY = "1,2,3,4,6,7";
-				TVOS_DEPLOYMENT_TARGET = 12.0;
-				VERSIONING_SYSTEM = "";
-				WATCHOS_DEPLOYMENT_TARGET = 4.0;
-				XROS_DEPLOYMENT_TARGET = 1.0;
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TimeNest.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/TimeNest";
+				TEST_TARGET_NAME = TimeNest;
 			};
 			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		6916CBE00796B9A34D767D27 /* Build configuration list for PBXNativeTarget "TimeNest_TimeNest" */ = {
+		45A8629EDF2B751356C8B129 /* Build configuration list for PBXNativeTarget "TimeNestTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				E26544254849F2DBB015E7F8 /* Debug */,
-				15A076868B23EF21292B3813 /* Release */,
+				D5090DA1E43BAD63E225A774 /* Debug */,
+				C6EEA7A19A1C096B1CA6B32A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
