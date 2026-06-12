@@ -118,6 +118,7 @@
 /* Day Detail */
 "day_detail.title" = "予定";
 "day_detail.no_events" = "予定はありません";
+"day_detail.add_event" = "予定を追加";
 
 /* Holiday Region Selection */
 "holiday_region.selection_title" = "祝祭日を選択";

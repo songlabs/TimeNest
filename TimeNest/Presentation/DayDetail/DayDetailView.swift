@@ -4,9 +4,11 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
+    let onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
     let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
 
     @State private var editingEvent: EditingEvent?
+    @State private var showingAddEvent: Bool = false
 
     var body: some View {
         NavigationView {
@@ -21,6 +23,16 @@ struct DayDetailView: View {
                 .padding()
             }
             .navigationTitle(localization.localized(.dayDetailTitle))
+            .sheet(isPresented: $showingAddEvent) {
+                let initialDate = cell.date.toDate()
+                EventEditorView(
+                    isPresented: $showingAddEvent,
+                    mode: .create(initialDate: initialDate),
+                    onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
+                        try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID)
+                    }
+                )
+            }
             .sheet(item: $editingEvent) { event in
                 EventEditorView(
                     isPresented: editingPresentationBinding,
@@ -61,15 +73,25 @@ struct DayDetailView: View {
 
     private var eventsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(localization.localized(.dayDetailTitle))
-                .font(.title2)
-                .fontWeight(.semibold)
-
             if cell.events.isEmpty {
-                Text(localization.localized(.dayDetailNoEvents))
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
+                VStack(spacing: 16) {
+                    Text(localization.localized(.dayDetailNoEvents))
+                        .foregroundColor(.secondary)
+                    
+                    Button(action: {
+                        showingAddEvent = true
+                    }) {
+                        Text(localization.localized(.dayDetailAddEvent))
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
             } else {
                 ForEach(cell.events, id: \.id) { event in
                     EventRowView(
@@ -224,6 +246,7 @@ struct EventRowView: View {
             eventMarkers: []
         ),
         onDeleteEvent: { _ in },
+        onCreateEvent: { _, _, _, _, _, _, _ in },
         onUpdateEvent: { _, _, _, _, _, _, _, _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))

@@ -116,8 +116,9 @@
 "editor.invalid_date_range" = "종료 시간은 시작 시간보다 늦어야 합니다.";
 
 /* Day Detail */
-"day_detail.title" = "이벤트";
-"day_detail.no_events" = "이벤트 없음";
+"day_detail.title" = "일정";
+"day_detail.no_events" = "일정 없음";
+"day_detail.add_event" = "일정 추가";
 
 /* Holiday Region Selection */
 "holiday_region.selection_title" = "공휴일 선택";

@@ -118,6 +118,7 @@
 /* Day Detail */
 "day_detail.title" = "日程";
 "day_detail.no_events" = "暂无日程";
+"day_detail.add_event" = "追加日程";
 
 /* Holiday Region Selection */
 "holiday_region.selection_title" = "选择节假日";

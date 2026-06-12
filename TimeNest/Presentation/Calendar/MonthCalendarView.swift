@@ -106,6 +106,17 @@ struct MonthCalendarView: View {
                             await viewModel.deleteEvent(id: eventID)
                         }
                     },
+                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
+                        try await viewModel.createEvent(
+                            title: title,
+                            note: note,
+                            startDate: startDate,
+                            endDate: endDate,
+                            isAllDay: isAllDay,
+                            reminderOffsetMinutes: reminderOffsetMinutes,
+                            shiftTemplateID: shiftTemplateID
+                        )
+                    },
                     onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
                         try await viewModel.updateEvent(
                             id: eventID,
@@ -424,14 +435,17 @@ struct DayCellView: View {
                     holidayLabelsView
                 } else if let shiftType = cell.shiftType {
                     // 排班标签 - 底部居中，圆角矩形样式
-                    Text(shiftType)
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background(shiftType.shiftLabelColor)
-                        .padding(.horizontal, ShiftCalendarLayout.shiftLabelHorizontalPadding)
-                        .padding(.bottom, 8)
+                    HStack {
+                        Text(shiftType)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.white)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 8)
+                            .background(shiftType.shiftLabelColor)
+                            .padding(.bottom, 8)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, ShiftCalendarLayout.shiftLabelHorizontalPadding)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

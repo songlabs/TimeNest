@@ -208,6 +208,7 @@ enum LocalizedString: String {
 
     case dayDetailTitle = "day_detail.title"
     case dayDetailNoEvents = "day_detail.no_events"
+    case dayDetailAddEvent = "day_detail.add_event"
 
     // MARK: - File Sharing
 

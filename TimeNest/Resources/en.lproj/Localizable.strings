@@ -118,6 +118,7 @@
 /* Day Detail */
 "day_detail.title" = "Events";
 "day_detail.no_events" = "No events";
+"day_detail.add_event" = "Add Event";
 
 /* Holiday Region Selection */
 "holiday_region.selection_title" = "Select Holiday Regions";
