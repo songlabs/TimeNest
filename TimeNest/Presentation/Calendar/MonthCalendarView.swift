@@ -461,18 +461,22 @@ struct DayCellView: View {
         let hiddenCount = max(0, cell.events.count - visibleEvents.count)
 
         if !visibleEvents.isEmpty {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .center, spacing: 2) {
                 ForEach(visibleEvents, id: \.id) { event in
-                    Text(eventLabel(for: event))
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(eventLabelTextColor(for: event))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(eventLabelBackgroundColor(for: event))
-                        .cornerRadius(3)
+                    HStack {
+                        Spacer(minLength: 0)
+                        Text(eventLabel(for: event))
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(eventLabelTextColor(for: event))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(eventLabelBackgroundColor(for: event))
+                            .cornerRadius(3)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
 
                 if hiddenCount > 0 {
