@@ -88,13 +88,16 @@ struct EventEditorView: View {
                         Button {
                             applyShiftTemplate(template)
                         } label: {
-                            Text("\(localization.localized(template.nameKey)) \(template.displayTime)")
+                            Text(template.displayName)
                                 .font(.subheadline.weight(.semibold))
-                                .monospacedDigit()
                                 .frame(maxWidth: .infinity)
+                                .foregroundColor(template.buttonTextColor)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(template.color.opacity(0.2))
+                                .cornerRadius(8)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.regular)
+                        .buttonStyle(.plain)
                     }
                 } header: {
                     Text(localization.localized(.shiftCommon))
@@ -251,6 +254,18 @@ struct EventEditorView: View {
         isAllDay = false
         startDate = start
         endDate = end
+
+        // 只有当标题为空或标题是默认班次名称时才覆盖
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+           isDefaultShiftTitle(title) {
+            title = template.displayName
+        }
+    }
+
+    /// 判断标题是否为任意一个启用班次模板的显示名称
+    private func isDefaultShiftTitle(_ title: String) -> Bool {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return shiftTemplates.contains { $0.displayName == normalizedTitle }
     }
 
     private func normalizeForAllDayChange(_ allDay: Bool) {

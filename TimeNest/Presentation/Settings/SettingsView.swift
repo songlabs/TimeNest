@@ -270,6 +270,20 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
         Color(hex: colorHex) ?? .gray
     }
 
+    var buttonTextColor: Color {
+        // 判断背景色深浅，决定使用深色还是白色文字
+        // 将颜色转换为 UIColor 来判断亮度
+        let uiColor = UIColor(color)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        
+        // 计算相对亮度 (YIQ 公式)
+        let brightness = (r * 299 + g * 587 + b * 114) / 1000
+        
+        // 亮度低于 0.5 使用白色文字，否则使用深色文字
+        return brightness < 0.5 ? .white : .primary
+    }
+
     var startHourMinute: (hour: Int, minute: Int)? {
         Self.hourMinute(from: startTime)
     }
