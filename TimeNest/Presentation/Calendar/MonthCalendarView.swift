@@ -78,14 +78,15 @@ struct MonthCalendarView: View {
             EventEditorView(
                 isPresented: $viewModel.showingEventEditor,
                 mode: .create(initialDate: viewModel.selectedDate),
-                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes in
+                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
                     try await viewModel.createEvent(
                         title: title,
                         note: note,
                         startDate: startDate,
                         endDate: endDate,
                         isAllDay: isAllDay,
-                        reminderOffsetMinutes: reminderOffsetMinutes
+                        reminderOffsetMinutes: reminderOffsetMinutes,
+                        shiftTemplateID: shiftTemplateID
                     )
                 }
             )
@@ -105,7 +106,7 @@ struct MonthCalendarView: View {
                             await viewModel.deleteEvent(id: eventID)
                         }
                     },
-                    onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes in
+                    onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
                         try await viewModel.updateEvent(
                             id: eventID,
                             title: title,
@@ -113,7 +114,8 @@ struct MonthCalendarView: View {
                             startDate: startDate,
                             endDate: endDate,
                             isAllDay: isAllDay,
-                            reminderOffsetMinutes: reminderOffsetMinutes
+                            reminderOffsetMinutes: reminderOffsetMinutes,
+                            shiftTemplateID: shiftTemplateID
                         )
                     }
                 )
@@ -449,13 +451,13 @@ struct DayCellView: View {
                 ForEach(visibleEvents, id: \.id) { event in
                     Text(eventLabel(for: event))
                         .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(ShiftCalendarColors.primaryBlueDark)
+                        .foregroundColor(eventLabelTextColor(for: event))
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 2)
-                        .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
+                        .background(eventLabelBackgroundColor(for: event))
                         .cornerRadius(3)
                 }
 
@@ -475,6 +477,25 @@ struct DayCellView: View {
             return event.title
         }
         return "\(formatTime(event.startDate)) \(event.title)"
+    }
+
+    private func eventLabelTextColor(for event: EventOccurrence) -> Color {
+        guard let shiftTemplateID = event.shiftTemplateID else {
+            return ShiftCalendarColors.primaryBlueDark
+        }
+        // 判断颜色深浅，决定使用深色还是白色文字
+        let uiColor = UIColor(shiftTemplateID.color)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let brightness = (r * 299 + g * 587 + b * 114) / 1000
+        return brightness < 0.5 ? .white : ShiftCalendarColors.primaryBlueDark
+    }
+
+    private func eventLabelBackgroundColor(for event: EventOccurrence) -> Color {
+        guard let shiftTemplateID = event.shiftTemplateID else {
+            return ShiftCalendarColors.primaryBlue.opacity(0.12)
+        }
+        return shiftTemplateID.color.opacity(0.12)
     }
 
     private func formatTime(_ date: Date) -> String {

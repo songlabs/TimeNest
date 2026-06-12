@@ -356,7 +356,7 @@ struct WeekTimeAxisView: View {
             ForEach(Array(cells.enumerated()), id: \.element.id) { index, cell in
                 ForEach(timedEvents(in: cell), id: \.id) { event in
                     CalendarEventBlockView(
-                        title: event.title,
+                        event: event,
                         timeText: eventTimeText(for: event),
                         compact: columnWidth < 64
                     )
@@ -431,13 +431,13 @@ struct WeekTimeAxisView: View {
 }
 
 struct CalendarEventBlockView: View {
-    let title: String
+    let event: EventOccurrence
     let timeText: String
     let compact: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(title)
+            Text(event.title)
                 .font(.system(size: compact ? 10 : 12, weight: .semibold))
                 .foregroundColor(ShiftCalendarColors.whiteText)
                 .lineLimit(1)
@@ -452,8 +452,12 @@ struct CalendarEventBlockView: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(ShiftCalendarColors.primaryBlue)
+        .background(eventColor)
         .cornerRadius(6)
+    }
+
+    private var eventColor: Color {
+        event.shiftTemplateID?.color ?? ShiftCalendarColors.primaryBlue
     }
 }
 

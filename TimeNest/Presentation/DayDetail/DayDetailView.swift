@@ -4,7 +4,7 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
-    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?) async throws -> Void
+    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
 
     @State private var editingEvent: EditingEvent?
 
@@ -33,8 +33,8 @@ struct DayDetailView: View {
                         initialIsAllDay: event.isAllDay,
                         initialReminderOffsetMinutes: event.reminderOffsetMinutes
                     ),
-                    onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes in
-                        try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes)
+                    onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID in
+                        try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID)
                     }
                 )
             }
@@ -142,6 +142,7 @@ private struct EditingEvent: Identifiable {
     let endDate: Date
     let isAllDay: Bool
     let reminderOffsetMinutes: Int?
+    let shiftTemplateID: ShiftTimeTemplateID?
 
     init(_ event: EventOccurrence) {
         id = event.id
@@ -152,6 +153,7 @@ private struct EditingEvent: Identifiable {
         endDate = event.endDate
         isAllDay = event.isAllDay
         reminderOffsetMinutes = event.reminderOffsetMinutes
+        shiftTemplateID = event.shiftTemplateID
     }
 }
 
@@ -222,7 +224,7 @@ struct EventRowView: View {
             eventMarkers: []
         ),
         onDeleteEvent: { _ in },
-        onUpdateEvent: { _, _, _, _, _, _, _ in }
+        onUpdateEvent: { _, _, _, _, _, _, _, _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }

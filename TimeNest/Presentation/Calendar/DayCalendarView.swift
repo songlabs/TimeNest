@@ -156,7 +156,7 @@ struct DayTimeAxisView: View {
         ZStack(alignment: .topLeading) {
             ForEach(timedEvents, id: \.id) { event in
                 CalendarEventBlockView(
-                    title: event.title,
+                    event: event,
                     timeText: eventTimeText(for: event),
                     compact: false
                 )
@@ -270,7 +270,8 @@ private func makePreviewCell() -> CalendarDayCell {
                 note: nil,
                 categoryID: nil,
                 reminderOffsetMinutes: nil,
-                notificationID: nil
+                notificationID: nil,
+                shiftTemplateID: nil
             )
         ],
         isToday: true,

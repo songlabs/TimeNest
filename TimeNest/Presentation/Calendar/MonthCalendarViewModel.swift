@@ -215,7 +215,7 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async throws {
+    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?) async throws {
         let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
         let now = Date()
 
@@ -233,7 +233,8 @@ class MonthCalendarViewModel: ObservableObject {
             notificationID: nil,
             importSource: nil,
             createdAt: now,
-            updatedAt: now
+            updatedAt: now,
+            shiftTemplateID: shiftTemplateID
         )
 
         try await eventUseCase.createEvent(event)
@@ -259,7 +260,7 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) async throws {
+    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?) async throws {
         do {
             let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
             let existingEvent = try await eventUseCase.event(id: id)
@@ -279,7 +280,8 @@ class MonthCalendarViewModel: ObservableObject {
                 notificationID: existingEvent?.notificationID,
                 importSource: existingEvent?.importSource,
                 createdAt: existingEvent?.createdAt ?? now,
-                updatedAt: now
+                updatedAt: now,
+                shiftTemplateID: shiftTemplateID ?? existingEvent?.shiftTemplateID
             )
 
             try await eventUseCase.updateEvent(updatedEvent)

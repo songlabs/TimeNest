@@ -176,12 +176,7 @@ struct SettingsView: View {
 
 // MARK: - Shift Time Settings
 
-enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
-    case day
-    case night
-
-    var id: String { rawValue }
-
+extension ShiftTimeTemplateID {
     var nameKey: LocalizedString {
         switch self {
         case .day:
@@ -249,6 +244,11 @@ enum ShiftTimeTemplateID: String, CaseIterable, Identifiable {
 
     var colorHexKey: String {
         "shiftTime.\(rawValue).colorHex"
+    }
+
+    /// 获取对应的颜色（十六进制版本）
+    var colorHex: String {
+        defaultColorHex
     }
 }
 
@@ -409,6 +409,16 @@ extension Color {
         let alpha = Int(a * 255)
         
         return String(format: "#%02X%02X%02X%02X", red, green, blue, alpha)
+    }
+}
+
+// MARK: - ShiftTimeTemplateID Color Extension
+
+extension ShiftTimeTemplateID {
+    var color: Color {
+        let defaults = UserDefaults.standard
+        let colorHex = defaults.string(forKey: self.colorHexKey) ?? self.defaultColorHex
+        return Color(hex: colorHex) ?? .gray
     }
 }
 

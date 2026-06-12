@@ -15,6 +15,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
     let importSource: ImportSource?
     let createdAt: Date
     var updatedAt: Date
+    var shiftTemplateID: ShiftTimeTemplateID?
 
     init(
         id: UUID,
@@ -30,7 +31,8 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         notificationID: String? = nil,
         importSource: ImportSource?,
         createdAt: Date,
-        updatedAt: Date
+        updatedAt: Date,
+        shiftTemplateID: ShiftTimeTemplateID? = nil
     ) {
         self.id = id
         self.title = title
@@ -46,6 +48,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         self.importSource = importSource
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.shiftTemplateID = shiftTemplateID
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -63,6 +66,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         case importSource
         case createdAt
         case updatedAt
+        case shiftTemplateID
     }
 
     init(from decoder: Decoder) throws {
@@ -81,6 +85,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         importSource = try container.decodeIfPresent(ImportSource.self, forKey: .importSource)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
+        shiftTemplateID = try container.decodeIfPresent(ShiftTimeTemplateID.self, forKey: .shiftTemplateID)
     }
 
     static func defaultEndDate(for startDate: Date, isAllDay: Bool) -> Date {

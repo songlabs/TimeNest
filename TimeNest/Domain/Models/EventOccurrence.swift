@@ -12,4 +12,5 @@ struct EventOccurrence: Identifiable, Hashable {
     let categoryID: UUID?
     let reminderOffsetMinutes: Int?
     let notificationID: String?
+    let shiftTemplateID: ShiftTimeTemplateID?
 }

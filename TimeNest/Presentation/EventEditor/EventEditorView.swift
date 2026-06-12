@@ -17,7 +17,7 @@ struct EventEditorView: View {
     @Environment(\.localization) private var localization
     @Binding var isPresented: Bool
     let mode: EventEditorMode
-    var onSave: (String, String?, Date, Date, Bool, Int?) async throws -> Void
+    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
 
     @State private var title: String
     @State private var note: String
@@ -25,16 +25,17 @@ struct EventEditorView: View {
     @State private var endDate: Date
     @State private var isAllDay: Bool
     @State private var reminderOffsetMinutes: Int?
+    @State private var selectedShiftTemplateID: ShiftTimeTemplateID?
     @State private var saving: Bool = false
     @State private var errorMessage: String?
 
- 
+
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
 
     init(
         isPresented: Binding<Bool>,
         mode: EventEditorMode,
-        onSave: @escaping (String, String?, Date, Date, Bool, Int?) async throws -> Void
+        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
     ) {
         _isPresented = isPresented
         self.mode = mode
@@ -84,20 +85,22 @@ struct EventEditorView: View {
                 }
 
                 Section {
-                    ForEach(shiftTemplates) { template in
-                        Button {
-                            applyShiftTemplate(template)
-                        } label: {
-                            Text(template.displayName)
-                                .font(.subheadline.weight(.semibold))
-                                .frame(maxWidth: .infinity)
-                                .foregroundColor(template.buttonTextColor)
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 16)
-                                .background(template.color.opacity(0.2))
-                                .cornerRadius(8)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
+                        ForEach(shiftTemplates) { template in
+                            Button {
+                                applyShiftTemplate(template)
+                            } label: {
+                                Text(template.displayName)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(template.buttonTextColor)
+                                    .padding(.vertical, 6)
+                                    .padding(.horizontal, 4)
+                                    .background(template.color.opacity(0.2))
+                                    .cornerRadius(6)
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     }
                 } header: {
                     Text(localization.localized(.shiftCommon))
@@ -199,7 +202,7 @@ struct EventEditorView: View {
         do {
             let normalized = normalizedDates()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes)
+            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID)
             isPresented = false
         } catch {
             errorMessage = error.localizedDescription
@@ -254,6 +257,7 @@ struct EventEditorView: View {
         isAllDay = false
         startDate = start
         endDate = end
+        selectedShiftTemplateID = template.id
 
         // 只有当标题为空或标题是默认班次名称时才覆盖
         if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
