@@ -93,7 +93,7 @@ struct CalendarHeaderView: View {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .medium))
                 .foregroundColor(ShiftCalendarColors.primaryBlue)
-                .frame(width: 42, height: 42)
+                .frame(width: 36, height: 36)
                 .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
                 .clipShape(Circle())
         }
