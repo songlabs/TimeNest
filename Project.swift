@@ -14,7 +14,7 @@ let project = Project(
             resources: [
                 "TimeNest/Resources/**/*.strings",
                 "TimeNest/PrivacyInfo.xcprivacy",
-                "TimeNest/Assets.xcassets"
+                "TimeNest/Resources/Assets.xcassets"
             ],
             settings: Settings.settings(
                 base: [

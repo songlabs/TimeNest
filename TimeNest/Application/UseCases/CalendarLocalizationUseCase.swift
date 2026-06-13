@@ -48,6 +48,7 @@ class CalendarLocalizationUseCase {
     }
     
     func holidayName(_ holiday: Holiday, language: DisplayLanguage) -> String {
-        holiday.localizedNames.localized(for: language)
+        // 根据节假日所属地区选择对应语言名称，而不是根据当前 App 语言
+        holiday.localizedNames.displayName(for: holiday.region)
     }
 }

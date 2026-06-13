@@ -129,20 +129,15 @@ struct DayDetailView: View {
     }
 
     private func localizedHolidayName(_ holiday: Holiday) -> String {
-        let language = localization.currentLanguage
+        // 根据节假日所属地区选择对应语言名称，而不是根据当前 App 语言
         let names = holiday.localizedNames
-
-        // 优先返回当前语言对应的名称，如果没有则按 fallback 顺序返回
-        switch language {
-        case .ja:
-            return names.ja.isEmpty ? localizedHolidayNameFallback(names) : names.ja
-        case .zhHans, .system:
-            return names.zhHans.isEmpty ? localizedHolidayNameFallback(names) : names.zhHans
-        case .ko:
-            return names.ko.isEmpty ? localizedHolidayNameFallback(names) : names.ko
-        case .enUS:
-            return names.enUS.isEmpty ? localizedHolidayNameFallback(names) : names.enUS
+        let displayName = names.displayName(for: holiday.region)
+        
+        // 如果为空，返回 fallback
+        if displayName.isEmpty {
+            return localizedHolidayNameFallback(names)
         }
+        return displayName
     }
 
     private func localizedHolidayNameFallback(_ names: LocalizedText) -> String {

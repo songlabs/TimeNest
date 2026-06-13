@@ -80,6 +80,8 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum DayDetail: Sendable {
+      /// Add Event
+      public static let addEvent = TimeNestStrings.tr("Localizable", "day_detail.add_event")
       /// No events
       public static let noEvents = TimeNestStrings.tr("Localizable", "day_detail.no_events")
       /// Events

@@ -32,12 +32,7 @@ class HolidayUseCase {
                     id: event.id,
                     region: event.region,
                     date: event.date,
-                    localizedNames: LocalizedText(
-                        zhHans: displayName,
-                        ja: displayName,
-                        ko: displayName,
-                        enUS: displayName
-                    ),
+                    localizedNames: LocalizedText(region: event.region, displayName: displayName),
                     type: holidayType(from: event.type),
                     isObserved: true
                 )
@@ -70,12 +65,7 @@ class HolidayUseCase {
                     id: event.id,
                     region: event.region,
                     date: event.date,
-                    localizedNames: LocalizedText(
-                        zhHans: displayName,
-                        ja: displayName,
-                        ko: displayName,
-                        enUS: displayName
-                    ),
+                    localizedNames: LocalizedText(region: event.region, displayName: displayName),
                     type: holidayType(from: event.type),
                     isObserved: true
                 )

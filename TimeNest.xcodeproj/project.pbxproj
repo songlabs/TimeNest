@@ -47,6 +47,7 @@
 		715474D479FC05B6C4DB0F44 /* YearMonthPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FD11D57EE56D99975E5266 /* YearMonthPickerView.swift */; };
 		71AE462561F299D3BE23BF2E /* EventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56173AE8F9BFC1AD236F1583 /* EventRepository.swift */; };
 		72EED81598A18C89AFD5A773 /* ImportSourceType.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1546D58C384E44B67DD07CB /* ImportSourceType.swift */; };
+		7671D365849B6A4C88FEB783 /* TuistAssets+TimeNest.swift in Sources */ = {isa = PBXBuildFile; fileRef = A60AFC0A83160C9B254218D3 /* TuistAssets+TimeNest.swift */; };
 		778EE6232DFEB476EB517FF5 /* WeekStartPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EC25C8B962498EDDACE984E /* WeekStartPolicy.swift */; };
 		7C9FA04770DB178237B20382 /* AddEventButtonRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A17461C709E8F5516FD5BE8 /* AddEventButtonRow.swift */; };
 		7D2A69B2C63C1D5EB259EBB7 /* HolidayType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49D6CD7EBA48907AD28AE6B /* HolidayType.swift */; };
@@ -75,6 +76,7 @@
 		B2F4B58C1DD420D2B5C5911D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 572E3EA9D52F0C5443BFA9B7 /* PrivacyInfo.xcprivacy */; };
 		B89B1698AB583D10078BFFEB /* InMemoryReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF57316C5D15E12E25C46D3D /* InMemoryReminderRepository.swift */; };
 		B8B80BF31BF9FE8D09334BE6 /* TimeNestFileImportUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39DBADCC8DFAC83240E7052 /* TimeNestFileImportUseCase.swift */; };
+		BF653EA7371BF409E4C7EDEF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 061140EC91CE348A8FB6AFC5 /* Assets.xcassets */; };
 		BFC2E4071046602758FE794B /* WeekdayHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B88C62841639AC38F232A51D /* WeekdayHeaderView.swift */; };
 		C0C749CE791967E6EA0E91A6 /* CalendarHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCCB9B14D63BBB681C058FEA /* CalendarHeaderView.swift */; };
 		C87249AB16F4E371618911FD /* TimeNestFileSharingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C0CAEAD6BBF5761066588BD /* TimeNestFileSharingView.swift */; };
@@ -135,6 +137,7 @@
 		04A35D8C4C8E7C99F7504CF8 /* DisplayLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DisplayLanguage.swift; sourceTree = "<group>"; };
 		055E266712ABAAFF393EB476 /* ScheduledReminder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledReminder.swift; sourceTree = "<group>"; };
 		05993F01B0DB122B6BA1A789 /* MonthGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthGrid.swift; sourceTree = "<group>"; };
+		061140EC91CE348A8FB6AFC5 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayNameLocalizerTests.swift; sourceTree = "<group>"; };
 		11B471485AB6829F00A33BC2 /* TimeNestFileExportUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileExportUseCase.swift; sourceTree = "<group>"; };
 		140976DC595D14B416FD6220 /* SelectedDateDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelectedDateDetailView.swift; sourceTree = "<group>"; };
@@ -194,6 +197,7 @@
 		9C98100FA71A91F736E6AF2A /* ExternalCalendarImporting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalCalendarImporting.swift; sourceTree = "<group>"; };
 		A2F5D1815A1BCF29537E68C4 /* TimeNestFileDecoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileDecoder.swift; sourceTree = "<group>"; };
 		A49D6CD7EBA48907AD28AE6B /* HolidayType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayType.swift; sourceTree = "<group>"; };
+		A60AFC0A83160C9B254218D3 /* TuistAssets+TimeNest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TuistAssets+TimeNest.swift"; sourceTree = "<group>"; };
 		A9DAAC92C759FA388396D515 /* ReminderUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderUseCase.swift; sourceTree = "<group>"; };
 		AA8102DC9C2AED69BA14461F /* HolidaySubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscription.swift; sourceTree = "<group>"; };
 		B2B79C74CDC902B76AD477B0 /* CalendarStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStyles.swift; sourceTree = "<group>"; };
@@ -392,6 +396,7 @@
 		5BF7C489061F859AB8E32AEC /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				A60AFC0A83160C9B254218D3 /* TuistAssets+TimeNest.swift */,
 				DF5DA116854EE5B6E0F28A5A /* TuistBundle+TimeNest.swift */,
 				DD60AC012AFD4FB0D80E74A4 /* TuistStrings+TimeNest.swift */,
 			);
@@ -433,6 +438,7 @@
 			children = (
 				1932E070BAE2E6B701259C8D /* InfoPlist.strings */,
 				9C782E37B736D8E03823F101 /* Localizable.strings */,
+				061140EC91CE348A8FB6AFC5 /* Assets.xcassets */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -653,6 +659,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B2F4B58C1DD420D2B5C5911D /* PrivacyInfo.xcprivacy in Resources */,
+				BF653EA7371BF409E4C7EDEF /* Assets.xcassets in Resources */,
 				A3792216AB0BDD08E37C1C2F /* InfoPlist.strings in Resources */,
 				2A29C0D5BAF560D733D461B1 /* Localizable.strings in Resources */,
 			);
@@ -681,6 +688,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7671D365849B6A4C88FEB783 /* TuistAssets+TimeNest.swift in Sources */,
 				9C99DD8100D2974E11B65A0C /* TuistBundle+TimeNest.swift in Sources */,
 				EACD70DA0475843CFE1EFC26 /* TuistStrings+TimeNest.swift in Sources */,
 				AA041746F2F4582BE0B36431 /* ContentView.swift in Sources */,
