@@ -187,6 +187,16 @@ extension ShiftTimeTemplateID {
             return .shiftCommon
         }
     }
+    
+    /// 自定义班次的 UUID 存储 key，用于在 UserDefaults 中记录自定义班次的存在
+    var uuidStorageKey: String {
+        switch self {
+        case .day, .night:
+            return ""
+        case .custom(let uuid):
+            return "shiftTime.custom.\(uuid.uuidString).id"
+        }
+    }
 
     var defaultDisplayName: String {
         switch self {
@@ -375,7 +385,8 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
             if let uuidString = defaults.string(forKey: prefix + ".id"),
                let uuid = UUID(uuidString: uuidString) {
                 let id = ShiftTimeTemplateID.custom(uuid)
-                let displayName = defaults.string(forKey: prefix + ".displayName") ?? id.defaultDisplayName
+                // 自定义班次优先显示保存的 displayName，为空时才使用默认值
+                let displayName = defaults.string(forKey: prefix + ".displayName") ?? ""
                 templates.append(ShiftTimeTemplate(
                     id: id,
                     nameKey: id.nameKey,
@@ -594,6 +605,11 @@ struct ShiftTimeSettingsView: View {
             defaults.set(template.startTime, forKey: template.id.startTimeKey)
             defaults.set(template.endTime, forKey: template.id.endTimeKey)
             defaults.set(template.enabled, forKey: template.id.enabledKey)
+            
+            // 保存自定义班次的 UUID，确保可以正确加载
+            if case .custom(let uuid) = template.id {
+                defaults.set(uuid.uuidString, forKey: template.id.uuidStorageKey)
+            }
         }
     }
 }
@@ -618,10 +634,16 @@ private struct ShiftTimeSettingsRow: View {
             }
             .buttonStyle(.plain)
 
-            // Shift Name
-            Text(LocalizedStringKey(template.nameKey.rawValue))
-                .font(.body.weight(.medium))
-                .foregroundColor(.primary)
+            // Shift Name: 优先显示 displayName，为空时 fallback 到本地化名称
+            if !template.displayName.isEmpty {
+                Text(template.displayName)
+                    .font(.body.weight(.medium))
+                    .foregroundColor(.primary)
+            } else {
+                Text(LocalizedStringKey(template.nameKey.rawValue))
+                    .font(.body.weight(.medium))
+                    .foregroundColor(.primary)
+            }
 
             Spacer()
 
@@ -682,18 +704,7 @@ private struct ShiftTimeEditSheet: View {
                         Spacer()
                         TextField("", text: $displayName)
                             .textFieldStyle(.plain)
-                            .onChange(of: displayName) { oldValue, newValue in
-                                if newValue.count > 2 {
-                                    displayName = String(newValue.prefix(2))
-                                }
-                            }
                     }
-                }
-
-                // 备注
-                Section {
-                    TextField(localization.localized(.shiftTimeNote), text: $note, axis: .vertical)
-                        .lineLimit(1...4)
                 }
 
                 // 颜色
@@ -741,8 +752,6 @@ private struct ShiftTimeEditSheet: View {
                         }
                     }
                     .padding(.vertical, 8)
-                } header: {
-                    Text(localization.localized(shiftID.nameKey))
                 } footer: {
                     Text(localization.localized(.shiftTimeEditFooter))
                 }
