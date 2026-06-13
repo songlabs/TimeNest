@@ -28,6 +28,10 @@ struct EventEditorView: View {
     @State private var selectedShiftTemplateID: ShiftTimeTemplateID?
     @State private var saving: Bool = false
     @State private var errorMessage: String?
+    @State private var showingStartDatePicker: Bool = false
+    @State private var showingStartTimePicker: Bool = false
+    @State private var showingEndDatePicker: Bool = false
+    @State private var showingEndTimePicker: Bool = false
 
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
@@ -55,21 +59,19 @@ struct EventEditorView: View {
             Form {
                 Section {
                     TextField(localization.localized(.editorTitle), text: $title)
-                } header: {
-                    Text(localization.localized(.editorBasicInfo))
                 }
 
                 Section {
-                    EventTimeCompactRow(
+                    EventTimeSection(
                         startDate: $startDate,
                         endDate: $endDate,
                         isAllDay: $isAllDay,
                         allDayTitle: localization.localized(.editorAllDay),
-                        datePickerComponents: datePickerComponents
+                        showingStartDatePicker: $showingStartDatePicker,
+                        showingStartTimePicker: $showingStartTimePicker,
+                        showingEndDatePicker: $showingEndDatePicker,
+                        showingEndTimePicker: $showingEndTimePicker
                     )
-                    .onChange(of: startDate) { _, newValue in
-                        adjustEndDateIfNeeded(for: newValue)
-                    }
                     .onChange(of: isAllDay) { _, newValue in
                         normalizeForAllDayChange(newValue)
                     }
@@ -80,8 +82,6 @@ struct EventEditorView: View {
                             Text(reminderTitle(for: option)).tag(option as Int?)
                         }
                     }
-                } header: {
-                    Text(localization.localized(.editorTime))
                 }
 
                 Section {
@@ -102,8 +102,6 @@ struct EventEditorView: View {
                             .buttonStyle(.plain)
                         }
                     }
-                } header: {
-                    Text(localization.localized(.shiftCommon))
                 }
 
                 if let validationMessage = validationMessage ?? errorMessage {
@@ -222,11 +220,6 @@ struct EventEditorView: View {
         return (startDate, endDate)
     }
 
-    private func adjustEndDateIfNeeded(for newStartDate: Date) {
-        guard !isAllDay, endDate <= newStartDate else { return }
-        endDate = CalendarEvent.defaultEndDate(for: newStartDate, isAllDay: false)
-    }
-
     private func applyShiftTemplate(_ template: ShiftTimeTemplate) {
         guard let startTime = template.startHourMinute,
               let endTime = template.endHourMinute else { return }
@@ -314,129 +307,369 @@ struct EventEditorView: View {
     }
 }
 
-private struct EventTimeCompactRow: View {
+private struct EventTimeSection: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var isAllDay: Bool
     let allDayTitle: String
-    let datePickerComponents: DatePickerComponents
+    @Binding var showingStartDatePicker: Bool
+    @Binding var showingStartTimePicker: Bool
+    @Binding var showingEndDatePicker: Bool
+    @Binding var showingEndTimePicker: Bool
+
+    private let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateFormat = "yyyy/MM/dd"
+        return formatter
+    }()
+
+    private let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "ja_JP")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            row(format: .full)
-            row(format: .short)
-            row(format: .compact)
-        }
-        .font(.subheadline)
-        .frame(minHeight: 36)
-        .accessibilityElement(children: .contain)
-    }
-
-    private func row(format: TimeDisplayFormat) -> some View {
-        HStack(spacing: format.spacing) {
-            EditableDateText(
-                date: $startDate,
-                text: formatted(startDate, role: .start, format: format),
-                components: datePickerComponents
-            )
-
-            Text(format.separator)
-                .foregroundStyle(.secondary)
-                .fixedSize()
-
-            EditableDateText(
-                date: $endDate,
-                text: formatted(endDate, role: .end, format: format),
-                components: datePickerComponents
-            )
-
-            Spacer(minLength: 4)
-
-            Toggle(isOn: $isAllDay) {
+        VStack(alignment: .leading, spacing: 12) {
+            // 第一行：終日 + Toggle，独立一行
+            HStack {
                 Text(allDayTitle)
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                Spacer()
+                Toggle("", isOn: $isAllDay)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
             }
-            .toggleStyle(.switch)
-            .fixedSize()
-            .controlSize(.small)
+
+            // 第二行：開始 + 日期/时间按钮
+            HStack(alignment: .center, spacing: 8) {
+                Text("開始")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(width: 40, alignment: .leading)
+
+                HStack(spacing: 8) {
+                    // 日期按钮
+                    Button {
+                        showingStartDatePicker = true
+                    } label: {
+                        Text(formatDateOnly(startDate))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color(.secondarySystemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    // 时间按钮
+                    Button {
+                        showingStartTimePicker = true
+                    } label: {
+                        Text(formatTimeOnly(startDate))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color(.secondarySystemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
+            }
+            .sheet(isPresented: $showingStartDatePicker) {
+                TimePickerSheet(
+                    startDate: $startDate,
+                    endDate: $endDate,
+                    isAllDay: isAllDay,
+                    mode: .startDate
+                )
+            }
+            .sheet(isPresented: $showingStartTimePicker) {
+                TimePickerSheet(
+                    startDate: $startDate,
+                    endDate: $endDate,
+                    isAllDay: isAllDay,
+                    mode: .startTime
+                )
+            }
+
+            // 第三行：終了 + 日期/时间按钮
+            HStack(alignment: .center, spacing: 8) {
+                Text("終了")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .frame(width: 40, alignment: .leading)
+
+                HStack(spacing: 8) {
+                    // 日期按钮
+                    Button {
+                        showingEndDatePicker = true
+                    } label: {
+                        Text(formatDateOnly(endDate))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color(.secondarySystemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+
+                    // 时间按钮
+                    Button {
+                        showingEndTimePicker = true
+                    } label: {
+                        Text(formatTimeOnly(endDate))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
+                            .padding(.horizontal, 12)
+                            .background(Color(.secondarySystemBackground))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Spacer()
+            }
+            .sheet(isPresented: $showingEndDatePicker) {
+                TimePickerSheet(
+                    startDate: $startDate,
+                    endDate: $endDate,
+                    isAllDay: isAllDay,
+                    mode: .endDate
+                )
+            }
+            .sheet(isPresented: $showingEndTimePicker) {
+                TimePickerSheet(
+                    startDate: $startDate,
+                    endDate: $endDate,
+                    isAllDay: isAllDay,
+                    mode: .endTime
+                )
+            }
         }
-        .lineLimit(1)
+        .padding(.vertical, 8)
     }
 
-    private func formatted(_ date: Date, role: TimeRole, format: TimeDisplayFormat) -> String {
-        if isAllDay {
-            switch format {
-            case .full:
-                return date.formatted(with: "yyyy/MM/dd")
-            case .short, .compact:
-                return date.formatted(with: "MM/dd")
-            }
-        }
+    private func formatDateOnly(_ date: Date) -> String {
+        dateFormatter.string(from: date)
+    }
 
-        switch format {
-        case .full:
-            return date.formatted(with: "yyyy/MM/dd H:mm")
-        case .short:
-            return date.formatted(with: "MM/dd H:mm")
-        case .compact:
-            if role == .end && Calendar.current.isDate(startDate, inSameDayAs: endDate) {
-                return date.formatted(with: "HH:mm")
-            }
-            return date.formatted(with: "MM/dd HH:mm")
-        }
+    private func formatTimeOnly(_ date: Date) -> String {
+        timeFormatter.string(from: date)
     }
 }
 
-private struct EditableDateText: View {
-    @Binding var date: Date
-    let text: String
-    let components: DatePickerComponents
+private enum TimePickerMode {
+    case startDate
+    case startTime
+    case endDate
+    case endTime
+}
+
+private struct TimePickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    let isAllDay: Bool
+    let mode: TimePickerMode
+
+    @State private var tempDate: Date
+
+    private var datePickerTitle: String {
+        switch mode {
+        case .startDate:
+            return "选择开始日期"
+        case .startTime:
+            return "选择开始时间"
+        case .endDate:
+            return "选择结束日期"
+        case .endTime:
+            return "选择结束时间"
+        }
+    }
+
+    init(startDate: Binding<Date>, endDate: Binding<Date>, isAllDay: Bool, mode: TimePickerMode) {
+        _startDate = startDate
+        _endDate = endDate
+        self.isAllDay = isAllDay
+        self.mode = mode
+        
+        // 根据模式初始化 tempDate
+        switch mode {
+        case .startDate, .startTime:
+            _tempDate = State(initialValue: startDate.wrappedValue)
+        case .endDate, .endTime:
+            _tempDate = State(initialValue: endDate.wrappedValue)
+        }
+    }
 
     var body: some View {
-        Text(text)
-            .foregroundStyle(.primary)
-            .monospacedDigit()
-            .fixedSize(horizontal: true, vertical: false)
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
-            .overlay {
-                DatePicker("", selection: $date, displayedComponents: components)
-                    .datePickerStyle(.compact)
-                    .labelsHidden()
-                    .opacity(0.02)
+        NavigationStack {
+            Form {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if isAllDay {
+                            // 全天模式：只显示日期选择
+                            DatePicker(
+                                "",
+                                selection: $tempDate,
+                                in: dateRangeForMode(),
+                                displayedComponents: [.date]
+                            )
+                            .datePickerStyle(.graphical)
+                        } else {
+                            // 非全天模式：根据模式显示日期或时间
+                            switch mode {
+                            case .startDate, .endDate:
+                                // 日期选择：只显示日期
+                                DatePicker(
+                                    "",
+                                    selection: $tempDate,
+                                    in: dateRangeForMode(),
+                                    displayedComponents: [.date]
+                                )
+                                .datePickerStyle(.graphical)
+                                
+                            case .startTime, .endTime:
+                                // 时间选择：只显示时间
+                                DatePicker(
+                                    "",
+                                    selection: $tempDate,
+                                    displayedComponents: [.hourAndMinute]
+                                )
+                                .datePickerStyle(.wheel)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                }
             }
-    }
-}
+            .navigationTitle(datePickerTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizedString("完了")) {
+                        commitSelection()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
 
-private enum TimeDisplayFormat {
-    case full
-    case short
-    case compact
-
-    var separator: String {
-        switch self {
-        case .full, .short:
-            return "～"
-        case .compact:
-            return "～"
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localizedString("取消")) {
+                        dismiss()
+                    }
+                }
+            }
         }
     }
 
-    var spacing: CGFloat {
-        switch self {
-        case .full, .short:
-            return 6
-        case .compact:
-            return 0
+    private func dateRangeForMode() -> ClosedRange<Date> {
+        let calendar = Calendar(identifier: .gregorian)
+        // 允许选择前后 10 年的日期，不限制开始/结束日期的相对关系
+        let calendarStart = calendar.startOfDay(for: Date())
+        let minDate = calendar.date(byAdding: .year, value: -10, to: calendarStart) ?? calendarStart
+        let maxDate = calendar.date(byAdding: .year, value: 10, to: calendarStart) ?? calendarStart
+        
+        // 所有模式都允许自由选择任意日期
+        return minDate...maxDate
+    }
+
+    private func commitSelection() {
+        let calendar = Calendar(identifier: .gregorian)
+        
+        switch mode {
+        case .startDate:
+            // 只更新开始日期的年月日，保留原来的时分
+            let timeComponent = calendar.dateComponents([.hour, .minute, .second], from: startDate)
+            let newDate = calendar.date(bySettingHour: timeComponent.hour ?? 0,
+                                        minute: timeComponent.minute ?? 0,
+                                        second: timeComponent.second ?? 0,
+                                        of: tempDate) ?? tempDate
+            startDate = newDate
+            // 如果修改后 endDate <= startDate，自动修正 endDate
+            if endDate <= startDate {
+                endDate = calendar.date(byAdding: .hour, value: 1, to: startDate) ?? startDate
+            }
+            
+        case .startTime:
+            // 只更新开始时间的时分秒，保留原来的年月日
+            let dateComponent = calendar.dateComponents([.year, .month, .day], from: startDate)
+            let timeDate = calendar.date(from: dateComponent) ?? startDate
+            let newDate = calendar.date(bySettingHour: calendar.component(.hour, from: tempDate),
+                                        minute: calendar.component(.minute, from: tempDate),
+                                        second: calendar.component(.second, from: tempDate),
+                                        of: timeDate) ?? timeDate
+            startDate = newDate
+            // 如果修改后 endDate <= startDate，自动修正 endDate
+            if endDate <= startDate {
+                endDate = calendar.date(byAdding: .hour, value: 1, to: startDate) ?? startDate
+            }
+            
+        case .endDate:
+            // 只更新结束日期的年月日，保留原来的时分
+            let timeComponent = calendar.dateComponents([.hour, .minute, .second], from: endDate)
+            let newDate = calendar.date(bySettingHour: timeComponent.hour ?? 0,
+                                        minute: timeComponent.minute ?? 0,
+                                        second: timeComponent.second ?? 0,
+                                        of: tempDate) ?? tempDate
+            endDate = newDate
+            // 如果修改后 endDate <= startDate，自动修正 startDate
+            if endDate <= startDate {
+                startDate = calendar.date(byAdding: .hour, value: -1, to: endDate) ?? endDate
+            }
+            
+        case .endTime:
+            // 只更新结束时间的时分秒，保留原来的年月日
+            let dateComponent = calendar.dateComponents([.year, .month, .day], from: endDate)
+            let timeDate = calendar.date(from: dateComponent) ?? endDate
+            let newDate = calendar.date(bySettingHour: calendar.component(.hour, from: tempDate),
+                                        minute: calendar.component(.minute, from: tempDate),
+                                        second: calendar.component(.second, from: tempDate),
+                                        of: timeDate) ?? timeDate
+            endDate = newDate
+            // 如果修改后 endDate <= startDate，自动修正 startDate
+            if endDate <= startDate {
+                startDate = calendar.date(byAdding: .hour, value: -1, to: endDate) ?? endDate
+            }
         }
     }
-}
 
-private enum TimeRole {
-    case start
-    case end
+    private func localizedString(_ key: String) -> String {
+        let localized = NSLocalizedString(key, comment: "")
+        return localized != key ? localized : key
+    }
 }
 
 private extension Date {
