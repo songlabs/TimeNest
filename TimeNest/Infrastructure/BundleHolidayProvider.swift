@@ -7,7 +7,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-newyear-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 1, day: 1),
-            localizedNames: LocalizedText(zhHans: "元旦", ja: "元日", ko: "신정", enUS: "New Year's Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "元日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -15,7 +15,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-matsuri-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 1, day: 12),
-            localizedNames: LocalizedText(zhHans: "成人节", ja: "成人の日", ko: "성인의 날", enUS: "Coming-of-Age Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "成人の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -23,7 +23,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-builders-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 2, day: 3),
-            localizedNames: LocalizedText(zhHans: "建国纪念日", ja: "建国記念の日", ko: "건국기념일", enUS: "National Foundation Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "建国記念の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -31,7 +31,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-emperor-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 2, day: 23),
-            localizedNames: LocalizedText(zhHans: "天皇诞生日", ja: "天皇誕生日", ko: "천황 생일", enUS: "Emperor's Birthday"),
+            localizedNames: LocalizedText(region: .japan, displayName: "天皇誕生日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -39,7 +39,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-spring-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 3, day: 20),
-            localizedNames: LocalizedText(zhHans: "春分日", ja: "春分日", ko: "춘분", enUS: "Vernal Equinox Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "春分日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -47,7 +47,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-showa-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 4, day: 29),
-            localizedNames: LocalizedText(zhHans: "昭和之日", ja: "昭和の日", ko: "쇼와의 날", enUS: "Showa Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "昭和の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -55,7 +55,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-constitution-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 5, day: 3),
-            localizedNames: LocalizedText(zhHans: "宪法纪念日", ja: "憲法記念日", ko: "헌법기념일", enUS: "Constitution Memorial Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "憲法記念日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -63,7 +63,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-midori-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 5, day: 4),
-            localizedNames: LocalizedText(zhHans: "绿色之日", ja: "みどりの日", ko: "녹색의 날", enUS: "Greenery Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "みどりの日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -71,7 +71,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-children-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 5, day: 5),
-            localizedNames: LocalizedText(zhHans: "儿童之日", ja: "こどもの日", ko: "어린이 날", enUS: "Children's Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "こどもの日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -79,7 +79,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-substitute-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 5, day: 6),
-            localizedNames: LocalizedText(zhHans: "补休日", ja: "振替休日", ko: "대체공휴일", enUS: "Substitute Holiday"),
+            localizedNames: LocalizedText(region: .japan, displayName: "振替休日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -87,7 +87,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-marine-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 7, day: 20),
-            localizedNames: LocalizedText(zhHans: "海之日", ja: "海の日", ko: "해의 날", enUS: "Marine Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "海の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -95,7 +95,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-mountain-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 8, day: 11),
-            localizedNames: LocalizedText(zhHans: "山之日", ja: "山の日", ko: "산의 날", enUS: "Mountain Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "山の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -103,7 +103,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-respect-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 9, day: 21),
-            localizedNames: LocalizedText(zhHans: "敬老日", ja: "敬老の日", ko: "경로의 날", enUS: "Respect for the Aged Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "敬老の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -111,7 +111,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-autumn-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 9, day: 23),
-            localizedNames: LocalizedText(zhHans: "秋分日", ja: "秋分日", ko: "추분", enUS: "Autumnal Equinox Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "秋分日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -119,7 +119,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-culture-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 11, day: 3),
-            localizedNames: LocalizedText(zhHans: "文化之日", ja: "文化の日", ko: "문화의 날", enUS: "Culture Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "文化の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -127,7 +127,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "jp-thanksgiving-2026",
             region: .japan,
             date: DateOnly(year: 2026, month: 11, day: 23),
-            localizedNames: LocalizedText(zhHans: "勤劳感谢之日", ja: "勤労感謝の日", ko: "노동 감사의 날", enUS: "Labor Thanksgiving Day"),
+            localizedNames: LocalizedText(region: .japan, displayName: "勤労感謝の日"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -136,7 +136,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "cn-springfestival-2026",
             region: .china,
             date: DateOnly(year: 2026, month: 2, day: 17),
-            localizedNames: LocalizedText(zhHans: "春节", ja: "春節", ko: "설날", enUS: "Spring Festival"),
+            localizedNames: LocalizedText(region: .china, displayName: "春节"),
             type: .traditional,
             isObserved: true
         ),
@@ -144,7 +144,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "cn-dragonboat-2026",
             region: .china,
             date: DateOnly(year: 2026, month: 6, day: 19),
-            localizedNames: LocalizedText(zhHans: "端午节", ja: "端午の節句", ko: "단오", enUS: "Dragon Boat Festival"),
+            localizedNames: LocalizedText(region: .china, displayName: "端午节"),
             type: .traditional,
             isObserved: true
         ),
@@ -152,7 +152,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "cn-dragonboat-holiday-2026",
             region: .china,
             date: DateOnly(year: 2026, month: 6, day: 20),
-            localizedNames: LocalizedText(zhHans: "端午节假", ja: "端午の節句休暇", ko: "단오 연휴", enUS: "Dragon Boat Festival Holiday"),
+            localizedNames: LocalizedText(region: .china, displayName: "端午节"),
             type: .traditional,
             isObserved: true
         ),
@@ -160,7 +160,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "cn-dragonboat-holiday2-2026",
             region: .china,
             date: DateOnly(year: 2026, month: 6, day: 21),
-            localizedNames: LocalizedText(zhHans: "端午节假", ja: "端午の節句休暇", ko: "단오 연휴", enUS: "Dragon Boat Festival Holiday"),
+            localizedNames: LocalizedText(region: .china, displayName: "端午节"),
             type: .traditional,
             isObserved: true
         ),
@@ -169,7 +169,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "kr-salnal-2026",
             region: .korea,
             date: DateOnly(year: 2026, month: 2, day: 17),
-            localizedNames: LocalizedText(zhHans: "春节", ja: "春節", ko: "설날", enUS: "Lunar New Year"),
+            localizedNames: LocalizedText(region: .korea, displayName: "설날"),
             type: .traditional,
             isObserved: true
         ),
@@ -178,7 +178,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "us-newyear-2026",
             region: .unitedStates,
             date: DateOnly(year: 2026, month: 1, day: 1),
-            localizedNames: LocalizedText(zhHans: "元旦", ja: "元日", ko: "신정", enUS: "New Year's Day"),
+            localizedNames: LocalizedText(region: .unitedStates, displayName: "New Year's Day"),
             type: .publicHoliday,
             isObserved: true
         ),
@@ -186,7 +186,7 @@ actor BundleHolidayProvider: HolidayProviding {
             id: "us-martinluther-2026",
             region: .unitedStates,
             date: DateOnly(year: 2026, month: 1, day: 19),
-            localizedNames: LocalizedText(zhHans: "马丁·路德·金纪念日", ja: "マーティン・ルーサー・キング・ジュニア記念日", ko: "마틴 루터 킹 기념일", enUS: "Martin Luther King Jr. Day"),
+            localizedNames: LocalizedText(region: .unitedStates, displayName: "Martin Luther King Jr. Day"),
             type: .publicHoliday,
             isObserved: true
         )
