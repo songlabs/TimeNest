@@ -246,3 +246,6 @@
 "shift_time.display_name" = "表示名";
 "shift_time.note" = "メモ";
 "shift_time.color" = "色";
+"shift_time.add_button" = "班次を追加";
+"shift_time.new_shift_name" = "新しい班次";
+"shift_time.edit_shift_title" = "班次を編集";

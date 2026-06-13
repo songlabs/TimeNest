@@ -246,3 +246,6 @@
 "shift_time.display_name" = "Display Name";
 "shift_time.note" = "Note";
 "shift_time.color" = "Color";
+"shift_time.add_button" = "Add Shift";
+"shift_time.new_shift_name" = "New Shift";
+"shift_time.edit_shift_title" = "Edit Shift";

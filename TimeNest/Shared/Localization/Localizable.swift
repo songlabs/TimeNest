@@ -198,11 +198,13 @@ enum LocalizedString: String {
     case shiftDisabled = "shift.disabled"
     case shiftTimeStartTime = "shift_time.start_time"
     case shiftTimeEndTime = "shift_time.end_time"
-    case shiftTimeEditTitle = "shift_time.edit_title"
+    case shiftTimeEditTitle = "shift_time.edit_shift_title"
     case shiftTimeEditFooter = "shift_time.edit_footer"
     case shiftTimeDisplayName = "shift_time.display_name"
     case shiftTimeNote = "shift_time.note"
     case shiftTimeColor = "shift_time.color"
+    case shiftTimeAddButton = "shift_time.add_button"
+    case shiftTimeNewShiftName = "shift_time.new_shift_name"
 
     // MARK: - Day Detail
 

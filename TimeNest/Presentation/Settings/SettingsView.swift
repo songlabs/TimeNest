@@ -183,6 +183,8 @@ extension ShiftTimeTemplateID {
             return .shiftDay
         case .night:
             return .shiftNight
+        case .custom:
+            return .shiftCommon
         }
     }
 
@@ -192,6 +194,8 @@ extension ShiftTimeTemplateID {
             return "白班"
         case .night:
             return "夜班"
+        case .custom:
+            return "新班次"
         }
     }
 
@@ -201,6 +205,8 @@ extension ShiftTimeTemplateID {
             return "08:30"
         case .night:
             return "17:00"
+        case .custom:
+            return "09:00"
         }
     }
 
@@ -210,6 +216,8 @@ extension ShiftTimeTemplateID {
             return "17:30"
         case .night:
             return "09:00"
+        case .custom:
+            return "18:00"
         }
     }
 
@@ -219,31 +227,75 @@ extension ShiftTimeTemplateID {
             return "#FFD54F"
         case .night:
             return "#5C6BC0"
+        case .custom:
+            return "#4CAF50"
         }
     }
 
     var startTimeKey: String {
-        "shiftTime.\(rawValue).start"
+        switch self {
+        case .day:
+            return "shiftTime.day.start"
+        case .night:
+            return "shiftTime.night.start"
+        case .custom(let uuid):
+            return "shiftTime.custom.\(uuid.uuidString).start"
+        }
     }
 
     var endTimeKey: String {
-        "shiftTime.\(rawValue).end"
+        switch self {
+        case .day:
+            return "shiftTime.day.end"
+        case .night:
+            return "shiftTime.night.end"
+        case .custom(let uuid):
+            return "shiftTime.custom.\(uuid.uuidString).end"
+        }
     }
 
     var enabledKey: String {
-        "shiftTime.\(rawValue).enabled"
+        switch self {
+        case .day:
+            return "shiftTime.day.enabled"
+        case .night:
+            return "shiftTime.night.enabled"
+        case .custom(let uuid):
+            return "shiftTime.custom.\(uuid.uuidString).enabled"
+        }
     }
 
     var displayNameKey: String {
-        "shiftTime.\(rawValue).displayName"
+        switch self {
+        case .day:
+            return "shiftTime.day.displayName"
+        case .night:
+            return "shiftTime.night.displayName"
+        case .custom(let uuid):
+            return "shiftTime.custom.\(uuid.uuidString).displayName"
+        }
     }
 
     var noteKey: String {
-        "shiftTime.\(rawValue).note"
+        switch self {
+        case .day:
+            return "shiftTime.day.note"
+        case .night:
+            return "shiftTime.night.note"
+        case .custom(let uuid):
+            return "shiftTime.custom.\(uuid.uuidString).note"
+        }
     }
 
     var colorHexKey: String {
-        "shiftTime.\(rawValue).colorHex"
+        switch self {
+        case .day:
+            return "shiftTime.day.colorHex"
+        case .night:
+            return "shiftTime.night.colorHex"
+        case .custom(let uuid):
+            return "shiftTime.custom.\(uuid.uuidString).colorHex"
+        }
     }
 
     /// 获取对应的颜色（十六进制版本）
@@ -293,7 +345,9 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
     }
 
     static func all(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
-        ShiftTimeTemplateID.allCases.map { id in
+        // 固定模板：day, night
+        let fixedTemplates: [ShiftTimeTemplateID] = [.day, .night]
+        var templates: [ShiftTimeTemplate] = fixedTemplates.map { id in
             let displayName = migrateDisplayName(
                 stored: defaults.string(forKey: id.displayNameKey),
                 template: id
@@ -309,6 +363,33 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                 enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true
             )
         }
+        
+        // 加载自定义班次
+        let customKeys = Set(
+            defaults.dictionaryRepresentation()
+                .filter { $0.key.hasPrefix("shiftTime.custom.") && $0.key.hasSuffix(".id") }
+                .map { String($0.key.prefix($0.key.count - 3)) }
+        )
+        
+        for prefix in customKeys {
+            if let uuidString = defaults.string(forKey: prefix + ".id"),
+               let uuid = UUID(uuidString: uuidString) {
+                let id = ShiftTimeTemplateID.custom(uuid)
+                let displayName = defaults.string(forKey: prefix + ".displayName") ?? id.defaultDisplayName
+                templates.append(ShiftTimeTemplate(
+                    id: id,
+                    nameKey: id.nameKey,
+                    displayName: displayName,
+                    note: defaults.string(forKey: prefix + ".note") ?? "",
+                    colorHex: defaults.string(forKey: prefix + ".colorHex") ?? id.defaultColorHex,
+                    startTime: defaults.string(forKey: prefix + ".startTime") ?? id.defaultStartTime,
+                    endTime: defaults.string(forKey: prefix + ".endTime") ?? id.defaultEndTime,
+                    enabled: defaults.object(forKey: prefix + ".enabled") as? Bool ?? true
+                ))
+            }
+        }
+        
+        return templates
     }
 
     /// 迁移旧默认值：白→白班，夜→夜班
@@ -326,6 +407,9 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
             if stored == "夜" || stored == "夜勤" {
                 return "夜班"
             }
+        case .custom:
+            // 自定义班次不需要迁移
+            break
         }
         return stored
     }
@@ -426,6 +510,7 @@ struct ShiftTimeSettingsView: View {
     @EnvironmentObject private var localization: LocalizationManager
     @State private var selectedShift: ShiftTimeTemplateID?
     @State private var shiftTemplates: [ShiftTimeTemplate] = []
+    @State private var showAddShift: Bool = false
 
     var body: some View {
         List {
@@ -436,6 +521,22 @@ struct ShiftTimeSettingsView: View {
                     onTap: { selectedShift = template.id }
                 )
             }
+            
+            Section {
+                Button {
+                    showAddShift = true
+                } label: {
+                    HStack {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.accentColor)
+                        Text(localization.localized(.shiftTimeAddButton))
+                            .foregroundColor(.accentColor)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .navigationTitle(localization.localized(.shiftTimeSettingsTitle))
         .navigationBarTitleDisplayMode(.inline)
@@ -443,6 +544,14 @@ struct ShiftTimeSettingsView: View {
             ShiftTimeEditSheet(
                 shiftID: shiftID,
                 onSave: updateShiftTemplate
+            )
+            .environmentObject(localization)
+        }
+        .sheet(isPresented: $showAddShift) {
+            ShiftTimeEditSheet(
+                shiftID: .custom(UUID()),
+                isNew: true,
+                onSave: addNewShiftTemplate
             )
             .environmentObject(localization)
         }
@@ -470,6 +579,10 @@ struct ShiftTimeSettingsView: View {
         if let index = shiftTemplates.firstIndex(where: { $0.id == template.id }) {
             shiftTemplates[index] = template
         }
+    }
+
+    private func addNewShiftTemplate(_ template: ShiftTimeTemplate) {
+        shiftTemplates.append(template)
     }
 
     private func saveShiftTemplates() {
@@ -537,6 +650,7 @@ private struct ShiftTimeEditSheet: View {
     @EnvironmentObject private var localization: LocalizationManager
 
     let shiftID: ShiftTimeTemplateID
+    let isNew: Bool
     let onSave: (ShiftTimeTemplate) -> Void
 
     @State private var displayName: String
@@ -545,8 +659,9 @@ private struct ShiftTimeEditSheet: View {
     @State private var startTime: String
     @State private var endTime: String
 
-    init(shiftID: ShiftTimeTemplateID, onSave: @escaping (ShiftTimeTemplate) -> Void) {
+    init(shiftID: ShiftTimeTemplateID, isNew: Bool = false, onSave: @escaping (ShiftTimeTemplate) -> Void) {
         self.shiftID = shiftID
+        self.isNew = isNew
         self.onSave = onSave
         let defaults = UserDefaults.standard
         _displayName = State(initialValue: defaults.string(forKey: shiftID.displayNameKey) ?? shiftID.defaultDisplayName)

@@ -246,3 +246,6 @@
 "shift_time.display_name" = "显示名称";
 "shift_time.note" = "备注";
 "shift_time.color" = "颜色";
+"shift_time.add_button" = "新增班次";
+"shift_time.new_shift_name" = "新班次";
+"shift_time.edit_shift_title" = "编辑班次";

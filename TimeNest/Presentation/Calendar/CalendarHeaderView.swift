@@ -13,7 +13,8 @@ struct CalendarHeaderView: View {
     var body: some View {
         unifiedHeaderView
             .padding(.horizontal, 16)
-            .frame(height: ShiftCalendarLayout.headerHeight)
+            .padding(.top, ShiftCalendarLayout.headerTopPadding)
+            .frame(height: ShiftCalendarLayout.headerHeight, alignment: .top)
             .background(ShiftCalendarColors.backgroundColor)
     }
 
