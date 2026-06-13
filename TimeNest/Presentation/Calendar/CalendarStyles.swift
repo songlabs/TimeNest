@@ -130,9 +130,14 @@ struct ShiftCalendarLayout {
     static let dayNumberFontSize: CGFloat = 20
     static let dayNumberFontSizeToday: CGFloat = 22
 
-    // Footer 工具栏字体大小 - 接近 Header 区域按钮文字的视觉比例
-    static let footerButtonFontSize: CGFloat = 26
+    // Footer 工具栏字体大小 - 调整后与 Header 区域按钮文字的视觉比例更协调
+    static let footerButtonFontSize: CGFloat = 19
     static let footerButtonFontWeight: Font.Weight = .medium
+    
+    // Footer 按钮统一高度 - 确保「今日」「月/周/日」「＋」视觉高度一致
+    static let footerButtonHeight: CGFloat = 34
+    static let footerButtonCornerRadius: CGFloat = 7
+    static let addButtonSize: CGFloat = 34
 
     // 选中日期信息条
     static let selectedDateInfoHeight: CGFloat = 40
