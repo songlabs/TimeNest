@@ -174,7 +174,7 @@ struct SettingsView: View {
     }
 }
 
-private enum SettingsNotificationTime {
+enum SettingsNotificationTime {
     static var defaultDate: Date {
         date(from: 9 * 60)
     }

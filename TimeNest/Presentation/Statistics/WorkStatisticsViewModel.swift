@@ -67,7 +67,7 @@ class WorkStatisticsViewModel: ObservableObject {
         
         // 模拟延迟（实际应用中应该从数据源获取真实数据）
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.loadStatisticsData()
+            self?.loadEmptyStatisticsState()
             self?.isLoading = false
         }
     }
@@ -108,7 +108,7 @@ class WorkStatisticsViewModel: ObservableObject {
     // MARK: - Private Methods
     /// 加载统计数据
     /// 当前无真实数据源，显示空状态
-    private func loadStatisticsData() {
+    func loadEmptyStatisticsState() {
         // TODO: 从真实数据源获取 Event 数据并计算
         // 当前无真实打工数据，清空统计数据以显示空状态
         

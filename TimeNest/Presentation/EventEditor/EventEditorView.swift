@@ -303,14 +303,7 @@ struct EventEditorView: View {
     }
 
     private func normalizedDates() -> (start: Date, end: Date) {
-        let calendar = Calendar(identifier: .gregorian)
-        if isAllDay {
-            let start = calendar.startOfDay(for: startDate)
-            let endDay = calendar.startOfDay(for: endDate)
-            let end = calendar.date(byAdding: .day, value: 1, to: endDay) ?? endDay
-            return (start, end)
-        }
-        return (startDate, endDate)
+        EventEditorDateNormalizer.normalizedDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
     }
 
     private func applyShiftTemplate(_ template: ShiftTimeTemplate) {
@@ -359,21 +352,13 @@ struct EventEditorView: View {
     }
 
     private func normalizeForAllDayChange(_ allDay: Bool) {
-        let calendar = Calendar(identifier: .gregorian)
-        if allDay {
-            startDate = calendar.startOfDay(for: startDate)
-            if endDate < startDate {
-                endDate = startDate
-            }
-        } else {
-            let startDay = calendar.startOfDay(for: startDate)
-            if startDate == startDay {
-                startDate = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: startDate) ?? startDate
-            }
-            if endDate <= startDate {
-                endDate = CalendarEvent.defaultEndDate(for: startDate, isAllDay: false)
-            }
-        }
+        let normalized = EventEditorDateNormalizer.normalizedForAllDayChange(
+            allDay: allDay,
+            startDate: startDate,
+            endDate: endDate
+        )
+        startDate = normalized.startDate
+        endDate = normalized.endDate
     }
 
     private func reminderTitle(for offset: Int?) -> String {
