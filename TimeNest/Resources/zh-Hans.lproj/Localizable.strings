@@ -114,6 +114,12 @@
 "editor.end" = "结束";
 "editor.reminder" = "提醒";
 "editor.invalid_date_range" = "结束时间必须晚于开始时间。";
+"editor.workIn" = "上班";
+"editor.workOut" = "下班";
+"editor.restTime" = "休息时间";
+"editor.transportFee" = "交通费";
+"editor.hourlyRate" = "时给";
+"editor.currencyUnit" = "元";
 
 /* Day Detail */
 "day_detail.title" = "日程";
@@ -249,3 +255,15 @@
 "shift_time.add_button" = "新增班次";
 "shift_time.new_shift_name" = "新班次";
 "shift_time.edit_shift_title" = "编辑班次";
+
+/* Work Statistics */
+"work_statistics.title" = "打工统计";
+"work_statistics" = "统计";
+"work_statistics.start_date_month" = "开始年月";
+"work_statistics.end_date_month" = "结束年月";
+"work_statistics.column_date" = "日期";
+"work_statistics.column_time" = "时间";
+"work_statistics.column_amount" = "金额";
+"work_statistics.column_total" = "总计";
+"work_statistics.total_hours" = "合计时间";
+"work_statistics.total_amount" = "合计金额";

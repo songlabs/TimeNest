@@ -20,7 +20,9 @@ public enum TimeNestStrings: Sendable {
     public static let cfBundleName = TimeNestStrings.tr("InfoPlist", "CFBundleName")
   }
   public enum Localizable {
-  
+    /// Statistics
+    public static let workStatistics = TimeNestStrings.tr("Localizable", "work_statistics")
+
     public enum About: Sendable {
       /// Developer
       public static let developer = TimeNestStrings.tr("Localizable", "about.developer")
@@ -95,6 +97,8 @@ public enum TimeNestStrings: Sendable {
       public static let basicInfo = TimeNestStrings.tr("Localizable", "editor.basic_info")
       /// Cancel
       public static let cancel = TimeNestStrings.tr("Localizable", "editor.cancel")
+      /// Yuan
+      public static let currencyUnit = TimeNestStrings.tr("Localizable", "editor.currencyUnit")
       /// Date
       public static let date = TimeNestStrings.tr("Localizable", "editor.date")
       /// Edit Event
@@ -103,6 +107,8 @@ public enum TimeNestStrings: Sendable {
       public static let end = TimeNestStrings.tr("Localizable", "editor.end")
       /// Error
       public static let error = TimeNestStrings.tr("Localizable", "editor.error")
+      /// Hourly Rate
+      public static let hourlyRate = TimeNestStrings.tr("Localizable", "editor.hourlyRate")
       /// End time must be after start time.
       public static let invalidDateRange = TimeNestStrings.tr("Localizable", "editor.invalid_date_range")
       /// New Event
@@ -111,6 +117,8 @@ public enum TimeNestStrings: Sendable {
       public static let note = TimeNestStrings.tr("Localizable", "editor.note")
       /// Reminder
       public static let reminder = TimeNestStrings.tr("Localizable", "editor.reminder")
+      /// Break Time
+      public static let restTime = TimeNestStrings.tr("Localizable", "editor.restTime")
       /// Save
       public static let save = TimeNestStrings.tr("Localizable", "editor.save")
       /// Start
@@ -119,6 +127,12 @@ public enum TimeNestStrings: Sendable {
       public static let time = TimeNestStrings.tr("Localizable", "editor.time")
       /// Title
       public static let title = TimeNestStrings.tr("Localizable", "editor.title")
+      /// Transport Fee
+      public static let transportFee = TimeNestStrings.tr("Localizable", "editor.transportFee")
+      /// Clock In
+      public static let workIn = TimeNestStrings.tr("Localizable", "editor.workIn")
+      /// Clock Out
+      public static let workOut = TimeNestStrings.tr("Localizable", "editor.workOut")
     }
 
     public enum Event: Sendable {
@@ -454,16 +468,22 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum ShiftTime: Sendable {
+      /// Add Shift
+      public static let addButton = TimeNestStrings.tr("Localizable", "shift_time.add_button")
       /// Color
       public static let color = TimeNestStrings.tr("Localizable", "shift_time.color")
       /// Display Name
       public static let displayName = TimeNestStrings.tr("Localizable", "shift_time.display_name")
       /// Set the start and end times. For night shifts that span across midnight, the end time can be earlier than the start time.
       public static let editFooter = TimeNestStrings.tr("Localizable", "shift_time.edit_footer")
+      /// Edit Shift
+      public static let editShiftTitle = TimeNestStrings.tr("Localizable", "shift_time.edit_shift_title")
       /// Edit Shift Time
       public static let editTitle = TimeNestStrings.tr("Localizable", "shift_time.edit_title")
       /// End Time
       public static let endTime = TimeNestStrings.tr("Localizable", "shift_time.end_time")
+      /// New Shift
+      public static let newShiftName = TimeNestStrings.tr("Localizable", "shift_time.new_shift_name")
       /// Note
       public static let note = TimeNestStrings.tr("Localizable", "shift_time.note")
       /// Customize Shift Times
@@ -510,6 +530,27 @@ public enum TimeNestStrings: Sendable {
       public static let sunday = TimeNestStrings.tr("Localizable", "week_start.sunday")
       /// System Default
       public static let system = TimeNestStrings.tr("Localizable", "week_start.system")
+    }
+
+    public enum WorkStatistics: Sendable {
+      /// Amount
+      public static let columnAmount = TimeNestStrings.tr("Localizable", "work_statistics.column_amount")
+      /// Date
+      public static let columnDate = TimeNestStrings.tr("Localizable", "work_statistics.column_date")
+      /// Time
+      public static let columnTime = TimeNestStrings.tr("Localizable", "work_statistics.column_time")
+      /// Total
+      public static let columnTotal = TimeNestStrings.tr("Localizable", "work_statistics.column_total")
+      /// End Year/Month
+      public static let endDateMonth = TimeNestStrings.tr("Localizable", "work_statistics.end_date_month")
+      /// Start Year/Month
+      public static let startDateMonth = TimeNestStrings.tr("Localizable", "work_statistics.start_date_month")
+      /// Work Statistics
+      public static let title = TimeNestStrings.tr("Localizable", "work_statistics.title")
+      /// Total Amount
+      public static let totalAmount = TimeNestStrings.tr("Localizable", "work_statistics.total_amount")
+      /// Total Hours
+      public static let totalHours = TimeNestStrings.tr("Localizable", "work_statistics.total_hours")
     }
   }
 }

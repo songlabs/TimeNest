@@ -25,6 +25,7 @@
 		213AF874F3964CEB0CAE9B05 /* HolidaySourceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F719FA6BB1CF0D06E842DAA /* HolidaySourceSettingsView.swift */; };
 		2A29C0D5BAF560D733D461B1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C782E37B736D8E03823F101 /* Localizable.strings */; };
 		2E6816AB0A09DC4A5E7070D7 /* ReminderScheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189AE518B84EB9C17417160 /* ReminderScheduling.swift */; };
+		32BB4B0199854A155036D99D /* WorkStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81E35DBECA1EFA239E2481A /* WorkStatisticsView.swift */; };
 		36D36BCDEDD761782DD873B9 /* ICSDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91FD96863142DA3FDD3A281 /* ICSDownloadService.swift */; };
 		372212AF537165E73DB6B549 /* AdBannerPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 610A1877EFDC6D2C2C45E0DD /* AdBannerPlaceholderView.swift */; };
 		3885194124E81A81E3EA5AEB /* ReminderUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9DAAC92C759FA388396D515 /* ReminderUseCase.swift */; };
@@ -53,6 +54,7 @@
 		7D2A69B2C63C1D5EB259EBB7 /* HolidayType.swift in Sources */ = {isa = PBXBuildFile; fileRef = A49D6CD7EBA48907AD28AE6B /* HolidayType.swift */; };
 		7D94668215024A4C620771B9 /* ICSParseServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F13F5A7D39130718BFA3D8C /* ICSParseServiceTests.swift */; };
 		7DCAA106627C03514833909F /* CalendarEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3812DA86CFA7341C6005EADC /* CalendarEvent.swift */; };
+		7EB9820BDFD843BE37DFA94A /* WorkStatisticsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 906DCCE7EA6A1C66D6D3B2E0 /* WorkStatisticsViewModel.swift */; };
 		807B38278C4BC50554C76052 /* TimeNestFileEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1785C977E3904B8C0105619 /* TimeNestFileEncoder.swift */; };
 		81F909FCB7CE48C8146A7408 /* ReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 929ABE66D20FB8733BAE61C3 /* ReminderRepository.swift */; };
 		8934D5604F0DD4000DF22C05 /* DisplayLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04A35D8C4C8E7C99F7504CF8 /* DisplayLanguage.swift */; };
@@ -189,6 +191,7 @@
 		8766BACE67A7E6BF321F82A9 /* MonthCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarViewModel.swift; sourceTree = "<group>"; };
 		8ADD721566196397200667FC /* BottomTabBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomTabBarView.swift; sourceTree = "<group>"; };
 		8F719FA6BB1CF0D06E842DAA /* HolidaySourceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySourceSettingsView.swift; sourceTree = "<group>"; };
+		906DCCE7EA6A1C66D6D3B2E0 /* WorkStatisticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkStatisticsViewModel.swift; sourceTree = "<group>"; };
 		929ABE66D20FB8733BAE61C3 /* ReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRepository.swift; sourceTree = "<group>"; };
 		93533B240DB94378B39CB486 /* WeatherProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherProviding.swift; sourceTree = "<group>"; };
 		969709E4E888BA8069AC2F07 /* HolidayRegionSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRegionSelectionView.swift; sourceTree = "<group>"; };
@@ -224,6 +227,7 @@
 		E2513065C4258C1A299CC35D /* HolidaySubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscriptionManager.swift; sourceTree = "<group>"; };
 		E2F78125BB977C2726B0497C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		E799759E69C33C7F7D00BA68 /* BundleHolidayProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleHolidayProvider.swift; sourceTree = "<group>"; };
+		E81E35DBECA1EFA239E2481A /* WorkStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkStatisticsView.swift; sourceTree = "<group>"; };
 		E91E182838B9F670B43F27CC /* CalendarDisplaySetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDisplaySetting.swift; sourceTree = "<group>"; };
 		F3F835D134D55777A57BA9A8 /* EventEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventEditorView.swift; sourceTree = "<group>"; };
 		F413AFD59DC28FA0E75BAFD7 /* CalendarViewMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarViewMode.swift; sourceTree = "<group>"; };
@@ -480,6 +484,7 @@
 				1DCAEA7809845303530375D8 /* DayDetail */,
 				20F12996337E103E1B4559B7 /* EventEditor */,
 				F0414343EB0518AE8279D52C /* Settings */,
+				D1C5526DFDDA9CC8C751FF36 /* Statistics */,
 			);
 			path = Presentation;
 			sourceTree = "<group>";
@@ -522,6 +527,15 @@
 				375A1C42A512ADA3DFDB2AC4 /* TimeNestExportFile.swift */,
 			);
 			path = Models;
+			sourceTree = "<group>";
+		};
+		D1C5526DFDDA9CC8C751FF36 /* Statistics */ = {
+			isa = PBXGroup;
+			children = (
+				E81E35DBECA1EFA239E2481A /* WorkStatisticsView.swift */,
+				906DCCE7EA6A1C66D6D3B2E0 /* WorkStatisticsViewModel.swift */,
+			);
+			path = Statistics;
 			sourceTree = "<group>";
 		};
 		DAD622EBDD33A503CDAA537E /* FileSharing */ = {
@@ -765,6 +779,8 @@
 				F6926445027ACF53819DE6D7 /* SettingsView.swift in Sources */,
 				925CBAECEB04660F30CA4798 /* ShiftSharePlaceholderView.swift in Sources */,
 				C87249AB16F4E371618911FD /* TimeNestFileSharingView.swift in Sources */,
+				32BB4B0199854A155036D99D /* WorkStatisticsView.swift in Sources */,
+				7EB9820BDFD843BE37DFA94A /* WorkStatisticsViewModel.swift in Sources */,
 				B061FE6E7B430B8B6707FB1F /* DateOnly.swift in Sources */,
 				6423FEA66D4E3409CAB550F0 /* AppError.swift in Sources */,
 				534AC542EFF8EF9FB8834004 /* Localizable.swift in Sources */,

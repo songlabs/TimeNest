@@ -342,8 +342,8 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
         // 计算相对亮度 (YIQ 公式)
         let brightness = (r * 299 + g * 587 + b * 114) / 1000
         
-        // 亮度低于 0.5 使用白色文字，否则使用深色文字
-        return brightness < 0.5 ? .white : .primary
+        // 亮度低于 0.5 使用白色文字，否则使用深色文字（使用黑色确保在白色背景上可见）
+        return brightness < 0.5 ? .white : .black
     }
 
     var startHourMinute: (hour: Int, minute: Int)? {

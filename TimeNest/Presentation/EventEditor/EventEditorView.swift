@@ -1,5 +1,74 @@
 import SwiftUI
 
+// MARK: - Local Styles
+
+/// EventEditorView 本地样式常量
+/// 集中定义页面所需的背景色、文字色、布局参数等，避免依赖外部未定义类型
+private enum EventEditorStyle {
+    // MARK: - Background Colors
+
+    /// 页面背景色 - 跟随系统深浅模式自动切换
+    static var pageBackground: Color {
+        Color(.systemGroupedBackground)
+    }
+
+    /// 卡片背景色 - 跟随系统深浅模式自动切换
+    static var cardBackground: Color {
+        Color(.secondarySystemGroupedBackground)
+    }
+
+    // MARK: - Text Colors
+
+    /// 主要文字颜色
+    static var primaryText: Color {
+        Color.primary
+    }
+
+    /// 次要文字颜色
+    static var secondaryText: Color {
+        Color.secondary
+    }
+
+    // MARK: - Field / Control Colors
+
+    /// 输入框/按钮背景色
+    static var fieldBackground: Color {
+        Color(.systemBackground)
+    }
+
+    /// 输入框/按钮文字颜色
+    static var fieldText: Color {
+        Color.primary
+    }
+
+    /// 输入框/按钮边框色
+    static var buttonBorder: Color {
+        Color(.systemGray5)
+    }
+
+    // MARK: - Divider Colors
+
+    /// 分隔线颜色
+    static var dividerColor: Color {
+        Color(.separator)
+    }
+
+    // MARK: - Destructive Color
+
+    /// 删除/错误颜色
+    static var destructive: Color {
+        Color(.systemRed)
+    }
+
+    // MARK: - Layout Constants
+
+    /// 统一卡片圆角
+    static let cardCornerRadius: CGFloat = 10
+
+    /// 统一控制组件圆角
+    static let controlCornerRadius: CGFloat = 8
+}
+
 enum EventEditorMode {
     case create(initialDate: Date)
     case edit(
@@ -12,20 +81,6 @@ enum EventEditorMode {
         initialReminderOffsetMinutes: Int?
     )
 }
-
-// MARK: - Layout Constants
-
-/// 统一的外部边距（屏幕左右留白）
-private let externalPadding: CGFloat = 16
-
-/// 白色卡片之间的统一间距
-private let sectionSpacing: CGFloat = 12
-
-/// 统一卡片圆角
-private let cardCornerRadius: CGFloat = 10
-
-/// 统一卡片背景色
-private let cardBackgroundColor = Color.white
 
 struct EventEditorView: View {
     @Environment(\.localization) private var localization
@@ -73,91 +128,101 @@ struct EventEditorView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TitleInputSection(title: $title, placeholder: localization.localized(.editorTitle))
-                }
-                .listRowInsets(EdgeInsets())
-
-                Section {
-                    EventTimeSection(
-                        startDate: $startDate,
-                        endDate: $endDate,
-                        isAllDay: $isAllDay,
-                        allDayTitle: localization.localized(.editorAllDay),
-                        showingStartDatePicker: $showingStartDatePicker,
-                        showingStartTimePicker: $showingStartTimePicker,
-                        showingEndDatePicker: $showingEndDatePicker,
-                        showingEndTimePicker: $showingEndTimePicker
-                    )
-                    .onChange(of: isAllDay) { _, newValue in
-                        normalizeForAllDayChange(newValue)
-                    }
-
-                    ReminderSection(
-                        reminderTitle: localization.localized(.editorReminder),
-                        reminderOffsetMinutes: $reminderOffsetMinutes,
-                        reminderOptions: reminderOptions,
-                        reminderTitleFormatter: { reminderTitle(for: $0) },
-                        showingReminderPicker: $showingReminderPicker
-                    )
-                }
-                .listRowInsets(EdgeInsets())
-
-                Section {
-                    ShiftTemplateSection(templates: shiftTemplates, selectedTemplateID: $selectedShiftTemplateID) { template in
-                        applyShiftTemplate(template)
-                    }
-                }
-                .listRowInsets(EdgeInsets())
-
-                Section {
-                    WorkInfoSection(
-                        restTime: $restTime,
-                        transportFee: $transportFee,
-                        hourlyRate: $hourlyRate,
-                        showingRestTimePicker: $showingRestTimePicker,
-                        workInTitle: localization.localized(.editorWorkIn),
-                        workOutTitle: localization.localized(.editorWorkOut),
-                        restTimeTitle: localization.localized(.editorRestTime),
-                        transportFeeTitle: localization.localized(.editorTransportFee),
-                        hourlyRateTitle: localization.localized(.editorHourlyRate),
-                        currencyUnit: localization.localized(.editorCurrencyUnit)
-                    )
-                    .sheet(isPresented: $showingRestTimePicker) {
-                        RestTimePickerSheet(restTime: $restTime)
-                    }
-                }
-                .listRowInsets(EdgeInsets())
-
-                if let validationMessage = validationMessage ?? errorMessage {
+        ZStack {
+            // 最外层背景 - 使用系统分组背景，覆盖整个页面（包括 safe area），跟随主题自动切换
+            EventEditorStyle.pageBackground
+                .ignoresSafeArea()
+            
+            NavigationStack {
+                Form {
                     Section {
-                        Text(validationMessage)
-                            .foregroundColor(.red)
-                    } header: {
-                        Text(localization.localized(.editorError))
+                        TitleInputSection(title: $title, placeholder: localization.localized(.editorTitle))
                     }
-                }
-            }
-            .disabled(saving)
-            .navigationTitle(editorTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.localized(.editorCancel), role: .cancel) {
-                        isPresented = false
-                    }
-                    .disabled(saving)
-                }
+                    .listRowInsets(EdgeInsets())
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.localized(.editorSave)) {
-                        Task {
-                            await save()
+                    Section {
+                        EventTimeSection(
+                            startDate: $startDate,
+                            endDate: $endDate,
+                            isAllDay: $isAllDay,
+                            allDayTitle: localization.localized(.editorAllDay),
+                            showingStartDatePicker: $showingStartDatePicker,
+                            showingStartTimePicker: $showingStartTimePicker,
+                            showingEndDatePicker: $showingEndDatePicker,
+                            showingEndTimePicker: $showingEndTimePicker
+                        )
+                        .onChange(of: isAllDay) { _, newValue in
+                            normalizeForAllDayChange(newValue)
+                        }
+
+                        ReminderSection(
+                            reminderTitle: localization.localized(.editorReminder),
+                            reminderOffsetMinutes: $reminderOffsetMinutes,
+                            reminderOptions: reminderOptions,
+                            reminderTitleFormatter: { reminderTitle(for: $0) },
+                            showingReminderPicker: $showingReminderPicker
+                        )
+                    }
+                    .listRowInsets(EdgeInsets())
+
+                    Section {
+                        ShiftTemplateSection(templates: shiftTemplates, selectedTemplateID: $selectedShiftTemplateID) { template in
+                            applyShiftTemplate(template)
                         }
                     }
-                    .disabled(!canSave || saving)
+                    .listRowInsets(EdgeInsets())
+
+                    Section {
+                        WorkInfoSection(
+                            restTime: $restTime,
+                            transportFee: $transportFee,
+                            hourlyRate: $hourlyRate,
+                            showingRestTimePicker: $showingRestTimePicker,
+                            workInTitle: localization.localized(.editorWorkIn),
+                            workOutTitle: localization.localized(.editorWorkOut),
+                            restTimeTitle: localization.localized(.editorRestTime),
+                            transportFeeTitle: localization.localized(.editorTransportFee),
+                            hourlyRateTitle: localization.localized(.editorHourlyRate),
+                            currencyUnit: localization.localized(.editorCurrencyUnit)
+                        )
+                        .sheet(isPresented: $showingRestTimePicker) {
+                            RestTimePickerSheet(restTime: $restTime)
+                        }
+                    }
+                    .listRowInsets(EdgeInsets())
+
+                    if let validationMessage = validationMessage ?? errorMessage {
+                        Section {
+                            Text(validationMessage)
+                                .foregroundColor(EventEditorStyle.destructive)
+                        } header: {
+                            Text(localization.localized(.editorError))
+                        }
+                    }
+                }
+                .disabled(saving)
+                .navigationTitle(editorTitle)
+                .navigationBarTitleDisplayMode(.inline)
+                // Form 背景使用系统卡片风格，跟随主题自动切换
+                .scrollContentBackground(.hidden)
+                .background(EventEditorStyle.cardBackground)
+                .toolbarBackground(EventEditorStyle.cardBackground, for: .navigationBar)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(localization.localized(.editorCancel), role: .cancel) {
+                            isPresented = false
+                        }
+                        .disabled(saving)
+                    }
+
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(localization.localized(.editorSave)) {
+                            Task {
+                                await save()
+                            }
+                        }
+                        .disabled(!canSave || saving)
+                    }
                 }
             }
         }
@@ -352,7 +417,7 @@ private struct ReminderSection: View {
                 HStack {
                     Text(reminderTitle)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(EventEditorStyle.secondaryText)
                         .frame(minWidth: 40, alignment: .leading)
 
                     Spacer()
@@ -360,11 +425,11 @@ private struct ReminderSection: View {
                     HStack {
                         Text(reminderTitleFormatter(reminderOffsetMinutes))
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(EventEditorStyle.primaryText)
 
                         Image(systemName: "chevron.right")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(EventEditorStyle.secondaryText)
                             .padding(.leading, 4)
                     }
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -374,8 +439,8 @@ private struct ReminderSection: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 12)
-        .background(cardBackgroundColor)
-        .cornerRadius(cardCornerRadius)
+        .background(EventEditorStyle.cardBackground)
+        .cornerRadius(EventEditorStyle.cardCornerRadius)
         .sheet(isPresented: $showingReminderPicker) {
             ReminderPickerSheet(
                 reminderOffsetMinutes: $reminderOffsetMinutes,
@@ -470,18 +535,19 @@ private struct EventTimeSection: View {
             HStack {
                 Text(allDayTitle)
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(EventEditorStyle.primaryText)
                 Spacer()
                 Toggle("", isOn: $isAllDay)
                     .toggleStyle(.switch)
                     .controlSize(.small)
+                    .tint(EventEditorStyle.primaryText)
             }
 
             // 第二行：開始 + 日期/时间按钮
             HStack(alignment: .center, spacing: 8) {
                 Text("開始")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(EventEditorStyle.secondaryText)
                     .frame(minWidth: 40, alignment: .leading)
 
                 HStack(spacing: 8) {
@@ -491,15 +557,15 @@ private struct EventTimeSection: View {
                     } label: {
                         Text(formatDateOnly(startDate))
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(EventEditorStyle.fieldText)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(Color(.secondarySystemBackground))
+                            .background(EventEditorStyle.fieldBackground)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
@@ -510,15 +576,15 @@ private struct EventTimeSection: View {
                     } label: {
                         Text(formatTimeOnly(startDate))
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(EventEditorStyle.fieldText)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(Color(.secondarySystemBackground))
+                            .background(EventEditorStyle.fieldBackground)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
@@ -547,7 +613,7 @@ private struct EventTimeSection: View {
             HStack(alignment: .center, spacing: 8) {
                 Text("終了")
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(EventEditorStyle.secondaryText)
                     .frame(minWidth: 40, alignment: .leading)
 
                 HStack(spacing: 8) {
@@ -557,15 +623,15 @@ private struct EventTimeSection: View {
                     } label: {
                         Text(formatDateOnly(endDate))
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(EventEditorStyle.fieldText)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(Color(.secondarySystemBackground))
+                            .background(EventEditorStyle.fieldBackground)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
@@ -576,15 +642,15 @@ private struct EventTimeSection: View {
                     } label: {
                         Text(formatTimeOnly(endDate))
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(EventEditorStyle.fieldText)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(Color(.secondarySystemBackground))
+                            .background(EventEditorStyle.fieldBackground)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
                     .buttonStyle(.plain)
@@ -611,8 +677,8 @@ private struct EventTimeSection: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 12)
-        .background(cardBackgroundColor)
-        .cornerRadius(cardCornerRadius)
+        .background(EventEditorStyle.cardBackground)
+        .cornerRadius(EventEditorStyle.cardCornerRadius)
     }
 
     private func formatDateOnly(_ date: Date) -> String {
@@ -828,8 +894,9 @@ private struct TitleInputSection: View {
             .textFieldStyle(.plain)
             .padding(.vertical, 12)
             .padding(.horizontal, 12)
-            .background(cardBackgroundColor)
-            .cornerRadius(cardCornerRadius)
+            .background(EventEditorStyle.fieldBackground)
+            .cornerRadius(EventEditorStyle.cardCornerRadius)
+            .tint(EventEditorStyle.primaryText)
     }
 }
 
@@ -861,8 +928,8 @@ private struct ShiftTemplateSection: View {
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 12)
-        .background(cardBackgroundColor)
-        .cornerRadius(cardCornerRadius)
+        .background(EventEditorStyle.cardBackground)
+        .cornerRadius(EventEditorStyle.cardCornerRadius)
     }
 }
 
@@ -958,14 +1025,14 @@ private struct WorkInfoSection: View {
                 } label: {
                     Text(workInTitle)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(EventEditorStyle.fieldText)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
-                        .background(Color.white)
+                        .background(EventEditorStyle.fieldBackground)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                         )
                         .frame(minWidth: 60)
                 }
@@ -980,18 +1047,18 @@ private struct WorkInfoSection: View {
                     VStack(alignment: .center, spacing: 4) {
                         Text(restTimeTitle)
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(EventEditorStyle.secondaryText)
 
                         // 休息时间显示（格式化为 HH:mm）
                         Text(formatRestTime(restTime))
                             .font(.subheadline.weight(.medium))
-                            .foregroundColor(.primary)
+                            .foregroundColor(EventEditorStyle.fieldText)
                             .frame(width: 56, height: 28)
-                            .background(Color(.secondarySystemBackground))
+                            .background(EventEditorStyle.fieldBackground)
                             .cornerRadius(8)
                             .overlay(
                                 RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color(.systemGray4), lineWidth: 1)
+                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
                 }
@@ -1005,14 +1072,14 @@ private struct WorkInfoSection: View {
                 } label: {
                     Text(workOutTitle)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(EventEditorStyle.fieldText)
                         .padding(.vertical, 8)
                         .padding(.horizontal, 16)
-                        .background(Color.white)
+                        .background(EventEditorStyle.fieldBackground)
                         .cornerRadius(8)
                         .overlay(
                             RoundedRectangle(cornerRadius: 8)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                         )
                         .frame(minWidth: 60)
                 }
@@ -1021,6 +1088,7 @@ private struct WorkInfoSection: View {
 
             // 分隔线
             Divider()
+                .foregroundColor(EventEditorStyle.dividerColor)
                 .padding(.vertical, 4)
 
             // 第二行：交通费和时给
@@ -1029,7 +1097,7 @@ private struct WorkInfoSection: View {
                 HStack(spacing: 6) {
                     Text(transportFeeTitle)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(EventEditorStyle.secondaryText)
 
                     TextField("", text: $transportFee)
                         .keyboardType(.numberPad)
@@ -1037,13 +1105,13 @@ private struct WorkInfoSection: View {
                         .frame(width: 70, alignment: .trailing)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                         )
                         .padding(.vertical, 4)
 
                     Text(currencyUnit)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(EventEditorStyle.secondaryText)
                 }
 
                 Spacer()
@@ -1052,7 +1120,7 @@ private struct WorkInfoSection: View {
                 HStack(spacing: 6) {
                     Text(hourlyRateTitle)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(EventEditorStyle.secondaryText)
 
                     TextField("", text: $hourlyRate)
                         .keyboardType(.numberPad)
@@ -1060,20 +1128,20 @@ private struct WorkInfoSection: View {
                         .frame(width: 70, alignment: .trailing)
                         .overlay(
                             RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color(.systemGray4), lineWidth: 1)
+                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                         )
                         .padding(.vertical, 4)
 
                     Text(currencyUnit)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(EventEditorStyle.secondaryText)
                 }
             }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 12)
-        .background(cardBackgroundColor)
-        .cornerRadius(cardCornerRadius)
+        .background(EventEditorStyle.cardBackground)
+        .cornerRadius(EventEditorStyle.cardCornerRadius)
     }
 
     private func formatRestTime(_ hours: Double) -> String {

@@ -114,6 +114,12 @@
 "editor.end" = "종료";
 "editor.reminder" = "알림";
 "editor.invalid_date_range" = "종료 시간은 시작 시간보다 늦어야 합니다.";
+"editor.workIn" = "출근";
+"editor.workOut" = "퇴근";
+"editor.restTime" = "휴식 시간";
+"editor.transportFee" = "교통비";
+"editor.hourlyRate" = "시급";
+"editor.currencyUnit" = "위안";
 
 /* Day Detail */
 "day_detail.title" = "일정";
@@ -249,3 +255,15 @@
 "shift_time.add_button" = "근무 추가";
 "shift_time.new_shift_name" = "새 근무";
 "shift_time.edit_shift_title" = "근무 편집";
+
+/* Work Statistics */
+"work_statistics.title" = "알바 통계";
+"work_statistics" = "통계";
+"work_statistics.start_date_month" = "시작 연월";
+"work_statistics.end_date_month" = "종료 연월";
+"work_statistics.column_date" = "날짜";
+"work_statistics.column_time" = "시간";
+"work_statistics.column_amount" = "금액";
+"work_statistics.column_total" = "총계";
+"work_statistics.total_hours" = "총 시간";
+"work_statistics.total_amount" = "총 금액";

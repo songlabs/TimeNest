@@ -4,6 +4,8 @@ struct MonthCalendarView: View {
     @StateObject private var viewModel: MonthCalendarViewModel
     @State private var showingYearMonthPicker = false
     @State private var showingSettings = false
+    @State private var showingStatistics = false
+    @StateObject private var statisticsViewModel = WorkStatisticsViewModel()
     @EnvironmentObject private var localization: LocalizationManager
 
     init(calendarDisplayUseCase: CalendarDisplayUseCase, eventUseCase: EventUseCase) {
@@ -26,6 +28,9 @@ struct MonthCalendarView: View {
                 CalendarHeaderView(
                     title: currentTitle,
                     displayMode: viewModel.displayMode,
+                    onStatisticsTapped: {
+                        showingStatistics = true
+                    },
                     onPrevious: handlePrevious,
                     onNext: handleNext,
                     onTitleTapped: {
@@ -96,6 +101,26 @@ struct MonthCalendarView: View {
                 SettingsView()
                     .environmentObject(localization)
             }
+        }
+        .sheet(isPresented: $showingStatistics) {
+            WorkStatisticsView(viewModel: statisticsViewModel)
+                .environmentObject(localization)
+                .onAppear {
+                    // 根据视图模式传入正确的基准日期
+                    let anchorDate: Date
+                    switch viewModel.displayMode {
+                    case .month:
+                        // 月视图：使用当前正在显示的月份（selectedDate）
+                        anchorDate = viewModel.selectedDate
+                    case .week:
+                        // 周视图：使用当前周所在的日期（selectedDate）
+                        anchorDate = viewModel.selectedDate
+                    case .day:
+                        // 日视图：优先使用 selectedDate，如果没有则使用 today
+                        anchorDate = viewModel.selectedDate
+                    }
+                    statisticsViewModel.setDefaultRange(for: viewModel.displayMode, anchorDate: anchorDate)
+                }
         }
         .sheet(isPresented: $viewModel.showingDayDetail) {
             if let cell = viewModel.selectedDayCell {

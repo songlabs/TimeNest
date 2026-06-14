@@ -114,6 +114,12 @@
 "editor.end" = "終了";
 "editor.reminder" = "通知";
 "editor.invalid_date_range" = "終了時刻は開始時刻より後にしてください。";
+"editor.workIn" = "出勤";
+"editor.workOut" = "退勤";
+"editor.restTime" = "休憩時間";
+"editor.transportFee" = "交通費";
+"editor.hourlyRate" = "時給";
+"editor.currencyUnit" = "円";
 
 /* Day Detail */
 "day_detail.title" = "予定";
@@ -249,3 +255,15 @@
 "shift_time.add_button" = "班次を追加";
 "shift_time.new_shift_name" = "新しい班次";
 "shift_time.edit_shift_title" = "班次を編集";
+
+/* Work Statistics */
+"work_statistics.title" = "アルバイト統計";
+"work_statistics" = "統計";
+"work_statistics.start_date_month" = "開始年月";
+"work_statistics.end_date_month" = "終了年月";
+"work_statistics.column_date" = "日付";
+"work_statistics.column_time" = "時間";
+"work_statistics.column_amount" = "金額";
+"work_statistics.column_total" = "合計";
+"work_statistics.total_hours" = "合計時間";
+"work_statistics.total_amount" = "合計金額";

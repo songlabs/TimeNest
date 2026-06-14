@@ -182,6 +182,12 @@ enum LocalizedString: String {
     case editorCancel = "editor.cancel"
     case editorNewEvent = "editor.new_event"
     case editorEditEvent = "editor.edit_event"
+    case editorWorkIn = "editor.workIn"
+    case editorWorkOut = "editor.workOut"
+    case editorRestTime = "editor.restTime"
+    case editorTransportFee = "editor.transportFee"
+    case editorHourlyRate = "editor.hourlyRate"
+    case editorCurrencyUnit = "editor.currencyUnit"
 
     // MARK: - Shift Time
 
@@ -270,6 +276,19 @@ enum LocalizedString: String {
     // MARK: - Placeholder
 
     case placeholderComingSoon = "placeholder.coming_soon"
+
+    // MARK: - Work Statistics
+
+    case workStatisticsTitle = "work_statistics.title"
+    case workStatistics = "work_statistics"
+    case startDateMonth = "work_statistics.start_date_month"
+    case endDateMonth = "work_statistics.end_date_month"
+    case columnDate = "work_statistics.column_date"
+    case columnTime = "work_statistics.column_time"
+    case columnAmount = "work_statistics.column_amount"
+    case columnTotal = "work_statistics.column_total"
+    case totalHours = "work_statistics.total_hours"
+    case totalAmount = "work_statistics.total_amount"
 }
 
 // MARK: - EnvironmentObject Extension

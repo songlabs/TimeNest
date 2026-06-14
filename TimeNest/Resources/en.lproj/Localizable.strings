@@ -114,6 +114,12 @@
 "editor.end" = "End";
 "editor.reminder" = "Reminder";
 "editor.invalid_date_range" = "End time must be after start time.";
+"editor.workIn" = "Clock In";
+"editor.workOut" = "Clock Out";
+"editor.restTime" = "Break Time";
+"editor.transportFee" = "Transport Fee";
+"editor.hourlyRate" = "Hourly Rate";
+"editor.currencyUnit" = "Yuan";
 
 /* Day Detail */
 "day_detail.title" = "Events";
@@ -249,3 +255,15 @@
 "shift_time.add_button" = "Add Shift";
 "shift_time.new_shift_name" = "New Shift";
 "shift_time.edit_shift_title" = "Edit Shift";
+
+/* Work Statistics */
+"work_statistics.title" = "Work Statistics";
+"work_statistics" = "Statistics";
+"work_statistics.start_date_month" = "Start Year/Month";
+"work_statistics.end_date_month" = "End Year/Month";
+"work_statistics.column_date" = "Date";
+"work_statistics.column_time" = "Time";
+"work_statistics.column_amount" = "Amount";
+"work_statistics.column_total" = "Total";
+"work_statistics.total_hours" = "Total Hours";
+"work_statistics.total_amount" = "Total Amount";
