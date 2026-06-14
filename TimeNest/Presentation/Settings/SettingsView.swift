@@ -643,6 +643,24 @@ struct ShiftTimeSettingsView: View {
     }
 }
 
+
+struct ShiftToggleActiveButtonStyle: ButtonStyle {
+    var backgroundColor: Color = .blue
+    var width: CGFloat = 44
+    var height: CGFloat = 28
+    var cornerRadius: CGFloat = 6
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.caption.weight(.semibold))
+            .foregroundColor(.white)
+            .frame(width: width, height: height)
+            .background(backgroundColor)
+            .cornerRadius(cornerRadius)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+    }
+}
+
 private struct ShiftTimeSettingsRow: View {
     let template: ShiftTimeTemplate
     let onToggle: (ShiftTimeTemplate) -> Void
@@ -655,13 +673,8 @@ private struct ShiftTimeSettingsRow: View {
                 onToggle(template)
             } label: {
                 Text(template.enabled ? "ON" : "OFF")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 44, height: 28)
-                    .background(template.enabled ? Color.blue : Color.gray)
-                    .cornerRadius(6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ShiftToggleActiveButtonStyle(backgroundColor: template.enabled ? .blue : .gray))
 
             // Shift Name: 优先显示 displayName，为空时 fallback 到本地化名称
             if !template.displayName.isEmpty {

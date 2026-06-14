@@ -117,7 +117,7 @@
 "editor.invalid_date_range" = "结束时间必须晚于开始时间。";
 "editor.workIn" = "上班";
 "editor.workOut" = "下班";
-"editor.restTime" = "休息时间";
+"editor.restTime" = "休息";
 "editor.transportFee" = "交通费";
 "editor.hourlyRate" = "时给";
 "editor.currencyUnit" = "元";

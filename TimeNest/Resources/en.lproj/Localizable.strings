@@ -117,7 +117,7 @@
 "editor.invalid_date_range" = "End time must be after start time.";
 "editor.workIn" = "Clock In";
 "editor.workOut" = "Clock Out";
-"editor.restTime" = "Break Time";
+"editor.restTime" = "Break";
 "editor.transportFee" = "Transport Fee";
 "editor.hourlyRate" = "Hourly Rate";
 "editor.currencyUnit" = "Yuan";

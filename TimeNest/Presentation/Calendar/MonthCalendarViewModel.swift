@@ -215,7 +215,7 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?) async throws {
+    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
         let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
         let now = Date()
 
@@ -234,7 +234,8 @@ class MonthCalendarViewModel: ObservableObject {
             importSource: nil,
             createdAt: now,
             updatedAt: now,
-            shiftTemplateID: shiftTemplateID
+            shiftTemplateID: shiftTemplateID,
+            workInfo: workInfo
         )
 
         try await eventUseCase.createEvent(event)
@@ -260,7 +261,7 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?) async throws {
+    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
         do {
             let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
             let existingEvent = try await eventUseCase.event(id: id)
@@ -281,7 +282,8 @@ class MonthCalendarViewModel: ObservableObject {
                 importSource: existingEvent?.importSource,
                 createdAt: existingEvent?.createdAt ?? now,
                 updatedAt: now,
-                shiftTemplateID: shiftTemplateID ?? existingEvent?.shiftTemplateID
+                shiftTemplateID: shiftTemplateID ?? existingEvent?.shiftTemplateID,
+                workInfo: workInfo
             )
 
             try await eventUseCase.updateEvent(updatedEvent)

@@ -271,7 +271,8 @@ private func makePreviewCell() -> CalendarDayCell {
                 categoryID: nil,
                 reminderOffsetMinutes: nil,
                 notificationID: nil,
-                shiftTemplateID: nil
+                shiftTemplateID: nil,
+                workInfo: nil
             )
         ],
         isToday: true,

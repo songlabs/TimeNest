@@ -4,8 +4,8 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
-    let onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
-    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
+    let onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
+    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
 
     @State private var editingEvent: EditingEvent?
     @State private var showingAddEvent: Bool = false
@@ -28,8 +28,8 @@ struct DayDetailView: View {
                 EventEditorView(
                     isPresented: $showingAddEvent,
                     mode: .create(initialDate: initialDate),
-                    onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
-                        try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID)
+                    onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                        try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
                     }
                 )
             }
@@ -43,10 +43,12 @@ struct DayDetailView: View {
                         initialStartDate: event.startDate,
                         initialEndDate: event.endDate,
                         initialIsAllDay: event.isAllDay,
-                        initialReminderOffsetMinutes: event.reminderOffsetMinutes
+                        initialReminderOffsetMinutes: event.reminderOffsetMinutes,
+                        initialWorkInfo: event.workInfo,
+                        initialShiftTemplateID: event.shiftTemplateID
                     ),
-                    onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID in
-                        try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID)
+                    onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo in
+                        try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo)
                     }
                 )
             }
@@ -160,6 +162,7 @@ private struct EditingEvent: Identifiable {
     let isAllDay: Bool
     let reminderOffsetMinutes: Int?
     let shiftTemplateID: ShiftTimeTemplateID?
+    let workInfo: WorkInfo?
 
     init(_ event: EventOccurrence) {
         id = event.id
@@ -171,6 +174,7 @@ private struct EditingEvent: Identifiable {
         isAllDay = event.isAllDay
         reminderOffsetMinutes = event.reminderOffsetMinutes
         shiftTemplateID = event.shiftTemplateID
+        workInfo = event.workInfo
     }
 }
 
@@ -241,8 +245,8 @@ struct EventRowView: View {
             eventMarkers: []
         ),
         onDeleteEvent: { _ in },
-        onCreateEvent: { _, _, _, _, _, _, _ in },
-        onUpdateEvent: { _, _, _, _, _, _, _, _ in }
+        onCreateEvent: { _, _, _, _, _, _, _, _ in },
+        onUpdateEvent: { _, _, _, _, _, _, _, _, _ in }
     )
     .environmentObject(LocalizationManager.preview(languageCode: "ja"))
 }

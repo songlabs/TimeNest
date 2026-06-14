@@ -1,5 +1,21 @@
 import Foundation
 
+struct WorkInfo: Codable, Hashable {
+    var workInTime: Date?
+    var workOutTime: Date?
+    var restHours: Double
+    var transportFee: Int?
+    var hourlyRate: Int?
+
+    init(workInTime: Date? = nil, workOutTime: Date? = nil, restHours: Double = 1.0, transportFee: Int? = nil, hourlyRate: Int? = nil) {
+        self.workInTime = workInTime
+        self.workOutTime = workOutTime
+        self.restHours = restHours
+        self.transportFee = transportFee
+        self.hourlyRate = hourlyRate
+    }
+}
+
 struct CalendarEvent: Identifiable, Codable, Hashable {
     let id: UUID
     var title: String
@@ -16,6 +32,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
     let createdAt: Date
     var updatedAt: Date
     var shiftTemplateID: ShiftTimeTemplateID?
+    var workInfo: WorkInfo?
 
     init(
         id: UUID,
@@ -32,7 +49,8 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         importSource: ImportSource?,
         createdAt: Date,
         updatedAt: Date,
-        shiftTemplateID: ShiftTimeTemplateID? = nil
+        shiftTemplateID: ShiftTimeTemplateID? = nil,
+        workInfo: WorkInfo? = nil
     ) {
         self.id = id
         self.title = title
@@ -49,6 +67,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.shiftTemplateID = shiftTemplateID
+        self.workInfo = workInfo
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -67,6 +86,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         case createdAt
         case updatedAt
         case shiftTemplateID
+        case workInfo
     }
 
     init(from decoder: Decoder) throws {
@@ -86,6 +106,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt) ?? createdAt
         shiftTemplateID = try container.decodeIfPresent(ShiftTimeTemplateID.self, forKey: .shiftTemplateID)
+        workInfo = try container.decodeIfPresent(WorkInfo.self, forKey: .workInfo)
     }
 
     static func defaultEndDate(for startDate: Date, isAllDay: Bool) -> Date {

@@ -73,7 +73,9 @@ class TimeNestFileImportUseCase {
                 notificationID: nil,
                 importSource: event.importSource,
                 createdAt: event.createdAt,
-                updatedAt: event.updatedAt
+                updatedAt: event.updatedAt,
+                shiftTemplateID: event.shiftTemplateID,
+                workInfo: event.workInfo
             )
             do {
                 try await eventRepository.create(newEvent)

@@ -83,7 +83,7 @@ struct MonthCalendarView: View {
             EventEditorView(
                 isPresented: $viewModel.showingEventEditor,
                 mode: .create(initialDate: viewModel.selectedDate),
-                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
+                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
                     try await viewModel.createEvent(
                         title: title,
                         note: note,
@@ -91,7 +91,8 @@ struct MonthCalendarView: View {
                         endDate: endDate,
                         isAllDay: isAllDay,
                         reminderOffsetMinutes: reminderOffsetMinutes,
-                        shiftTemplateID: shiftTemplateID
+                        shiftTemplateID: shiftTemplateID,
+                        workInfo: workInfo
                     )
                 }
             )
@@ -131,7 +132,7 @@ struct MonthCalendarView: View {
                             await viewModel.deleteEvent(id: eventID)
                         }
                     },
-                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
+                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
                         try await viewModel.createEvent(
                             title: title,
                             note: note,
@@ -139,10 +140,11 @@ struct MonthCalendarView: View {
                             endDate: endDate,
                             isAllDay: isAllDay,
                             reminderOffsetMinutes: reminderOffsetMinutes,
-                            shiftTemplateID: shiftTemplateID
+                            shiftTemplateID: shiftTemplateID,
+                            workInfo: workInfo
                         )
                     },
-                    onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID in
+                    onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
                         try await viewModel.updateEvent(
                             id: eventID,
                             title: title,
@@ -151,7 +153,8 @@ struct MonthCalendarView: View {
                             endDate: endDate,
                             isAllDay: isAllDay,
                             reminderOffsetMinutes: reminderOffsetMinutes,
-                            shiftTemplateID: shiftTemplateID
+                            shiftTemplateID: shiftTemplateID,
+                            workInfo: workInfo
                         )
                     }
                 )
