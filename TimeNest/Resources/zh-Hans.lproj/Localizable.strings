@@ -267,3 +267,6 @@
 "work_statistics.column_total" = "总计";
 "work_statistics.total_hours" = "合计时间";
 "work_statistics.total_amount" = "合计金额";
+"work_statistics.loading" = "加载中...";
+"work_statistics.empty_title" = "暂无统计数据";
+"work_statistics.empty_message" = "请调整筛选条件后点击统计按钮";

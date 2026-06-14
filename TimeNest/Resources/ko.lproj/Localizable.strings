@@ -267,3 +267,6 @@
 "work_statistics.column_total" = "총계";
 "work_statistics.total_hours" = "총 시간";
 "work_statistics.total_amount" = "총 금액";
+"work_statistics.loading" = "불러오는 중...";
+"work_statistics.empty_title" = "통계 데이터가 없습니다";
+"work_statistics.empty_message" = "필터를 조정한 후 통계 버튼을 눌러주세요";

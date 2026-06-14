@@ -157,6 +157,37 @@ struct ShiftCalendarLayout {
     static let tabBarIconSelectedSize: CGFloat = 24
 }
 
+// MARK: - Statistics Bottom Sheet Layout
+
+struct WorkStatisticsLayout {
+    static let sheetHeight: CGFloat = 560
+    static let sheetCornerRadius: CGFloat = 28
+    static let horizontalPadding: CGFloat = 20
+    static let sectionSpacing: CGFloat = 16
+    static let cardCornerRadius: CGFloat = 14
+    static let pickerCornerRadius: CGFloat = 12
+    static let primaryButtonHeight: CGFloat = 52
+    static let rowVerticalPadding: CGFloat = 12
+    static let tableColumnSpacing: CGFloat = 12
+    static let handleWidth: CGFloat = 52
+    static let handleHeight: CGFloat = 5
+}
+
+// MARK: - Statistics Bottom Sheet Colors
+
+struct WorkStatisticsColors {
+    static let sheetBackground = Color(UIColor.systemBackground)
+    static let sectionBackground = Color(UIColor.secondarySystemBackground)
+    static let fieldBackground = Color(UIColor.tertiarySystemBackground)
+    static let tableHeaderBackground = Color(UIColor.secondarySystemBackground)
+    static let totalRowBackground = ShiftCalendarColors.primaryBlue.opacity(0.10)
+    static let separator = Color(UIColor.separator).opacity(0.55)
+    static let primaryText = Color(UIColor.label)
+    static let secondaryText = Color(UIColor.secondaryLabel)
+    static let handle = Color(UIColor.tertiaryLabel)
+    static let border = Color(UIColor.separator).opacity(0.45)
+}
+
 // MARK: - Weekday Helpers
 
 enum CalendarWeekdayKind {
