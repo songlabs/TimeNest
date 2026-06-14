@@ -68,6 +68,11 @@ private enum EventEditorStyle {
     static let cardPadding: CGFloat = 16
     static let rowHeight: CGFloat = 48
     static let controlHeight: CGFloat = 36
+    static let compactControlHeight: CGFloat = 30
+    static let shiftActionButtonWidth: CGFloat = 88
+    static let shiftActionButtonHeight: CGFloat = 32
+    static let shiftActionButtonCornerRadius: CGFloat = 8
+    static let workColumnSpacing: CGFloat = 12
 
     /// 统一卡片圆角
     static let cardCornerRadius: CGFloat = 26
@@ -79,6 +84,11 @@ private enum EventEditorStyle {
     static let headerButtonCornerRadius: CGFloat = 24
 }
 
+private enum WorkTimeField {
+    case workIn
+    case workOut
+}
+
 enum EventEditorMode {
     case create(initialDate: Date)
     case edit(
@@ -88,7 +98,9 @@ enum EventEditorMode {
         initialStartDate: Date,
         initialEndDate: Date,
         initialIsAllDay: Bool,
-        initialReminderOffsetMinutes: Int?
+        initialReminderOffsetMinutes: Int?,
+        initialWorkInfo: WorkInfo? = nil,
+        initialShiftTemplateID: ShiftTimeTemplateID? = nil
     )
 }
 
@@ -96,7 +108,7 @@ struct EventEditorView: View {
     @Environment(\.localization) private var localization
     @Binding var isPresented: Bool
     let mode: EventEditorMode
-    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
+    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
 
     @State private var title: String
     @State private var note: String
@@ -116,13 +128,14 @@ struct EventEditorView: View {
     @State private var transportFee: String = "" // 交通费
     @State private var hourlyRate: String = "" // 时给
     @State private var showingRestTimePicker: Bool = false // 休息时间选择器
+    @State private var activeWorkTimeField: WorkTimeField?
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
 
     init(
         isPresented: Binding<Bool>,
         mode: EventEditorMode,
-        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?) async throws -> Void
+        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
     ) {
         _isPresented = isPresented
         self.mode = mode
@@ -135,6 +148,10 @@ struct EventEditorView: View {
         _endDate = State(initialValue: initialState.endDate)
         _isAllDay = State(initialValue: initialState.isAllDay)
         _reminderOffsetMinutes = State(initialValue: initialState.reminderOffsetMinutes)
+        _restTime = State(initialValue: initialState.workInfo?.restHours ?? 1.0)
+        _transportFee = State(initialValue: initialState.workInfo?.transportFee.map(String.init) ?? "")
+        _hourlyRate = State(initialValue: initialState.workInfo?.hourlyRate.map(String.init) ?? "")
+        _selectedShiftTemplateID = State(initialValue: initialState.shiftTemplateID)
     }
 
     var body: some View {
@@ -198,6 +215,9 @@ struct EventEditorView: View {
                                 transportFee: $transportFee,
                                 hourlyRate: $hourlyRate,
                                 showingRestTimePicker: $showingRestTimePicker,
+                                startDate: $startDate,
+                                endDate: $endDate,
+                                activeWorkTimeField: $activeWorkTimeField,
                                 workInTitle: localization.localized(.editorWorkIn),
                                 workOutTitle: localization.localized(.editorWorkOut),
                                 restTimeTitle: localization.localized(.editorRestTime),
@@ -239,7 +259,14 @@ struct EventEditorView: View {
     }
 
     private var editorTitle: String {
-        isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
+        switch activeWorkTimeField {
+        case .workIn:
+            return localization.localized(.editorWorkIn)
+        case .workOut:
+            return localization.localized(.editorWorkOut)
+        case nil:
+            return isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
+        }
     }
 
     private var datePickerComponents: DatePickerComponents {
@@ -262,7 +289,7 @@ struct EventEditorView: View {
         return nil
     }
 
-    private static func initialState(for mode: EventEditorMode) -> (title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?) {
+    private static func initialState(for mode: EventEditorMode) -> (title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, workInfo: WorkInfo?, shiftTemplateID: ShiftTimeTemplateID?) {
         switch mode {
         case .create(let initialDate):
             return (
@@ -271,16 +298,20 @@ struct EventEditorView: View {
                 startDate: initialDate,
                 endDate: CalendarEvent.defaultEndDate(for: initialDate, isAllDay: false),
                 isAllDay: false,
-                reminderOffsetMinutes: nil
+                reminderOffsetMinutes: nil,
+                workInfo: nil,
+                shiftTemplateID: nil
             )
-        case .edit(_, let initialTitle, let initialNote, let initialStartDate, let initialEndDate, let initialIsAllDay, let initialReminderOffsetMinutes):
+        case .edit(_, let initialTitle, let initialNote, let initialStartDate, let initialEndDate, let initialIsAllDay, let initialReminderOffsetMinutes, let initialWorkInfo, let initialShiftTemplateID):
             return (
                 title: initialTitle,
                 note: initialNote,
                 startDate: initialStartDate,
                 endDate: initialEndDate,
                 isAllDay: initialIsAllDay,
-                reminderOffsetMinutes: initialReminderOffsetMinutes
+                reminderOffsetMinutes: initialReminderOffsetMinutes,
+                workInfo: initialWorkInfo,
+                shiftTemplateID: initialShiftTemplateID
             )
         }
     }
@@ -293,13 +324,24 @@ struct EventEditorView: View {
         do {
             let normalized = normalizedDates()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID)
+            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, currentWorkInfo(start: normalized.start, end: normalized.end))
             isPresented = false
         } catch {
             errorMessage = error.localizedDescription
         }
 
         saving = false
+    }
+
+
+    private func currentWorkInfo(start: Date, end: Date) -> WorkInfo {
+        WorkInfo(
+            workInTime: start,
+            workOutTime: end,
+            restHours: restTime,
+            transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
+            hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines))
+        )
     }
 
     private func normalizedDates() -> (start: Date, end: Date) {
@@ -1056,10 +1098,13 @@ private struct RestTimePickerSheet: View {
 
 /// 打工时间和收入信息输入组件
 private struct WorkInfoSection: View {
-    @Binding var restTime: Double // 休息时间（小时）
-    @Binding var transportFee: String // 交通费
-    @Binding var hourlyRate: String // 时给
-    @Binding var showingRestTimePicker: Bool // 是否显示休息时间选择器
+    @Binding var restTime: Double
+    @Binding var transportFee: String
+    @Binding var hourlyRate: String
+    @Binding var showingRestTimePicker: Bool
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    @Binding var activeWorkTimeField: WorkTimeField?
 
     let workInTitle: String
     let workOutTitle: String
@@ -1069,95 +1114,92 @@ private struct WorkInfoSection: View {
     let currencyUnit: String
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 12) {
-                workButton(title: workInTitle)
-                workButton(title: workOutTitle)
-            }
-            .padding(.bottom, 12)
+        VStack(spacing: 14) {
+            HStack(spacing: EventEditorStyle.workColumnSpacing) {
+                workColumn(title: workInTitle, field: .workIn) {
+                    DatePicker("", selection: $startDate, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                }
 
-            CardDivider()
+                workColumn(title: restTimeTitle, field: nil) {
+                    Button {
+                        showingRestTimePicker = true
+                    } label: {
+                        Text(formatRestTime(restTime))
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(EventEditorStyle.fieldText)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: EventEditorStyle.compactControlHeight)
+                            .background(EventEditorStyle.fieldBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
 
-            Button {
-                showingRestTimePicker = true
-            } label: {
-                formRow(title: restTimeTitle) {
-                    Text(formatRestTime(restTime))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(EventEditorStyle.fieldText)
-                        .frame(width: 76, height: EventEditorStyle.controlHeight)
-                        .background(EventEditorStyle.fieldBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+                workColumn(title: workOutTitle, field: .workOut) {
+                    DatePicker("", selection: $endDate, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
                 }
             }
-            .buttonStyle(.plain)
 
             CardDivider()
 
-            currencyRow(title: transportFeeTitle, value: $transportFee)
-
-            CardDivider()
-
-            currencyRow(title: hourlyRateTitle, value: $hourlyRate)
+            HStack(spacing: EventEditorStyle.workColumnSpacing) {
+                currencyField(title: transportFeeTitle, value: $transportFee)
+                currencyField(title: hourlyRateTitle, value: $hourlyRate)
+            }
         }
         .padding(EventEditorStyle.cardPadding)
         .cardContainer()
     }
 
-    private func workButton(title: String) -> some View {
-        Button {
-            // TODO: 实现点击逻辑
-        } label: {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(EventEditorStyle.fieldText)
-                .frame(maxWidth: .infinity)
-                .frame(height: EventEditorStyle.controlHeight)
-                .background(EventEditorStyle.fieldBackground)
-                .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
-                        .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func currencyRow(title: String, value: Binding<String>) -> some View {
-        formRow(title: title) {
-            HStack(spacing: 8) {
-                TextField("", text: value)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(.plain)
-                    .multilineTextAlignment(.trailing)
-                    .frame(width: 96, height: EventEditorStyle.controlHeight)
-                    .padding(.horizontal, 10)
-                    .background(EventEditorStyle.fieldBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
-                            .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                    )
-
-                Text(currencyUnit)
-                    .font(.subheadline)
-                    .foregroundColor(EventEditorStyle.secondaryText)
-                    .frame(width: 24, alignment: .trailing)
+    private func workColumn<Content: View>(title: String, field: WorkTimeField?, @ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 8) {
+            if let field {
+                Button {
+                    activeWorkTimeField = field
+                } label: {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius))
+            } else {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(EventEditorStyle.primaryText)
+                    .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
             }
+
+            content()
+                .frame(maxWidth: .infinity)
+                .frame(height: EventEditorStyle.compactControlHeight)
         }
+        .frame(maxWidth: .infinity)
     }
 
-    private func formRow<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack {
+    private func currencyField(title: String, value: Binding<String>) -> some View {
+        HStack(spacing: 8) {
             Text(title)
                 .font(.subheadline)
                 .foregroundColor(EventEditorStyle.secondaryText)
 
-            Spacer(minLength: 12)
+            TextField("", text: value)
+                .keyboardType(.numberPad)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity)
+                .frame(height: EventEditorStyle.controlHeight)
+                .padding(.horizontal, 10)
+                .background(EventEditorStyle.fieldBackground)
+                .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
 
-            content()
+            Text(currencyUnit)
+                .font(.subheadline)
+                .foregroundColor(EventEditorStyle.secondaryText)
         }
-        .frame(minHeight: EventEditorStyle.rowHeight)
+        .frame(maxWidth: .infinity)
     }
 
     private func formatRestTime(_ hours: Double) -> String {

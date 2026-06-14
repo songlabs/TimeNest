@@ -77,7 +77,8 @@ class EventUseCase {
                 categoryID: event.categoryID,
                 reminderOffsetMinutes: event.reminderOffsetMinutes,
                 notificationID: event.notificationID,
-                shiftTemplateID: event.shiftTemplateID
+                shiftTemplateID: event.shiftTemplateID,
+                workInfo: event.workInfo
             )
         }
     }

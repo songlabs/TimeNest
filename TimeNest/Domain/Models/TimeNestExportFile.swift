@@ -20,6 +20,8 @@ struct TimeNestExportEvent: Codable {
     let recurrenceRule: String?
     let reminderOffsetMinutes: Int?
     let notificationID: String?
+    let shiftTemplateID: ShiftTimeTemplateID?
+    let workInfo: WorkInfo?
 
     private enum CodingKeys: String, CodingKey {
         case id
@@ -32,6 +34,8 @@ struct TimeNestExportEvent: Codable {
         case recurrenceRule
         case reminderOffsetMinutes
         case notificationID
+        case shiftTemplateID
+        case workInfo
     }
 
     init(
@@ -44,7 +48,9 @@ struct TimeNestExportEvent: Codable {
         categoryID: UUID?,
         recurrenceRule: String?,
         reminderOffsetMinutes: Int?,
-        notificationID: String?
+        notificationID: String?,
+        shiftTemplateID: ShiftTimeTemplateID? = nil,
+        workInfo: WorkInfo? = nil
     ) {
         self.id = id
         self.title = title
@@ -56,6 +62,8 @@ struct TimeNestExportEvent: Codable {
         self.recurrenceRule = recurrenceRule
         self.reminderOffsetMinutes = reminderOffsetMinutes
         self.notificationID = notificationID
+        self.shiftTemplateID = shiftTemplateID
+        self.workInfo = workInfo
     }
 
     init(from decoder: Decoder) throws {
@@ -70,6 +78,8 @@ struct TimeNestExportEvent: Codable {
         recurrenceRule = try container.decodeIfPresent(String.self, forKey: .recurrenceRule)
         reminderOffsetMinutes = try container.decodeIfPresent(Int.self, forKey: .reminderOffsetMinutes)
         notificationID = try container.decodeIfPresent(String.self, forKey: .notificationID)
+        shiftTemplateID = try container.decodeIfPresent(ShiftTimeTemplateID.self, forKey: .shiftTemplateID)
+        workInfo = try container.decodeIfPresent(WorkInfo.self, forKey: .workInfo)
     }
 }
 
@@ -90,7 +100,9 @@ extension TimeNestExportEvent {
             categoryID: event.categoryID,
             recurrenceRule: event.recurrenceRule.rawValue,
             reminderOffsetMinutes: event.reminderOffsetMinutes,
-            notificationID: event.notificationID
+            notificationID: event.notificationID,
+            shiftTemplateID: event.shiftTemplateID,
+            workInfo: event.workInfo
         )
     }
 
@@ -110,7 +122,9 @@ extension TimeNestExportEvent {
             notificationID: nil,
             importSource: nil,
             createdAt: Date(),
-            updatedAt: Date()
+            updatedAt: Date(),
+            shiftTemplateID: shiftTemplateID,
+            workInfo: workInfo
         )
     }
 }
