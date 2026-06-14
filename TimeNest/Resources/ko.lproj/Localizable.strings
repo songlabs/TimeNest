@@ -52,6 +52,7 @@
 /* Notification */
 "notification.enabled" = "알림 활성화";
 "notification.time" = "알림 시간";
+"notification.daily_schedule_check" = "오늘 일정을 확인하세요";
 "notification.event_starting_soon" = "일정이 곧 시작됩니다";
 
 /* Reminder Options */

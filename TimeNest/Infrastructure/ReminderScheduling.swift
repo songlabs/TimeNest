@@ -10,9 +10,13 @@ protocol LocalNotificationScheduling {
     func requestAuthorizationIfNeeded() async -> Bool
     func scheduleEventNotification(event: CalendarEvent) async throws -> String?
     func cancelNotification(id: String)
+    func scheduleDailyScheduleCheck(hour: Int, minute: Int) async
+    func cancelDailyScheduleCheck()
 }
 
 final class LocalNotificationService: LocalNotificationScheduling {
+    static let dailyScheduleCheckIdentifier = "TimeNest.dailyScheduleCheck"
+
     private let center: UNUserNotificationCenter
     private let calendar: Calendar
 
@@ -72,6 +76,36 @@ final class LocalNotificationService: LocalNotificationScheduling {
     func cancelNotification(id: String) {
         center.removePendingNotificationRequests(withIdentifiers: [id])
         center.removeDeliveredNotifications(withIdentifiers: [id])
+    }
+
+    func scheduleDailyScheduleCheck(hour: Int, minute: Int) async {
+        guard await requestAuthorizationIfNeeded() else {
+            return
+        }
+
+        cancelDailyScheduleCheck()
+
+        let content = UNMutableNotificationContent()
+        content.title = "TimeNest"
+        content.body = LocalizationManager.shared.localized(.notificationDailyScheduleCheck)
+        content.sound = .default
+
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+        let request = UNNotificationRequest(
+            identifier: Self.dailyScheduleCheckIdentifier,
+            content: content,
+            trigger: trigger
+        )
+
+        try? await center.add(request)
+    }
+
+    func cancelDailyScheduleCheck() {
+        center.removePendingNotificationRequests(withIdentifiers: [Self.dailyScheduleCheckIdentifier])
+        center.removeDeliveredNotifications(withIdentifiers: [Self.dailyScheduleCheckIdentifier])
     }
 
     private func notificationBody(for event: CalendarEvent) -> String {

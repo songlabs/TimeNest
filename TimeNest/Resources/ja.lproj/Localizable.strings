@@ -52,6 +52,7 @@
 /* Notification */
 "notification.enabled" = "通知を有効にする";
 "notification.time" = "通知時間";
+"notification.daily_schedule_check" = "今日の予定を確認しましょう";
 "notification.event_starting_soon" = "予定がまもなく始まります";
 
 /* Reminder Options */
