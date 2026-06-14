@@ -267,3 +267,6 @@
 "work_statistics.column_total" = "Total";
 "work_statistics.total_hours" = "Total Hours";
 "work_statistics.total_amount" = "Total Amount";
+"work_statistics.loading" = "Loading...";
+"work_statistics.empty_title" = "No statistics yet";
+"work_statistics.empty_message" = "Adjust the filters and tap the statistics button";

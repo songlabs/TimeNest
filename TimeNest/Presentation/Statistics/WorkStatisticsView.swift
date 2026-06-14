@@ -4,240 +4,309 @@ import SwiftUI
 struct WorkStatisticsView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var viewModel: WorkStatisticsViewModel
-    
+
+    private let statisticIconName = "chart.bar.xaxis"
+
     var body: some View {
         VStack(spacing: 0) {
-            // 顶部标题栏
             headerView
-            
-            // 筛选区域
-            filterSection
-            
-            // 数据表格
-            if viewModel.isLoading {
-                loadingView
-            } else if viewModel.statisticsData.isEmpty {
-                emptyView
-            } else {
-                tableView
+
+            ScrollView {
+                VStack(spacing: WorkStatisticsLayout.sectionSpacing) {
+                    filterSection
+
+                    if viewModel.isLoading {
+                        loadingView
+                    } else if viewModel.statisticsData.isEmpty {
+                        emptyView
+                    } else {
+                        tableView
+                    }
+                }
+                .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+                .padding(.bottom, WorkStatisticsLayout.horizontalPadding)
             }
         }
-        .background(Color(UIColor.systemBackground))
-        .presentationDetents([.height(500)])
-        .presentationDragIndicator(.visible)
+        .background(WorkStatisticsColors.sheetBackground)
+        .presentationDetents([.height(WorkStatisticsLayout.sheetHeight)])
+        .presentationDragIndicator(.hidden)
+        .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
+        .sheet(isPresented: $viewModel.showStartDatePicker) {
+            monthPickerSheet(
+                titleKey: "work_statistics.start_date_month",
+                selection: $viewModel.startDate
+            )
+        }
+        .sheet(isPresented: $viewModel.showEndDatePicker) {
+            monthPickerSheet(
+                titleKey: "work_statistics.end_date_month",
+                selection: $viewModel.endDate
+            )
+        }
     }
-    
+
     // MARK: - Header
+
     private var headerView: some View {
-        HStack {
-            Text(LocalizedStringKey("work_statistics.title"))
-                .font(.system(size: 20, weight: .semibold))
-            
-            Spacer()
-            
-            Button(action: { dismiss() }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(Color(UIColor.systemBackground))
-        .overlay(
-            Rectangle()
-                .fill(Color(UIColor.separator))
-                .frame(height: 0.5),
-            alignment: .bottom
-        )
-    }
-    
-    // MARK: - Filter Section
-    private var filterSection: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 12) {
-                // 开始年月选择器
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(LocalizedStringKey("work_statistics.start_date_month"))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    Button(action: { viewModel.showStartDatePicker = true }) {
-                        HStack {
-                            Text(viewModel.formattedStartDate)
-                                .font(.system(size: 16, weight: .regular))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+            Capsule()
+                .fill(WorkStatisticsColors.handle)
+                .frame(
+                    width: WorkStatisticsLayout.handleWidth,
+                    height: WorkStatisticsLayout.handleHeight
+                )
+                .padding(.top, 10)
+
+            HStack {
+                Text(LocalizedStringKey("work_statistics.title"))
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundColor(WorkStatisticsColors.primaryText)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button(action: { dismiss() }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(WorkStatisticsColors.secondaryText)
+                        .frame(width: 36, height: 36)
+                        .background(WorkStatisticsColors.sectionBackground)
+                        .clipShape(Circle())
                 }
-                
-                // 结束年月选择器
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(LocalizedStringKey("work_statistics.end_date_month"))
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.secondary)
-                    
-                    Button(action: { viewModel.showEndDatePicker = true }) {
-                        HStack {
-                            Text(viewModel.formattedEndDate)
-                                .font(.system(size: 16, weight: .regular))
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.secondary)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 12)
-                        .background(Color(UIColor.systemGray6))
-                        .cornerRadius(8)
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                }
+                .buttonStyle(PlainButtonStyle())
             }
-            
-            // 统计按钮
+            .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+            .padding(.bottom, 14)
+        }
+        .background(WorkStatisticsColors.sheetBackground)
+        .overlay(alignment: .bottom) {
+            Rectangle()
+                .fill(WorkStatisticsColors.separator)
+                .frame(height: 0.5)
+        }
+    }
+
+    // MARK: - Filter Section
+
+    private var filterSection: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 12) {
+                monthField(
+                    titleKey: "work_statistics.start_date_month",
+                    value: viewModel.formattedStartDate,
+                    action: { viewModel.showStartDatePicker = true }
+                )
+
+                monthField(
+                    titleKey: "work_statistics.end_date_month",
+                    value: viewModel.formattedEndDate,
+                    action: { viewModel.showEndDatePicker = true }
+                )
+            }
+
             Button(action: { viewModel.calculateStatistics() }) {
-                HStack {
-                    Image(systemName: "chart.bar.fill")
-                    Text(LocalizedStringKey("work_statistics"))
-                }
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(ShiftCalendarColors.primaryBlue)
-                .cornerRadius(10)
+                Label(LocalizedStringKey("work_statistics"), systemImage: statisticIconName)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity, minHeight: WorkStatisticsLayout.primaryButtonHeight)
+                    .background(ShiftCalendarColors.primaryBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding(16)
-        .background(Color(UIColor.systemGray6))
+        .padding(14)
+        .background(WorkStatisticsColors.sectionBackground)
+        .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
     }
-    
+
+    private func monthField(titleKey: String, value: String, action: @escaping () -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(LocalizedStringKey(titleKey))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(WorkStatisticsColors.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            Button(action: action) {
+                HStack(spacing: 8) {
+                    Text(value)
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(WorkStatisticsColors.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+
+                    Spacer(minLength: 4)
+
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(WorkStatisticsColors.secondaryText)
+                }
+                .padding(.horizontal, 12)
+                .frame(minHeight: 46)
+                .background(WorkStatisticsColors.fieldBackground)
+                .overlay(
+                    RoundedRectangle(cornerRadius: WorkStatisticsLayout.pickerCornerRadius, style: .continuous)
+                        .stroke(WorkStatisticsColors.border, lineWidth: 0.8)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.pickerCornerRadius, style: .continuous))
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     // MARK: - Table View
+
     private var tableView: some View {
         VStack(spacing: 0) {
-            // 表格头部
             headerRow
-            
-            Divider()
-            
-            // 数据行
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(viewModel.statisticsData) { data in
-                        dataRow(data)
-                        if data != viewModel.statisticsData.last {
-                            Divider()
-                        }
+
+            Divider().background(WorkStatisticsColors.separator)
+
+            VStack(spacing: 0) {
+                ForEach(viewModel.statisticsData) { data in
+                    dataRow(data)
+                    if data != viewModel.statisticsData.last {
+                        Divider().background(WorkStatisticsColors.separator)
                     }
                 }
             }
-            
-            Divider()
-            
-            // 总计行
+
+            Divider().background(WorkStatisticsColors.separator)
+
             totalRow
         }
-        .frame(maxHeight: .infinity)
+        .background(WorkStatisticsColors.fieldBackground)
+        .overlay(
+            RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous)
+                .stroke(WorkStatisticsColors.border, lineWidth: 0.8)
+        )
+        .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
     }
-    
+
     private var headerRow: some View {
-        HStack {
+        tableRowBackground(background: WorkStatisticsColors.tableHeaderBackground) {
             Text(LocalizedStringKey("work_statistics.column_date"))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
-            
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             Text(LocalizedStringKey("work_statistics.column_time"))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
-            
+                .frame(width: 76, alignment: .center)
+
             Text(LocalizedStringKey("work_statistics.column_amount"))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundColor(.secondary)
-                .frame(width: 120, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color(UIColor.systemGray6))
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundColor(WorkStatisticsColors.secondaryText)
     }
-    
+
     private func dataRow(_ data: StatisticsDataItem) -> some View {
-        HStack {
+        tableRowBackground(background: WorkStatisticsColors.fieldBackground) {
             Text(data.date)
-                .font(.system(size: 14))
-                .frame(width: 100, alignment: .leading)
-            
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             Text(data.time)
-                .font(.system(size: 14))
-                .frame(width: 100, alignment: .leading)
-            
+                .frame(width: 76, alignment: .center)
+
             Text(data.amount)
-                .font(.system(size: 14, weight: .medium))
-                .frame(width: 120, alignment: .trailing)
+                .fontWeight(.medium)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
+        .font(.system(size: 15))
+        .foregroundColor(WorkStatisticsColors.primaryText)
     }
-    
+
     private var totalRow: some View {
-        HStack {
+        tableRowBackground(background: WorkStatisticsColors.totalRowBackground, verticalPadding: 14) {
             Text(LocalizedStringKey("work_statistics.column_total"))
-                .font(.system(size: 14, weight: .semibold))
-                .frame(width: 100, alignment: .leading)
-            
+                .frame(maxWidth: .infinity, alignment: .leading)
+
             Text(viewModel.totalHours)
-                .font(.system(size: 14, weight: .semibold))
-                .frame(width: 100, alignment: .leading)
-            
+                .frame(width: 76, alignment: .center)
+
             Text(viewModel.totalAmount)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundColor(.blue)
-                .frame(width: 120, alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 16)
-        .background(Color(UIColor.systemGray6))
+        .font(.system(size: 15, weight: .semibold))
+        .foregroundColor(ShiftCalendarColors.primaryBlue)
     }
-    
+
+    private func tableRowBackground<Content: View>(
+        background: Color,
+        verticalPadding: CGFloat = WorkStatisticsLayout.rowVerticalPadding,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        HStack(spacing: WorkStatisticsLayout.tableColumnSpacing) {
+            content()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, verticalPadding)
+        .background(background)
+    }
+
     // MARK: - Loading View
+
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
-                .scaleEffect(1.5)
-            Text("加载中...")
-                .font(.system(size: 14))
-                .foregroundColor(.secondary)
+                .scaleEffect(1.2)
+
+            Text(LocalizedStringKey("work_statistics.loading"))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(WorkStatisticsColors.secondaryText)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 220)
+        .background(WorkStatisticsColors.sectionBackground)
+        .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
     }
-    
+
     // MARK: - Empty View
+
     private var emptyView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "chart.bar.xaxis.empty")
-                .font(.system(size: 48))
-                .foregroundColor(.secondary)
-            
-            Text("暂无统计数据")
-                .font(.system(size: 16))
-                .foregroundColor(.secondary)
-            
-            Text("请调整筛选条件后点击统计按钮")
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
+        VStack(spacing: 10) {
+            Image(systemName: "chart.bar.xaxis")
+                .font(.system(size: 40, weight: .medium))
+                .foregroundColor(ShiftCalendarColors.primaryBlue.opacity(0.85))
+                .padding(.bottom, 4)
+
+            Text(LocalizedStringKey("work_statistics.empty_title"))
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(WorkStatisticsColors.primaryText)
+
+            Text(LocalizedStringKey("work_statistics.empty_message"))
+                .font(.system(size: 14, weight: .regular))
+                .foregroundColor(WorkStatisticsColors.secondaryText)
+                .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(24)
+        .frame(maxWidth: .infinity, minHeight: 240)
+        .background(WorkStatisticsColors.sectionBackground)
+        .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
+    }
+
+    // MARK: - Date Picker
+
+    private func monthPickerSheet(titleKey: String, selection: Binding<Date>) -> some View {
+        NavigationView {
+            DatePicker(
+                LocalizedStringKey(titleKey),
+                selection: selection,
+                displayedComponents: [.date]
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .padding()
+            .navigationTitle(LocalizedStringKey(titleKey))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(LocalizedStringKey("common.done")) {
+                        viewModel.showStartDatePicker = false
+                        viewModel.showEndDatePicker = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.height(320)])
     }
 }
 
@@ -248,7 +317,7 @@ struct WorkStatisticsView: View {
     let viewModel = WorkStatisticsViewModel()
     viewModel.showStartDatePicker = false
     viewModel.showEndDatePicker = false
-    
+
     return WorkStatisticsView(viewModel: viewModel)
         .environmentObject(LocalizationManager.preview(languageCode: "zh-Hans"))
         .background(Color(UIColor.systemGray5))

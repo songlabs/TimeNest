@@ -105,7 +105,7 @@ struct CalendarHeaderView: View {
     /// 左侧统计按钮：沿用浅蓝色圆形背景风格。
     private var statisticsButton: some View {
         Button(action: onStatisticsTapped) {
-            Image(systemName: "chart.bar.fill")
+            Image(systemName: "chart.bar.xaxis")
                 .font(.system(size: 22, weight: .medium))
                 .foregroundColor(ShiftCalendarColors.primaryBlue)
                 .frame(width: 36, height: 36)

@@ -289,6 +289,9 @@ enum LocalizedString: String {
     case columnTotal = "work_statistics.column_total"
     case totalHours = "work_statistics.total_hours"
     case totalAmount = "work_statistics.total_amount"
+    case workStatisticsLoading = "work_statistics.loading"
+    case workStatisticsEmptyTitle = "work_statistics.empty_title"
+    case workStatisticsEmptyMessage = "work_statistics.empty_message"
 }
 
 // MARK: - EnvironmentObject Extension

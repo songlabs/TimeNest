@@ -267,3 +267,6 @@
 "work_statistics.column_total" = "合計";
 "work_statistics.total_hours" = "合計時間";
 "work_statistics.total_amount" = "合計金額";
+"work_statistics.loading" = "読み込み中...";
+"work_statistics.empty_title" = "統計データがありません";
+"work_statistics.empty_message" = "条件を調整して統計ボタンをタップしてください";
