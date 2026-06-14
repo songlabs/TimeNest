@@ -4,9 +4,11 @@ struct SettingsView: View {
     @EnvironmentObject private var localization: LocalizationManager
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
-    @AppStorage("notificationEnabled") private var notificationEnabled: Bool = true
+    @AppStorage("notificationEnabled") private var notificationEnabled: Bool = false
+    @AppStorage("notificationTimeMinutes") private var notificationTimeMinutes: Int = 9 * 60
 
     @State private var showVersionInfo: Bool = false
+    @State private var notificationTime: Date = SettingsNotificationTime.defaultDate
     @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
 
     var body: some View {
@@ -71,17 +73,23 @@ struct SettingsView: View {
             // MARK: - Notification Section
             Section {
                 Toggle(localization.localized(.notificationEnabled), isOn: $notificationEnabled)
+                    .onChange(of: notificationEnabled) { enabled in
+                        updateDailyNotification(enabled: enabled)
+                    }
 
-                // Placeholder for future notification time setting
-                HStack {
-                    Text(localization.localized(.notificationTime))
-                    Spacer()
-                    Text(localization.localized(.notImplemented))
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                }
-                .opacity(notificationEnabled ? 1.0 : 0.5)
+                DatePicker(
+                    localization.localized(.notificationTime),
+                    selection: $notificationTime,
+                    displayedComponents: .hourAndMinute
+                )
                 .disabled(!notificationEnabled)
+                .opacity(notificationEnabled ? 1.0 : 0.5)
+                .onChange(of: notificationTime) { newValue in
+                    notificationTimeMinutes = SettingsNotificationTime.minutes(from: newValue)
+                    if notificationEnabled {
+                        updateDailyNotification(enabled: true)
+                    }
+                }
             } header: {
                 Text(localization.localized(.settingsNotification))
             }
@@ -117,36 +125,39 @@ struct SettingsView: View {
                 Text(localization.localized(.settingsAbout))
             }
 
-            // MARK: - File Sharing Section
-            Section {
-                NavigationLink {
-                    TimeNestFileSharingView()
-                        .environmentObject(localization)
-                } label: {
-                    Text(localization.localized(.fileSharingTitle))
-                }
-            } header: {
-                Text(localization.localized(.fileSharingTitle))
-            }
-
-            // MARK: - Shift Sharing Section
-            Section {
-                NavigationLink {
-                    ShiftSharePlaceholderView()
-                        .environmentObject(localization)
-                } label: {
-                    Text(localization.localized(.shiftShare))
-                }
-            } header: {
-                Text(localization.localized(.shiftShare))
-            }
         }
         .navigationTitle(localization.localized(.settingsTitle))
         .foregroundColor(.primary)
         .onAppear {
+            notificationTime = SettingsNotificationTime.date(from: notificationTimeMinutes)
+            if notificationEnabled {
+                updateDailyNotification(enabled: true)
+            }
+
             // 执行启动时的自动同步检查
             Task {
                 await subscriptionManager.performAutoSync()
+            }
+        }
+    }
+
+    private func updateDailyNotification(enabled: Bool) {
+        let service = LocalNotificationService()
+        let minutes = notificationTimeMinutes
+
+        Task {
+            if enabled {
+                let authorized = await service.requestAuthorizationIfNeeded()
+                await MainActor.run {
+                    notificationEnabled = authorized
+                }
+                if authorized {
+                    await service.scheduleDailyScheduleCheck(hour: minutes / 60, minute: minutes % 60)
+                } else {
+                    service.cancelDailyScheduleCheck()
+                }
+            } else {
+                service.cancelDailyScheduleCheck()
             }
         }
     }
@@ -160,6 +171,24 @@ struct SettingsView: View {
             .sorted { $0.localizedKey < $1.localizedKey }
             .map { localization.localized($0.localizedKey) }
             .joined(separator: ", ")
+    }
+}
+
+private enum SettingsNotificationTime {
+    static var defaultDate: Date {
+        date(from: 9 * 60)
+    }
+
+    static func date(from minutes: Int) -> Date {
+        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        components.hour = minutes / 60
+        components.minute = minutes % 60
+        return Calendar.current.date(from: components) ?? Date()
+    }
+
+    static func minutes(from date: Date) -> Int {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (components.hour ?? 9) * 60 + (components.minute ?? 0)
     }
 }
 

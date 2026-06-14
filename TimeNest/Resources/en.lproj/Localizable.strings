@@ -52,6 +52,7 @@
 /* Notification */
 "notification.enabled" = "Enable Notifications";
 "notification.time" = "Notification Time";
+"notification.daily_schedule_check" = "Check today’s schedule";
 "notification.event_starting_soon" = "Event starting soon";
 
 /* Reminder Options */
