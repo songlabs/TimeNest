@@ -33,7 +33,7 @@ private enum EventEditorStyle {
 
     /// 输入框/按钮背景色
     static var fieldBackground: Color {
-        Color(.systemBackground)
+        Color(.tertiarySystemGroupedBackground)
     }
 
     /// 输入框/按钮文字颜色
@@ -43,14 +43,14 @@ private enum EventEditorStyle {
 
     /// 输入框/按钮边框色
     static var buttonBorder: Color {
-        Color(.systemGray5)
+        Color(.separator).opacity(0.35)
     }
 
     // MARK: - Divider Colors
 
     /// 分隔线颜色
     static var dividerColor: Color {
-        Color(.separator)
+        Color(.separator).opacity(0.45)
     }
 
     // MARK: - Destructive Color
@@ -63,10 +63,20 @@ private enum EventEditorStyle {
     // MARK: - Layout Constants
 
     /// 统一卡片圆角
-    static let cardCornerRadius: CGFloat = 10
+    static let horizontalPadding: CGFloat = 16
+    static let sectionSpacing: CGFloat = 22
+    static let cardPadding: CGFloat = 16
+    static let rowHeight: CGFloat = 48
+    static let controlHeight: CGFloat = 36
+
+    /// 统一卡片圆角
+    static let cardCornerRadius: CGFloat = 26
 
     /// 统一控制组件圆角
-    static let controlCornerRadius: CGFloat = 8
+    static let controlCornerRadius: CGFloat = 16
+
+    /// 顶部按钮圆角
+    static let headerButtonCornerRadius: CGFloat = 24
 }
 
 enum EventEditorMode {
@@ -128,103 +138,94 @@ struct EventEditorView: View {
     }
 
     var body: some View {
-        ZStack {
-            // 最外层背景 - 使用系统分组背景，覆盖整个页面（包括 safe area），跟随主题自动切换
-            EventEditorStyle.pageBackground
-                .ignoresSafeArea()
-            
-            NavigationStack {
-                Form {
-                    Section {
-                        TitleInputSection(title: $title, placeholder: localization.localized(.editorTitle))
-                    }
-                    .listRowInsets(EdgeInsets())
+        NavigationStack {
+            ZStack {
+                EventEditorStyle.pageBackground
+                    .ignoresSafeArea()
 
-                    Section {
-                        EventTimeSection(
-                            startDate: $startDate,
-                            endDate: $endDate,
-                            isAllDay: $isAllDay,
-                            allDayTitle: localization.localized(.editorAllDay),
-                            showingStartDatePicker: $showingStartDatePicker,
-                            showingStartTimePicker: $showingStartTimePicker,
-                            showingEndDatePicker: $showingEndDatePicker,
-                            showingEndTimePicker: $showingEndTimePicker
-                        )
-                        .onChange(of: isAllDay) { _, newValue in
-                            normalizeForAllDayChange(newValue)
-                        }
-
-                        ReminderSection(
-                            reminderTitle: localization.localized(.editorReminder),
-                            reminderOffsetMinutes: $reminderOffsetMinutes,
-                            reminderOptions: reminderOptions,
-                            reminderTitleFormatter: { reminderTitle(for: $0) },
-                            showingReminderPicker: $showingReminderPicker
-                        )
-                    }
-                    .listRowInsets(EdgeInsets())
-
-                    Section {
-                        ShiftTemplateSection(templates: shiftTemplates, selectedTemplateID: $selectedShiftTemplateID) { template in
-                            applyShiftTemplate(template)
-                        }
-                    }
-                    .listRowInsets(EdgeInsets())
-
-                    Section {
-                        WorkInfoSection(
-                            restTime: $restTime,
-                            transportFee: $transportFee,
-                            hourlyRate: $hourlyRate,
-                            showingRestTimePicker: $showingRestTimePicker,
-                            workInTitle: localization.localized(.editorWorkIn),
-                            workOutTitle: localization.localized(.editorWorkOut),
-                            restTimeTitle: localization.localized(.editorRestTime),
-                            transportFeeTitle: localization.localized(.editorTransportFee),
-                            hourlyRateTitle: localization.localized(.editorHourlyRate),
-                            currencyUnit: localization.localized(.editorCurrencyUnit)
-                        )
-                        .sheet(isPresented: $showingRestTimePicker) {
-                            RestTimePickerSheet(restTime: $restTime)
-                        }
-                    }
-                    .listRowInsets(EdgeInsets())
-
-                    if let validationMessage = validationMessage ?? errorMessage {
-                        Section {
-                            Text(validationMessage)
-                                .foregroundColor(EventEditorStyle.destructive)
-                        } header: {
-                            Text(localization.localized(.editorError))
-                        }
-                    }
-                }
-                .disabled(saving)
-                .navigationTitle(editorTitle)
-                .navigationBarTitleDisplayMode(.inline)
-                // Form 背景使用系统卡片风格，跟随主题自动切换
-                .scrollContentBackground(.hidden)
-                .background(EventEditorStyle.cardBackground)
-                .toolbarBackground(EventEditorStyle.cardBackground, for: .navigationBar)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(localization.localized(.editorCancel), role: .cancel) {
-                            isPresented = false
-                        }
-                        .disabled(saving)
-                    }
-
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(localization.localized(.editorSave)) {
+                VStack(spacing: 0) {
+                    EditorHeader(
+                        title: editorTitle,
+                        cancelTitle: localization.localized(.editorCancel),
+                        saveTitle: localization.localized(.editorSave),
+                        canSave: canSave,
+                        saving: saving,
+                        onCancel: { isPresented = false },
+                        onSave: {
                             Task {
                                 await save()
                             }
                         }
-                        .disabled(!canSave || saving)
+                    )
+
+                    ScrollView {
+                        VStack(spacing: EventEditorStyle.sectionSpacing) {
+                            TitleInputSection(title: $title, placeholder: localization.localized(.editorTitle))
+
+                            VStack(spacing: 0) {
+                                EventTimeSection(
+                                    startDate: $startDate,
+                                    endDate: $endDate,
+                                    isAllDay: $isAllDay,
+                                    allDayTitle: localization.localized(.editorAllDay),
+                                    showingStartDatePicker: $showingStartDatePicker,
+                                    showingStartTimePicker: $showingStartTimePicker,
+                                    showingEndDatePicker: $showingEndDatePicker,
+                                    showingEndTimePicker: $showingEndTimePicker
+                                )
+                                .onChange(of: isAllDay) { _, newValue in
+                                    normalizeForAllDayChange(newValue)
+                                }
+
+                                CardDivider()
+
+                                ReminderSection(
+                                    reminderTitle: localization.localized(.editorReminder),
+                                    reminderOffsetMinutes: $reminderOffsetMinutes,
+                                    reminderOptions: reminderOptions,
+                                    reminderTitleFormatter: { reminderTitle(for: $0) },
+                                    showingReminderPicker: $showingReminderPicker
+                                )
+                            }
+                            .cardContainer()
+
+                            ShiftTemplateSection(templates: shiftTemplates, selectedTemplateID: $selectedShiftTemplateID) { template in
+                                applyShiftTemplate(template)
+                            }
+
+                            WorkInfoSection(
+                                restTime: $restTime,
+                                transportFee: $transportFee,
+                                hourlyRate: $hourlyRate,
+                                showingRestTimePicker: $showingRestTimePicker,
+                                workInTitle: localization.localized(.editorWorkIn),
+                                workOutTitle: localization.localized(.editorWorkOut),
+                                restTimeTitle: localization.localized(.editorRestTime),
+                                transportFeeTitle: localization.localized(.editorTransportFee),
+                                hourlyRateTitle: localization.localized(.editorHourlyRate),
+                                currencyUnit: localization.localized(.editorCurrencyUnit)
+                            )
+                            .sheet(isPresented: $showingRestTimePicker) {
+                                RestTimePickerSheet(restTime: $restTime)
+                            }
+
+                            if let validationMessage = validationMessage ?? errorMessage {
+                                Text(validationMessage)
+                                    .font(.footnote)
+                                    .foregroundColor(EventEditorStyle.destructive)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, EventEditorStyle.cardPadding)
+                            }
+                        }
+                        .padding(.horizontal, EventEditorStyle.horizontalPadding)
+                        .padding(.top, 18)
+                        .padding(.bottom, 28)
                     }
+                    .scrollIndicators(.hidden)
                 }
             }
+            .disabled(saving)
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
@@ -399,6 +400,80 @@ struct EventEditorView: View {
     }
 }
 
+
+// MARK: - Shared Editor Components
+
+private struct EditorHeader: View {
+    let title: String
+    let cancelTitle: String
+    let saveTitle: String
+    let canSave: Bool
+    let saving: Bool
+    let onCancel: () -> Void
+    let onSave: () -> Void
+
+    var body: some View {
+        ZStack {
+            Text(title)
+                .font(.headline.weight(.bold))
+                .foregroundColor(EventEditorStyle.primaryText)
+                .lineLimit(1)
+
+            HStack {
+                Button(cancelTitle, action: onCancel)
+                    .buttonStyle(HeaderCapsuleButtonStyle(isEnabled: !saving))
+                    .disabled(saving)
+
+                Spacer()
+
+                Button(saveTitle, action: onSave)
+                    .buttonStyle(HeaderCapsuleButtonStyle(isEnabled: canSave && !saving))
+                    .disabled(!canSave || saving)
+            }
+        }
+        .padding(.horizontal, EventEditorStyle.horizontalPadding)
+        .padding(.top, 22)
+        .padding(.bottom, 18)
+        .background(EventEditorStyle.pageBackground)
+    }
+}
+
+private struct HeaderCapsuleButtonStyle: ButtonStyle {
+    let isEnabled: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(isEnabled ? EventEditorStyle.primaryText : EventEditorStyle.secondaryText.opacity(0.55))
+            .padding(.horizontal, 18)
+            .frame(height: EventEditorStyle.rowHeight)
+            .background(EventEditorStyle.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.headerButtonCornerRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: EventEditorStyle.headerButtonCornerRadius, style: .continuous)
+                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
+            )
+            .opacity(configuration.isPressed ? 0.75 : 1)
+    }
+}
+
+private struct CardDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(EventEditorStyle.dividerColor)
+            .frame(height: 1 / UIScreen.main.scale)
+            .padding(.leading, EventEditorStyle.cardPadding)
+    }
+}
+
+private extension View {
+    func cardContainer() -> some View {
+        self
+            .background(EventEditorStyle.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.cardCornerRadius, style: .continuous))
+    }
+}
+
 // MARK: - Reminder Section
 
 /// 提醒设置组件（与时间设置卡片样式保持一致）
@@ -437,10 +512,8 @@ private struct ReminderSection: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 12)
-        .background(EventEditorStyle.cardBackground)
-        .cornerRadius(EventEditorStyle.cardCornerRadius)
+        .frame(minHeight: EventEditorStyle.rowHeight)
+        .padding(EventEditorStyle.cardPadding)
         .sheet(isPresented: $showingReminderPicker) {
             ReminderPickerSheet(
                 reminderOffsetMinutes: $reminderOffsetMinutes,
@@ -562,9 +635,9 @@ private struct EventTimeSection: View {
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
                             .background(EventEditorStyle.fieldBackground)
-                            .cornerRadius(8)
+                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 8)
+                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
                                     .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
@@ -581,9 +654,9 @@ private struct EventTimeSection: View {
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
                             .background(EventEditorStyle.fieldBackground)
-                            .cornerRadius(8)
+                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 8)
+                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
                                     .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
@@ -628,9 +701,9 @@ private struct EventTimeSection: View {
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
                             .background(EventEditorStyle.fieldBackground)
-                            .cornerRadius(8)
+                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 8)
+                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
                                     .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
@@ -647,9 +720,9 @@ private struct EventTimeSection: View {
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
                             .background(EventEditorStyle.fieldBackground)
-                            .cornerRadius(8)
+                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                             .overlay(
-                                RoundedRectangle(cornerRadius: 8)
+                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
                                     .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
                             )
                     }
@@ -675,10 +748,7 @@ private struct EventTimeSection: View {
                 )
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 12)
-        .background(EventEditorStyle.cardBackground)
-        .cornerRadius(EventEditorStyle.cardCornerRadius)
+        .padding(EventEditorStyle.cardPadding)
     }
 
     private func formatDateOnly(_ date: Date) -> String {
@@ -892,10 +962,10 @@ private struct TitleInputSection: View {
     var body: some View {
         TextField(placeholder, text: $title)
             .textFieldStyle(.plain)
-            .padding(.vertical, 12)
-            .padding(.horizontal, 12)
-            .background(EventEditorStyle.fieldBackground)
-            .cornerRadius(EventEditorStyle.cardCornerRadius)
+            .padding(.horizontal, EventEditorStyle.cardPadding)
+            .frame(height: EventEditorStyle.rowHeight + 12)
+            .background(EventEditorStyle.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.cardCornerRadius, style: .continuous))
             .tint(EventEditorStyle.primaryText)
     }
 }
@@ -909,7 +979,7 @@ private struct ShiftTemplateSection: View {
     let onSelect: (ShiftTimeTemplate) -> Void
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 5), spacing: 6) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
             ForEach(templates) { template in
                 Button {
                     onSelect(template)
@@ -917,19 +987,17 @@ private struct ShiftTemplateSection: View {
                     Text(template.displayName)
                         .font(.subheadline.weight(.semibold))
                         .foregroundColor(template.buttonTextColor)
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 4)
-                        .background(template.color.opacity(0.2))
-                        .cornerRadius(6)
+                        .frame(height: EventEditorStyle.controlHeight)
+                        .padding(.horizontal, 8)
+                        .background(template.color.opacity(0.24))
+                        .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 12)
-        .background(EventEditorStyle.cardBackground)
-        .cornerRadius(EventEditorStyle.cardCornerRadius)
+        .padding(EventEditorStyle.cardPadding)
+        .cardContainer()
     }
 }
 
@@ -1016,132 +1084,95 @@ private struct WorkInfoSection: View {
     let currencyUnit: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 第一行：上班 / 休息时间 / 下班（左 / 中/右三段式布局）
-            HStack(alignment: .center) {
-                // 左侧：上班按钮
-                Button {
-                    // TODO: 实现上班点击逻辑
-                } label: {
-                    Text(workInTitle)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(EventEditorStyle.fieldText)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 16)
-                        .background(EventEditorStyle.fieldBackground)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                        )
-                        .frame(minWidth: 60)
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                // 中间：休息时间选择
-                Button {
-                    showingRestTimePicker = true
-                } label: {
-                    VStack(alignment: .center, spacing: 4) {
-                        Text(restTimeTitle)
-                            .font(.caption)
-                            .foregroundColor(EventEditorStyle.secondaryText)
-
-                        // 休息时间显示（格式化为 HH:mm）
-                        Text(formatRestTime(restTime))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(EventEditorStyle.fieldText)
-                            .frame(width: 56, height: 28)
-                            .background(EventEditorStyle.fieldBackground)
-                            .cornerRadius(8)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                            )
-                    }
-                }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                // 右侧：下班按钮
-                Button {
-                    // TODO: 实现下班点击逻辑
-                } label: {
-                    Text(workOutTitle)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(EventEditorStyle.fieldText)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 16)
-                        .background(EventEditorStyle.fieldBackground)
-                        .cornerRadius(8)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                        )
-                        .frame(minWidth: 60)
-                }
-                .buttonStyle(.plain)
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
+                workButton(title: workInTitle)
+                workButton(title: workOutTitle)
             }
+            .padding(.bottom, 12)
 
-            // 分隔线
-            Divider()
-                .foregroundColor(EventEditorStyle.dividerColor)
-                .padding(.vertical, 4)
+            CardDivider()
 
-            // 第二行：交通费和时给
-            HStack(alignment: .center, spacing: 16) {
-                // 交通费
-                HStack(spacing: 6) {
-                    Text(transportFeeTitle)
-                        .font(.subheadline)
-                        .foregroundColor(EventEditorStyle.secondaryText)
-
-                    TextField("", text: $transportFee)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.plain)
-                        .frame(width: 70, alignment: .trailing)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                        )
-                        .padding(.vertical, 4)
-
-                    Text(currencyUnit)
-                        .font(.subheadline)
-                        .foregroundColor(EventEditorStyle.secondaryText)
+            Button {
+                showingRestTimePicker = true
+            } label: {
+                formRow(title: restTimeTitle) {
+                    Text(formatRestTime(restTime))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(EventEditorStyle.fieldText)
+                        .frame(width: 76, height: EventEditorStyle.controlHeight)
+                        .background(EventEditorStyle.fieldBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                 }
+            }
+            .buttonStyle(.plain)
 
-                Spacer()
+            CardDivider()
 
-                // 时给
-                HStack(spacing: 6) {
-                    Text(hourlyRateTitle)
-                        .font(.subheadline)
-                        .foregroundColor(EventEditorStyle.secondaryText)
+            currencyRow(title: transportFeeTitle, value: $transportFee)
 
-                    TextField("", text: $hourlyRate)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.plain)
-                        .frame(width: 70, alignment: .trailing)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                        )
-                        .padding(.vertical, 4)
+            CardDivider()
 
-                    Text(currencyUnit)
-                        .font(.subheadline)
-                        .foregroundColor(EventEditorStyle.secondaryText)
-                }
+            currencyRow(title: hourlyRateTitle, value: $hourlyRate)
+        }
+        .padding(EventEditorStyle.cardPadding)
+        .cardContainer()
+    }
+
+    private func workButton(title: String) -> some View {
+        Button {
+            // TODO: 实现点击逻辑
+        } label: {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(EventEditorStyle.fieldText)
+                .frame(maxWidth: .infinity)
+                .frame(height: EventEditorStyle.controlHeight)
+                .background(EventEditorStyle.fieldBackground)
+                .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
+                        .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func currencyRow(title: String, value: Binding<String>) -> some View {
+        formRow(title: title) {
+            HStack(spacing: 8) {
+                TextField("", text: value)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.plain)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 96, height: EventEditorStyle.controlHeight)
+                    .padding(.horizontal, 10)
+                    .background(EventEditorStyle.fieldBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
+                            .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
+                    )
+
+                Text(currencyUnit)
+                    .font(.subheadline)
+                    .foregroundColor(EventEditorStyle.secondaryText)
+                    .frame(width: 24, alignment: .trailing)
             }
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 12)
-        .background(EventEditorStyle.cardBackground)
-        .cornerRadius(EventEditorStyle.cardCornerRadius)
+    }
+
+    private func formRow<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(EventEditorStyle.secondaryText)
+
+            Spacer(minLength: 12)
+
+            content()
+        }
+        .frame(minHeight: EventEditorStyle.rowHeight)
     }
 
     private func formatRestTime(_ hours: Double) -> String {
