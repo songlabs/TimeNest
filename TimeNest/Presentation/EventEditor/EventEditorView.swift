@@ -84,9 +84,10 @@ private enum EventEditorStyle {
     static let headerButtonCornerRadius: CGFloat = 24
 }
 
-private enum WorkTimeField {
-    case workIn
-    case workOut
+private enum EditorFocusedField: Hashable {
+    case title
+    case transportFee
+    case hourlyRate
 }
 
 enum EventEditorMode {
@@ -128,7 +129,9 @@ struct EventEditorView: View {
     @State private var transportFee: String = "" // 交通费
     @State private var hourlyRate: String = "" // 时给
     @State private var showingRestTimePicker: Bool = false // 休息时间选择器
-    @State private var activeWorkTimeField: WorkTimeField?
+    @State private var hasTappedWorkIn: Bool = false
+    @State private var hasTappedWorkOut: Bool = false
+    @FocusState private var focusedField: EditorFocusedField?
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
 
@@ -177,7 +180,11 @@ struct EventEditorView: View {
 
                     ScrollView {
                         VStack(spacing: EventEditorStyle.sectionSpacing) {
-                            TitleInputSection(title: $title, placeholder: localization.localized(.editorTitle))
+                            TitleInputSection(
+                                title: $title,
+                                placeholder: localization.localized(.editorTitle),
+                                focusedField: $focusedField
+                            )
 
                             VStack(spacing: 0) {
                                 EventTimeSection(
@@ -217,7 +224,10 @@ struct EventEditorView: View {
                                 showingRestTimePicker: $showingRestTimePicker,
                                 startDate: $startDate,
                                 endDate: $endDate,
-                                activeWorkTimeField: $activeWorkTimeField,
+                                eventTitle: $title,
+                                hasTappedWorkIn: $hasTappedWorkIn,
+                                hasTappedWorkOut: $hasTappedWorkOut,
+                                focusedField: $focusedField,
                                 workInTitle: localization.localized(.editorWorkIn),
                                 workOutTitle: localization.localized(.editorWorkOut),
                                 restTimeTitle: localization.localized(.editorRestTime),
@@ -246,6 +256,17 @@ struct EventEditorView: View {
             }
             .disabled(saving)
             .toolbar(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(localization.localized(.done)) {
+                        focusedField = nil
+                    }
+                }
+            }
+            .onAppear {
+                initializeWorkButtonStateIfNeeded()
+            }
         }
     }
 
@@ -259,14 +280,7 @@ struct EventEditorView: View {
     }
 
     private var editorTitle: String {
-        switch activeWorkTimeField {
-        case .workIn:
-            return localization.localized(.editorWorkIn)
-        case .workOut:
-            return localization.localized(.editorWorkOut)
-        case nil:
-            return isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
-        }
+        isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
     }
 
     private var datePickerComponents: DatePickerComponents {
@@ -313,6 +327,17 @@ struct EventEditorView: View {
                 workInfo: initialWorkInfo,
                 shiftTemplateID: initialShiftTemplateID
             )
+        }
+    }
+
+
+    private func initializeWorkButtonStateIfNeeded() {
+        if title == localization.localized(.editorWorkIn) {
+            hasTappedWorkIn = true
+        }
+
+        if title == localization.localized(.editorWorkOut) {
+            hasTappedWorkOut = true
         }
     }
 
@@ -985,9 +1010,11 @@ private extension Date {
 private struct TitleInputSection: View {
     @Binding var title: String
     let placeholder: String
+    var focusedField: FocusState<EditorFocusedField?>.Binding
 
     var body: some View {
         TextField(placeholder, text: $title)
+            .focused(focusedField, equals: .title)
             .textFieldStyle(.plain)
             .padding(.horizontal, EventEditorStyle.cardPadding)
             .frame(height: EventEditorStyle.rowHeight + 12)
@@ -1104,7 +1131,10 @@ private struct WorkInfoSection: View {
     @Binding var showingRestTimePicker: Bool
     @Binding var startDate: Date
     @Binding var endDate: Date
-    @Binding var activeWorkTimeField: WorkTimeField?
+    @Binding var eventTitle: String
+    @Binding var hasTappedWorkIn: Bool
+    @Binding var hasTappedWorkOut: Bool
+    var focusedField: FocusState<EditorFocusedField?>.Binding
 
     let workInTitle: String
     let workOutTitle: String
@@ -1116,13 +1146,17 @@ private struct WorkInfoSection: View {
     var body: some View {
         VStack(spacing: 14) {
             HStack(spacing: EventEditorStyle.workColumnSpacing) {
-                workColumn(title: workInTitle, field: .workIn) {
+                workColumn(title: workInTitle, isDisabled: hasTappedWorkIn) {
+                    eventTitle = workInTitle
+                    hasTappedWorkIn = true
+                    focusedField.wrappedValue = nil
+                } content: {
                     DatePicker("", selection: $startDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
                 }
 
-                workColumn(title: restTimeTitle, field: nil) {
+                workColumn(title: restTimeTitle) {
                     Button {
                         showingRestTimePicker = true
                     } label: {
@@ -1137,7 +1171,11 @@ private struct WorkInfoSection: View {
                     .buttonStyle(.plain)
                 }
 
-                workColumn(title: workOutTitle, field: .workOut) {
+                workColumn(title: workOutTitle, isDisabled: hasTappedWorkOut) {
+                    eventTitle = workOutTitle
+                    hasTappedWorkOut = true
+                    focusedField.wrappedValue = nil
+                } content: {
                     DatePicker("", selection: $endDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
@@ -1147,30 +1185,23 @@ private struct WorkInfoSection: View {
             CardDivider()
 
             HStack(spacing: EventEditorStyle.workColumnSpacing) {
-                currencyField(title: transportFeeTitle, value: $transportFee)
-                currencyField(title: hourlyRateTitle, value: $hourlyRate)
+                currencyField(title: transportFeeTitle, value: $transportFee, field: .transportFee)
+                currencyField(title: hourlyRateTitle, value: $hourlyRate, field: .hourlyRate)
             }
         }
         .padding(EventEditorStyle.cardPadding)
         .cardContainer()
     }
 
-    private func workColumn<Content: View>(title: String, field: WorkTimeField?, @ViewBuilder content: () -> Content) -> some View {
+    private func workColumn<Content: View>(title: String, isDisabled: Bool, action: @escaping () -> Void, @ViewBuilder content: () -> Content) -> some View {
         VStack(spacing: 8) {
-            if let field {
-                Button {
-                    activeWorkTimeField = field
-                } label: {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                }
-                .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius))
-            } else {
+            Button(action: action) {
                 Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(EventEditorStyle.primaryText)
-                    .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
+                    .font(.subheadline.weight(.semibold))
             }
+            .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius))
+            .disabled(isDisabled)
+            .opacity(isDisabled ? 0.55 : 1)
 
             content()
                 .frame(maxWidth: .infinity)
@@ -1179,13 +1210,28 @@ private struct WorkInfoSection: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func currencyField(title: String, value: Binding<String>) -> some View {
+    private func workColumn<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 8) {
+            Text(title)
+                .font(.subheadline.weight(.medium))
+                .foregroundColor(EventEditorStyle.primaryText)
+                .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
+
+            content()
+                .frame(maxWidth: .infinity)
+                .frame(height: EventEditorStyle.compactControlHeight)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func currencyField(title: String, value: Binding<String>, field: EditorFocusedField) -> some View {
         HStack(spacing: 8) {
             Text(title)
                 .font(.subheadline)
                 .foregroundColor(EventEditorStyle.secondaryText)
 
             TextField("", text: value)
+                .focused(focusedField, equals: field)
                 .keyboardType(.numberPad)
                 .textFieldStyle(.plain)
                 .multilineTextAlignment(.trailing)
