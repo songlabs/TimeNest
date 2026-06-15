@@ -244,6 +244,7 @@ class MonthCalendarViewModel: ObservableObject {
 
         if let kind = workClockKind(for: title) {
             try await upsertWorkClockEvent(event, kind: kind)
+            try await syncSharedWorkValues(for: saveDates.start, transportFee: workInfo.transportFee, hourlyRate: workInfo.hourlyRate)
         } else {
             try await eventUseCase.createEvent(event)
         }
@@ -290,6 +291,45 @@ class MonthCalendarViewModel: ObservableObject {
             try await eventUseCase.deleteEvent(id: duplicate.id)
         }
     }
+    private func syncSharedWorkValues(for date: Date, transportFee: Int?, hourlyRate: Int?) async throws {
+        let sameDayWorkEvents = try await sameDayWorkEvents(for: date)
+        let now = Date()
+
+        for event in sameDayWorkEvents {
+            var syncedWorkInfo = event.workInfo ?? WorkInfo()
+            syncedWorkInfo.transportFee = transportFee
+            syncedWorkInfo.hourlyRate = hourlyRate
+
+            let syncedEvent = CalendarEvent(
+                id: event.id,
+                title: event.title,
+                note: event.note,
+                startDate: event.startDate,
+                endDate: event.endDate,
+                isAllDay: event.isAllDay,
+                categoryID: event.categoryID,
+                recurrenceRule: event.recurrenceRule,
+                reminderTemplateID: event.reminderTemplateID,
+                reminderOffsetMinutes: event.reminderOffsetMinutes,
+                notificationID: event.notificationID,
+                importSource: event.importSource,
+                createdAt: event.createdAt,
+                updatedAt: now,
+                shiftTemplateID: event.shiftTemplateID,
+                workInfo: syncedWorkInfo
+            )
+            try await eventUseCase.updateEvent(syncedEvent)
+        }
+    }
+
+    private func sameDayWorkEvents(for date: Date) async throws -> [CalendarEvent] {
+        let calendar = Calendar(identifier: .gregorian)
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+        return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
+            .filter { workClockKind(for: $0.title) != nil }
+    }
+
 
     private func workClockKind(for title: String) -> WorkClockKind? {
         if WorkClockTitleMatcher.isClockInTitle(title) {
@@ -346,6 +386,9 @@ class MonthCalendarViewModel: ObservableObject {
             )
 
             try await eventUseCase.updateEvent(updatedEvent)
+            if workClockKind(for: title) != nil {
+                try await syncSharedWorkValues(for: saveDates.start, transportFee: workInfo.transportFee, hourlyRate: workInfo.hourlyRate)
+            }
             await reloadMonth()
         } catch {
             errorMessage = error.localizedDescription

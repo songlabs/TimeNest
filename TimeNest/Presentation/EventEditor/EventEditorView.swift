@@ -182,9 +182,15 @@ struct EventEditorView: View {
         _workOutDate = State(initialValue: initialState.workInfo?.workOutTime ?? initialState.defaultWorkDate)
         _isAllDay = State(initialValue: initialState.isAllDay)
         _reminderOffsetMinutes = State(initialValue: initialState.reminderOffsetMinutes)
+        let sharedValues = EventEditorView.sharedWorkValues(
+            ownWorkInfo: initialState.workInfo,
+            targetDate: initialState.defaultWorkDate,
+            existingEvents: existingEvents,
+            editingEventID: EventEditorView.editingEventID(for: mode)
+        )
         _restTime = State(initialValue: initialState.workInfo?.restHours ?? 1.0)
-        _transportFee = State(initialValue: initialState.workInfo?.transportFee.map(String.init) ?? "")
-        _hourlyRate = State(initialValue: initialState.workInfo?.hourlyRate.map(String.init) ?? "")
+        _transportFee = State(initialValue: sharedValues.transportFee.map(String.init) ?? "")
+        _hourlyRate = State(initialValue: sharedValues.hourlyRate.map(String.init) ?? "")
         _selectedShiftTemplateID = State(initialValue: initialState.shiftTemplateID)
     }
 
@@ -400,10 +406,28 @@ struct EventEditorView: View {
     }
 
     private var editingEventID: UUID? {
+        EventEditorView.editingEventID(for: mode)
+    }
+
+    private static func editingEventID(for mode: EventEditorMode) -> UUID? {
         if case .edit(let eventID, _, _, _, _, _, _, _, _) = mode {
             return eventID
         }
         return nil
+    }
+
+    private static func sharedWorkValues(ownWorkInfo: WorkInfo?, targetDate: Date, existingEvents: [EventOccurrence], editingEventID: UUID?) -> (transportFee: Int?, hourlyRate: Int?) {
+        let calendar = Calendar.current
+        let sameDayWorkEvents = existingEvents.filter { event in
+            event.eventID != editingEventID
+            && event.isWorkClockEvent
+            && calendar.isDate(event.startDate, inSameDayAs: targetDate)
+        }
+
+        return (
+            transportFee: ownWorkInfo?.transportFee ?? sameDayWorkEvents.compactMap { $0.workInfo?.transportFee }.first,
+            hourlyRate: ownWorkInfo?.hourlyRate ?? sameDayWorkEvents.compactMap { $0.workInfo?.hourlyRate }.first
+        )
     }
 
     private func save() async {
