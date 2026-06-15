@@ -90,6 +90,7 @@ struct DayDetailView: View {
                 ForEach(cell.events, id: \.id) { event in
                     EventRowView(
                         event: event,
+                        selectedDate: cell.date.toDate(),
                         onDelete: {
                             onDeleteEvent(event.eventID)
                         },
@@ -190,6 +191,7 @@ private struct EditingEvent: Identifiable {
 
 struct EventRowView: View {
     let event: EventOccurrence
+    let selectedDate: Date
     let onDelete: () -> Void
     let onEdit: () -> Void
 
@@ -235,7 +237,7 @@ struct EventRowView: View {
         if event.isClockOutEvent {
             let clockOutTime = event.workInfo?.workOutTime ?? event.startDate
             let time = formatTime(clockOutTime) ?? ""
-            if Calendar(identifier: .gregorian).startOfDay(for: clockOutTime) > Calendar(identifier: .gregorian).startOfDay(for: event.workDate) {
+            if isNextDayClockOut(clockOutTime) {
                 return "\(LocalizationManager.shared.localized(.workNextDayPrefix)) \(time)"
             }
             return time
@@ -244,6 +246,16 @@ struct EventRowView: View {
             return ""
         }
         return "\(start) - \(end)"
+    }
+
+    private func isNextDayClockOut(_ clockOutTime: Date) -> Bool {
+        let calendar = Calendar(identifier: .gregorian)
+        let detailDay = calendar.startOfDay(for: selectedDate)
+        let clockOutDay = calendar.startOfDay(for: clockOutTime)
+        guard let nextDay = calendar.date(byAdding: .day, value: 1, to: detailDay) else {
+            return false
+        }
+        return clockOutDay == nextDay
     }
 
     private func formatTime(_ date: Date) -> String? {
