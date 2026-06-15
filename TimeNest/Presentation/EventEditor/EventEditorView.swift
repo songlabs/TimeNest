@@ -72,6 +72,7 @@ private enum EventEditorStyle {
     static let shiftActionButtonWidth: CGFloat = 88
     static let shiftActionButtonHeight: CGFloat = 32
     static let shiftActionButtonCornerRadius: CGFloat = 8
+    static let shiftTemplateButtonSpacing: CGFloat = 12
     static let workColumnSpacing: CGFloat = 12
 
     /// 统一卡片圆角
@@ -839,35 +840,33 @@ private struct ReminderSection: View {
     @Binding var showingReminderPicker: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Button {
-                showingReminderPicker = true
-            } label: {
+        Button {
+            showingReminderPicker = true
+        } label: {
+            HStack {
+                Text(reminderTitle)
+                    .font(.subheadline)
+                    .foregroundColor(EventEditorStyle.secondaryText)
+                    .frame(minWidth: 40, alignment: .leading)
+
+                Spacer()
+
                 HStack {
-                    Text(reminderTitle)
-                        .font(.subheadline)
+                    Text(reminderTitleFormatter(reminderOffsetMinutes))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundColor(EventEditorStyle.primaryText)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
                         .foregroundColor(EventEditorStyle.secondaryText)
-                        .frame(minWidth: 40, alignment: .leading)
-
-                    Spacer()
-
-                    HStack {
-                        Text(reminderTitleFormatter(reminderOffsetMinutes))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(EventEditorStyle.primaryText)
-
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(EventEditorStyle.secondaryText)
-                            .padding(.leading, 4)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.leading, 4)
                 }
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
-            .buttonStyle(.plain)
+            .frame(height: EventEditorStyle.rowHeight)
+            .padding(.horizontal, EventEditorStyle.cardPadding)
         }
-        .frame(minHeight: EventEditorStyle.rowHeight)
-        .padding(EventEditorStyle.cardPadding)
+        .buttonStyle(.plain)
         .sheet(isPresented: $showingReminderPicker) {
             ReminderPickerSheet(
                 reminderOffsetMinutes: $reminderOffsetMinutes,
@@ -1335,21 +1334,27 @@ private struct ShiftTemplateSection: View {
     let onSelect: (ShiftTimeTemplate) -> Void
 
     var body: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+        LazyVGrid(
+            columns: [
+                GridItem(
+                    .adaptive(
+                        minimum: EventEditorStyle.shiftActionButtonWidth,
+                        maximum: EventEditorStyle.shiftActionButtonWidth
+                    ),
+                    spacing: EventEditorStyle.shiftTemplateButtonSpacing,
+                    alignment: .leading
+                )
+            ],
+            alignment: .leading,
+            spacing: EventEditorStyle.shiftTemplateButtonSpacing
+        ) {
             ForEach(templates) { template in
                 Button {
                     onSelect(template)
                 } label: {
                     Text(template.displayName)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(template.buttonTextColor)
-                        .frame(height: EventEditorStyle.controlHeight)
-                        .padding(.horizontal, 8)
-                        .background(template.color.opacity(0.24))
-                        .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ShiftTemplateButtonStyle(backgroundColor: template.color.opacity(0.24)))
             }
         }
         .padding(EventEditorStyle.cardPadding)
@@ -1499,7 +1504,7 @@ private struct WorkInfoSection: View {
             }
             .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius))
             content()
-                .frame(maxWidth: .infinity)
+                .frame(width: EventEditorStyle.shiftActionButtonWidth)
                 .frame(height: EventEditorStyle.compactControlHeight)
         }
         .frame(maxWidth: .infinity)
@@ -1513,12 +1518,29 @@ private struct WorkInfoSection: View {
                 .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
 
             content()
-                .frame(maxWidth: .infinity)
+                .frame(width: EventEditorStyle.shiftActionButtonWidth)
                 .frame(height: EventEditorStyle.compactControlHeight)
         }
         .frame(maxWidth: .infinity)
     }
 
+}
+
+private struct ShiftTemplateButtonStyle: ButtonStyle {
+    let backgroundColor: Color
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.caption.weight(.semibold))
+            .foregroundColor(EventEditorStyle.primaryText)
+            .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
+            .background(backgroundColor)
+            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius, style: .continuous))
+            .opacity(configuration.isPressed ? 0.85 : 1)
+    }
+}
+
+private extension WorkInfoSection {
     private func currencyField(title: String, value: Binding<String>, field: EditorFocusedField) -> some View {
         HStack(spacing: 8) {
             Text(title)

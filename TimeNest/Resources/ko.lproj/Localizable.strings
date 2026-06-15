@@ -117,7 +117,7 @@
 "editor.invalid_date_range" = "종료 시간은 시작 시간보다 늦어야 합니다.";
 "editor.workIn" = "출근";
 "editor.workOut" = "퇴근";
-"editor.restTime" = "휴식";
+"editor.restTime" = "휴식 시간";
 "editor.transportFee" = "교통비";
 "editor.hourlyRate" = "시급";
 "editor.currencyUnit" = "위안";
