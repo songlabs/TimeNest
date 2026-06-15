@@ -79,18 +79,8 @@ struct DayDetailView: View {
                 VStack(spacing: 16) {
                     Text(localization.localized(.dayDetailNoEvents))
                         .foregroundColor(.secondary)
-                    
-                    Button(action: {
-                        showingAddEvent = true
-                    }) {
-                        Text(localization.localized(.dayDetailAddEvent))
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
+
+                    addEventButton
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 40)
@@ -106,7 +96,25 @@ struct DayDetailView: View {
                         }
                     )
                 }
+
+                addEventButton
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
             }
+        }
+    }
+
+    private var addEventButton: some View {
+        Button(action: {
+            showingAddEvent = true
+        }) {
+            Text(localization.localized(.dayDetailAddEvent))
+                .fontWeight(.medium)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
+                .background(Color.blue)
+                .foregroundColor(.white)
+                .cornerRadius(8)
         }
     }
 
