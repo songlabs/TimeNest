@@ -220,15 +220,15 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
-        let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+        let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: workInfo)
         let now = Date()
 
         let event = CalendarEvent(
             id: UUID(),
             title: title,
             note: note,
-            startDate: normalized.start,
-            endDate: normalized.end,
+            startDate: saveDates.start,
+            endDate: saveDates.end,
             isAllDay: isAllDay,
             categoryID: nil,
             recurrenceRule: .none,
@@ -322,7 +322,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
         do {
-            let normalized = normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+            let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: workInfo)
             let existingEvent = try await eventUseCase.event(id: id)
             let now = Date()
 
@@ -330,8 +330,8 @@ class MonthCalendarViewModel: ObservableObject {
                 id: id,
                 title: title,
                 note: note,
-                startDate: normalized.start,
-                endDate: normalized.end,
+                startDate: saveDates.start,
+                endDate: saveDates.end,
                 isAllDay: isAllDay,
                 categoryID: existingEvent?.categoryID,
                 recurrenceRule: existingEvent?.recurrenceRule ?? .none,
@@ -351,6 +351,21 @@ class MonthCalendarViewModel: ObservableObject {
             errorMessage = error.localizedDescription
             throw error
         }
+    }
+
+
+    private func eventDatesForSave(title: String, startDate: Date, endDate: Date, isAllDay: Bool, workInfo: WorkInfo) -> (start: Date, end: Date) {
+        if WorkClockTitleMatcher.isClockInTitle(title), let workInTime = workInfo.workInTime {
+            return workClockEventDates(for: workInTime)
+        }
+        if WorkClockTitleMatcher.isClockOutTitle(title), let workOutTime = workInfo.workOutTime {
+            return workClockEventDates(for: workOutTime)
+        }
+        return normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+    }
+
+    private func workClockEventDates(for clockDate: Date) -> (start: Date, end: Date) {
+        (clockDate, CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false))
     }
 
     private func normalizedEventDates(startDate: Date, endDate: Date, isAllDay: Bool) -> (start: Date, end: Date) {

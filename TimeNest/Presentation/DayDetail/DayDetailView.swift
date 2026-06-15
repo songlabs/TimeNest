@@ -230,10 +230,10 @@ struct EventRowView: View {
 
     private func eventTimeText(for event: EventOccurrence) -> String {
         if event.isClockInEvent {
-            return formatTime(event.startDate) ?? ""
+            return formatTime(event.workInfo?.workInTime ?? event.startDate) ?? ""
         }
         if event.isClockOutEvent {
-            return formatTime(event.endDate) ?? ""
+            return formatTime(event.workInfo?.workOutTime ?? event.startDate) ?? ""
         }
         guard let start = formatTime(event.startDate), let end = formatTime(event.endDate) else {
             return ""

@@ -201,10 +201,10 @@ struct DayTimeAxisView: View {
 
     private func eventTimeText(for event: EventOccurrence) -> String {
         if event.isClockInEvent {
-            return formatTime(event.startDate)
+            return formatTime(event.workInfo?.workInTime ?? event.startDate)
         }
         if event.isClockOutEvent {
-            return formatTime(event.endDate)
+            return formatTime(event.workInfo?.workOutTime ?? event.startDate)
         }
         return "\(formatTime(event.startDate)) - \(formatTime(event.endDate))"
     }
