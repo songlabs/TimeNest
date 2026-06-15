@@ -313,6 +313,12 @@ struct EventEditorView: View {
                     }
                 }
             }
+            .onAppear {
+                applySharedWorkValuesForNewEventIfNeeded(date: startDate, resetWhenMissing: false)
+            }
+            .onChange(of: startDate) { oldValue, newValue in
+                handleStartDateChange(from: oldValue, to: newValue)
+            }
             .alert(item: $pendingWorkClockConfirmation) { confirmation in
                 Alert(
                     title: Text(localization.localized(confirmation.titleKey)),
@@ -401,6 +407,8 @@ struct EventEditorView: View {
     }
 
     private func applyWorkClockSelection(_ kind: WorkClockKind) {
+        applySharedWorkValuesForNewEventIfNeeded(date: startDate, resetWhenMissing: false, preserveExistingValues: true)
+
         switch kind {
         case .clockIn:
             title = localization.localized(.editorWorkIn)
@@ -428,6 +436,19 @@ struct EventEditorView: View {
         return nil
     }
 
+    private func handleStartDateChange(from oldValue: Date, to newValue: Date) {
+        guard !isEditing else { return }
+
+        let calendar = Calendar.current
+        let newWorkDate = calendar.startOfDay(for: newValue)
+        workDate = newWorkDate
+        workInDate = EventEditorView.date(on: newWorkDate, matchingTimeOf: workInDate)
+        workOutDate = EventEditorView.date(on: newWorkDate, matchingTimeOf: workOutDate)
+
+        guard !calendar.isDate(oldValue, inSameDayAs: newValue) else { return }
+        applySharedWorkValuesForNewEventIfNeeded(date: newValue, resetWhenMissing: true)
+    }
+
     private static func sharedWorkValues(ownWorkInfo: WorkInfo?, sessionId: UUID, targetDate: Date, existingEvents: [EventOccurrence], editingEventID: UUID?) -> (restHours: Double?, transportFee: Int?, hourlyRate: Int?) {
         let calendar = Calendar.current
         let sameSessionWorkEvents = existingEvents.filter { event in
@@ -435,19 +456,59 @@ struct EventEditorView: View {
             && event.isWorkClockEvent
             && event.workInfo?.workSessionId == sessionId
         }
-        let legacySameDayWorkEvents = existingEvents.filter { event in
+        let sameDayWorkEvents = existingEvents.filter { event in
             event.eventID != editingEventID
             && event.isWorkClockEvent
-            && event.workInfo?.workSessionId == nil
             && calendar.isDate(event.workDate, inSameDayAs: targetDate)
         }
-        let sourceEvents = sameSessionWorkEvents.isEmpty ? legacySameDayWorkEvents : sameSessionWorkEvents
+        let sourceEvents = sameSessionWorkEvents.isEmpty ? sameDayWorkEvents : sameSessionWorkEvents
 
         return (
             restHours: ownWorkInfo?.restHours ?? sourceEvents.compactMap { $0.workInfo?.restHours }.first,
             transportFee: ownWorkInfo?.transportFee ?? sourceEvents.compactMap { $0.workInfo?.transportFee }.first,
             hourlyRate: ownWorkInfo?.hourlyRate ?? sourceEvents.compactMap { $0.workInfo?.hourlyRate }.first
         )
+    }
+
+    private func applySharedWorkValuesForNewEventIfNeeded(date: Date, resetWhenMissing: Bool, preserveExistingValues: Bool = false) {
+        guard !isEditing else { return }
+
+        let sharedValues = EventEditorView.sharedWorkValues(
+            ownWorkInfo: nil,
+            sessionId: workSessionId,
+            targetDate: date,
+            existingEvents: existingEvents,
+            editingEventID: nil
+        )
+
+        if !preserveExistingValues, let restHours = sharedValues.restHours {
+            restTime = restHours
+        } else if !preserveExistingValues, resetWhenMissing {
+            restTime = 1.0
+        }
+
+        if let transportFee = sharedValues.transportFee, (!preserveExistingValues || self.transportFee.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+            self.transportFee = String(transportFee)
+        } else if !preserveExistingValues, resetWhenMissing {
+            self.transportFee = ""
+        }
+
+        if let hourlyRate = sharedValues.hourlyRate, (!preserveExistingValues || self.hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) {
+            self.hourlyRate = String(hourlyRate)
+        } else if !preserveExistingValues, resetWhenMissing {
+            self.hourlyRate = ""
+        }
+    }
+
+    private static func date(on day: Date, matchingTimeOf sourceDate: Date) -> Date {
+        let calendar = Calendar.current
+        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: sourceDate)
+        return calendar.date(
+            bySettingHour: timeComponents.hour ?? 0,
+            minute: timeComponents.minute ?? 0,
+            second: timeComponents.second ?? 0,
+            of: day
+        ) ?? sourceDate
     }
 
     private static func initialWorkOutDate(title: String, workInfo: WorkInfo?, defaultWorkDate: Date, existingEvents: [EventOccurrence]) -> Date {
