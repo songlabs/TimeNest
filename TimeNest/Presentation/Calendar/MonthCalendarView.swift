@@ -83,6 +83,7 @@ struct MonthCalendarView: View {
             EventEditorView(
                 isPresented: $viewModel.showingEventEditor,
                 mode: .create(initialDate: viewModel.selectedDate),
+                existingEvents: viewModel.selectedDateEvents,
                 onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
                     try await viewModel.createEvent(
                         title: title,

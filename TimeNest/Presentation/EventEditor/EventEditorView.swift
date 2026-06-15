@@ -90,6 +90,31 @@ private enum EditorFocusedField: Hashable {
     case hourlyRate
 }
 
+
+private struct WorkClockConfirmation: Identifiable {
+    let kind: WorkClockKind
+
+    var id: WorkClockKind { kind }
+
+    var titleKey: LocalizedString {
+        switch kind {
+        case .clockIn:
+            return .editorWorkInOverwriteTitle
+        case .clockOut:
+            return .editorWorkOutOverwriteTitle
+        }
+    }
+
+    var messageKey: LocalizedString {
+        switch kind {
+        case .clockIn:
+            return .editorWorkInOverwriteMessage
+        case .clockOut:
+            return .editorWorkOutOverwriteMessage
+        }
+    }
+}
+
 enum EventEditorMode {
     case create(initialDate: Date)
     case edit(
@@ -109,6 +134,7 @@ struct EventEditorView: View {
     @Environment(\.localization) private var localization
     @Binding var isPresented: Bool
     let mode: EventEditorMode
+    let existingEvents: [EventOccurrence]
     var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
 
     @State private var title: String
@@ -129,8 +155,7 @@ struct EventEditorView: View {
     @State private var transportFee: String = "" // 交通费
     @State private var hourlyRate: String = "" // 时给
     @State private var showingRestTimePicker: Bool = false // 休息时间选择器
-    @State private var hasTappedWorkIn: Bool = false
-    @State private var hasTappedWorkOut: Bool = false
+    @State private var pendingWorkClockConfirmation: WorkClockConfirmation?
     @FocusState private var focusedField: EditorFocusedField?
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
@@ -138,10 +163,12 @@ struct EventEditorView: View {
     init(
         isPresented: Binding<Bool>,
         mode: EventEditorMode,
+        existingEvents: [EventOccurrence] = [],
         onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
     ) {
         _isPresented = isPresented
         self.mode = mode
+        self.existingEvents = existingEvents
         self.onSave = onSave
 
         let initialState = EventEditorView.initialState(for: mode)
@@ -225,15 +252,15 @@ struct EventEditorView: View {
                                 startDate: $startDate,
                                 endDate: $endDate,
                                 eventTitle: $title,
-                                hasTappedWorkIn: $hasTappedWorkIn,
-                                hasTappedWorkOut: $hasTappedWorkOut,
                                 focusedField: $focusedField,
                                 workInTitle: localization.localized(.editorWorkIn),
                                 workOutTitle: localization.localized(.editorWorkOut),
                                 restTimeTitle: localization.localized(.editorRestTime),
                                 transportFeeTitle: localization.localized(.editorTransportFee),
                                 hourlyRateTitle: localization.localized(.editorHourlyRate),
-                                currencyUnit: localization.localized(.editorCurrencyUnit)
+                                currencyUnit: localization.localized(.editorCurrencyUnit),
+                                onWorkInTap: { handleWorkClockTap(.clockIn) },
+                                onWorkOutTap: { handleWorkClockTap(.clockOut) }
                             )
                             .sheet(isPresented: $showingRestTimePicker) {
                                 RestTimePickerSheet(restTime: $restTime)
@@ -264,8 +291,15 @@ struct EventEditorView: View {
                     }
                 }
             }
-            .onAppear {
-                initializeWorkButtonStateIfNeeded()
+            .alert(item: $pendingWorkClockConfirmation) { confirmation in
+                Alert(
+                    title: Text(localization.localized(confirmation.titleKey)),
+                    message: Text(localization.localized(confirmation.messageKey)),
+                    primaryButton: .default(Text(localization.localized(.editorWorkOverwriteButton))) {
+                        applyWorkClockSelection(confirmation.kind)
+                    },
+                    secondaryButton: .cancel(Text(localization.localized(.editorWorkOverwriteCancelButton)))
+                )
             }
         }
     }
@@ -331,14 +365,38 @@ struct EventEditorView: View {
     }
 
 
-    private func initializeWorkButtonStateIfNeeded() {
-        if title == localization.localized(.editorWorkIn) {
-            hasTappedWorkIn = true
-        }
+    private func handleWorkClockTap(_ kind: WorkClockKind) {
+        focusedField = nil
 
-        if title == localization.localized(.editorWorkOut) {
-            hasTappedWorkOut = true
+        if hasExistingWorkClockEvent(kind) {
+            pendingWorkClockConfirmation = WorkClockConfirmation(kind: kind)
+        } else {
+            applyWorkClockSelection(kind)
         }
+    }
+
+    private func applyWorkClockSelection(_ kind: WorkClockKind) {
+        switch kind {
+        case .clockIn:
+            title = localization.localized(.editorWorkIn)
+        case .clockOut:
+            title = localization.localized(.editorWorkOut)
+        }
+        focusedField = nil
+    }
+
+    private func hasExistingWorkClockEvent(_ kind: WorkClockKind) -> Bool {
+        existingEvents.contains { event in
+            guard event.eventID != editingEventID else { return false }
+            return Calendar.current.isDate(event.startDate, inSameDayAs: startDate) && event.matchesWorkClockKind(kind)
+        }
+    }
+
+    private var editingEventID: UUID? {
+        if case .edit(let eventID, _, _, _, _, _, _, _, _) = mode {
+            return eventID
+        }
+        return nil
     }
 
     private func save() async {
@@ -1132,8 +1190,6 @@ private struct WorkInfoSection: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var eventTitle: String
-    @Binding var hasTappedWorkIn: Bool
-    @Binding var hasTappedWorkOut: Bool
     var focusedField: FocusState<EditorFocusedField?>.Binding
 
     let workInTitle: String
@@ -1142,14 +1198,14 @@ private struct WorkInfoSection: View {
     let transportFeeTitle: String
     let hourlyRateTitle: String
     let currencyUnit: String
+    let onWorkInTap: () -> Void
+    let onWorkOutTap: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
             HStack(spacing: EventEditorStyle.workColumnSpacing) {
-                workColumn(title: workInTitle, isDisabled: hasTappedWorkIn) {
-                    eventTitle = workInTitle
-                    hasTappedWorkIn = true
-                    focusedField.wrappedValue = nil
+                workColumn(title: workInTitle) {
+                    onWorkInTap()
                 } content: {
                     DatePicker("", selection: $startDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
@@ -1171,10 +1227,8 @@ private struct WorkInfoSection: View {
                     .buttonStyle(.plain)
                 }
 
-                workColumn(title: workOutTitle, isDisabled: hasTappedWorkOut) {
-                    eventTitle = workOutTitle
-                    hasTappedWorkOut = true
-                    focusedField.wrappedValue = nil
+                workColumn(title: workOutTitle) {
+                    onWorkOutTap()
                 } content: {
                     DatePicker("", selection: $endDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
@@ -1193,16 +1247,13 @@ private struct WorkInfoSection: View {
         .cardContainer()
     }
 
-    private func workColumn<Content: View>(title: String, isDisabled: Bool, action: @escaping () -> Void, @ViewBuilder content: () -> Content) -> some View {
+    private func workColumn<Content: View>(title: String, action: @escaping () -> Void, @ViewBuilder content: () -> Content) -> some View {
         VStack(spacing: 8) {
             Button(action: action) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
             }
             .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius))
-            .disabled(isDisabled)
-            .opacity(isDisabled ? 0.55 : 1)
-
             content()
                 .frame(maxWidth: .infinity)
                 .frame(height: EventEditorStyle.compactControlHeight)

@@ -28,6 +28,7 @@ struct DayDetailView: View {
                 EventEditorView(
                     isPresented: $showingAddEvent,
                     mode: .create(initialDate: initialDate),
+                    existingEvents: cell.events,
                     onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
                         try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
                     }
@@ -47,6 +48,7 @@ struct DayDetailView: View {
                         initialWorkInfo: event.workInfo,
                         initialShiftTemplateID: event.shiftTemplateID
                     ),
+                    existingEvents: cell.events,
                     onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo in
                         try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo)
                     }
@@ -202,9 +204,8 @@ struct EventRowView: View {
                     Text(LocalizationManager.shared.localized(.editorAllDay))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                } else if let start = formatTime(event.startDate),
-                          let end = formatTime(event.endDate) {
-                    Text("\(start) - \(end)")
+                } else {
+                    Text(eventTimeText(for: event))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -225,6 +226,19 @@ struct EventRowView: View {
         .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(8)
+    }
+
+    private func eventTimeText(for event: EventOccurrence) -> String {
+        if event.isClockInEvent {
+            return formatTime(event.startDate) ?? ""
+        }
+        if event.isClockOutEvent {
+            return formatTime(event.endDate) ?? ""
+        }
+        guard let start = formatTime(event.startDate), let end = formatTime(event.endDate) else {
+            return ""
+        }
+        return "\(start) - \(end)"
     }
 
     private func formatTime(_ date: Date) -> String? {
