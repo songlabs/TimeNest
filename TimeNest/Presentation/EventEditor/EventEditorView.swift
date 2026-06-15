@@ -1433,6 +1433,22 @@ private struct RestTimePickerSheet: View {
 
 // MARK: - Work Info Section
 
+private enum WorkTimeEditTarget: Hashable, Identifiable {
+    case workIn
+    case workOut
+
+    var id: Self { self }
+
+    func title(workInTitle: String, workOutTitle: String) -> String {
+        switch self {
+        case .workIn:
+            return workInTitle
+        case .workOut:
+            return workOutTitle
+        }
+    }
+}
+
 /// 打工时间和收入信息输入组件
 private struct WorkInfoSection: View {
     @Binding var restTime: Double
@@ -1453,20 +1469,28 @@ private struct WorkInfoSection: View {
     let onWorkInTap: () -> Void
     let onWorkOutTap: () -> Void
 
+    @State private var editingWorkTime: WorkTimeEditTarget?
+
     var body: some View {
         VStack(spacing: 14) {
             HStack(spacing: EventEditorStyle.workColumnSpacing) {
                 workColumn(title: workInTitle) {
                     onWorkInTap()
                 } content: {
-                    workInfoDateValuePill(date: $workInDate)
+                    Button {
+                        editingWorkTime = .workIn
+                    } label: {
+                        workInfoTimeValuePillLabel(formatWorkTime(workInDate))
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                 }
 
                 workColumn(title: restTimeTitle) {
                     Button {
                         showingRestTimePicker = true
                     } label: {
-                        workInfoTimeValuePill(formatRestTime(restTime))
+                        workInfoTimeValuePillLabel(formatRestTime(restTime))
                     }
                     .buttonStyle(.plain)
                 }
@@ -1474,7 +1498,13 @@ private struct WorkInfoSection: View {
                 workColumn(title: workOutTitle) {
                     onWorkOutTap()
                 } content: {
-                    workInfoDateValuePill(date: $workOutDate)
+                    Button {
+                        editingWorkTime = .workOut
+                    } label: {
+                        workInfoTimeValuePillLabel(formatWorkTime(workOutDate))
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
                 }
             }
 
@@ -1487,6 +1517,27 @@ private struct WorkInfoSection: View {
         }
         .padding(EventEditorStyle.cardPadding)
         .cardContainer()
+        .sheet(item: $editingWorkTime) { target in
+            NavigationStack {
+                DatePicker(
+                    "",
+                    selection: workTimeBinding(for: target),
+                    displayedComponents: .hourAndMinute
+                )
+                .datePickerStyle(.wheel)
+                .labelsHidden()
+                .padding()
+                .navigationTitle(target.title(workInTitle: workInTitle, workOutTitle: workOutTitle))
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(localizedString("完了")) {
+                            editingWorkTime = nil
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.height(320)])
+        }
     }
 
     private func workColumn<Content: View>(title: String, action: @escaping () -> Void, @ViewBuilder content: () -> Content) -> some View {
@@ -1513,23 +1564,7 @@ private struct WorkInfoSection: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func workInfoDateValuePill(date: Binding<Date>) -> some View {
-        ZStack {
-            workInfoTimeValuePill(formatWorkTime(date.wrappedValue))
-
-            DatePicker("", selection: date, displayedComponents: .hourAndMinute)
-                .labelsHidden()
-                .datePickerStyle(.compact)
-                .frame(width: EventEditorStyle.workInfoTimeValuePillWidth,
-                       height: EventEditorStyle.workInfoTimeValuePillHeight)
-                .opacity(0.02)
-        }
-        .frame(width: EventEditorStyle.workInfoTimeValuePillWidth,
-               height: EventEditorStyle.workInfoTimeValuePillHeight)
-        .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-    }
-
-    private func workInfoTimeValuePill(_ text: String) -> some View {
+    private func workInfoTimeValuePillLabel(_ text: String) -> some View {
         Text(text)
             .font(.subheadline.weight(.medium))
             .foregroundColor(EventEditorStyle.fieldText)
@@ -1539,9 +1574,23 @@ private struct WorkInfoSection: View {
             .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
     }
 
+    private func workTimeBinding(for target: WorkTimeEditTarget) -> Binding<Date> {
+        switch target {
+        case .workIn:
+            return $workInDate
+        case .workOut:
+            return $workOutDate
+        }
+    }
+
     private func formatWorkTime(_ date: Date) -> String {
         let components = Calendar.current.dateComponents([.hour, .minute], from: date)
         return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
+    }
+
+    private func localizedString(_ key: String) -> String {
+        let localized = NSLocalizedString(key, comment: "")
+        return localized != key ? localized : key
     }
 
 }
