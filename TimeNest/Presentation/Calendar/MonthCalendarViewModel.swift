@@ -21,6 +21,10 @@ class MonthCalendarViewModel: ObservableObject {
     }
     
     // 日视图的日期单元格
+    var selectedDateEvents: [EventOccurrence] {
+        dayCell?.events ?? []
+    }
+
     var dayCell: CalendarDayCell? {
         guard let grid = grid else { return nil }
         let calendar = Calendar(identifier: .gregorian)
@@ -238,8 +242,63 @@ class MonthCalendarViewModel: ObservableObject {
             workInfo: workInfo
         )
 
-        try await eventUseCase.createEvent(event)
+        if let kind = workClockKind(for: title) {
+            try await upsertWorkClockEvent(event, kind: kind)
+        } else {
+            try await eventUseCase.createEvent(event)
+        }
         await reloadMonth()
+    }
+
+
+    private func upsertWorkClockEvent(_ event: CalendarEvent, kind: WorkClockKind) async throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let dayStart = calendar.startOfDay(for: event.startDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+        let sameDayEvents = try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
+        let sameKindEvents = sameDayEvents
+            .filter { workClockKind(for: $0.title) == kind }
+            .sorted { $0.createdAt < $1.createdAt }
+
+        guard let existingEvent = sameKindEvents.first else {
+            try await eventUseCase.createEvent(event)
+            return
+        }
+
+        let now = Date()
+        let updatedEvent = CalendarEvent(
+            id: existingEvent.id,
+            title: event.title,
+            note: event.note,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            isAllDay: event.isAllDay,
+            categoryID: existingEvent.categoryID,
+            recurrenceRule: existingEvent.recurrenceRule,
+            reminderTemplateID: existingEvent.reminderTemplateID,
+            reminderOffsetMinutes: event.reminderOffsetMinutes,
+            notificationID: existingEvent.notificationID,
+            importSource: existingEvent.importSource,
+            createdAt: existingEvent.createdAt,
+            updatedAt: now,
+            shiftTemplateID: event.shiftTemplateID,
+            workInfo: event.workInfo
+        )
+        try await eventUseCase.updateEvent(updatedEvent)
+
+        for duplicate in sameKindEvents.dropFirst() {
+            try await eventUseCase.deleteEvent(id: duplicate.id)
+        }
+    }
+
+    private func workClockKind(for title: String) -> WorkClockKind? {
+        if WorkClockTitleMatcher.isClockInTitle(title) {
+            return .clockIn
+        }
+        if WorkClockTitleMatcher.isClockOutTitle(title) {
+            return .clockOut
+        }
+        return nil
     }
 
     func selectDay(_ cell: CalendarDayCell) {

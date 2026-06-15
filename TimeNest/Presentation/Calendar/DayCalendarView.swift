@@ -200,7 +200,13 @@ struct DayTimeAxisView: View {
     }
 
     private func eventTimeText(for event: EventOccurrence) -> String {
-        "\(formatTime(event.startDate)) - \(formatTime(event.endDate))"
+        if event.isClockInEvent {
+            return formatTime(event.startDate)
+        }
+        if event.isClockOutEvent {
+            return formatTime(event.endDate)
+        }
+        return "\(formatTime(event.startDate)) - \(formatTime(event.endDate))"
     }
 
     private func minutesFromStartOfDay(_ date: Date) -> Int {
