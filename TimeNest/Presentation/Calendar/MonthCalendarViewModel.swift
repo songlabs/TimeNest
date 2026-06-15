@@ -245,7 +245,9 @@ class MonthCalendarViewModel: ObservableObject {
 
         if let kind = workClockKind(for: title) {
             try await upsertWorkClockEvent(event, kind: kind)
-            try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
+            if let sessionId = adjustedWorkInfo.workSessionId {
+                try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
+            }
         } else {
             try await eventUseCase.createEvent(event)
         }
@@ -254,13 +256,15 @@ class MonthCalendarViewModel: ObservableObject {
 
 
     private func upsertWorkClockEvent(_ event: CalendarEvent, kind: WorkClockKind) async throws {
-        let calendar = Calendar(identifier: .gregorian)
-        let dayStart = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
-        let sameDayEvents = try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
-        let sameKindEvents = sameDayEvents
-            .filter { workClockKind(for: $0.title) == kind }
-            .sorted { $0.createdAt < $1.createdAt }
+        let sessionId = event.workInfo?.workSessionId
+        let sameKindEvents: [CalendarEvent]
+        if let sessionId {
+            sameKindEvents = try await workEventsAround(workDate: event.workInfo?.workDate ?? event.startDate)
+                .filter { $0.workInfo?.workSessionId == sessionId && workClockKind(for: $0.title) == kind }
+                .sorted { $0.createdAt < $1.createdAt }
+        } else {
+            sameKindEvents = []
+        }
 
         guard let existingEvent = sameKindEvents.first else {
             try await eventUseCase.createEvent(event)
@@ -292,11 +296,12 @@ class MonthCalendarViewModel: ObservableObject {
             try await eventUseCase.deleteEvent(id: duplicate.id)
         }
     }
-    private func syncSharedWorkValues(for date: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?) async throws {
-        let sameDayWorkEvents = try await sameDayWorkEvents(for: date)
+    private func syncSharedWorkValues(for sessionId: UUID, workDate: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?) async throws {
+        let sameSessionWorkEvents = try await workEventsAround(workDate: workDate)
+            .filter { $0.workInfo?.workSessionId == sessionId }
         let now = Date()
 
-        for event in sameDayWorkEvents {
+        for event in sameSessionWorkEvents {
             var syncedWorkInfo = event.workInfo ?? WorkInfo()
             syncedWorkInfo.restHours = restHours
             syncedWorkInfo.transportFee = transportFee
@@ -328,6 +333,14 @@ class MonthCalendarViewModel: ObservableObject {
         let calendar = Calendar(identifier: .gregorian)
         let dayStart = calendar.startOfDay(for: date)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+        return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
+            .filter { workClockKind(for: $0.title) != nil }
+    }
+
+    private func workEventsAround(workDate: Date) async throws -> [CalendarEvent] {
+        let calendar = Calendar(identifier: .gregorian)
+        let dayStart = calendar.startOfDay(for: workDate)
+        let dayEnd = calendar.date(byAdding: .day, value: 2, to: dayStart) ?? dayStart
         return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
             .filter { workClockKind(for: $0.title) != nil }
     }
@@ -390,7 +403,9 @@ class MonthCalendarViewModel: ObservableObject {
 
             try await eventUseCase.updateEvent(updatedEvent)
             if workClockKind(for: title) != nil {
-                try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
+                if let sessionId = adjustedWorkInfo.workSessionId {
+                    try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
+                }
             }
             await reloadMonth()
         } catch {
@@ -405,6 +420,9 @@ class MonthCalendarViewModel: ObservableObject {
         }
 
         var adjusted = workInfo
+        if adjusted.workSessionId == nil {
+            adjusted.workSessionId = WorkInfo.makeNewWorkSessionId()
+        }
         let calendar = Calendar(identifier: .gregorian)
         let workDay = calendar.startOfDay(for: workInfo.workDate ?? startDate)
         adjusted.workDate = workDay
@@ -417,7 +435,7 @@ class MonthCalendarViewModel: ObservableObject {
             return adjusted
         }
 
-        let clockInTime = try await clockInTime(on: workDay)
+        let clockInTime = try await clockInTime(on: workDay, sessionId: adjusted.workSessionId)
         let baseOut = date(on: workDay, matchingTimeOf: workOutTime)
         if let clockInTime, isTime(baseOut, earlierThan: clockInTime) {
             adjusted.workOutTime = calendar.date(byAdding: .day, value: 1, to: baseOut) ?? baseOut
@@ -427,9 +445,13 @@ class MonthCalendarViewModel: ObservableObject {
         return adjusted
     }
 
-    private func clockInTime(on workDay: Date) async throws -> Date? {
+    private func clockInTime(on workDay: Date, sessionId: UUID?) async throws -> Date? {
         try await sameDayWorkEvents(for: workDay)
             .filter { WorkClockTitleMatcher.isClockInTitle($0.title) }
+            .filter { event in
+                guard let sessionId else { return event.workInfo?.workSessionId == nil }
+                return event.workInfo?.workSessionId == sessionId || event.workInfo?.workSessionId == nil
+            }
             .map { $0.workInfo?.workInTime ?? $0.startDate }
             .min()
     }

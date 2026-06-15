@@ -89,6 +89,24 @@ class EventUseCase {
                 workInfo: event.workInfo
             )
         }
+        .sorted { lhs, rhs in
+            let calendar = Calendar(identifier: .gregorian)
+            let leftDay = calendar.startOfDay(for: lhs.workDate)
+            let rightDay = calendar.startOfDay(for: rhs.workDate)
+            if leftDay != rightDay { return leftDay < rightDay }
+            let leftSessionTime = lhs.isWorkClockEvent ? sessionSortTime(for: lhs) : lhs.startDate
+            let rightSessionTime = rhs.isWorkClockEvent ? sessionSortTime(for: rhs) : rhs.startDate
+            if leftSessionTime != rightSessionTime { return leftSessionTime < rightSessionTime }
+            if lhs.isClockInEvent != rhs.isClockInEvent { return lhs.isClockInEvent }
+            return lhs.actualWorkClockDate < rhs.actualWorkClockDate
+        }
+    }
+
+    private func sessionSortTime(for occurrence: EventOccurrence) -> Date {
+        if occurrence.isClockInEvent {
+            return occurrence.workInfo?.workInTime ?? occurrence.startDate
+        }
+        return occurrence.workInfo?.workInTime ?? occurrence.workInfo?.workOutTime ?? occurrence.startDate
     }
 
     private func validate(_ event: CalendarEvent) throws {

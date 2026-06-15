@@ -111,40 +111,71 @@ class WorkStatisticsViewModel: ObservableObject {
         return DateInterval(start: start, end: exclusiveEnd)
     }
 
+    private struct WorkSessionGroup {
+        var clockIn: CalendarEvent?
+        var clockOut: CalendarEvent?
+    }
+
     private func applyStatistics(from events: [CalendarEvent]) {
         let calendar = Calendar.current
-        var clockIns: [Date: CalendarEvent] = [:]
-        var clockOuts: [Date: CalendarEvent] = [:]
+        var sessions: [UUID: WorkSessionGroup] = [:]
+        var legacyClockInsByDay: [Date: [CalendarEvent]] = [:]
+        var legacyClockOutsByDay: [Date: [CalendarEvent]] = [:]
 
         for event in events {
-            let clockInTime = event.workInfo?.workInTime ?? event.startDate
-            let clockOutTime = effectiveClockOutTime(for: event, clockInTime: nil)
+            guard isClockInEvent(event) || isClockOutEvent(event) else { continue }
+            let workDay = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
 
-            if isClockInEvent(event) {
-                let day = calendar.startOfDay(for: event.workInfo?.workDate ?? clockInTime)
-                if clockIns[day].map({ clockInTime < ($0.workInfo?.workInTime ?? $0.startDate) }) ?? true {
-                    clockIns[day] = event
+            if let sessionId = event.workInfo?.workSessionId {
+                var group = sessions[sessionId] ?? WorkSessionGroup()
+                if isClockInEvent(event) {
+                    let time = event.workInfo?.workInTime ?? event.startDate
+                    if group.clockIn.map({ time < ($0.workInfo?.workInTime ?? $0.startDate) }) ?? true {
+                        group.clockIn = event
+                    }
+                } else if isClockOutEvent(event) {
+                    let time = event.workInfo?.workOutTime ?? event.startDate
+                    if group.clockOut.map({ time > ($0.workInfo?.workOutTime ?? $0.startDate) }) ?? true {
+                        group.clockOut = event
+                    }
                 }
+                sessions[sessionId] = group
+            } else if isClockInEvent(event) {
+                legacyClockInsByDay[workDay, default: []].append(event)
             } else if isClockOutEvent(event) {
-                let day = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
-                if clockOuts[day].map({ clockOutTime > ($0.workInfo?.workOutTime ?? $0.startDate) }) ?? true {
-                    clockOuts[day] = event
-                }
+                legacyClockOutsByDay[workDay, default: []].append(event)
             }
         }
 
-        let days = clockIns.keys.filter { clockOuts[$0] != nil }.sorted()
-        var totalMinutes = 0
-        var totalPay = 0
+        let legacyDays = Set(legacyClockInsByDay.keys).intersection(legacyClockOutsByDay.keys)
+        var legacyGroups: [WorkSessionGroup] = []
+        for day in legacyDays {
+            let ins = (legacyClockInsByDay[day] ?? []).sorted { ($0.workInfo?.workInTime ?? $0.startDate) < ($1.workInfo?.workInTime ?? $1.startDate) }
+            let outs = (legacyClockOutsByDay[day] ?? []).sorted { ($0.workInfo?.workOutTime ?? $0.startDate) < ($1.workInfo?.workOutTime ?? $1.startDate) }
+            for (clockIn, clockOut) in zip(ins, outs) {
+                legacyGroups.append(WorkSessionGroup(clockIn: clockIn, clockOut: clockOut))
+            }
+        }
 
-        statisticsData = days.compactMap { day in
-            guard let clockIn = clockIns[day], let clockOut = clockOuts[day] else { return nil }
+        let completeSessions = (Array(sessions.values) + legacyGroups).compactMap { group -> (day: Date, clockIn: CalendarEvent, clockOut: CalendarEvent, inTime: Date, outTime: Date)? in
+            guard let clockIn = group.clockIn, let clockOut = group.clockOut else { return nil }
             let inTime = clockIn.workInfo?.workInTime ?? clockIn.startDate
             let outTime = effectiveClockOutTime(for: clockOut, clockInTime: inTime)
             guard outTime > inTime else { return nil }
+            let day = calendar.startOfDay(for: clockIn.workInfo?.workDate ?? clockOut.workInfo?.workDate ?? inTime)
+            guard statisticsRange().contains(day) else { return nil }
+            return (day, clockIn, clockOut, inTime, outTime)
+        }.sorted {
+            if $0.day != $1.day { return $0.day < $1.day }
+            return $0.inTime < $1.inTime
+        }
 
-            let sharedValues = sharedWorkValues(clockIn: clockIn, clockOut: clockOut)
-            let workedSeconds = max(0, outTime.timeIntervalSince(inTime) - sharedValues.restHours * 3600)
+        var totalMinutes = 0
+        var totalPay = 0
+
+        statisticsData = completeSessions.map { session in
+            let sharedValues = sharedWorkValues(clockIn: session.clockIn, clockOut: session.clockOut)
+            let workedSeconds = max(0, session.outTime.timeIntervalSince(session.inTime) - sharedValues.restHours * 3600)
             let minutes = Int(workedSeconds / 60)
             let amount = Int((workedSeconds / 3600) * Double(sharedValues.hourlyRate)) + sharedValues.transportFee
 
@@ -152,7 +183,7 @@ class WorkStatisticsViewModel: ObservableObject {
             totalPay += amount
 
             return StatisticsDataItem(
-                date: formatDate(day),
+                date: formatDate(session.day),
                 time: formatDuration(minutes: minutes),
                 amount: formatCurrency(amount)
             )
