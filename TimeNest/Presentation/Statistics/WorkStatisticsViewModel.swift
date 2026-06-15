@@ -58,7 +58,7 @@ class WorkStatisticsViewModel: ObservableObject {
         isLoading = true
         Task {
             do {
-                let events = try await eventUseCase.events(in: statisticsRange())
+                let events = try await eventUseCase.events(in: statisticsFetchRange())
                 applyStatistics(from: events)
             } catch {
                 loadEmptyStatisticsState()
@@ -111,6 +111,13 @@ class WorkStatisticsViewModel: ObservableObject {
         return DateInterval(start: start, end: exclusiveEnd)
     }
 
+    private func statisticsFetchRange() -> DateInterval {
+        let range = statisticsRange()
+        let calendar = Calendar.current
+        let fetchEnd = calendar.date(byAdding: .day, value: 1, to: range.end) ?? range.end
+        return DateInterval(start: range.start, end: fetchEnd)
+    }
+
     private struct WorkSessionGroup {
         var clockIn: CalendarEvent?
         var clockOut: CalendarEvent?
@@ -147,15 +154,10 @@ class WorkStatisticsViewModel: ObservableObject {
             }
         }
 
-        let legacyDays = Set(legacyClockInsByDay.keys).intersection(legacyClockOutsByDay.keys)
-        var legacyGroups: [WorkSessionGroup] = []
-        for day in legacyDays {
-            let ins = (legacyClockInsByDay[day] ?? []).sorted { ($0.workInfo?.workInTime ?? $0.startDate) < ($1.workInfo?.workInTime ?? $1.startDate) }
-            let outs = (legacyClockOutsByDay[day] ?? []).sorted { ($0.workInfo?.workOutTime ?? $0.startDate) < ($1.workInfo?.workOutTime ?? $1.startDate) }
-            for (clockIn, clockOut) in zip(ins, outs) {
-                legacyGroups.append(WorkSessionGroup(clockIn: clockIn, clockOut: clockOut))
-            }
-        }
+        let legacyGroups = makeLegacySessionGroups(
+            clockInsByDay: legacyClockInsByDay,
+            clockOutsByDay: legacyClockOutsByDay
+        )
 
         let completeSessions = (Array(sessions.values) + legacyGroups).compactMap { group -> (day: Date, clockIn: CalendarEvent, clockOut: CalendarEvent, inTime: Date, outTime: Date)? in
             guard let clockIn = group.clockIn, let clockOut = group.clockOut else { return nil }
@@ -191,6 +193,33 @@ class WorkStatisticsViewModel: ObservableObject {
 
         totalHours = formatDuration(minutes: totalMinutes)
         totalAmount = formatCurrency(totalPay)
+    }
+
+    private func makeLegacySessionGroups(clockInsByDay: [Date: [CalendarEvent]], clockOutsByDay: [Date: [CalendarEvent]]) -> [WorkSessionGroup] {
+        let clockIns = clockInsByDay.values.flatMap { $0 }.sorted { ($0.workInfo?.workInTime ?? $0.startDate) < ($1.workInfo?.workInTime ?? $1.startDate) }
+        let clockOuts = clockOutsByDay.values.flatMap { $0 }.sorted { ($0.workInfo?.workOutTime ?? $0.startDate) < ($1.workInfo?.workOutTime ?? $1.startDate) }
+        var usedClockOutIDs = Set<UUID>()
+        var groups: [WorkSessionGroup] = []
+
+        for (index, clockIn) in clockIns.enumerated() {
+            let inTime = clockIn.workInfo?.workInTime ?? clockIn.startDate
+            let nextInTime = clockIns.dropFirst(index + 1).first.map { $0.workInfo?.workInTime ?? $0.startDate }
+
+            guard let clockOut = clockOuts.first(where: { candidate in
+                guard !usedClockOutIDs.contains(candidate.id) else { return false }
+                let outTime = effectiveClockOutTime(for: candidate, clockInTime: inTime)
+                guard outTime > inTime else { return false }
+                if let nextInTime, outTime >= nextInTime { return false }
+                return true
+            }) else {
+                continue
+            }
+
+            usedClockOutIDs.insert(clockOut.id)
+            groups.append(WorkSessionGroup(clockIn: clockIn, clockOut: clockOut))
+        }
+
+        return groups
     }
 
     private func effectiveClockOutTime(for event: CalendarEvent, clockInTime: Date?) -> Date {
