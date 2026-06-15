@@ -344,16 +344,17 @@ struct EventEditorView: View {
     private static func initialState(for mode: EventEditorMode) -> (title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, workInfo: WorkInfo?, shiftTemplateID: ShiftTimeTemplateID?, defaultWorkDate: Date) {
         switch mode {
         case .create(let initialDate):
+            let defaultStartDate = makeDefaultEventStartDate(selectedDate: initialDate)
             return (
                 title: "",
                 note: nil,
-                startDate: initialDate,
-                endDate: CalendarEvent.defaultEndDate(for: initialDate, isAllDay: false),
+                startDate: defaultStartDate,
+                endDate: makeDefaultEventEndDate(startDate: defaultStartDate),
                 isAllDay: false,
                 reminderOffsetMinutes: nil,
                 workInfo: nil,
                 shiftTemplateID: nil,
-                defaultWorkDate: workClockDefaultDate(on: initialDate)
+                defaultWorkDate: defaultStartDate
             )
         case .edit(_, let initialTitle, let initialNote, let initialStartDate, let initialEndDate, let initialIsAllDay, let initialReminderOffsetMinutes, let initialWorkInfo, let initialShiftTemplateID):
             return (
@@ -365,7 +366,7 @@ struct EventEditorView: View {
                 reminderOffsetMinutes: initialReminderOffsetMinutes,
                 workInfo: initialWorkInfo,
                 shiftTemplateID: initialShiftTemplateID,
-                defaultWorkDate: workClockDefaultDate(on: initialStartDate)
+                defaultWorkDate: makeDefaultEventStartDate(selectedDate: initialStartDate)
             )
         }
     }
@@ -411,9 +412,9 @@ struct EventEditorView: View {
         errorMessage = nil
 
         do {
-            let normalized = normalizedDates()
+            let saveDates = datesForSave()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, currentWorkInfo())
+            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, saveDates.start, saveDates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, currentWorkInfo())
             isPresented = false
         } catch {
             errorMessage = error.localizedDescription
@@ -437,7 +438,22 @@ struct EventEditorView: View {
         EventEditorDateNormalizer.normalizedDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
     }
 
-    private static func workClockDefaultDate(on selectedDate: Date, now: Date = Date()) -> Date {
+    private func datesForSave() -> (start: Date, end: Date) {
+        if WorkClockTitleMatcher.isClockInTitle(title) {
+            return workClockSaveDates(for: workInDate)
+        }
+        if WorkClockTitleMatcher.isClockOutTitle(title) {
+            return workClockSaveDates(for: workOutDate)
+        }
+        return normalizedDates()
+    }
+
+    private func workClockSaveDates(for clockDate: Date) -> (start: Date, end: Date) {
+        let end = CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false)
+        return (clockDate, end)
+    }
+
+    private static func makeDefaultEventStartDate(selectedDate: Date, now: Date = Date()) -> Date {
         let calendar = Calendar.current
         let selectedComponents = calendar.dateComponents([.year, .month, .day], from: selectedDate)
         let nowComponents = calendar.dateComponents([.hour, .minute], from: now)
@@ -452,6 +468,10 @@ struct EventEditorView: View {
         components.second = 0
 
         return calendar.date(from: components) ?? now
+    }
+
+    private static func makeDefaultEventEndDate(startDate: Date) -> Date {
+        CalendarEvent.defaultEndDate(for: startDate, isAllDay: false)
     }
 
     private func applyShiftTemplate(_ template: ShiftTimeTemplate) {
