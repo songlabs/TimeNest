@@ -245,7 +245,7 @@ class MonthCalendarViewModel: ObservableObject {
 
         if let kind = workClockKind(for: title) {
             try await upsertWorkClockEvent(event, kind: kind)
-            try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
+            try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
         } else {
             try await eventUseCase.createEvent(event)
         }
@@ -292,12 +292,13 @@ class MonthCalendarViewModel: ObservableObject {
             try await eventUseCase.deleteEvent(id: duplicate.id)
         }
     }
-    private func syncSharedWorkValues(for date: Date, transportFee: Int?, hourlyRate: Int?) async throws {
+    private func syncSharedWorkValues(for date: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?) async throws {
         let sameDayWorkEvents = try await sameDayWorkEvents(for: date)
         let now = Date()
 
         for event in sameDayWorkEvents {
             var syncedWorkInfo = event.workInfo ?? WorkInfo()
+            syncedWorkInfo.restHours = restHours
             syncedWorkInfo.transportFee = transportFee
             syncedWorkInfo.hourlyRate = hourlyRate
 
@@ -389,7 +390,7 @@ class MonthCalendarViewModel: ObservableObject {
 
             try await eventUseCase.updateEvent(updatedEvent)
             if workClockKind(for: title) != nil {
-                try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
+                try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
             }
             await reloadMonth()
         } catch {
