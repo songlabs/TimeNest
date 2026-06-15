@@ -143,10 +143,9 @@ class WorkStatisticsViewModel: ObservableObject {
             let outTime = effectiveClockOutTime(for: clockOut, clockInTime: inTime)
             guard outTime > inTime else { return nil }
 
-            let restHours = clockIn.workInfo?.restHours ?? clockOut.workInfo?.restHours ?? 0
-            let workedSeconds = max(0, outTime.timeIntervalSince(inTime) - restHours * 3600)
-            let minutes = Int(workedSeconds / 60)
             let sharedValues = sharedWorkValues(clockIn: clockIn, clockOut: clockOut)
+            let workedSeconds = max(0, outTime.timeIntervalSince(inTime) - sharedValues.restHours * 3600)
+            let minutes = Int(workedSeconds / 60)
             let amount = Int((workedSeconds / 3600) * Double(sharedValues.hourlyRate)) + sharedValues.transportFee
 
             totalMinutes += minutes
@@ -178,8 +177,9 @@ class WorkStatisticsViewModel: ObservableObject {
         return calendar.date(byAdding: .day, value: 1, to: outTime) ?? outTime
     }
 
-    private func sharedWorkValues(clockIn: CalendarEvent, clockOut: CalendarEvent) -> (transportFee: Int, hourlyRate: Int) {
+    private func sharedWorkValues(clockIn: CalendarEvent, clockOut: CalendarEvent) -> (restHours: Double, transportFee: Int, hourlyRate: Int) {
         (
+            restHours: clockIn.workInfo?.restHours ?? clockOut.workInfo?.restHours ?? 0,
             transportFee: clockIn.workInfo?.transportFee ?? clockOut.workInfo?.transportFee ?? 0,
             hourlyRate: clockIn.workInfo?.hourlyRate ?? clockOut.workInfo?.hourlyRate ?? 0
         )
