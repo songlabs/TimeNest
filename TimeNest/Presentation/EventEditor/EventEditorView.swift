@@ -545,9 +545,9 @@ struct EventEditorView: View {
         errorMessage = nil
 
         do {
-            let saveDates = datesForSave()
+            let saveContext = normalizedSaveContext()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, saveDates.start, saveDates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, currentWorkInfo())
+            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, saveContext.dates.start, saveContext.dates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, saveContext.workInfo)
             isPresented = false
         } catch {
             errorMessage = error.localizedDescription
@@ -556,11 +556,47 @@ struct EventEditorView: View {
         saving = false
     }
 
+    private func normalizedSaveContext() -> (dates: (start: Date, end: Date), workInfo: WorkInfo) {
+        if WorkClockTitleMatcher.isClockOutTitle(title) {
+            let matchedClockIn = matchingClockInForClockOut()
+            let normalizedWorkDate = matchedClockIn.map { Calendar.current.startOfDay(for: $0.workDate) } ?? workDate
+            let normalizedSessionId = matchedClockIn?.workInfo?.workSessionId ?? workSessionId
+            let normalizedWorkOutDate = normalizedClockOutDate(
+                selectedClockOutDate: workOutDate,
+                clockInDate: matchedClockIn?.actualWorkClockDate,
+                workDay: normalizedWorkDate
+            )
+            let info = currentWorkInfo(
+                workInTime: workInDate,
+                workOutTime: normalizedWorkOutDate,
+                workDate: normalizedWorkDate,
+                workSessionId: normalizedSessionId
+            )
+            return (workClockSaveDates(for: normalizedWorkOutDate), info)
+        }
 
-    private func currentWorkInfo() -> WorkInfo {
-        WorkInfo(
+        if WorkClockTitleMatcher.isClockInTitle(title) {
+            let info = currentWorkInfo(
+                workInTime: workInDate,
+                workOutTime: workOutDate,
+                workDate: workDate,
+                workSessionId: workSessionId
+            )
+            return (workClockSaveDates(for: workInDate), info)
+        }
+
+        return (normalizedDates(), currentWorkInfo(
             workInTime: workInDate,
             workOutTime: workOutDate,
+            workDate: workDate,
+            workSessionId: workSessionId
+        ))
+    }
+
+    private func currentWorkInfo(workInTime: Date?, workOutTime: Date?, workDate: Date?, workSessionId: UUID?) -> WorkInfo {
+        WorkInfo(
+            workInTime: workInTime,
+            workOutTime: workOutTime,
             restHours: restTime,
             workDate: workDate,
             transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
@@ -569,18 +605,48 @@ struct EventEditorView: View {
         )
     }
 
-    private func normalizedDates() -> (start: Date, end: Date) {
-        EventEditorDateNormalizer.normalizedDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+    private func matchingClockInForClockOut() -> EventOccurrence? {
+        let calendar = Calendar.current
+        let targetWorkDay = calendar.startOfDay(for: workDate)
+        let clockIns = existingEvents
+            .filter { event in
+                guard event.eventID != editingEventID, event.isClockInEvent else { return false }
+                return calendar.isDate(event.workDate, inSameDayAs: targetWorkDay)
+            }
+            .sorted { $0.actualWorkClockDate > $1.actualWorkClockDate }
+
+        if let sameSessionClockIn = clockIns.first(where: { $0.workInfo?.workSessionId == workSessionId }) {
+            return sameSessionClockIn
+        }
+
+        let usedClockInSessionIDs = Set(existingEvents.compactMap { event -> UUID? in
+            guard event.eventID != editingEventID, event.isClockOutEvent else { return nil }
+            return event.workInfo?.workSessionId
+        })
+
+        return clockIns.first { event in
+            guard let sessionId = event.workInfo?.workSessionId else { return true }
+            return !usedClockInSessionIDs.contains(sessionId)
+        } ?? clockIns.first
     }
 
-    private func datesForSave() -> (start: Date, end: Date) {
-        if WorkClockTitleMatcher.isClockInTitle(title) {
-            return workClockSaveDates(for: workInDate)
+    private func normalizedClockOutDate(selectedClockOutDate: Date, clockInDate: Date?, workDay: Date) -> Date {
+        let calendar = Calendar.current
+        var normalized = EventEditorView.date(on: workDay, matchingTimeOf: selectedClockOutDate)
+        guard let clockInDate else {
+            if calendar.startOfDay(for: selectedClockOutDate) > calendar.startOfDay(for: workDay) {
+                return EventEditorView.date(on: selectedClockOutDate, matchingTimeOf: selectedClockOutDate)
+            }
+            return normalized
         }
-        if WorkClockTitleMatcher.isClockOutTitle(title) {
-            return workClockSaveDates(for: workOutDate)
+        if normalized <= clockInDate {
+            normalized = calendar.date(byAdding: .day, value: 1, to: normalized) ?? normalized
         }
-        return normalizedDates()
+        return normalized
+    }
+
+    private func normalizedDates() -> (start: Date, end: Date) {
+        EventEditorDateNormalizer.normalizedDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
     }
 
     private func workClockSaveDates(for clockDate: Date) -> (start: Date, end: Date) {
