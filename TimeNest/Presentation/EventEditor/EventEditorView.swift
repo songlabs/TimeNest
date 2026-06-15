@@ -141,6 +141,8 @@ struct EventEditorView: View {
     @State private var note: String
     @State private var startDate: Date
     @State private var endDate: Date
+    @State private var workInDate: Date
+    @State private var workOutDate: Date
     @State private var isAllDay: Bool
     @State private var reminderOffsetMinutes: Int?
     @State private var selectedShiftTemplateID: ShiftTimeTemplateID?
@@ -176,6 +178,8 @@ struct EventEditorView: View {
         _note = State(initialValue: initialState.note ?? "")
         _startDate = State(initialValue: initialState.startDate)
         _endDate = State(initialValue: initialState.endDate)
+        _workInDate = State(initialValue: initialState.workInfo?.workInTime ?? initialState.defaultWorkDate)
+        _workOutDate = State(initialValue: initialState.workInfo?.workOutTime ?? initialState.defaultWorkDate)
         _isAllDay = State(initialValue: initialState.isAllDay)
         _reminderOffsetMinutes = State(initialValue: initialState.reminderOffsetMinutes)
         _restTime = State(initialValue: initialState.workInfo?.restHours ?? 1.0)
@@ -249,8 +253,8 @@ struct EventEditorView: View {
                                 transportFee: $transportFee,
                                 hourlyRate: $hourlyRate,
                                 showingRestTimePicker: $showingRestTimePicker,
-                                startDate: $startDate,
-                                endDate: $endDate,
+                                workInDate: $workInDate,
+                                workOutDate: $workOutDate,
                                 eventTitle: $title,
                                 focusedField: $focusedField,
                                 workInTitle: localization.localized(.editorWorkIn),
@@ -337,7 +341,7 @@ struct EventEditorView: View {
         return nil
     }
 
-    private static func initialState(for mode: EventEditorMode) -> (title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, workInfo: WorkInfo?, shiftTemplateID: ShiftTimeTemplateID?) {
+    private static func initialState(for mode: EventEditorMode) -> (title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, workInfo: WorkInfo?, shiftTemplateID: ShiftTimeTemplateID?, defaultWorkDate: Date) {
         switch mode {
         case .create(let initialDate):
             return (
@@ -348,7 +352,8 @@ struct EventEditorView: View {
                 isAllDay: false,
                 reminderOffsetMinutes: nil,
                 workInfo: nil,
-                shiftTemplateID: nil
+                shiftTemplateID: nil,
+                defaultWorkDate: workClockDefaultDate(on: initialDate)
             )
         case .edit(_, let initialTitle, let initialNote, let initialStartDate, let initialEndDate, let initialIsAllDay, let initialReminderOffsetMinutes, let initialWorkInfo, let initialShiftTemplateID):
             return (
@@ -359,7 +364,8 @@ struct EventEditorView: View {
                 isAllDay: initialIsAllDay,
                 reminderOffsetMinutes: initialReminderOffsetMinutes,
                 workInfo: initialWorkInfo,
-                shiftTemplateID: initialShiftTemplateID
+                shiftTemplateID: initialShiftTemplateID,
+                defaultWorkDate: workClockDefaultDate(on: initialStartDate)
             )
         }
     }
@@ -407,7 +413,7 @@ struct EventEditorView: View {
         do {
             let normalized = normalizedDates()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, currentWorkInfo(start: normalized.start, end: normalized.end))
+            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, normalized.start, normalized.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, currentWorkInfo())
             isPresented = false
         } catch {
             errorMessage = error.localizedDescription
@@ -417,10 +423,10 @@ struct EventEditorView: View {
     }
 
 
-    private func currentWorkInfo(start: Date, end: Date) -> WorkInfo {
+    private func currentWorkInfo() -> WorkInfo {
         WorkInfo(
-            workInTime: start,
-            workOutTime: end,
+            workInTime: workInDate,
+            workOutTime: workOutDate,
             restHours: restTime,
             transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
             hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -429,6 +435,23 @@ struct EventEditorView: View {
 
     private func normalizedDates() -> (start: Date, end: Date) {
         EventEditorDateNormalizer.normalizedDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+    }
+
+    private static func workClockDefaultDate(on selectedDate: Date, now: Date = Date()) -> Date {
+        let calendar = Calendar.current
+        let selectedComponents = calendar.dateComponents([.year, .month, .day], from: selectedDate)
+        let nowComponents = calendar.dateComponents([.hour, .minute], from: now)
+
+        var components = DateComponents()
+        components.calendar = calendar
+        components.year = selectedComponents.year
+        components.month = selectedComponents.month
+        components.day = selectedComponents.day
+        components.hour = nowComponents.hour
+        components.minute = nowComponents.minute
+        components.second = 0
+
+        return calendar.date(from: components) ?? now
     }
 
     private func applyShiftTemplate(_ template: ShiftTimeTemplate) {
@@ -1187,8 +1210,8 @@ private struct WorkInfoSection: View {
     @Binding var transportFee: String
     @Binding var hourlyRate: String
     @Binding var showingRestTimePicker: Bool
-    @Binding var startDate: Date
-    @Binding var endDate: Date
+    @Binding var workInDate: Date
+    @Binding var workOutDate: Date
     @Binding var eventTitle: String
     var focusedField: FocusState<EditorFocusedField?>.Binding
 
@@ -1207,7 +1230,7 @@ private struct WorkInfoSection: View {
                 workColumn(title: workInTitle) {
                     onWorkInTap()
                 } content: {
-                    DatePicker("", selection: $startDate, displayedComponents: .hourAndMinute)
+                    DatePicker("", selection: $workInDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
                 }
@@ -1230,7 +1253,7 @@ private struct WorkInfoSection: View {
                 workColumn(title: workOutTitle) {
                     onWorkOutTap()
                 } content: {
-                    DatePicker("", selection: $endDate, displayedComponents: .hourAndMinute)
+                    DatePicker("", selection: $workOutDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
                 }
