@@ -91,6 +91,7 @@ struct DayDetailView: View {
                     EventRowView(
                         event: event,
                         selectedDate: cell.date.toDate(),
+                        dayEvents: cell.events,
                         onDelete: {
                             onDeleteEvent(event.eventID)
                         },
@@ -192,6 +193,7 @@ private struct EditingEvent: Identifiable {
 struct EventRowView: View {
     let event: EventOccurrence
     let selectedDate: Date
+    let dayEvents: [EventOccurrence]
     let onDelete: () -> Void
     let onEdit: () -> Void
 
@@ -237,7 +239,7 @@ struct EventRowView: View {
         if event.isClockOutEvent {
             let clockOutTime = event.workInfo?.workOutTime ?? event.startDate
             let time = formatTime(clockOutTime) ?? ""
-            if isNextDayClockOut(clockOutTime) {
+            if isNextDayClockOut(clockOutTime, event: event) {
                 return "\(LocalizationManager.shared.localized(.workNextDayPrefix)) \(time)"
             }
             return time
@@ -248,14 +250,41 @@ struct EventRowView: View {
         return "\(start) - \(end)"
     }
 
-    private func isNextDayClockOut(_ clockOutTime: Date) -> Bool {
+    private func isNextDayClockOut(_ clockOutTime: Date, event: EventOccurrence) -> Bool {
         let calendar = Calendar(identifier: .gregorian)
         let detailDay = calendar.startOfDay(for: selectedDate)
         let clockOutDay = calendar.startOfDay(for: clockOutTime)
         guard let nextDay = calendar.date(byAdding: .day, value: 1, to: detailDay) else {
             return false
         }
-        return clockOutDay == nextDay
+        if clockOutDay == nextDay {
+            return true
+        }
+
+        guard clockOutDay == detailDay,
+              let clockInTime = matchingClockInTime(for: event),
+              calendar.isDate(clockInTime, inSameDayAs: detailDay)
+        else {
+            return false
+        }
+        return clockOutTime <= clockInTime
+    }
+
+    private func matchingClockInTime(for clockOutEvent: EventOccurrence) -> Date? {
+        let calendar = Calendar(identifier: .gregorian)
+        let detailDay = calendar.startOfDay(for: selectedDate)
+        let clockIns = dayEvents
+            .filter { event in
+                guard event.isClockInEvent else { return false }
+                return calendar.isDate(event.workDate, inSameDayAs: detailDay)
+            }
+            .sorted { $0.actualWorkClockDate > $1.actualWorkClockDate }
+
+        if let sessionId = clockOutEvent.workInfo?.workSessionId,
+           let sameSessionClockIn = clockIns.first(where: { $0.workInfo?.workSessionId == sessionId }) {
+            return sameSessionClockIn.actualWorkClockDate
+        }
+        return clockIns.first?.actualWorkClockDate
     }
 
     private func formatTime(_ date: Date) -> String? {

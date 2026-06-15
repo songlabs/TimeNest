@@ -154,6 +154,17 @@ class WorkStatisticsViewModel: ObservableObject {
             }
         }
 
+        for group in sessions.values {
+            if let clockIn = group.clockIn, group.clockOut == nil {
+                let workDay = calendar.startOfDay(for: clockIn.workInfo?.workDate ?? clockIn.startDate)
+                legacyClockInsByDay[workDay, default: []].append(clockIn)
+            }
+            if let clockOut = group.clockOut, group.clockIn == nil {
+                let workDay = calendar.startOfDay(for: clockOut.workInfo?.workDate ?? clockOut.startDate)
+                legacyClockOutsByDay[workDay, default: []].append(clockOut)
+            }
+        }
+
         let legacyGroups = makeLegacySessionGroups(
             clockInsByDay: legacyClockInsByDay,
             clockOutsByDay: legacyClockOutsByDay
@@ -233,7 +244,7 @@ class WorkStatisticsViewModel: ObservableObject {
         let inComponents = calendar.dateComponents([.hour, .minute], from: clockInTime)
         let outMinutes = (outComponents.hour ?? 0) * 60 + (outComponents.minute ?? 0)
         let inMinutes = (inComponents.hour ?? 0) * 60 + (inComponents.minute ?? 0)
-        guard outMinutes < inMinutes else { return outTime }
+        guard outMinutes <= inMinutes else { return outTime }
         return calendar.date(byAdding: .day, value: 1, to: outTime) ?? outTime
     }
 
