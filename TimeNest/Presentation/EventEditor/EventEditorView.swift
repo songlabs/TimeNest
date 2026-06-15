@@ -74,6 +74,8 @@ private enum EventEditorStyle {
     static let shiftActionButtonCornerRadius: CGFloat = 8
     static let shiftTemplateButtonSpacing: CGFloat = 12
     static let workColumnSpacing: CGFloat = 12
+    static let workActionButtonFont = Font.subheadline.weight(.semibold)
+    static let workInfoValuePillWidth: CGFloat = shiftActionButtonWidth
 
     /// 统一卡片圆角
     static let cardCornerRadius: CGFloat = 26
@@ -1459,6 +1461,7 @@ private struct WorkInfoSection: View {
                     DatePicker("", selection: $workInDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
+                        .frame(width: EventEditorStyle.workInfoValuePillWidth)
                 }
 
                 workColumn(title: restTimeTitle) {
@@ -1468,7 +1471,7 @@ private struct WorkInfoSection: View {
                         Text(formatRestTime(restTime))
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(EventEditorStyle.fieldText)
-                            .frame(maxWidth: .infinity)
+                            .frame(width: EventEditorStyle.workInfoValuePillWidth)
                             .frame(height: EventEditorStyle.compactControlHeight)
                             .background(EventEditorStyle.fieldBackground)
                             .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
@@ -1482,6 +1485,7 @@ private struct WorkInfoSection: View {
                     DatePicker("", selection: $workOutDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
+                        .frame(width: EventEditorStyle.workInfoValuePillWidth)
                 }
             }
 
@@ -1500,9 +1504,9 @@ private struct WorkInfoSection: View {
         VStack(spacing: 8) {
             Button(action: action) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(EventEditorStyle.workActionButtonFont)
             }
-            .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius))
+            .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius, font: EventEditorStyle.workActionButtonFont))
             content()
                 .frame(width: EventEditorStyle.shiftActionButtonWidth)
                 .frame(height: EventEditorStyle.compactControlHeight)
@@ -1531,7 +1535,7 @@ private struct ShiftTemplateButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.caption.weight(.semibold))
+            .font(EventEditorStyle.workActionButtonFont)
             .foregroundColor(EventEditorStyle.primaryText)
             .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
             .background(backgroundColor)

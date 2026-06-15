@@ -649,10 +649,11 @@ struct ShiftToggleActiveButtonStyle: ButtonStyle {
     var width: CGFloat = 44
     var height: CGFloat = 28
     var cornerRadius: CGFloat = 6
+    var font: Font = .caption.weight(.semibold)
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.caption.weight(.semibold))
+            .font(font)
             .foregroundColor(.white)
             .frame(width: width, height: height)
             .background(backgroundColor)
