@@ -260,8 +260,8 @@
 /* Work Statistics */
 "work_statistics.title" = "Work Statistics";
 "work_statistics" = "Statistics";
-"work_statistics.start_date_month" = "Start Year/Month";
-"work_statistics.end_date_month" = "End Year/Month";
+"work_statistics.start_date_month" = "Start Date";
+"work_statistics.end_date_month" = "End Date";
 "work_statistics.column_date" = "Date";
 "work_statistics.column_time" = "Time";
 "work_statistics.column_amount" = "Amount";

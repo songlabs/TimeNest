@@ -10,6 +10,7 @@ struct StatisticsDataItem: Identifiable, Hashable {
 }
 
 /// 打工统计 View Model
+@MainActor
 class WorkStatisticsViewModel: ObservableObject {
     // MARK: - Properties
     @Published var startDate: Date
@@ -17,103 +18,181 @@ class WorkStatisticsViewModel: ObservableObject {
     @Published var showStartDatePicker = false
     @Published var showEndDatePicker = false
     @Published var isLoading = false
-    
+
     @Published var statisticsData: [StatisticsDataItem] = []
     @Published var totalHours: String = "00:00"
     @Published var totalAmount: String = "¥0"
-    
+
+    private let eventUseCase: EventUseCase?
     private var cancellables = Set<AnyCancellable>()
-    
+
     // MARK: - Initialization
-    init(startDate: Date? = nil, endDate: Date? = nil) {
+    init(eventUseCase: EventUseCase? = nil, startDate: Date? = nil, endDate: Date? = nil) {
+        self.eventUseCase = eventUseCase
         let calendar = Calendar.current
-        
-        // 默认值：当前月份
-        let computedStartDate: Date
-        if let startDate = startDate {
-            computedStartDate = startDate
-        } else {
-            computedStartDate = calendar.date(from: calendar.dateComponents([.year, .month], from: Date())) ?? Date()
-        }
-        
-        let computedEndDate: Date
-        if let endDate = endDate {
-            computedEndDate = endDate
-        } else {
-            computedEndDate = computedStartDate
-        }
-        
-        self.startDate = computedStartDate
-        self.endDate = computedEndDate
+        let now = Date()
+        let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: now)) ?? now
+        let monthEnd = calendar.date(byAdding: DateComponents(month: 1, day: -1), to: monthStart) ?? monthStart
+
+        self.startDate = calendar.startOfDay(for: startDate ?? monthStart)
+        self.endDate = calendar.startOfDay(for: endDate ?? monthEnd)
     }
-    
+
     // MARK: - Computed Properties
     var formattedStartDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy 年 MM 月"
-        return formatter.string(from: startDate)
+        formatDate(startDate)
     }
-    
+
     var formattedEndDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy 年 MM 月"
-        return formatter.string(from: endDate)
+        formatDate(endDate)
     }
-    
+
     // MARK: - Public Methods
     /// 计算统计数据
     func calculateStatistics() {
+        guard let eventUseCase else {
+            loadEmptyStatisticsState()
+            return
+        }
+
         isLoading = true
-        
-        // 模拟延迟（实际应用中应该从数据源获取真实数据）
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-            self?.loadEmptyStatisticsState()
-            self?.isLoading = false
+        Task {
+            do {
+                let events = try await eventUseCase.events(in: statisticsRange())
+                applyStatistics(from: events)
+            } catch {
+                loadEmptyStatisticsState()
+            }
+            isLoading = false
         }
     }
-    
+
     /// 设置日期范围
     func setDateRange(start: Date, end: Date) {
         let calendar = Calendar.current
-        
-        // 确保结束日期不早于开始日期
-        if calendar.compare(end, to: start, toGranularity: .month) == .orderedAscending {
-            self.endDate = start
+        let normalizedStart = calendar.startOfDay(for: start)
+        let normalizedEnd = calendar.startOfDay(for: end)
+
+        if normalizedEnd < normalizedStart {
+            self.startDate = normalizedStart
+            self.endDate = normalizedStart
         } else {
-            self.startDate = start
-            self.endDate = end
+            self.startDate = normalizedStart
+            self.endDate = normalizedEnd
         }
-        
+
         calculateStatistics()
     }
-    
+
     /// 设置默认范围（根据视图模式和基准日期）
     /// - Parameters:
     ///   - viewMode: 日历视图模式（月/周/日）
     ///   - anchorDate: 基准日期，用于计算默认范围
     func setDefaultRange(for viewMode: CalendarViewMode, anchorDate: Date) {
         let calendar = Calendar.current
-        
+
         // 所有视图模式都以 anchorDate 所在月份为默认
-        if let range = calendar.dateInterval(of: .month, for: anchorDate) {
-            self.startDate = range.start
-            self.endDate = range.end
-            self.startDate = calendar.date(bySettingHour: 0, minute: 0, second: 0, of: self.startDate) ?? self.startDate
-            self.endDate = calendar.date(bySettingHour: 23, minute: 59, second: 59, of: self.endDate) ?? self.endDate
+        if let range = calendar.dateInterval(of: .month, for: anchorDate),
+           let monthEnd = calendar.date(byAdding: .day, value: -1, to: range.end) {
+            self.startDate = calendar.startOfDay(for: range.start)
+            self.endDate = calendar.startOfDay(for: monthEnd)
         }
-        
+
         calculateStatistics()
     }
-    
+
     // MARK: - Private Methods
-    /// 加载统计数据
-    /// 当前无真实数据源，显示空状态
-    func loadEmptyStatisticsState() {
-        // TODO: 从真实数据源获取 Event 数据并计算
-        // 当前无真实打工数据，清空统计数据以显示空状态
-        
+    private func statisticsRange() -> DateInterval {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: startDate)
+        let selectedEndDay = calendar.startOfDay(for: endDate)
+        let endDay = max(selectedEndDay, start)
+        let exclusiveEnd = calendar.date(byAdding: .day, value: 1, to: endDay) ?? endDay
+        return DateInterval(start: start, end: exclusiveEnd)
+    }
+
+    private func applyStatistics(from events: [CalendarEvent]) {
+        let calendar = Calendar.current
+        var clockIns: [Date: CalendarEvent] = [:]
+        var clockOuts: [Date: CalendarEvent] = [:]
+
+        for event in events {
+            let clockInTime = event.workInfo?.workInTime ?? event.startDate
+            let clockOutTime = event.workInfo?.workOutTime ?? event.startDate
+
+            if isClockInEvent(event) {
+                let day = calendar.startOfDay(for: clockInTime)
+                if clockIns[day].map({ clockInTime < ($0.workInfo?.workInTime ?? $0.startDate) }) ?? true {
+                    clockIns[day] = event
+                }
+            } else if isClockOutEvent(event) {
+                let day = calendar.startOfDay(for: clockOutTime)
+                if clockOuts[day].map({ clockOutTime > ($0.workInfo?.workOutTime ?? $0.startDate) }) ?? true {
+                    clockOuts[day] = event
+                }
+            }
+        }
+
+        let days = clockIns.keys.filter { clockOuts[$0] != nil }.sorted()
+        var totalMinutes = 0
+        var totalPay = 0
+
+        statisticsData = days.compactMap { day in
+            guard let clockIn = clockIns[day], let clockOut = clockOuts[day] else { return nil }
+            let inTime = clockIn.workInfo?.workInTime ?? clockIn.startDate
+            let outTime = clockOut.workInfo?.workOutTime ?? clockOut.startDate
+            guard outTime > inTime else { return nil }
+
+            let restHours = clockIn.workInfo?.restHours ?? clockOut.workInfo?.restHours ?? 0
+            let workedSeconds = max(0, outTime.timeIntervalSince(inTime) - restHours * 3600)
+            let minutes = Int(workedSeconds / 60)
+            let hourlyRate = clockIn.workInfo?.hourlyRate ?? clockOut.workInfo?.hourlyRate ?? 0
+            let transportFee = clockIn.workInfo?.transportFee ?? clockOut.workInfo?.transportFee ?? 0
+            let amount = Int((workedSeconds / 3600) * Double(hourlyRate)) + transportFee
+
+            totalMinutes += minutes
+            totalPay += amount
+
+            return StatisticsDataItem(
+                date: formatDate(day),
+                time: formatDuration(minutes: minutes),
+                amount: formatCurrency(amount)
+            )
+        }
+
+        totalHours = formatDuration(minutes: totalMinutes)
+        totalAmount = formatCurrency(totalPay)
+    }
+
+    private func isClockInEvent(_ event: CalendarEvent) -> Bool {
+        if WorkClockTitleMatcher.isClockInTitle(event.title) { return true }
+        if WorkClockTitleMatcher.isClockOutTitle(event.title) { return false }
+        return event.workInfo?.workInTime != nil && event.workInfo?.workOutTime == nil
+    }
+
+    private func isClockOutEvent(_ event: CalendarEvent) -> Bool {
+        if WorkClockTitleMatcher.isClockOutTitle(event.title) { return true }
+        if WorkClockTitleMatcher.isClockInTitle(event.title) { return false }
+        return event.workInfo?.workOutTime != nil && event.workInfo?.workInTime == nil
+    }
+
+    private func loadEmptyStatisticsState() {
         statisticsData = []
         totalHours = "00:00"
         totalAmount = "¥0"
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy/MM/dd"
+        return formatter.string(from: date)
+    }
+
+    private func formatDuration(minutes: Int) -> String {
+        String(format: "%02d:%02d", minutes / 60, minutes % 60)
+    }
+
+    private func formatCurrency(_ amount: Int) -> String {
+        "¥\(amount)"
     }
 }

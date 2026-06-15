@@ -5,7 +5,7 @@ struct MonthCalendarView: View {
     @State private var showingYearMonthPicker = false
     @State private var showingSettings = false
     @State private var showingStatistics = false
-    @StateObject private var statisticsViewModel = WorkStatisticsViewModel()
+    @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
 
     init(calendarDisplayUseCase: CalendarDisplayUseCase, eventUseCase: EventUseCase) {
@@ -15,6 +15,7 @@ struct MonthCalendarView: View {
                 eventUseCase: eventUseCase
             )
         )
+        _statisticsViewModel = StateObject(wrappedValue: WorkStatisticsViewModel(eventUseCase: eventUseCase))
     }
 
     var body: some View {

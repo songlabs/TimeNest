@@ -32,13 +32,13 @@ struct WorkStatisticsView: View {
         .presentationDragIndicator(.hidden)
         .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
         .sheet(isPresented: $viewModel.showStartDatePicker) {
-            monthPickerSheet(
+            datePickerSheet(
                 titleKey: "work_statistics.start_date_month",
                 selection: $viewModel.startDate
             )
         }
         .sheet(isPresented: $viewModel.showEndDatePicker) {
-            monthPickerSheet(
+            datePickerSheet(
                 titleKey: "work_statistics.end_date_month",
                 selection: $viewModel.endDate
             )
@@ -91,13 +91,13 @@ struct WorkStatisticsView: View {
     private var filterSection: some View {
         VStack(spacing: 14) {
             HStack(spacing: 12) {
-                monthField(
+                dateField(
                     titleKey: "work_statistics.start_date_month",
                     value: viewModel.formattedStartDate,
                     action: { viewModel.showStartDatePicker = true }
                 )
 
-                monthField(
+                dateField(
                     titleKey: "work_statistics.end_date_month",
                     value: viewModel.formattedEndDate,
                     action: { viewModel.showEndDatePicker = true }
@@ -119,7 +119,7 @@ struct WorkStatisticsView: View {
         .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
     }
 
-    private func monthField(titleKey: String, value: String, action: @escaping () -> Void) -> some View {
+    private func dateField(titleKey: String, value: String, action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(LocalizedStringKey(titleKey))
                 .font(.system(size: 13, weight: .semibold))
@@ -285,7 +285,7 @@ struct WorkStatisticsView: View {
 
     // MARK: - Date Picker
 
-    private func monthPickerSheet(titleKey: String, selection: Binding<Date>) -> some View {
+    private func datePickerSheet(titleKey: String, selection: Binding<Date>) -> some View {
         NavigationView {
             DatePicker(
                 LocalizedStringKey(titleKey),

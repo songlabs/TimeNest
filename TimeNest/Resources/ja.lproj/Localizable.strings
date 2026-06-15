@@ -260,8 +260,8 @@
 /* Work Statistics */
 "work_statistics.title" = "アルバイト統計";
 "work_statistics" = "統計";
-"work_statistics.start_date_month" = "開始年月";
-"work_statistics.end_date_month" = "終了年月";
+"work_statistics.start_date_month" = "開始日";
+"work_statistics.end_date_month" = "終了日";
 "work_statistics.column_date" = "日付";
 "work_statistics.column_time" = "時間";
 "work_statistics.column_amount" = "金額";
