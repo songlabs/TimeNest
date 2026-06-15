@@ -7,14 +7,38 @@ struct WorkInfo: Codable, Hashable {
     var workDate: Date?
     var transportFee: Int?
     var hourlyRate: Int?
+    var workSessionId: UUID?
 
-    init(workInTime: Date? = nil, workOutTime: Date? = nil, restHours: Double = 1.0, workDate: Date? = nil, transportFee: Int? = nil, hourlyRate: Int? = nil) {
+    init(workInTime: Date? = nil, workOutTime: Date? = nil, restHours: Double = 1.0, workDate: Date? = nil, transportFee: Int? = nil, hourlyRate: Int? = nil, workSessionId: UUID? = nil) {
         self.workInTime = workInTime
         self.workOutTime = workOutTime
         self.restHours = restHours
         self.workDate = workDate
         self.transportFee = transportFee
         self.hourlyRate = hourlyRate
+        self.workSessionId = workSessionId
+    }
+
+    var effectiveWorkSessionId: UUID {
+        workSessionId ?? UUID()
+    }
+}
+
+extension WorkInfo {
+    static func makeNewWorkSessionId() -> UUID {
+        UUID()
+    }
+}
+
+extension Sequence where Element == CalendarEvent {
+    func sameWorkSessionEvents(sessionId: UUID) -> [CalendarEvent] {
+        filter { $0.workInfo?.workSessionId == sessionId }
+    }
+}
+
+extension Sequence where Element == EventOccurrence {
+    func sameWorkSessionEvents(sessionId: UUID) -> [EventOccurrence] {
+        filter { $0.workInfo?.workSessionId == sessionId }
     }
 }
 

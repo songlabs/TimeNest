@@ -159,6 +159,7 @@ struct EventEditorView: View {
     @State private var hourlyRate: String = "" // 时给
     @State private var showingRestTimePicker: Bool = false // 休息时间选择器
     @State private var pendingWorkClockConfirmation: WorkClockConfirmation?
+    @State private var workSessionId: UUID
     @FocusState private var focusedField: EditorFocusedField?
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
@@ -180,6 +181,8 @@ struct EventEditorView: View {
         _startDate = State(initialValue: initialState.startDate)
         _endDate = State(initialValue: initialState.endDate)
         let initialWorkDate = initialState.workInfo?.workDate ?? initialState.defaultWorkDate
+        let initialWorkSessionId = initialState.workInfo?.workSessionId ?? WorkInfo.makeNewWorkSessionId()
+        _workSessionId = State(initialValue: initialWorkSessionId)
         _workDate = State(initialValue: initialWorkDate)
         _workInDate = State(initialValue: initialState.workInfo?.workInTime ?? initialWorkDate)
         _workOutDate = State(initialValue: EventEditorView.initialWorkOutDate(
@@ -192,6 +195,7 @@ struct EventEditorView: View {
         _reminderOffsetMinutes = State(initialValue: initialState.reminderOffsetMinutes)
         let sharedValues = EventEditorView.sharedWorkValues(
             ownWorkInfo: initialState.workInfo,
+            sessionId: initialWorkSessionId,
             targetDate: initialWorkDate,
             existingEvents: existingEvents,
             editingEventID: EventEditorView.editingEventID(for: mode)
@@ -409,7 +413,7 @@ struct EventEditorView: View {
     private func hasExistingWorkClockEvent(_ kind: WorkClockKind) -> Bool {
         existingEvents.contains { event in
             guard event.eventID != editingEventID else { return false }
-            return Calendar.current.isDate(event.workDate, inSameDayAs: workDate) && event.matchesWorkClockKind(kind)
+            return event.workInfo?.workSessionId == workSessionId && event.matchesWorkClockKind(kind)
         }
     }
 
@@ -424,18 +428,25 @@ struct EventEditorView: View {
         return nil
     }
 
-    private static func sharedWorkValues(ownWorkInfo: WorkInfo?, targetDate: Date, existingEvents: [EventOccurrence], editingEventID: UUID?) -> (restHours: Double?, transportFee: Int?, hourlyRate: Int?) {
+    private static func sharedWorkValues(ownWorkInfo: WorkInfo?, sessionId: UUID, targetDate: Date, existingEvents: [EventOccurrence], editingEventID: UUID?) -> (restHours: Double?, transportFee: Int?, hourlyRate: Int?) {
         let calendar = Calendar.current
-        let sameDayWorkEvents = existingEvents.filter { event in
+        let sameSessionWorkEvents = existingEvents.filter { event in
             event.eventID != editingEventID
             && event.isWorkClockEvent
+            && event.workInfo?.workSessionId == sessionId
+        }
+        let legacySameDayWorkEvents = existingEvents.filter { event in
+            event.eventID != editingEventID
+            && event.isWorkClockEvent
+            && event.workInfo?.workSessionId == nil
             && calendar.isDate(event.workDate, inSameDayAs: targetDate)
         }
+        let sourceEvents = sameSessionWorkEvents.isEmpty ? legacySameDayWorkEvents : sameSessionWorkEvents
 
         return (
-            restHours: ownWorkInfo?.restHours ?? sameDayWorkEvents.compactMap { $0.workInfo?.restHours }.first,
-            transportFee: ownWorkInfo?.transportFee ?? sameDayWorkEvents.compactMap { $0.workInfo?.transportFee }.first,
-            hourlyRate: ownWorkInfo?.hourlyRate ?? sameDayWorkEvents.compactMap { $0.workInfo?.hourlyRate }.first
+            restHours: ownWorkInfo?.restHours ?? sourceEvents.compactMap { $0.workInfo?.restHours }.first,
+            transportFee: ownWorkInfo?.transportFee ?? sourceEvents.compactMap { $0.workInfo?.transportFee }.first,
+            hourlyRate: ownWorkInfo?.hourlyRate ?? sourceEvents.compactMap { $0.workInfo?.hourlyRate }.first
         )
     }
 
@@ -447,7 +458,7 @@ struct EventEditorView: View {
         let workDay = calendar.startOfDay(for: workInfo?.workDate ?? defaultWorkDate)
         guard calendar.isDate(workOut, inSameDayAs: workDay),
               let clockIn = existingEvents
-                .filter({ $0.isClockInEvent && calendar.isDate($0.workDate, inSameDayAs: workDay) })
+                .filter({ $0.isClockInEvent && ($0.workInfo?.workSessionId == workInfo?.workSessionId || ($0.workInfo?.workSessionId == nil && calendar.isDate($0.workDate, inSameDayAs: workDay))) })
                 .map({ $0.workInfo?.workInTime ?? $0.startDate })
                 .min()
         else {
@@ -492,7 +503,8 @@ struct EventEditorView: View {
             restHours: restTime,
             workDate: workDate,
             transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
-            hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines))
+            hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines)),
+            workSessionId: workSessionId
         )
     }
 
