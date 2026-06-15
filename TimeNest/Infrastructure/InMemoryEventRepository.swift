@@ -19,7 +19,10 @@ actor InMemoryEventRepository: EventRepository {
     
     func events(in range: DateInterval) async throws -> [CalendarEvent] {
         events.values.filter {
-            $0.startDate < range.end && $0.endDate > range.start
+            let isWorkClockEvent = WorkClockTitleMatcher.isClockInTitle($0.title) || WorkClockTitleMatcher.isClockOutTitle($0.title)
+            let workDate = isWorkClockEvent ? $0.workInfo?.workDate : nil
+            return ($0.startDate < range.end && $0.endDate > range.start)
+                || (workDate.map { $0 >= range.start && $0 < range.end } ?? false)
         }.sorted { $0.startDate < $1.startDate }
     }
     

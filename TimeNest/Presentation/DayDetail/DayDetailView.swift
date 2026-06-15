@@ -233,7 +233,12 @@ struct EventRowView: View {
             return formatTime(event.workInfo?.workInTime ?? event.startDate) ?? ""
         }
         if event.isClockOutEvent {
-            return formatTime(event.workInfo?.workOutTime ?? event.startDate) ?? ""
+            let clockOutTime = event.workInfo?.workOutTime ?? event.startDate
+            let time = formatTime(clockOutTime) ?? ""
+            if Calendar(identifier: .gregorian).startOfDay(for: clockOutTime) > Calendar(identifier: .gregorian).startOfDay(for: event.workDate) {
+                return "\(LocalizationManager.shared.localized(.workNextDayPrefix)) \(time)"
+            }
+            return time
         }
         guard let start = formatTime(event.startDate), let end = formatTime(event.endDate) else {
             return ""

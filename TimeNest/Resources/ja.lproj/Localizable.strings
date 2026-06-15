@@ -279,3 +279,4 @@
 "editor.work_out_overwrite_message" = "この日の退勤データはすでに存在します。現在の時刻で上書きしますか？";
 "editor.work_overwrite_button" = "上書き";
 "editor.work_overwrite_cancel_button" = "キャンセル";
+"work.nextDayPrefix" = "翌日";

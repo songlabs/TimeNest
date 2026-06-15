@@ -4,13 +4,15 @@ struct WorkInfo: Codable, Hashable {
     var workInTime: Date?
     var workOutTime: Date?
     var restHours: Double
+    var workDate: Date?
     var transportFee: Int?
     var hourlyRate: Int?
 
-    init(workInTime: Date? = nil, workOutTime: Date? = nil, restHours: Double = 1.0, transportFee: Int? = nil, hourlyRate: Int? = nil) {
+    init(workInTime: Date? = nil, workOutTime: Date? = nil, restHours: Double = 1.0, workDate: Date? = nil, transportFee: Int? = nil, hourlyRate: Int? = nil) {
         self.workInTime = workInTime
         self.workOutTime = workOutTime
         self.restHours = restHours
+        self.workDate = workDate
         self.transportFee = transportFee
         self.hourlyRate = hourlyRate
     }

@@ -143,6 +143,7 @@ struct EventEditorView: View {
     @State private var endDate: Date
     @State private var workInDate: Date
     @State private var workOutDate: Date
+    @State private var workDate: Date
     @State private var isAllDay: Bool
     @State private var reminderOffsetMinutes: Int?
     @State private var selectedShiftTemplateID: ShiftTimeTemplateID?
@@ -178,8 +179,15 @@ struct EventEditorView: View {
         _note = State(initialValue: initialState.note ?? "")
         _startDate = State(initialValue: initialState.startDate)
         _endDate = State(initialValue: initialState.endDate)
-        _workInDate = State(initialValue: initialState.workInfo?.workInTime ?? initialState.defaultWorkDate)
-        _workOutDate = State(initialValue: initialState.workInfo?.workOutTime ?? initialState.defaultWorkDate)
+        let initialWorkDate = initialState.workInfo?.workDate ?? initialState.defaultWorkDate
+        _workDate = State(initialValue: initialWorkDate)
+        _workInDate = State(initialValue: initialState.workInfo?.workInTime ?? initialWorkDate)
+        _workOutDate = State(initialValue: EventEditorView.initialWorkOutDate(
+            title: initialState.title,
+            workInfo: initialState.workInfo,
+            defaultWorkDate: initialWorkDate,
+            existingEvents: existingEvents
+        ))
         _isAllDay = State(initialValue: initialState.isAllDay)
         _reminderOffsetMinutes = State(initialValue: initialState.reminderOffsetMinutes)
         let sharedValues = EventEditorView.sharedWorkValues(
@@ -401,7 +409,7 @@ struct EventEditorView: View {
     private func hasExistingWorkClockEvent(_ kind: WorkClockKind) -> Bool {
         existingEvents.contains { event in
             guard event.eventID != editingEventID else { return false }
-            return Calendar.current.isDate(event.startDate, inSameDayAs: startDate) && event.matchesWorkClockKind(kind)
+            return Calendar.current.isDate(event.workDate, inSameDayAs: workDate) && event.matchesWorkClockKind(kind)
         }
     }
 
@@ -421,13 +429,41 @@ struct EventEditorView: View {
         let sameDayWorkEvents = existingEvents.filter { event in
             event.eventID != editingEventID
             && event.isWorkClockEvent
-            && calendar.isDate(event.startDate, inSameDayAs: targetDate)
+            && calendar.isDate(event.workDate, inSameDayAs: targetDate)
         }
 
         return (
             transportFee: ownWorkInfo?.transportFee ?? sameDayWorkEvents.compactMap { $0.workInfo?.transportFee }.first,
             hourlyRate: ownWorkInfo?.hourlyRate ?? sameDayWorkEvents.compactMap { $0.workInfo?.hourlyRate }.first
         )
+    }
+
+    private static func initialWorkOutDate(title: String, workInfo: WorkInfo?, defaultWorkDate: Date, existingEvents: [EventOccurrence]) -> Date {
+        let workOut = workInfo?.workOutTime ?? defaultWorkDate
+        guard WorkClockTitleMatcher.isClockOutTitle(title) else { return workOut }
+
+        let calendar = Calendar.current
+        let workDay = calendar.startOfDay(for: workInfo?.workDate ?? defaultWorkDate)
+        guard calendar.isDate(workOut, inSameDayAs: workDay),
+              let clockIn = existingEvents
+                .filter({ $0.isClockInEvent && calendar.isDate($0.workDate, inSameDayAs: workDay) })
+                .map({ $0.workInfo?.workInTime ?? $0.startDate })
+                .min()
+        else {
+            return workOut
+        }
+
+        let outMinutes = minutesSinceStartOfDay(workOut, calendar: calendar)
+        let inMinutes = minutesSinceStartOfDay(clockIn, calendar: calendar)
+        if outMinutes < inMinutes {
+            return calendar.date(byAdding: .day, value: 1, to: workOut) ?? workOut
+        }
+        return workOut
+    }
+
+    private static func minutesSinceStartOfDay(_ date: Date, calendar: Calendar) -> Int {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return (components.hour ?? 0) * 60 + (components.minute ?? 0)
     }
 
     private func save() async {
@@ -453,6 +489,7 @@ struct EventEditorView: View {
             workInTime: workInDate,
             workOutTime: workOutDate,
             restHours: restTime,
+            workDate: workDate,
             transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
             hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines))
         )

@@ -34,6 +34,20 @@ extension EventOccurrence {
         isClockInEvent || isClockOutEvent
     }
 
+    var workDate: Date {
+        workInfo?.workDate ?? startDate
+    }
+
+    var actualWorkClockDate: Date {
+        if isClockInEvent {
+            return workInfo?.workInTime ?? startDate
+        }
+        if isClockOutEvent {
+            return workInfo?.workOutTime ?? startDate
+        }
+        return startDate
+    }
+
     func matchesWorkClockKind(_ kind: WorkClockKind) -> Bool {
         switch kind {
         case .clockIn:
@@ -41,6 +55,22 @@ extension EventOccurrence {
         case .clockOut:
             return isClockOutEvent
         }
+    }
+}
+
+extension CalendarEvent {
+    var workDate: Date {
+        workInfo?.workDate ?? startDate
+    }
+
+    var actualWorkClockDate: Date {
+        if WorkClockTitleMatcher.isClockInTitle(title) {
+            return workInfo?.workInTime ?? startDate
+        }
+        if WorkClockTitleMatcher.isClockOutTitle(title) {
+            return workInfo?.workOutTime ?? startDate
+        }
+        return startDate
     }
 }
 

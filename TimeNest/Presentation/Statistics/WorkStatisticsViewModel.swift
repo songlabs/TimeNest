@@ -118,15 +118,15 @@ class WorkStatisticsViewModel: ObservableObject {
 
         for event in events {
             let clockInTime = event.workInfo?.workInTime ?? event.startDate
-            let clockOutTime = event.workInfo?.workOutTime ?? event.startDate
+            let clockOutTime = effectiveClockOutTime(for: event, clockInTime: nil)
 
             if isClockInEvent(event) {
-                let day = calendar.startOfDay(for: clockInTime)
+                let day = calendar.startOfDay(for: event.workInfo?.workDate ?? clockInTime)
                 if clockIns[day].map({ clockInTime < ($0.workInfo?.workInTime ?? $0.startDate) }) ?? true {
                     clockIns[day] = event
                 }
             } else if isClockOutEvent(event) {
-                let day = calendar.startOfDay(for: clockOutTime)
+                let day = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
                 if clockOuts[day].map({ clockOutTime > ($0.workInfo?.workOutTime ?? $0.startDate) }) ?? true {
                     clockOuts[day] = event
                 }
@@ -140,7 +140,7 @@ class WorkStatisticsViewModel: ObservableObject {
         statisticsData = days.compactMap { day in
             guard let clockIn = clockIns[day], let clockOut = clockOuts[day] else { return nil }
             let inTime = clockIn.workInfo?.workInTime ?? clockIn.startDate
-            let outTime = clockOut.workInfo?.workOutTime ?? clockOut.startDate
+            let outTime = effectiveClockOutTime(for: clockOut, clockInTime: inTime)
             guard outTime > inTime else { return nil }
 
             let restHours = clockIn.workInfo?.restHours ?? clockOut.workInfo?.restHours ?? 0
@@ -161,6 +161,21 @@ class WorkStatisticsViewModel: ObservableObject {
 
         totalHours = formatDuration(minutes: totalMinutes)
         totalAmount = formatCurrency(totalPay)
+    }
+
+    private func effectiveClockOutTime(for event: CalendarEvent, clockInTime: Date?) -> Date {
+        let outTime = event.workInfo?.workOutTime ?? event.startDate
+        guard let clockInTime else { return outTime }
+
+        let calendar = Calendar.current
+        guard calendar.isDate(outTime, inSameDayAs: clockInTime) else { return outTime }
+
+        let outComponents = calendar.dateComponents([.hour, .minute], from: outTime)
+        let inComponents = calendar.dateComponents([.hour, .minute], from: clockInTime)
+        let outMinutes = (outComponents.hour ?? 0) * 60 + (outComponents.minute ?? 0)
+        let inMinutes = (inComponents.hour ?? 0) * 60 + (inComponents.minute ?? 0)
+        guard outMinutes < inMinutes else { return outTime }
+        return calendar.date(byAdding: .day, value: 1, to: outTime) ?? outTime
     }
 
     private func sharedWorkValues(clockIn: CalendarEvent, clockOut: CalendarEvent) -> (transportFee: Int, hourlyRate: Int) {

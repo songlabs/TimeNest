@@ -279,3 +279,4 @@
 "editor.work_out_overwrite_message" = "Clock-out data already exists for this day. Overwrite it with the current time?";
 "editor.work_overwrite_button" = "Overwrite";
 "editor.work_overwrite_cancel_button" = "Cancel";
+"work.nextDayPrefix" = "Next day";
