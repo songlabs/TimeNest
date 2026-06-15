@@ -75,8 +75,9 @@ private enum EventEditorStyle {
     static let shiftTemplateButtonSpacing: CGFloat = 12
     static let workColumnSpacing: CGFloat = 12
     static let workActionButtonFont = Font.subheadline.weight(.semibold)
-    static let workInfoTimeValuePillWidth: CGFloat = 92
-    static let workInfoTimeValuePillHeight: CGFloat = compactControlHeight
+    static let workInfoTimePillWidth: CGFloat = 92
+    static let workInfoTimePillHeight: CGFloat = compactControlHeight
+    static let workInfoTimePillCornerRadius: CGFloat = controlCornerRadius
 
     /// 统一卡片圆角
     static let cardCornerRadius: CGFloat = 26
@@ -1365,37 +1366,32 @@ private struct ShiftTemplateSection: View {
     }
 }
 
-// MARK: - Rest Time Picker Sheet
+// MARK: - Work Info Time Picker Sheet
 
-/// 休息时间选择器（Sheet）
-private struct RestTimePickerSheet: View {
+private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var restTime: Double // 休息时间（小时）
+
+    let title: String
+    let onCancel: () -> Void
+    let onDone: () -> Void
+    @ViewBuilder let pickerContent: () -> PickerContent
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     VStack(alignment: .leading, spacing: 12) {
-                        // 使用 wheel 风格的 DatePicker，只显示时间
-                        DatePicker(
-                            "",
-                            selection: Binding(
-                                get: { restTimeToDuration(restTime) },
-                                set: { restTime = durationToRestTime($0) }
-                            ),
-                            displayedComponents: [.hourAndMinute]
-                        )
-                        .datePickerStyle(.wheel)
+                        pickerContent()
                     }
                     .padding(.vertical, 8)
                 }
             }
-            .navigationTitle(localizedString("选择休息时间"))
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizedString("完了")) {
+                        onDone()
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -1403,10 +1399,40 @@ private struct RestTimePickerSheet: View {
 
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizedString("取消")) {
+                        onCancel()
                         dismiss()
                     }
                 }
             }
+        }
+    }
+
+    private func localizedString(_ key: String) -> String {
+        let localized = NSLocalizedString(key, comment: "")
+        return localized != key ? localized : key
+    }
+}
+
+/// 休息时间选择器（Sheet）
+private struct RestTimePickerSheet: View {
+    @Binding var restTime: Double // 休息时间（小时）
+
+    var body: some View {
+        WorkInfoTimePickerSheet(
+            title: localizedString("选择休息时间"),
+            onCancel: {},
+            onDone: {}
+        ) {
+            DatePicker(
+                "",
+                selection: Binding(
+                    get: { restTimeToDuration(restTime) },
+                    set: { restTime = durationToRestTime($0) }
+                ),
+                displayedComponents: [.hourAndMinute]
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
         }
     }
 
@@ -1439,13 +1465,18 @@ private enum WorkTimeEditTarget: Hashable, Identifiable {
 
     var id: Self { self }
 
-    func title(workInTitle: String, workOutTitle: String) -> String {
+    func pickerTitle(workInTitle: String, workOutTitle: String) -> String {
         switch self {
         case .workIn:
-            return workInTitle
+            return localizedString("选择") + workInTitle + localizedString("editor.time")
         case .workOut:
-            return workOutTitle
+            return localizedString("选择") + workOutTitle + localizedString("editor.time")
         }
+    }
+
+    private func localizedString(_ key: String) -> String {
+        let localized = NSLocalizedString(key, comment: "")
+        return localized != key ? localized : key
     }
 }
 
@@ -1483,7 +1514,7 @@ private struct WorkInfoSection: View {
                         workInfoTimeValuePillLabel(formatWorkTime(workInDate))
                     }
                     .buttonStyle(.plain)
-                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
                 }
 
                 workColumn(title: restTimeTitle) {
@@ -1493,6 +1524,7 @@ private struct WorkInfoSection: View {
                         workInfoTimeValuePillLabel(formatRestTime(restTime))
                     }
                     .buttonStyle(.plain)
+                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
                 }
 
                 workColumn(title: workOutTitle) {
@@ -1504,7 +1536,7 @@ private struct WorkInfoSection: View {
                         workInfoTimeValuePillLabel(formatWorkTime(workOutDate))
                     }
                     .buttonStyle(.plain)
-                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
                 }
             }
 
@@ -1518,7 +1550,11 @@ private struct WorkInfoSection: View {
         .padding(EventEditorStyle.cardPadding)
         .cardContainer()
         .sheet(item: $editingWorkTime) { target in
-            NavigationStack {
+            WorkInfoTimePickerSheet(
+                title: target.pickerTitle(workInTitle: workInTitle, workOutTitle: workOutTitle),
+                onCancel: { editingWorkTime = nil },
+                onDone: { editingWorkTime = nil }
+            ) {
                 DatePicker(
                     "",
                     selection: workTimeBinding(for: target),
@@ -1526,17 +1562,7 @@ private struct WorkInfoSection: View {
                 )
                 .datePickerStyle(.wheel)
                 .labelsHidden()
-                .padding()
-                .navigationTitle(target.title(workInTitle: workInTitle, workOutTitle: workOutTitle))
-                .toolbar {
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(localizedString("完了")) {
-                            editingWorkTime = nil
-                        }
-                    }
-                }
             }
-            .presentationDetents([.height(320)])
         }
     }
 
@@ -1568,10 +1594,10 @@ private struct WorkInfoSection: View {
         Text(text)
             .font(.subheadline.weight(.medium))
             .foregroundColor(EventEditorStyle.fieldText)
-            .frame(width: EventEditorStyle.workInfoTimeValuePillWidth,
-                   height: EventEditorStyle.workInfoTimeValuePillHeight)
+            .frame(width: EventEditorStyle.workInfoTimePillWidth,
+                   height: EventEditorStyle.workInfoTimePillHeight)
             .background(EventEditorStyle.fieldBackground)
-            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
     }
 
     private func workTimeBinding(for target: WorkTimeEditTarget) -> Binding<Date> {
