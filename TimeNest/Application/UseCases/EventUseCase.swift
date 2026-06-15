@@ -65,8 +65,15 @@ class EventUseCase {
     func occurrences(in range: DateInterval) async throws -> [EventOccurrence] {
         let events = try await repository.events(in: range)
         return events.map { event in
-            let occurrenceDate = WorkClockTitleMatcher.isClockInTitle(event.title) || WorkClockTitleMatcher.isClockOutTitle(event.title) ? (event.workInfo?.workDate ?? event.startDate) : event.startDate
-            EventOccurrence(
+            let isWorkClockEvent =
+                WorkClockTitleMatcher.isClockInTitle(event.title) ||
+                WorkClockTitleMatcher.isClockOutTitle(event.title)
+
+            let occurrenceDate = isWorkClockEvent
+                ? (event.workInfo?.workDate ?? event.startDate)
+                : event.startDate
+
+            return EventOccurrence(
                 id: "\(event.id)-\(event.startDate)",
                 eventID: event.id,
                 occurrenceDate: DateOnly(from: occurrenceDate) ?? DateOnly(year: 2026, month: 1, day: 1),
