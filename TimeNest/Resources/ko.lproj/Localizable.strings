@@ -260,8 +260,8 @@
 /* Work Statistics */
 "work_statistics.title" = "알바 통계";
 "work_statistics" = "통계";
-"work_statistics.start_date_month" = "시작 연월";
-"work_statistics.end_date_month" = "종료 연월";
+"work_statistics.start_date_month" = "시작일";
+"work_statistics.end_date_month" = "종료일";
 "work_statistics.column_date" = "날짜";
 "work_statistics.column_time" = "시간";
 "work_statistics.column_amount" = "금액";

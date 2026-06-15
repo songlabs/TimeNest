@@ -260,8 +260,8 @@
 /* Work Statistics */
 "work_statistics.title" = "打工统计";
 "work_statistics" = "统计";
-"work_statistics.start_date_month" = "开始年月";
-"work_statistics.end_date_month" = "结束年月";
+"work_statistics.start_date_month" = "开始日期";
+"work_statistics.end_date_month" = "结束日期";
 "work_statistics.column_date" = "日期";
 "work_statistics.column_time" = "时间";
 "work_statistics.column_amount" = "金额";
