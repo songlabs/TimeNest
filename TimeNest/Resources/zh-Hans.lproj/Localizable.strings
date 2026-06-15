@@ -279,3 +279,4 @@
 "editor.work_out_overwrite_message" = "这一天已经存在下班数据。是否用当前时间覆盖？";
 "editor.work_overwrite_button" = "覆盖";
 "editor.work_overwrite_cancel_button" = "取消";
+"work.nextDayPrefix" = "次日";

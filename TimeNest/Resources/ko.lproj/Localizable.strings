@@ -279,3 +279,4 @@
 "editor.work_out_overwrite_message" = "이 날의 퇴근 데이터가 이미 있습니다. 현재 시간으로 덮어쓸까요?";
 "editor.work_overwrite_button" = "덮어쓰기";
 "editor.work_overwrite_cancel_button" = "취소";
+"work.nextDayPrefix" = "다음날";

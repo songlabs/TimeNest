@@ -220,7 +220,8 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
-        let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: workInfo)
+        let adjustedWorkInfo = try await adjustedWorkInfoForSave(title: title, startDate: startDate, workInfo: workInfo)
+        let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: adjustedWorkInfo)
         let now = Date()
 
         let event = CalendarEvent(
@@ -239,12 +240,12 @@ class MonthCalendarViewModel: ObservableObject {
             createdAt: now,
             updatedAt: now,
             shiftTemplateID: shiftTemplateID,
-            workInfo: workInfo
+            workInfo: adjustedWorkInfo
         )
 
         if let kind = workClockKind(for: title) {
             try await upsertWorkClockEvent(event, kind: kind)
-            try await syncSharedWorkValues(for: saveDates.start, transportFee: workInfo.transportFee, hourlyRate: workInfo.hourlyRate)
+            try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
         } else {
             try await eventUseCase.createEvent(event)
         }
@@ -254,7 +255,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     private func upsertWorkClockEvent(_ event: CalendarEvent, kind: WorkClockKind) async throws {
         let calendar = Calendar(identifier: .gregorian)
-        let dayStart = calendar.startOfDay(for: event.startDate)
+        let dayStart = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
         let sameDayEvents = try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
         let sameKindEvents = sameDayEvents
@@ -362,7 +363,8 @@ class MonthCalendarViewModel: ObservableObject {
 
     func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
         do {
-            let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: workInfo)
+            let adjustedWorkInfo = try await adjustedWorkInfoForSave(title: title, startDate: startDate, workInfo: workInfo)
+            let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: adjustedWorkInfo)
             let existingEvent = try await eventUseCase.event(id: id)
             let now = Date()
 
@@ -382,18 +384,68 @@ class MonthCalendarViewModel: ObservableObject {
                 createdAt: existingEvent?.createdAt ?? now,
                 updatedAt: now,
                 shiftTemplateID: shiftTemplateID ?? existingEvent?.shiftTemplateID,
-                workInfo: workInfo
+                workInfo: adjustedWorkInfo
             )
 
             try await eventUseCase.updateEvent(updatedEvent)
             if workClockKind(for: title) != nil {
-                try await syncSharedWorkValues(for: saveDates.start, transportFee: workInfo.transportFee, hourlyRate: workInfo.hourlyRate)
+                try await syncSharedWorkValues(for: adjustedWorkInfo.workDate ?? saveDates.start, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
             }
             await reloadMonth()
         } catch {
             errorMessage = error.localizedDescription
             throw error
         }
+    }
+
+    private func adjustedWorkInfoForSave(title: String, startDate: Date, workInfo: WorkInfo) async throws -> WorkInfo {
+        guard workClockKind(for: title) != nil else {
+            return workInfo
+        }
+
+        var adjusted = workInfo
+        let calendar = Calendar(identifier: .gregorian)
+        let workDay = calendar.startOfDay(for: workInfo.workDate ?? startDate)
+        adjusted.workDate = workDay
+
+        if WorkClockTitleMatcher.isClockInTitle(title), let workInTime = workInfo.workInTime {
+            adjusted.workInTime = date(on: workDay, matchingTimeOf: workInTime)
+        }
+
+        guard WorkClockTitleMatcher.isClockOutTitle(title), let workOutTime = workInfo.workOutTime else {
+            return adjusted
+        }
+
+        let clockInTime = try await clockInTime(on: workDay)
+        let baseOut = date(on: workDay, matchingTimeOf: workOutTime)
+        if let clockInTime, isTime(baseOut, earlierThan: clockInTime) {
+            adjusted.workOutTime = calendar.date(byAdding: .day, value: 1, to: baseOut) ?? baseOut
+        } else {
+            adjusted.workOutTime = baseOut
+        }
+        return adjusted
+    }
+
+    private func clockInTime(on workDay: Date) async throws -> Date? {
+        try await sameDayWorkEvents(for: workDay)
+            .filter { WorkClockTitleMatcher.isClockInTitle($0.title) }
+            .map { $0.workInfo?.workInTime ?? $0.startDate }
+            .min()
+    }
+
+    private func date(on day: Date, matchingTimeOf date: Date) -> Date {
+        let calendar = Calendar(identifier: .gregorian)
+        let time = calendar.dateComponents([.hour, .minute, .second], from: date)
+        return calendar.date(bySettingHour: time.hour ?? 0, minute: time.minute ?? 0, second: time.second ?? 0, of: day) ?? date
+    }
+
+    private func isTime(_ lhs: Date, earlierThan rhs: Date) -> Bool {
+        let calendar = Calendar(identifier: .gregorian)
+        let left = calendar.dateComponents([.hour, .minute], from: lhs)
+        let right = calendar.dateComponents([.hour, .minute], from: rhs)
+        let leftMinutes = (left.hour ?? 0) * 60 + (left.minute ?? 0)
+        let rightMinutes = (right.hour ?? 0) * 60 + (right.minute ?? 0)
+        return leftMinutes < rightMinutes
     }
 
 

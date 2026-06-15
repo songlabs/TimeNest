@@ -195,6 +195,7 @@ enum LocalizedString: String {
     case editorTransportFee = "editor.transportFee"
     case editorHourlyRate = "editor.hourlyRate"
     case editorCurrencyUnit = "editor.currencyUnit"
+    case workNextDayPrefix = "work.nextDayPrefix"
 
     // MARK: - Shift Time
 
