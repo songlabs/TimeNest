@@ -75,7 +75,7 @@ private enum EventEditorStyle {
     static let shiftTemplateButtonSpacing: CGFloat = 12
     static let workColumnSpacing: CGFloat = 12
     static let workActionButtonFont = Font.subheadline.weight(.semibold)
-    static let workInfoValuePillWidth: CGFloat = shiftActionButtonWidth
+    static let workInfoTimePillWidth: CGFloat = shiftActionButtonWidth
 
     /// 统一卡片圆角
     static let cardCornerRadius: CGFloat = 26
@@ -1461,7 +1461,7 @@ private struct WorkInfoSection: View {
                     DatePicker("", selection: $workInDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
-                        .frame(width: EventEditorStyle.workInfoValuePillWidth)
+                        .frame(width: EventEditorStyle.workInfoTimePillWidth)
                 }
 
                 workColumn(title: restTimeTitle) {
@@ -1471,7 +1471,7 @@ private struct WorkInfoSection: View {
                         Text(formatRestTime(restTime))
                             .font(.subheadline.weight(.medium))
                             .foregroundColor(EventEditorStyle.fieldText)
-                            .frame(width: EventEditorStyle.workInfoValuePillWidth)
+                            .frame(width: EventEditorStyle.workInfoTimePillWidth)
                             .frame(height: EventEditorStyle.compactControlHeight)
                             .background(EventEditorStyle.fieldBackground)
                             .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
@@ -1485,7 +1485,7 @@ private struct WorkInfoSection: View {
                     DatePicker("", selection: $workOutDate, displayedComponents: .hourAndMinute)
                         .labelsHidden()
                         .datePickerStyle(.compact)
-                        .frame(width: EventEditorStyle.workInfoValuePillWidth)
+                        .frame(width: EventEditorStyle.workInfoTimePillWidth)
                 }
             }
 
@@ -1508,7 +1508,7 @@ private struct WorkInfoSection: View {
             }
             .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius, font: EventEditorStyle.workActionButtonFont))
             content()
-                .frame(width: EventEditorStyle.shiftActionButtonWidth)
+                .frame(width: EventEditorStyle.workInfoTimePillWidth)
                 .frame(height: EventEditorStyle.compactControlHeight)
         }
         .frame(maxWidth: .infinity)
@@ -1522,7 +1522,7 @@ private struct WorkInfoSection: View {
                 .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
 
             content()
-                .frame(width: EventEditorStyle.shiftActionButtonWidth)
+                .frame(width: EventEditorStyle.workInfoTimePillWidth)
                 .frame(height: EventEditorStyle.compactControlHeight)
         }
         .frame(maxWidth: .infinity)
