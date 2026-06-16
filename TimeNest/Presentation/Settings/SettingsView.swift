@@ -4,11 +4,8 @@ struct SettingsView: View {
     @EnvironmentObject private var localization: LocalizationManager
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
-    @AppStorage("notificationEnabled") private var notificationEnabled: Bool = false
-    @AppStorage("notificationTimeMinutes") private var notificationTimeMinutes: Int = 9 * 60
 
     @State private var showVersionInfo: Bool = false
-    @State private var notificationTime: Date = SettingsNotificationTime.defaultDate
     @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
 
     private let onClose: (() -> Void)?
@@ -35,11 +32,6 @@ struct SettingsView: View {
             }
         }
         .onAppear {
-            notificationTime = SettingsNotificationTime.date(from: notificationTimeMinutes)
-            if notificationEnabled {
-                updateDailyNotification(enabled: true)
-            }
-
             // 执行启动时的自动同步检查
             Task {
                 await subscriptionManager.performAutoSync()
@@ -100,30 +92,6 @@ struct SettingsView: View {
                 }
 
                 SettingsCard {
-                    SettingsToggleRow(
-                        title: localization.localized(.notificationEnabled),
-                        isOn: $notificationEnabled
-                    )
-                    .onChange(of: notificationEnabled) { enabled in
-                        updateDailyNotification(enabled: enabled)
-                    }
-
-                    SettingsDivider()
-
-                    SettingsDatePickerRow(
-                        title: localization.localized(.notificationTime),
-                        selection: $notificationTime,
-                        isEnabled: notificationEnabled
-                    )
-                    .onChange(of: notificationTime) { newValue in
-                        notificationTimeMinutes = SettingsNotificationTime.minutes(from: newValue)
-                        if notificationEnabled {
-                            updateDailyNotification(enabled: true)
-                        }
-                    }
-                }
-
-                SettingsCard {
                     SettingsPickerRow(
                         title: localization.localized(.settingsTheme),
                         selection: $themeMode,
@@ -160,27 +128,6 @@ struct SettingsView: View {
         .foregroundColor(SettingsStyle.primaryText)
     }
 
-    private func updateDailyNotification(enabled: Bool) {
-        let service = LocalNotificationService()
-        let minutes = notificationTimeMinutes
-
-        Task {
-            if enabled {
-                let authorized = await service.requestAuthorizationIfNeeded()
-                await MainActor.run {
-                    notificationEnabled = authorized
-                }
-                if authorized {
-                    await service.scheduleDailyScheduleCheck(hour: minutes / 60, minute: minutes % 60)
-                } else {
-                    service.cancelDailyScheduleCheck()
-                }
-            } else {
-                service.cancelDailyScheduleCheck()
-            }
-        }
-    }
-
     private var enabledSubscriptionsDisplayText: String {
         let enabledRegions = subscriptionManager.enabledRegions
         if enabledRegions.isEmpty {
@@ -198,11 +145,10 @@ private enum SettingsStyle {
     static let cardBackground = SettingsModalSurface.sectionBackground
     static let primaryText = SettingsModalSurface.primaryText
     static let secondaryText = SettingsModalSurface.secondaryText
-    static let disabledText = SettingsModalSurface.secondaryText.opacity(0.55)
     static let divider = SettingsModalSurface.separator
 
     static let horizontalPadding: CGFloat = TimeNestTheme.externalPadding
-    static let sectionSpacing: CGFloat = TimeNestTheme.sectionSpacing
+    static let sectionSpacing: CGFloat = 22
     static let topPadding: CGFloat = 18
     static let bottomPadding: CGFloat = 28
     static let rowHorizontalPadding: CGFloat = 16
@@ -210,7 +156,9 @@ private enum SettingsStyle {
     static let cardCornerRadius: CGFloat = 26
     static let titleTopPadding: CGFloat = 14
     static let titleBottomPadding: CGFloat = 8
-    static let accessorySpacing: CGFloat = 8
+    static let accessorySpacing: CGFloat = 6
+    static let rowContentSpacing: CGFloat = 8
+    static let rowAccessoryMinSpacing: CGFloat = 8
 }
 
 private struct SettingsPickerOption: Identifiable {
@@ -265,30 +213,29 @@ private struct SettingsDivider: View {
 
 private struct SettingsRow<Accessory: View>: View {
     let title: String
-    var isEnabled: Bool = true
     let accessory: Accessory
 
     init(
         title: String,
-        isEnabled: Bool = true,
         @ViewBuilder accessory: () -> Accessory
     ) {
         self.title = title
-        self.isEnabled = isEnabled
         self.accessory = accessory()
     }
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: SettingsStyle.rowContentSpacing) {
             Text(title)
                 .font(.body)
-                .foregroundColor(isEnabled ? SettingsStyle.primaryText : SettingsStyle.disabledText)
+                .foregroundColor(SettingsStyle.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
+                .layoutPriority(1)
 
-            Spacer(minLength: 12)
+            Spacer(minLength: SettingsStyle.rowAccessoryMinSpacing)
 
             accessory
+                .layoutPriority(0)
         }
         .frame(minHeight: SettingsStyle.rowMinHeight)
         .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
@@ -311,7 +258,6 @@ private struct SettingsPickerRow: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .tint(SettingsStyle.secondaryText)
-            .frame(maxWidth: .infinity, alignment: .trailing)
         }
     }
 }
@@ -347,42 +293,11 @@ private struct SettingsNavigationRow<Destination: View>: View {
                     Image(systemName: "chevron.right")
                         .font(.footnote.weight(.semibold))
                         .foregroundColor(SettingsStyle.secondaryText)
+                        .fixedSize()
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct SettingsToggleRow: View {
-    let title: String
-    @Binding var isOn: Bool
-
-    var body: some View {
-        SettingsRow(title: title) {
-            Toggle("", isOn: $isOn)
-                .labelsHidden()
-        }
-    }
-}
-
-private struct SettingsDatePickerRow: View {
-    let title: String
-    @Binding var selection: Date
-    var isEnabled: Bool
-
-    var body: some View {
-        SettingsRow(title: title, isEnabled: isEnabled) {
-            DatePicker(
-                "",
-                selection: $selection,
-                displayedComponents: .hourAndMinute
-            )
-            .labelsHidden()
-            .disabled(!isEnabled)
-            .opacity(isEnabled ? 1.0 : 0.55)
-        }
     }
 }
 
@@ -397,26 +312,7 @@ private struct SettingsValueRow: View {
                 .foregroundColor(SettingsStyle.secondaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
-                .frame(maxWidth: .infinity, alignment: .trailing)
         }
-    }
-}
-
-enum SettingsNotificationTime {
-    static var defaultDate: Date {
-        date(from: 9 * 60)
-    }
-
-    static func date(from minutes: Int) -> Date {
-        var components = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        components.hour = minutes / 60
-        components.minute = minutes % 60
-        return Calendar.current.date(from: components) ?? Date()
-    }
-
-    static func minutes(from date: Date) -> Int {
-        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
-        return (components.hour ?? 9) * 60 + (components.minute ?? 0)
     }
 }
 
