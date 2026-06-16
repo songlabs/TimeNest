@@ -173,6 +173,8 @@ struct ShiftCalendarLayout {
     static let footerButtonFontSize: CGFloat = 19
     static let footerButtonFontWeight: Font.Weight = .medium
     
+    static let footerToolbarHeight: CGFloat = 58
+
     // Footer 按钮统一高度 - 确保「今日」「月/周/日」「＋」视觉高度一致
     static let footerButtonHeight: CGFloat = 34
     static let footerButtonCornerRadius: CGFloat = 7

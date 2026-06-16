@@ -253,7 +253,6 @@
 "shift.disabled" = "Disabled";
 "shift_time.start_time" = "Start Time";
 "shift_time.end_time" = "End Time";
-"shift_time.edit_title" = "Edit Shift Time";
 "shift_time.edit_footer" = "Set the start and end times. For night shifts that span across midnight, the end time can be earlier than the start time.";
 "shift_time.display_name" = "Display Name";
 "shift_time.note" = "Note";

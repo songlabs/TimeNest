@@ -32,9 +32,6 @@ protocol ICSParsing {
 
 class ICSParseService: ICSParsing {
 
-    // ICS 最大文件大小限制 (10MB)
-    private let maxFileSize: Int = 10 * 1024 * 1024
-
     // 最大事件数量限制
     private let maxEventCount: Int = 1000
 
@@ -72,14 +69,12 @@ class ICSParseService: ICSParsing {
         var events: [HolidayEvent] = []
         var inVEvent = false
         var currentEventLines: [String] = []
-        var vEventCount = 0
 
         // 3. Parse by VEVENT blocks
 
         for line in unfoldedLines {
             if line == "BEGIN:VEVENT" {
                 inVEvent = true
-                vEventCount += 1
                 currentEventLines = []
             } else if line == "END:VEVENT" {
                 inVEvent = false

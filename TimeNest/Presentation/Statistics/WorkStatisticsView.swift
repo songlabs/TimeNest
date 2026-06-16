@@ -33,13 +33,13 @@ struct WorkStatisticsView: View {
         .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
         .sheet(isPresented: $viewModel.showStartDatePicker) {
             datePickerSheet(
-                titleKey: "work_statistics.start_date_month",
+                titleKey: .startDateMonth,
                 selection: $viewModel.startDate
             )
         }
         .sheet(isPresented: $viewModel.showEndDatePicker) {
             datePickerSheet(
-                titleKey: "work_statistics.end_date_month",
+                titleKey: .endDateMonth,
                 selection: $viewModel.endDate
             )
         }
@@ -58,7 +58,7 @@ struct WorkStatisticsView: View {
                 .padding(.top, 10)
 
             HStack {
-                Text(LocalizedStringKey("work_statistics.title"))
+                Text(localizedKey(.workStatisticsTitle))
                     .font(.system(size: 22, weight: .semibold))
                     .foregroundColor(WorkStatisticsColors.primaryText)
                     .lineLimit(1)
@@ -92,20 +92,20 @@ struct WorkStatisticsView: View {
         VStack(spacing: 14) {
             HStack(spacing: 12) {
                 dateField(
-                    titleKey: "work_statistics.start_date_month",
+                    titleKey: .startDateMonth,
                     value: viewModel.formattedStartDate,
                     action: { viewModel.showStartDatePicker = true }
                 )
 
                 dateField(
-                    titleKey: "work_statistics.end_date_month",
+                    titleKey: .endDateMonth,
                     value: viewModel.formattedEndDate,
                     action: { viewModel.showEndDatePicker = true }
                 )
             }
 
             Button(action: { viewModel.calculateStatistics() }) {
-                Label(LocalizedStringKey("work_statistics"), systemImage: statisticIconName)
+                Label(localizedKey(.workStatistics), systemImage: statisticIconName)
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, minHeight: WorkStatisticsLayout.primaryButtonHeight)
@@ -119,9 +119,9 @@ struct WorkStatisticsView: View {
         .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
     }
 
-    private func dateField(titleKey: String, value: String, action: @escaping () -> Void) -> some View {
+    private func dateField(titleKey: LocalizedString, value: String, action: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(LocalizedStringKey(titleKey))
+            Text(localizedKey(titleKey))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(WorkStatisticsColors.secondaryText)
                 .lineLimit(1)
@@ -186,13 +186,13 @@ struct WorkStatisticsView: View {
 
     private var headerRow: some View {
         tableRowBackground(background: WorkStatisticsColors.tableHeaderBackground) {
-            Text(LocalizedStringKey("work_statistics.column_date"))
+            Text(localizedKey(.columnDate))
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(LocalizedStringKey("work_statistics.column_time"))
+            Text(localizedKey(.columnTime))
                 .frame(width: 76, alignment: .center)
 
-            Text(LocalizedStringKey("work_statistics.column_amount"))
+            Text(localizedKey(.columnAmount))
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
         .font(.system(size: 14, weight: .semibold))
@@ -217,7 +217,7 @@ struct WorkStatisticsView: View {
 
     private var totalRow: some View {
         tableRowBackground(background: WorkStatisticsColors.totalRowBackground, verticalPadding: 14) {
-            Text(LocalizedStringKey("work_statistics.column_total"))
+            Text(localizedKey(.columnTotal))
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(viewModel.totalHours)
@@ -250,7 +250,7 @@ struct WorkStatisticsView: View {
             ProgressView()
                 .scaleEffect(1.2)
 
-            Text(LocalizedStringKey("work_statistics.loading"))
+            Text(localizedKey(.workStatisticsLoading))
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(WorkStatisticsColors.secondaryText)
         }
@@ -268,11 +268,11 @@ struct WorkStatisticsView: View {
                 .foregroundColor(ShiftCalendarColors.primaryBlue.opacity(0.85))
                 .padding(.bottom, 4)
 
-            Text(LocalizedStringKey("work_statistics.empty_title"))
+            Text(localizedKey(.workStatisticsEmptyTitle))
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundColor(WorkStatisticsColors.primaryText)
 
-            Text(LocalizedStringKey("work_statistics.empty_message"))
+            Text(localizedKey(.workStatisticsEmptyMessage))
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(WorkStatisticsColors.secondaryText)
                 .multilineTextAlignment(.center)
@@ -285,21 +285,21 @@ struct WorkStatisticsView: View {
 
     // MARK: - Date Picker
 
-    private func datePickerSheet(titleKey: String, selection: Binding<Date>) -> some View {
+    private func datePickerSheet(titleKey: LocalizedString, selection: Binding<Date>) -> some View {
         NavigationView {
             DatePicker(
-                LocalizedStringKey(titleKey),
+                localizedKey(titleKey),
                 selection: selection,
                 displayedComponents: [.date]
             )
             .datePickerStyle(.wheel)
             .labelsHidden()
             .padding()
-            .navigationTitle(LocalizedStringKey(titleKey))
+            .navigationTitle(localizedKey(titleKey))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(LocalizedStringKey("common.done")) {
+                    Button(localizedKey(.done)) {
                         viewModel.showStartDatePicker = false
                         viewModel.showEndDatePicker = false
                     }
@@ -307,6 +307,10 @@ struct WorkStatisticsView: View {
             }
         }
         .presentationDetents([.height(320)])
+    }
+
+    private func localizedKey(_ key: LocalizedString) -> LocalizedStringKey {
+        LocalizedStringKey(key.rawValue)
     }
 }
 

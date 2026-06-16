@@ -88,15 +88,9 @@ struct CalendarBottomToolbarView: View {
             .padding(.vertical, 5)
         }
         .background(ShiftCalendarColors.backgroundColor)
-        .frame(height: CalendarBottomToolbarLayout.toolbarHeight)
+        .frame(height: ShiftCalendarLayout.footerToolbarHeight)
         .ignoresSafeArea(edges: .bottom)
     }
-}
-
-// MARK: - Layout Constants
-
-struct CalendarBottomToolbarLayout {
-    static let toolbarHeight: CGFloat = 58
 }
 
 // MARK: - Preview

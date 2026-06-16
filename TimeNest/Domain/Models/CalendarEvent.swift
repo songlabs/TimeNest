@@ -19,26 +19,8 @@ struct WorkInfo: Codable, Hashable {
         self.workSessionId = workSessionId
     }
 
-    var effectiveWorkSessionId: UUID {
-        workSessionId ?? UUID()
-    }
-}
-
-extension WorkInfo {
     static func makeNewWorkSessionId() -> UUID {
         UUID()
-    }
-}
-
-extension Sequence where Element == CalendarEvent {
-    func sameWorkSessionEvents(sessionId: UUID) -> [CalendarEvent] {
-        filter { $0.workInfo?.workSessionId == sessionId }
-    }
-}
-
-extension Sequence where Element == EventOccurrence {
-    func sameWorkSessionEvents(sessionId: UUID) -> [EventOccurrence] {
-        filter { $0.workInfo?.workSessionId == sessionId }
     }
 }
 

@@ -198,7 +198,7 @@ struct MonthCalendarView: View {
             GeometryReader { geometry in
                 let isShiftInputMode = viewModel.isShiftInputMode
                 let adBannerHeight: CGFloat = isShiftInputMode ? 0 : ShiftCalendarLayout.adBannerHeight
-                let toolbarHeight: CGFloat = isShiftInputMode ? 0 : CalendarBottomToolbarLayout.toolbarHeight
+                let toolbarHeight: CGFloat = isShiftInputMode ? 0 : ShiftCalendarLayout.footerToolbarHeight
                 let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
                 let dateRowCount = max(1, grid.days.count / 7)
                 let minimumDateCellHeight = isShiftInputMode

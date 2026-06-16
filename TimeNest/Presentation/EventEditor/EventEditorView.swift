@@ -245,6 +245,11 @@ struct EventEditorView: View {
                                     endDate: $endDate,
                                     isAllDay: $isAllDay,
                                     allDayTitle: localization.localized(.editorAllDay),
+                                    startTitle: localization.localized(.editorStart),
+                                    endTitle: localization.localized(.editorEnd),
+                                    timeTitle: localization.localized(.editorTime),
+                                    doneTitle: localization.localized(.done),
+                                    cancelTitle: localization.localized(.cancel),
                                     showingStartDatePicker: $showingStartDatePicker,
                                     showingStartTimePicker: $showingStartTimePicker,
                                     showingEndDatePicker: $showingEndDatePicker,
@@ -261,6 +266,7 @@ struct EventEditorView: View {
                                     reminderOffsetMinutes: $reminderOffsetMinutes,
                                     reminderOptions: reminderOptions,
                                     reminderTitleFormatter: { reminderTitle(for: $0) },
+                                    cancelTitle: localization.localized(.cancel),
                                     showingReminderPicker: $showingReminderPicker
                                 )
                             }
@@ -281,11 +287,19 @@ struct EventEditorView: View {
                                 transportFeeTitle: localization.localized(.editorTransportFee),
                                 hourlyRateTitle: localization.localized(.editorHourlyRate),
                                 currencyUnit: localization.localized(.editorCurrencyUnit),
+                                timeTitle: localization.localized(.editorTime),
+                                doneTitle: localization.localized(.done),
+                                cancelTitle: localization.localized(.cancel),
                                 onWorkInTap: { handleWorkClockTap(.clockIn) },
                                 onWorkOutTap: { handleWorkClockTap(.clockOut) }
                             )
                             .sheet(isPresented: $showingRestTimePicker) {
-                                RestTimePickerSheet(restTime: $restTime)
+                                RestTimePickerSheet(
+                                    restTime: $restTime,
+                                    title: localization.localized(.editorRestTime),
+                                    doneTitle: localization.localized(.done),
+                                    cancelTitle: localization.localized(.cancel)
+                                )
                             }
 
                             if let validationMessage = validationMessage ?? errorMessage {
@@ -343,10 +357,6 @@ struct EventEditorView: View {
 
     private var editorTitle: String {
         isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
-    }
-
-    private var datePickerComponents: DatePickerComponents {
-        isAllDay ? [.date] : [.date, .hourAndMinute]
     }
 
     private var canSave: Bool {
@@ -787,6 +797,7 @@ private struct ReminderSection: View {
     @Binding var reminderOffsetMinutes: Int?
     let reminderOptions: [Int?]
     let reminderTitleFormatter: (Int?) -> String
+    let cancelTitle: String
     @Binding var showingReminderPicker: Bool
 
     var body: some View {
@@ -819,9 +830,11 @@ private struct ReminderSection: View {
         .buttonStyle(.plain)
         .sheet(isPresented: $showingReminderPicker) {
             ReminderPickerSheet(
+                title: reminderTitle,
                 reminderOffsetMinutes: $reminderOffsetMinutes,
                 reminderOptions: reminderOptions,
                 reminderTitleFormatter: reminderTitleFormatter,
+                cancelTitle: cancelTitle,
                 showingReminderPicker: $showingReminderPicker
             )
         }
@@ -831,9 +844,11 @@ private struct ReminderSection: View {
 /// 提醒时间选择器弹窗
 private struct ReminderPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
+    let title: String
     @Binding var reminderOffsetMinutes: Int?
     let reminderOptions: [Int?]
     let reminderTitleFormatter: (Int?) -> String
+    let cancelTitle: String
     @Binding var showingReminderPicker: Bool
 
     var body: some View {
@@ -860,22 +875,17 @@ private struct ReminderPickerSheet: View {
                     }
                 }
             }
-            .navigationTitle(localizedString("提醒"))
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localizedString("取消")) {
+                    Button(cancelTitle) {
                         showingReminderPicker = false
                         dismiss()
                     }
                 }
             }
         }
-    }
-
-    private func localizedString(_ key: String) -> String {
-        let localized = NSLocalizedString(key, comment: "")
-        return localized != key ? localized : key
     }
 }
 
@@ -884,6 +894,11 @@ private struct EventTimeSection: View {
     @Binding var endDate: Date
     @Binding var isAllDay: Bool
     let allDayTitle: String
+    let startTitle: String
+    let endTitle: String
+    let timeTitle: String
+    let doneTitle: String
+    let cancelTitle: String
     @Binding var showingStartDatePicker: Bool
     @Binding var showingStartTimePicker: Bool
     @Binding var showingEndDatePicker: Bool
@@ -921,7 +936,7 @@ private struct EventTimeSection: View {
 
             // 第二行：開始 + 日期/时间按钮
             HStack(alignment: .center, spacing: 8) {
-                Text("開始")
+                Text(startTitle)
                     .font(.subheadline)
                     .foregroundColor(EventEditorStyle.secondaryText)
                     .frame(minWidth: 40, alignment: .leading)
@@ -970,24 +985,30 @@ private struct EventTimeSection: View {
             }
             .sheet(isPresented: $showingStartDatePicker) {
                 TimePickerSheet(
+                    title: pickerTitle(for: .startDate),
                     startDate: $startDate,
                     endDate: $endDate,
                     isAllDay: isAllDay,
+                    doneTitle: doneTitle,
+                    cancelTitle: cancelTitle,
                     mode: .startDate
                 )
             }
             .sheet(isPresented: $showingStartTimePicker) {
                 TimePickerSheet(
+                    title: pickerTitle(for: .startTime),
                     startDate: $startDate,
                     endDate: $endDate,
                     isAllDay: isAllDay,
+                    doneTitle: doneTitle,
+                    cancelTitle: cancelTitle,
                     mode: .startTime
                 )
             }
 
             // 第三行：終了 + 日期/时间按钮
             HStack(alignment: .center, spacing: 8) {
-                Text("終了")
+                Text(endTitle)
                     .font(.subheadline)
                     .foregroundColor(EventEditorStyle.secondaryText)
                     .frame(minWidth: 40, alignment: .leading)
@@ -1036,17 +1057,23 @@ private struct EventTimeSection: View {
             }
             .sheet(isPresented: $showingEndDatePicker) {
                 TimePickerSheet(
+                    title: pickerTitle(for: .endDate),
                     startDate: $startDate,
                     endDate: $endDate,
                     isAllDay: isAllDay,
+                    doneTitle: doneTitle,
+                    cancelTitle: cancelTitle,
                     mode: .endDate
                 )
             }
             .sheet(isPresented: $showingEndTimePicker) {
                 TimePickerSheet(
+                    title: pickerTitle(for: .endTime),
                     startDate: $startDate,
                     endDate: $endDate,
                     isAllDay: isAllDay,
+                    doneTitle: doneTitle,
+                    cancelTitle: cancelTitle,
                     mode: .endTime
                 )
             }
@@ -1061,6 +1088,19 @@ private struct EventTimeSection: View {
     private func formatTimeOnly(_ date: Date) -> String {
         timeFormatter.string(from: date)
     }
+
+    private func pickerTitle(for mode: TimePickerMode) -> String {
+        switch mode {
+        case .startDate:
+            return startTitle
+        case .startTime:
+            return "\(startTitle) \(timeTitle)"
+        case .endDate:
+            return endTitle
+        case .endTime:
+            return "\(endTitle) \(timeTitle)"
+        }
+    }
 }
 
 private enum TimePickerMode {
@@ -1072,30 +1112,23 @@ private enum TimePickerMode {
 
 private struct TimePickerSheet: View {
     @Environment(\.dismiss) private var dismiss
+    let title: String
     @Binding var startDate: Date
     @Binding var endDate: Date
     let isAllDay: Bool
+    let doneTitle: String
+    let cancelTitle: String
     let mode: TimePickerMode
 
     @State private var tempDate: Date
 
-    private var datePickerTitle: String {
-        switch mode {
-        case .startDate:
-            return "选择开始日期"
-        case .startTime:
-            return "选择开始时间"
-        case .endDate:
-            return "选择结束日期"
-        case .endTime:
-            return "选择结束时间"
-        }
-    }
-
-    init(startDate: Binding<Date>, endDate: Binding<Date>, isAllDay: Bool, mode: TimePickerMode) {
+    init(title: String, startDate: Binding<Date>, endDate: Binding<Date>, isAllDay: Bool, doneTitle: String, cancelTitle: String, mode: TimePickerMode) {
+        self.title = title
         _startDate = startDate
         _endDate = endDate
         self.isAllDay = isAllDay
+        self.doneTitle = doneTitle
+        self.cancelTitle = cancelTitle
         self.mode = mode
         
         // 根据模式初始化 tempDate
@@ -1148,11 +1181,11 @@ private struct TimePickerSheet: View {
                     .padding(.vertical, 8)
                 }
             }
-            .navigationTitle(datePickerTitle)
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localizedString("完了")) {
+                    Button(doneTitle) {
                         commitSelection()
                         dismiss()
                     }
@@ -1160,7 +1193,7 @@ private struct TimePickerSheet: View {
                 }
 
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localizedString("取消")) {
+                    Button(cancelTitle) {
                         dismiss()
                     }
                 }
@@ -1239,20 +1272,6 @@ private struct TimePickerSheet: View {
         }
     }
 
-    private func localizedString(_ key: String) -> String {
-        let localized = NSLocalizedString(key, comment: "")
-        return localized != key ? localized : key
-    }
-}
-
-private extension Date {
-    func formatted(with dateFormat: String) -> String {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = dateFormat
-        return formatter.string(from: self)
-    }
 }
 
 // MARK: - Title Input Section
@@ -1281,6 +1300,8 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
     @Environment(\.dismiss) private var dismiss
 
     let title: String
+    let doneTitle: String
+    let cancelTitle: String
     let onCancel: () -> Void
     let onDone: () -> Void
     @ViewBuilder let pickerContent: () -> PickerContent
@@ -1299,7 +1320,7 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localizedString("完了")) {
+                    Button(doneTitle) {
                         onDone()
                         dismiss()
                     }
@@ -1307,7 +1328,7 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
                 }
 
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localizedString("取消")) {
+                    Button(cancelTitle) {
                         onCancel()
                         dismiss()
                     }
@@ -1315,20 +1336,20 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
             }
         }
     }
-
-    private func localizedString(_ key: String) -> String {
-        let localized = NSLocalizedString(key, comment: "")
-        return localized != key ? localized : key
-    }
 }
 
 /// 休息时间选择器（Sheet）
 private struct RestTimePickerSheet: View {
     @Binding var restTime: Double // 休息时间（小时）
+    let title: String
+    let doneTitle: String
+    let cancelTitle: String
 
     var body: some View {
         WorkInfoTimePickerSheet(
-            title: localizedString("选择休息时间"),
+            title: title,
+            doneTitle: doneTitle,
+            cancelTitle: cancelTitle,
             onCancel: {},
             onDone: {}
         ) {
@@ -1359,11 +1380,6 @@ private struct RestTimePickerSheet: View {
         let minute = Double(calendar.component(.minute, from: date))
         return hour + minute / 60.0
     }
-
-    private func localizedString(_ key: String) -> String {
-        let localized = NSLocalizedString(key, comment: "")
-        return localized != key ? localized : key
-    }
 }
 
 // MARK: - Work Info Section
@@ -1374,18 +1390,13 @@ private enum WorkTimeEditTarget: Hashable, Identifiable {
 
     var id: Self { self }
 
-    func pickerTitle(workInTitle: String, workOutTitle: String) -> String {
+    func pickerTitle(workInTitle: String, workOutTitle: String, timeTitle: String) -> String {
         switch self {
         case .workIn:
-            return localizedString("选择") + workInTitle + localizedString("editor.time")
+            return "\(workInTitle) \(timeTitle)"
         case .workOut:
-            return localizedString("选择") + workOutTitle + localizedString("editor.time")
+            return "\(workOutTitle) \(timeTitle)"
         }
-    }
-
-    private func localizedString(_ key: String) -> String {
-        let localized = NSLocalizedString(key, comment: "")
-        return localized != key ? localized : key
     }
 }
 
@@ -1406,6 +1417,9 @@ private struct WorkInfoSection: View {
     let transportFeeTitle: String
     let hourlyRateTitle: String
     let currencyUnit: String
+    let timeTitle: String
+    let doneTitle: String
+    let cancelTitle: String
     let onWorkInTap: () -> Void
     let onWorkOutTap: () -> Void
 
@@ -1460,7 +1474,9 @@ private struct WorkInfoSection: View {
         .cardContainer()
         .sheet(item: $editingWorkTime) { target in
             WorkInfoTimePickerSheet(
-                title: target.pickerTitle(workInTitle: workInTitle, workOutTitle: workOutTitle),
+                title: target.pickerTitle(workInTitle: workInTitle, workOutTitle: workOutTitle, timeTitle: timeTitle),
+                doneTitle: doneTitle,
+                cancelTitle: cancelTitle,
                 onCancel: { editingWorkTime = nil },
                 onDone: { editingWorkTime = nil }
             ) {
@@ -1521,11 +1537,6 @@ private struct WorkInfoSection: View {
     private func formatWorkTime(_ date: Date) -> String {
         let components = Calendar.current.dateComponents([.hour, .minute], from: date)
         return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
-    }
-
-    private func localizedString(_ key: String) -> String {
-        let localized = NSLocalizedString(key, comment: "")
-        return localized != key ? localized : key
     }
 
 }
