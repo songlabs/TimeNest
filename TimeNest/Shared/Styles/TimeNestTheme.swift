@@ -65,6 +65,10 @@ enum TimeNestTheme {
     
     /// 统一小圆角（用于小控件）
     static let smallCornerRadius: CGFloat = 6
+
+    enum Fonts {
+        static let popupTitle = Font.headline.weight(.bold)
+    }
 }
 
 /// Settings-aligned modal shell metrics shared by popup-style surfaces.
@@ -87,8 +91,6 @@ enum SettingsModalSurface {
     static let horizontalPadding: CGFloat = 20
     static let headerVerticalPadding: CGFloat = 14
     static let closeButtonSize: CGFloat = 36
-    static let titleFontSize: CGFloat = 28
-    static let titleFontWeight: Font.Weight = .bold
     static let shadowColor = Color.black.opacity(0.12)
 }
 
@@ -109,7 +111,7 @@ struct SettingsModalHeaderView: View {
     var body: some View {
         ZStack {
             title
-                .font(.system(size: SettingsModalSurface.titleFontSize, weight: SettingsModalSurface.titleFontWeight))
+                .font(TimeNestTheme.Fonts.popupTitle)
                 .foregroundColor(SettingsModalSurface.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)

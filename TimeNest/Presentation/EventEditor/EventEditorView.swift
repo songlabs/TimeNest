@@ -725,7 +725,7 @@ private struct EditorHeader: View {
     var body: some View {
         ZStack {
             Text(title)
-                .font(.headline.weight(.bold))
+                .font(TimeNestTheme.Fonts.popupTitle)
                 .foregroundColor(EventEditorStyle.primaryText)
                 .lineLimit(1)
 
