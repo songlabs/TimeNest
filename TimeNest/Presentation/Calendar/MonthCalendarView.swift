@@ -623,18 +623,14 @@ struct DayCellView: View {
 
     @ViewBuilder
     private var eventLabelsView: some View {
-        let visibleEvents = Array(cell.events.prefix(3))
-        let hiddenCount = max(0, cell.events.count - visibleEvents.count)
+        let rows = eventLabelRows
+        let visibleRows = Array(rows.prefix(3))
+        let hiddenCount = max(0, rows.count - visibleRows.count)
 
-        if !visibleEvents.isEmpty {
+        if !visibleRows.isEmpty {
             VStack(alignment: .center, spacing: 2) {
-                ForEach(visibleEvents, id: \.id) { event in
-                    HStack {
-                        Spacer(minLength: 0)
-                        eventLabelView(for: event)
-                        Spacer(minLength: 0)
-                    }
-                    .frame(maxWidth: .infinity)
+                ForEach(Array(visibleRows.enumerated()), id: \.offset) { _, row in
+                    eventLabelRowView(row)
                 }
 
                 if hiddenCount > 0 {
@@ -648,28 +644,74 @@ struct DayCellView: View {
         }
     }
 
+    private enum EventLabelRow {
+        case workClock(clockIn: EventOccurrence?, clockOut: EventOccurrence?)
+        case event(EventOccurrence)
+    }
+
+    private var eventLabelRows: [EventLabelRow] {
+        let clockIn = cell.events.first(where: \.isClockInEvent)
+        let clockOut = cell.events.first(where: \.isClockOutEvent)
+        var didInsertWorkClockRow = false
+
+        return cell.events.compactMap { event in
+            if event.isWorkClockEvent {
+                guard !didInsertWorkClockRow else { return nil }
+                didInsertWorkClockRow = true
+                return .workClock(clockIn: clockIn, clockOut: clockOut)
+            }
+            return .event(event)
+        }
+    }
+
+    @ViewBuilder
+    private func eventLabelRowView(_ row: EventLabelRow) -> some View {
+        switch row {
+        case .workClock(let clockIn, let clockOut):
+            workClockLabelView(clockIn: clockIn, clockOut: clockOut)
+        case .event(let event):
+            eventLabelView(for: event)
+        }
+    }
+
     @ViewBuilder
     private func eventLabelView(for event: EventOccurrence) -> some View {
-        let label = Text(eventLabel(for: event))
+        Text(eventLabel(for: event))
             .font(.system(size: 10, weight: .medium))
             .foregroundColor(eventLabelTextColor(for: event))
             .lineLimit(1)
             .truncationMode(.tail)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity)
+            .background(eventLabelBackgroundColor(for: event))
+            .cornerRadius(3)
+    }
 
-        if event.shiftTemplateID != nil {
-            label
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
-                .frame(maxWidth: .infinity)
-                .background(eventLabelBackgroundColor(for: event))
-                .cornerRadius(3)
-        } else {
-            label
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
-                .background(eventLabelBackgroundColor(for: event))
-                .cornerRadius(3)
+    @ViewBuilder
+    private func workClockLabelView(clockIn: EventOccurrence?, clockOut: EventOccurrence?) -> some View {
+        HStack(spacing: 4) {
+            if let clockIn {
+                Text(eventLabel(for: clockIn))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+
+            Spacer(minLength: 4)
+
+            if let clockOut {
+                Text(eventLabel(for: clockOut))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
         }
+        .font(.system(size: 10, weight: .medium))
+        .foregroundColor(ShiftCalendarColors.primaryBlueDark)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity)
+        .background(workClockLabelBackgroundColor(clockIn: clockIn, clockOut: clockOut))
+        .cornerRadius(3)
     }
 
     private func eventLabel(for event: EventOccurrence) -> String {
@@ -693,6 +735,16 @@ struct DayCellView: View {
             return ShiftCalendarColors.primaryBlue.opacity(0.12)
         }
         return shiftTemplateID.displayBackgroundColor
+    }
+
+    private func workClockLabelBackgroundColor(clockIn: EventOccurrence?, clockOut: EventOccurrence?) -> Color {
+        if let clockIn {
+            return eventLabelBackgroundColor(for: clockIn)
+        }
+        if let clockOut {
+            return eventLabelBackgroundColor(for: clockOut)
+        }
+        return ShiftCalendarColors.primaryBlue.opacity(0.12)
     }
 
     private func formatTime(_ date: Date) -> String {
