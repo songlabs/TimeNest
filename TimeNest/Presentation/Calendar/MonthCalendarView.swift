@@ -508,20 +508,13 @@ private struct ShiftInputPanelView: View {
                             Button {
                                 onSelectTemplate(template)
                             } label: {
-                                VStack(spacing: 2) {
-                                    Text(template.displayName)
-                                        .font(.system(size: ShiftInputPanelLayout.buttonTitleFontSize, weight: .semibold))
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-
-                                    Text(template.displayTime)
-                                        .font(.system(size: ShiftInputPanelLayout.buttonTimeFontSize, weight: .medium))
-                                        .lineLimit(1)
-                                        .minimumScaleFactor(0.8)
-                                }
-                                .foregroundColor(buttonTextColor(for: template))
-                                .padding(.horizontal, ShiftInputPanelLayout.doneButtonHorizontalPadding)
-                                .frame(width: ShiftInputPanelLayout.buttonWidth, height: ShiftInputPanelLayout.buttonHeight)
+                                Text(template.displayName)
+                                    .font(.system(size: ShiftInputPanelLayout.buttonTitleFontSize, weight: .semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .foregroundColor(buttonTextColor(for: template))
+                                    .padding(.horizontal, ShiftInputPanelLayout.doneButtonHorizontalPadding)
+                                    .frame(minWidth: ShiftInputPanelLayout.buttonMinWidth, minHeight: ShiftInputPanelLayout.buttonHeight)
                                 .background(buttonBackgroundColor(for: template))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous)

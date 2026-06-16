@@ -184,16 +184,15 @@ struct ShiftInputPanelLayout {
     static let headerSpacing: CGFloat = 12
     static let doneButtonHeight: CGFloat = 32
     static let doneButtonHorizontalPadding: CGFloat = 12
-    static let buttonWidth: CGFloat = 104
-    static let buttonHeight: CGFloat = 48
+    static let buttonMinWidth: CGFloat = 68
+    static let buttonHeight: CGFloat = 36
     static let buttonSpacing: CGFloat = 10
     static let buttonCornerRadius: CGFloat = 8
-    static let buttonBottomPadding: CGFloat = 14
+    static let buttonBottomPadding: CGFloat = 12
     static let emptyBottomPadding: CGFloat = 14
     static let titleFontSize: CGFloat = 18
     static let doneFontSize: CGFloat = 15
     static let buttonTitleFontSize: CGFloat = 14
-    static let buttonTimeFontSize: CGFloat = 11
 }
 
 // MARK: - Statistics Bottom Sheet Colors
