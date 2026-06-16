@@ -27,8 +27,6 @@ struct SettingsView: View {
                     )
 
                     settingsForm
-                        .scrollContentBackground(.hidden)
-                        .background(SettingsModalSurface.background)
                 }
                 .background(SettingsModalSurface.background)
             } else {
@@ -50,121 +48,116 @@ struct SettingsView: View {
     }
 
     private var settingsForm: some View {
-        Form {
-            // MARK: - Language Section
-            Section {
-                Picker(localization.localized(.settingsLanguage), selection: Binding(
-                    get: { localization.selectedLanguageCode },
-                    set: { localization.setLanguage(DisplayLanguage(rawValue: $0) ?? .system) }
-                )) {
-                    Text(localization.localized(.languageSystem)).tag("system")
-                    Text(localization.localized(.languageSimplifiedChinese)).tag("zhHans")
-                    Text(localization.localized(.languageJapanese)).tag("ja")
-                    Text(localization.localized(.languageKorean)).tag("ko")
-                    Text(localization.localized(.languageEnglish)).tag("enUS")
+        ScrollView {
+            VStack(spacing: SettingsStyle.sectionSpacing) {
+                SettingsCard {
+                    SettingsPickerRow(
+                        title: localization.localized(.settingsLanguage),
+                        selection: Binding(
+                            get: { localization.selectedLanguageCode },
+                            set: { localization.setLanguage(DisplayLanguage(rawValue: $0) ?? .system) }
+                        ),
+                        options: [
+                            SettingsPickerOption(title: localization.localized(.languageSystem), tag: "system"),
+                            SettingsPickerOption(title: localization.localized(.languageSimplifiedChinese), tag: "zhHans"),
+                            SettingsPickerOption(title: localization.localized(.languageJapanese), tag: "ja"),
+                            SettingsPickerOption(title: localization.localized(.languageKorean), tag: "ko"),
+                            SettingsPickerOption(title: localization.localized(.languageEnglish), tag: "enUS")
+                        ]
+                    )
                 }
-            } header: {
-                Text(localization.localized(.settingsLanguage))
-            }
 
-            // MARK: - Holiday Subscription Section
-            Section {
-                NavigationLink {
-                    HolidaySubscriptionSettingsView()
-                        .environmentObject(localization)
-                } label: {
-                    HStack {
-                        Text(localization.localized(.settingsHolidayRegion))
-                        Spacer()
-                        Text(enabledSubscriptionsDisplayText)
-                            .foregroundColor(.secondary)
+                SettingsCard {
+                    SettingsNavigationRow(
+                        title: localization.localized(.settingsHolidayRegion),
+                        value: enabledSubscriptionsDisplayText
+                    ) {
+                        HolidaySubscriptionSettingsView()
+                            .environmentObject(localization)
                     }
                 }
-            } header: {
-                Text(localization.localized(.settingsHolidayRegion))
-            }
 
-            // MARK: - Week Start Section
-            Section {
-                Picker(localization.localized(.settingsWeekStart), selection: $weekStart) {
-                    Text(localization.localized(.weekStartSystem)).tag("system")
-                    Text(localization.localized(.weekStartSunday)).tag("sunday")
-                    Text(localization.localized(.weekStartMonday)).tag("monday")
-                    Text(localization.localized(.weekStartSaturday)).tag("saturday")
+                SettingsCard {
+                    SettingsPickerRow(
+                        title: localization.localized(.settingsWeekStart),
+                        selection: $weekStart,
+                        options: [
+                            SettingsPickerOption(title: localization.localized(.weekStartSystem), tag: "system"),
+                            SettingsPickerOption(title: localization.localized(.weekStartSunday), tag: "sunday"),
+                            SettingsPickerOption(title: localization.localized(.weekStartMonday), tag: "monday"),
+                            SettingsPickerOption(title: localization.localized(.weekStartSaturday), tag: "saturday")
+                        ]
+                    )
                 }
-            } header: {
-                Text(localization.localized(.settingsWeekStart))
-            }
 
-            // MARK: - Shift Time Section
-            Section {
-                NavigationLink {
-                    ShiftTimeSettingsView()
-                        .environmentObject(localization)
-                } label: {
-                    Text(localization.localized(.shiftTimeSettingsTitle))
+                SettingsCard {
+                    SettingsNavigationRow(
+                        title: localization.localized(.shiftTimeSettingsTitle)
+                    ) {
+                        ShiftTimeSettingsView()
+                            .environmentObject(localization)
+                    }
                 }
-            } header: {
-                Text(localization.localized(.shiftTimeSettingsTitle))
-            }
 
-            // MARK: - Notification Section
-            Section {
-                Toggle(localization.localized(.notificationEnabled), isOn: $notificationEnabled)
+                SettingsCard {
+                    SettingsToggleRow(
+                        title: localization.localized(.notificationEnabled),
+                        isOn: $notificationEnabled
+                    )
                     .onChange(of: notificationEnabled) { enabled in
                         updateDailyNotification(enabled: enabled)
                     }
 
-                DatePicker(
-                    localization.localized(.notificationTime),
-                    selection: $notificationTime,
-                    displayedComponents: .hourAndMinute
-                )
-                .disabled(!notificationEnabled)
-                .opacity(notificationEnabled ? 1.0 : 0.5)
-                .onChange(of: notificationTime) { newValue in
-                    notificationTimeMinutes = SettingsNotificationTime.minutes(from: newValue)
-                    if notificationEnabled {
-                        updateDailyNotification(enabled: true)
+                    SettingsDivider()
+
+                    SettingsDatePickerRow(
+                        title: localization.localized(.notificationTime),
+                        selection: $notificationTime,
+                        isEnabled: notificationEnabled
+                    )
+                    .onChange(of: notificationTime) { newValue in
+                        notificationTimeMinutes = SettingsNotificationTime.minutes(from: newValue)
+                        if notificationEnabled {
+                            updateDailyNotification(enabled: true)
+                        }
                     }
                 }
-            } header: {
-                Text(localization.localized(.settingsNotification))
-            }
 
-            // MARK: - Theme Section
-            Section {
-                Picker(localization.localized(.settingsTheme), selection: $themeMode) {
-                    Text(localization.localized(.themeLight)).tag("light")
-                    Text(localization.localized(.themeDark)).tag("dark")
-                    Text(localization.localized(.themeSystem)).tag("system")
-                }
-            } header: {
-                Text(localization.localized(.settingsTheme))
-            }
-
-            // MARK: - About Section
-            Section {
-                HStack {
-                    Text(localization.localized(.aboutVersion))
-                    Spacer()
-                    Text("1.0.0")
-                        .foregroundColor(.secondary)
+                SettingsCard {
+                    SettingsPickerRow(
+                        title: localization.localized(.settingsTheme),
+                        selection: $themeMode,
+                        options: [
+                            SettingsPickerOption(title: localization.localized(.themeLight), tag: "light"),
+                            SettingsPickerOption(title: localization.localized(.themeDark), tag: "dark"),
+                            SettingsPickerOption(title: localization.localized(.themeSystem), tag: "system")
+                        ]
+                    )
                 }
 
-                HStack {
-                    Text(localization.localized(.aboutDeveloper))
-                    Spacer()
-                    Text(localization.localized(.aboutDeveloperName))
-                        .foregroundColor(.secondary)
+                SettingsCard {
+                    SettingsCardTitle(localization.localized(.settingsAbout))
+                    SettingsDivider()
+
+                    SettingsValueRow(
+                        title: localization.localized(.aboutVersion),
+                        value: "1.0.0"
+                    )
+
+                    SettingsDivider()
+
+                    SettingsValueRow(
+                        title: localization.localized(.aboutDeveloper),
+                        value: localization.localized(.aboutDeveloperName)
+                    )
                 }
-
-            } header: {
-                Text(localization.localized(.settingsAbout))
             }
-
+            .padding(.horizontal, SettingsStyle.horizontalPadding)
+            .padding(.top, SettingsStyle.topPadding)
+            .padding(.bottom, SettingsStyle.bottomPadding)
         }
-        .foregroundColor(.primary)
+        .background(SettingsStyle.background)
+        .foregroundColor(SettingsStyle.primaryText)
     }
 
     private func updateDailyNotification(enabled: Bool) {
@@ -197,6 +190,215 @@ struct SettingsView: View {
             .sorted { $0.localizedKey < $1.localizedKey }
             .map { localization.localized($0.localizedKey) }
             .joined(separator: ", ")
+    }
+}
+
+private enum SettingsStyle {
+    static let background = SettingsModalSurface.background
+    static let cardBackground = SettingsModalSurface.sectionBackground
+    static let primaryText = SettingsModalSurface.primaryText
+    static let secondaryText = SettingsModalSurface.secondaryText
+    static let disabledText = SettingsModalSurface.secondaryText.opacity(0.55)
+    static let divider = SettingsModalSurface.separator
+
+    static let horizontalPadding: CGFloat = TimeNestTheme.externalPadding
+    static let sectionSpacing: CGFloat = TimeNestTheme.sectionSpacing
+    static let topPadding: CGFloat = 18
+    static let bottomPadding: CGFloat = 28
+    static let rowHorizontalPadding: CGFloat = 16
+    static let rowMinHeight: CGFloat = 56
+    static let cardCornerRadius: CGFloat = 26
+    static let titleTopPadding: CGFloat = 14
+    static let titleBottomPadding: CGFloat = 8
+    static let accessorySpacing: CGFloat = 8
+}
+
+private struct SettingsPickerOption: Identifiable {
+    let title: String
+    let tag: String
+
+    var id: String { tag }
+}
+
+private struct SettingsCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .background(SettingsStyle.cardBackground)
+        .clipShape(RoundedRectangle(cornerRadius: SettingsStyle.cardCornerRadius, style: .continuous))
+    }
+}
+
+private struct SettingsCardTitle: View {
+    let title: String
+
+    init(_ title: String) {
+        self.title = title
+    }
+
+    var body: some View {
+        Text(title)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(SettingsStyle.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
+            .padding(.top, SettingsStyle.titleTopPadding)
+            .padding(.bottom, SettingsStyle.titleBottomPadding)
+    }
+}
+
+private struct SettingsDivider: View {
+    var body: some View {
+        Rectangle()
+            .fill(SettingsStyle.divider)
+            .frame(height: 1 / UIScreen.main.scale)
+            .padding(.leading, SettingsStyle.rowHorizontalPadding)
+    }
+}
+
+private struct SettingsRow<Accessory: View>: View {
+    let title: String
+    var isEnabled: Bool = true
+    let accessory: Accessory
+
+    init(
+        title: String,
+        isEnabled: Bool = true,
+        @ViewBuilder accessory: () -> Accessory
+    ) {
+        self.title = title
+        self.isEnabled = isEnabled
+        self.accessory = accessory()
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(title)
+                .font(.body)
+                .foregroundColor(isEnabled ? SettingsStyle.primaryText : SettingsStyle.disabledText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+
+            Spacer(minLength: 12)
+
+            accessory
+        }
+        .frame(minHeight: SettingsStyle.rowMinHeight)
+        .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
+        .contentShape(Rectangle())
+    }
+}
+
+private struct SettingsPickerRow: View {
+    let title: String
+    @Binding var selection: String
+    let options: [SettingsPickerOption]
+
+    var body: some View {
+        SettingsRow(title: title) {
+            Picker("", selection: $selection) {
+                ForEach(options) { option in
+                    Text(option.title).tag(option.tag)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .tint(SettingsStyle.secondaryText)
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+}
+
+private struct SettingsNavigationRow<Destination: View>: View {
+    let title: String
+    var value: String?
+    let destination: Destination
+
+    init(
+        title: String,
+        value: String? = nil,
+        @ViewBuilder destination: () -> Destination
+    ) {
+        self.title = title
+        self.value = value
+        self.destination = destination()
+    }
+
+    var body: some View {
+        NavigationLink {
+            destination
+        } label: {
+            SettingsRow(title: title) {
+                HStack(spacing: SettingsStyle.accessorySpacing) {
+                    if let value {
+                        Text(value)
+                            .font(.body)
+                            .foregroundColor(SettingsStyle.secondaryText)
+                            .lineLimit(1)
+                    }
+
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(SettingsStyle.secondaryText)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        SettingsRow(title: title) {
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+        }
+    }
+}
+
+private struct SettingsDatePickerRow: View {
+    let title: String
+    @Binding var selection: Date
+    var isEnabled: Bool
+
+    var body: some View {
+        SettingsRow(title: title, isEnabled: isEnabled) {
+            DatePicker(
+                "",
+                selection: $selection,
+                displayedComponents: .hourAndMinute
+            )
+            .labelsHidden()
+            .disabled(!isEnabled)
+            .opacity(isEnabled ? 1.0 : 0.55)
+        }
+    }
+}
+
+private struct SettingsValueRow: View {
+    let title: String
+    let value: String
+
+    var body: some View {
+        SettingsRow(title: title) {
+            Text(value)
+                .font(.body)
+                .foregroundColor(SettingsStyle.secondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
     }
 }
 
