@@ -604,17 +604,14 @@ struct DayCellView: View {
                     holidayLabelsView
                 } else if let shiftType = cell.shiftType {
                     // 排班标签 - 底部居中，圆角矩形样式
-                    HStack {
-                        Text(shiftType)
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 8)
-                            .background(shiftType.shiftLabelColor)
-                            .padding(.bottom, 8)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.horizontal, ShiftCalendarLayout.shiftLabelHorizontalPadding)
+                    Text(shiftType)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, minHeight: ShiftCalendarLayout.shiftLabelHeight)
+                        .background(shiftType.shiftLabelColor)
+                        .clipShape(RoundedRectangle(cornerRadius: ShiftCalendarLayout.shiftLabelCornerRadius, style: .continuous))
+                        .padding(.horizontal, 2)
+                        .padding(.bottom, 8)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -634,15 +631,7 @@ struct DayCellView: View {
                 ForEach(visibleEvents, id: \.id) { event in
                     HStack {
                         Spacer(minLength: 0)
-                        Text(eventLabel(for: event))
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(eventLabelTextColor(for: event))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(eventLabelBackgroundColor(for: event))
-                            .cornerRadius(3)
+                        eventLabelView(for: event)
                         Spacer(minLength: 0)
                     }
                     .frame(maxWidth: .infinity)
@@ -656,6 +645,30 @@ struct DayCellView: View {
                 }
             }
             .padding(.horizontal, 4)
+        }
+    }
+
+    @ViewBuilder
+    private func eventLabelView(for event: EventOccurrence) -> some View {
+        let label = Text(eventLabel(for: event))
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(eventLabelTextColor(for: event))
+            .lineLimit(1)
+            .truncationMode(.tail)
+
+        if event.shiftTemplateID != nil {
+            label
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .frame(maxWidth: .infinity)
+                .background(eventLabelBackgroundColor(for: event))
+                .cornerRadius(3)
+        } else {
+            label
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(eventLabelBackgroundColor(for: event))
+                .cornerRadius(3)
         }
     }
 
