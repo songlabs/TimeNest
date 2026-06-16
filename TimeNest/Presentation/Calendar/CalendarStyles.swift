@@ -120,6 +120,7 @@ struct ShiftCalendarLayout {
     static let calendarGridTopMargin: CGFloat = 0
     static let calendarGridHorizontalPadding: CGFloat = 0
     static let dayCellMinHeight: CGFloat = 99
+    static let shiftInputDayCellMinHeight: CGFloat = 78
     static let dayCellRecommendedHeight: CGFloat = 109
 
     // 表格网格线
@@ -171,6 +172,28 @@ struct WorkStatisticsLayout {
     static let tableColumnSpacing: CGFloat = 12
     static let handleWidth: CGFloat = 52
     static let handleHeight: CGFloat = 5
+}
+
+// MARK: - Shift Input Panel Layout
+
+struct ShiftInputPanelLayout {
+    static let outerHorizontalPadding: CGFloat = 10
+    static let outerBottomPadding: CGFloat = 8
+    static let panelSpacing: CGFloat = 10
+    static let handleTopPadding: CGFloat = 8
+    static let headerSpacing: CGFloat = 12
+    static let doneButtonHeight: CGFloat = 32
+    static let doneButtonHorizontalPadding: CGFloat = 12
+    static let buttonWidth: CGFloat = 104
+    static let buttonHeight: CGFloat = 48
+    static let buttonSpacing: CGFloat = 10
+    static let buttonCornerRadius: CGFloat = 8
+    static let buttonBottomPadding: CGFloat = 14
+    static let emptyBottomPadding: CGFloat = 14
+    static let titleFontSize: CGFloat = 18
+    static let doneFontSize: CGFloat = 15
+    static let buttonTitleFontSize: CGFloat = 14
+    static let buttonTimeFontSize: CGFloat = 11
 }
 
 // MARK: - Statistics Bottom Sheet Colors

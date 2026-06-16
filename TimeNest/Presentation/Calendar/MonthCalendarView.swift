@@ -186,8 +186,8 @@ struct MonthCalendarView: View {
             }
         )
         .environmentObject(localization)
-        .padding(.horizontal, 10)
-        .padding(.bottom, 8)
+        .padding(.horizontal, ShiftInputPanelLayout.outerHorizontalPadding)
+        .padding(.bottom, ShiftInputPanelLayout.outerBottomPadding)
         .background(ShiftCalendarColors.backgroundColor)
     }
 
@@ -196,15 +196,19 @@ struct MonthCalendarView: View {
         VStack(spacing: 0) {
             // 月历表格 - 最大化占据空间
             GeometryReader { geometry in
-                let adBannerHeight: CGFloat = ShiftCalendarLayout.adBannerHeight
-                let toolbarHeight: CGFloat = CalendarBottomToolbarLayout.toolbarHeight
+                let isShiftInputMode = viewModel.isShiftInputMode
+                let adBannerHeight: CGFloat = isShiftInputMode ? 0 : ShiftCalendarLayout.adBannerHeight
+                let toolbarHeight: CGFloat = isShiftInputMode ? 0 : CalendarBottomToolbarLayout.toolbarHeight
                 let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
                 let dateRowCount = max(1, grid.days.count / 7)
+                let minimumDateCellHeight = isShiftInputMode
+                    ? ShiftCalendarLayout.shiftInputDayCellMinHeight
+                    : ShiftCalendarLayout.dayCellMinHeight
 
                 // 可用高度 = 总高度 - adBanner - toolbar（header 已在 VStack 中占用）
                 let availableHeight = geometry.size.height - adBannerHeight - toolbarHeight
                 // 星期行固定高度 + 当前月份实际需要的日期行
-                let dateCellHeight = max(ShiftCalendarLayout.dayCellMinHeight, (availableHeight - weekdayRowHeight) / CGFloat(dateRowCount))
+                let dateCellHeight = max(minimumDateCellHeight, (availableHeight - weekdayRowHeight) / CGFloat(dateRowCount))
                 let containerWidth = geometry.size.width
                 let cellWidth = containerWidth / 7.0
                 let gridHeight = weekdayRowHeight + dateCellHeight * CGFloat(dateRowCount)
@@ -265,11 +269,13 @@ struct MonthCalendarView: View {
             }
             .frame(maxHeight: .infinity)
 
-            // 广告 banner 占位
-            AdBannerPlaceholderView()
+            if !viewModel.isShiftInputMode {
+                // 广告 banner 占位
+                AdBannerPlaceholderView()
 
-            // 底部工具栏
-            calendarBottomToolbar
+                // 底部工具栏
+                calendarBottomToolbar
+            }
         }
         .background(ShiftCalendarColors.backgroundColor)
     }
@@ -458,18 +464,18 @@ private struct ShiftInputPanelView: View {
     let onDone: () -> Void
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: ShiftInputPanelLayout.panelSpacing) {
             Capsule()
                 .fill(WorkStatisticsColors.handle)
                 .frame(
                     width: WorkStatisticsLayout.handleWidth,
                     height: WorkStatisticsLayout.handleHeight
                 )
-                .padding(.top, 10)
+                .padding(.top, ShiftInputPanelLayout.handleTopPadding)
 
-            HStack(spacing: 12) {
+            HStack(spacing: ShiftInputPanelLayout.headerSpacing) {
                 Text(LocalizedStringKey(LocalizedString.shiftInputTitle.rawValue))
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.system(size: ShiftInputPanelLayout.titleFontSize, weight: .semibold))
                     .foregroundColor(WorkStatisticsColors.primaryText)
                     .lineLimit(1)
 
@@ -477,12 +483,12 @@ private struct ShiftInputPanelView: View {
 
                 Button(action: onDone) {
                     Text(LocalizedStringKey(LocalizedString.done.rawValue))
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: ShiftInputPanelLayout.doneFontSize, weight: .semibold))
                         .foregroundColor(ShiftCalendarColors.primaryBlue)
-                        .padding(.horizontal, 12)
-                        .frame(height: 32)
+                        .padding(.horizontal, ShiftInputPanelLayout.doneButtonHorizontalPadding)
+                        .frame(height: ShiftInputPanelLayout.doneButtonHeight)
                         .background(WorkStatisticsColors.sectionBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous))
                 }
                 .buttonStyle(PlainButtonStyle())
             }
@@ -494,40 +500,40 @@ private struct ShiftInputPanelView: View {
                     .foregroundColor(WorkStatisticsColors.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
-                    .padding(.bottom, 18)
+                    .padding(.bottom, ShiftInputPanelLayout.emptyBottomPadding)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 10) {
+                    HStack(spacing: ShiftInputPanelLayout.buttonSpacing) {
                         ForEach(templates) { template in
                             Button {
                                 onSelectTemplate(template)
                             } label: {
                                 VStack(spacing: 2) {
                                     Text(template.displayName)
-                                        .font(.system(size: 14, weight: .semibold))
+                                        .font(.system(size: ShiftInputPanelLayout.buttonTitleFontSize, weight: .semibold))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.8)
 
                                     Text(template.displayTime)
-                                        .font(.system(size: 11, weight: .medium))
+                                        .font(.system(size: ShiftInputPanelLayout.buttonTimeFontSize, weight: .medium))
                                         .lineLimit(1)
                                         .minimumScaleFactor(0.8)
                                 }
                                 .foregroundColor(buttonTextColor(for: template))
-                                .padding(.horizontal, 12)
-                                .frame(width: 104, height: 48)
+                                .padding(.horizontal, ShiftInputPanelLayout.doneButtonHorizontalPadding)
+                                .frame(width: ShiftInputPanelLayout.buttonWidth, height: ShiftInputPanelLayout.buttonHeight)
                                 .background(buttonBackgroundColor(for: template))
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous)
                                         .stroke(buttonBorderColor(for: template), lineWidth: isSelected(template) ? 2 : 0.8)
                                 )
-                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous))
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
                     .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
-                    .padding(.bottom, 18)
+                    .padding(.bottom, ShiftInputPanelLayout.buttonBottomPadding)
                 }
             }
         }
