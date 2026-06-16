@@ -93,6 +93,7 @@
 "common.done" = "Done";
 "common.reset" = "Reset to Default";
 "common.today" = "Today";
+"common.more_menu" = "More menu";
 
 /* Year Month Picker */
 "picker.select_year_month" = "Select Year-Month";

@@ -93,6 +93,7 @@
 "common.done" = "完了";
 "common.reset" = "デフォルトにリセット";
 "common.today" = "今日";
+"common.more_menu" = "その他メニュー";
 
 /* Year Month Picker */
 "picker.select_year_month" = "年月を選択";

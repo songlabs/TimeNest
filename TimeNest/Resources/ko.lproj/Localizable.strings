@@ -93,6 +93,7 @@
 "common.done" = "완료";
 "common.reset" = "기본값으로 복원";
 "common.today" = "오늘";
+"common.more_menu" = "더보기 메뉴";
 
 /* Year Month Picker */
 "picker.select_year_month" = "년월 선택";

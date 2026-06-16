@@ -106,6 +106,7 @@ enum LocalizedString: String {
     case done = "common.done"
     case reset = "common.reset"
     case today = "common.today"
+    case moreMenu = "common.more_menu"
     
     // MARK: - Year Month Picker
     
