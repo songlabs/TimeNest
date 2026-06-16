@@ -515,12 +515,18 @@ private struct ShiftInputPanelView: View {
                                     .foregroundColor(buttonTextColor(for: template))
                                     .padding(.horizontal, ShiftInputPanelLayout.doneButtonHorizontalPadding)
                                     .frame(minWidth: ShiftInputPanelLayout.buttonMinWidth, minHeight: ShiftInputPanelLayout.buttonHeight)
-                                .background(buttonBackgroundColor(for: template))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous)
-                                        .stroke(buttonBorderColor(for: template), lineWidth: isSelected(template) ? 2 : 0.8)
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous))
+                                    .background(buttonBackgroundColor(for: template))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous)
+                                            .stroke(buttonBorderColor(for: template), lineWidth: isSelected(template) ? 2 : 0.8)
+                                    )
+                                    .clipShape(RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous))
+                                    .shadow(
+                                        color: isSelected(template) ? ShiftDisplayColors.selectionStrokeColor.opacity(0.16) : .clear,
+                                        radius: isSelected(template) ? 3 : 0,
+                                        x: 0,
+                                        y: 1
+                                    )
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -541,15 +547,15 @@ private struct ShiftInputPanelView: View {
     }
 
     private func buttonBackgroundColor(for template: ShiftTimeTemplate) -> Color {
-        isSelected(template) ? template.color : template.color.opacity(0.24)
+        template.displayBackgroundColor
     }
 
     private func buttonTextColor(for template: ShiftTimeTemplate) -> Color {
-        isSelected(template) ? template.buttonTextColor : WorkStatisticsColors.primaryText
+        template.displayForegroundColor
     }
 
     private func buttonBorderColor(for template: ShiftTimeTemplate) -> Color {
-        isSelected(template) ? ShiftCalendarColors.primaryBlue : WorkStatisticsColors.border
+        isSelected(template) ? ShiftDisplayColors.selectionStrokeColor : WorkStatisticsColors.border
     }
 }
 
@@ -666,19 +672,14 @@ struct DayCellView: View {
         guard let shiftTemplateID = event.shiftTemplateID else {
             return ShiftCalendarColors.primaryBlueDark
         }
-        // 判断颜色深浅，决定使用深色还是白色文字
-        let uiColor = UIColor(shiftTemplateID.color)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-        let brightness = (r * 299 + g * 587 + b * 114) / 1000
-        return brightness < 0.5 ? .white : ShiftCalendarColors.primaryBlueDark
+        return shiftTemplateID.displayForegroundColor
     }
 
     private func eventLabelBackgroundColor(for event: EventOccurrence) -> Color {
         guard let shiftTemplateID = event.shiftTemplateID else {
             return ShiftCalendarColors.primaryBlue.opacity(0.12)
         }
-        return shiftTemplateID.color.opacity(0.12)
+        return shiftTemplateID.displayBackgroundColor
     }
 
     private func formatTime(_ date: Date) -> String {

@@ -70,6 +70,41 @@ extension String {
     }
 }
 
+// MARK: - Shift Display Colors
+
+enum ShiftDisplayColors {
+    static let backgroundOpacity: Double = 0.12
+    static let selectionStrokeColor = ShiftCalendarColors.primaryBlue
+
+    static func backgroundColor(for color: Color) -> Color {
+        color.opacity(backgroundOpacity)
+    }
+
+    static func foregroundColor(for color: Color) -> Color {
+        Color(UIColor.label)
+    }
+}
+
+extension ShiftTimeTemplate {
+    var displayBackgroundColor: Color {
+        ShiftDisplayColors.backgroundColor(for: color)
+    }
+
+    var displayForegroundColor: Color {
+        ShiftDisplayColors.foregroundColor(for: color)
+    }
+}
+
+extension ShiftTimeTemplateID {
+    var displayBackgroundColor: Color {
+        ShiftDisplayColors.backgroundColor(for: color)
+    }
+
+    var displayForegroundColor: Color {
+        ShiftDisplayColors.foregroundColor(for: color)
+    }
+}
+
 // MARK: - 事件标记颜色扩展
 
 extension EventMarkerType {
