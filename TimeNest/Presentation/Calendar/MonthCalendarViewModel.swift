@@ -11,6 +11,9 @@ class MonthCalendarViewModel: ObservableObject {
     @Published var showingEventEditor: Bool = false
     @Published var selectedDayCell: CalendarDayCell?
     @Published var showingDayDetail: Bool = false
+    @Published var isShiftInputMode: Bool = false
+    @Published var selectedShiftTemplate: ShiftTimeTemplate?
+    @Published private(set) var shiftTemplates: [ShiftTimeTemplate] = ShiftTimeTemplate.enabled()
     
     // 视图模式：month / week / day
     @Published var displayMode: CalendarViewMode = .month
@@ -254,6 +257,137 @@ class MonthCalendarViewModel: ObservableObject {
         await reloadMonth()
     }
 
+    func enterShiftInputMode() {
+        refreshShiftTemplates()
+        isShiftInputMode = true
+        showingDayDetail = false
+        showingEventEditor = false
+        selectedShiftTemplate = selectedShiftTemplate ?? shiftTemplates.first
+    }
+
+    func exitShiftInputMode() {
+        isShiftInputMode = false
+        selectedShiftTemplate = nil
+    }
+
+    func selectShiftTemplate(_ template: ShiftTimeTemplate) {
+        selectedShiftTemplate = template
+    }
+
+    func refreshShiftTemplates() {
+        shiftTemplates = ShiftTimeTemplate.enabled()
+        if let selectedShiftTemplate,
+           !shiftTemplates.contains(where: { $0.id == selectedShiftTemplate.id }) {
+            self.selectedShiftTemplate = shiftTemplates.first
+        }
+    }
+
+    func createShiftEvent(on date: Date, template: ShiftTimeTemplate) async {
+        do {
+            guard let dates = shiftEventDates(on: date, template: template) else { return }
+            let now = Date()
+
+            if let existingEvent = try await existingGeneratedShiftEvent(on: date, template: template) {
+                let updatedEvent = CalendarEvent(
+                    id: existingEvent.id,
+                    title: template.displayName,
+                    note: existingEvent.note,
+                    startDate: dates.start,
+                    endDate: dates.end,
+                    isAllDay: false,
+                    categoryID: existingEvent.categoryID,
+                    recurrenceRule: existingEvent.recurrenceRule,
+                    reminderTemplateID: existingEvent.reminderTemplateID,
+                    reminderOffsetMinutes: existingEvent.reminderOffsetMinutes,
+                    notificationID: existingEvent.notificationID,
+                    importSource: existingEvent.importSource,
+                    createdAt: existingEvent.createdAt,
+                    updatedAt: now,
+                    shiftTemplateID: template.id,
+                    workInfo: existingEvent.workInfo
+                )
+                try await eventUseCase.updateEvent(updatedEvent)
+            } else {
+                let event = CalendarEvent(
+                    id: UUID(),
+                    title: template.displayName,
+                    note: nil,
+                    startDate: dates.start,
+                    endDate: dates.end,
+                    isAllDay: false,
+                    categoryID: nil,
+                    recurrenceRule: .none,
+                    reminderTemplateID: nil,
+                    reminderOffsetMinutes: nil,
+                    notificationID: nil,
+                    importSource: nil,
+                    createdAt: now,
+                    updatedAt: now,
+                    shiftTemplateID: template.id,
+                    workInfo: nil
+                )
+                try await eventUseCase.createEvent(event)
+            }
+
+            await reloadMonth()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func shiftEventDates(on date: Date, template: ShiftTimeTemplate) -> (start: Date, end: Date)? {
+        guard let startTime = template.startHourMinute,
+              let endTime = template.endHourMinute else { return nil }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let dayStart = calendar.startOfDay(for: date)
+        let start = calendar.date(
+            bySettingHour: startTime.hour,
+            minute: startTime.minute,
+            second: 0,
+            of: dayStart
+        ) ?? dayStart
+
+        let startMinutes = startTime.hour * 60 + startTime.minute
+        let endMinutes = endTime.hour * 60 + endTime.minute
+        let endBaseDate = endMinutes <= startMinutes
+            ? (calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart)
+            : dayStart
+
+        let end = calendar.date(
+            bySettingHour: endTime.hour,
+            minute: endTime.minute,
+            second: 0,
+            of: endBaseDate
+        ) ?? CalendarEvent.defaultEndDate(for: start, isAllDay: false)
+
+        return (start, end)
+    }
+
+    private func existingGeneratedShiftEvent(on date: Date, template: ShiftTimeTemplate) async throws -> CalendarEvent? {
+        let calendar = Calendar(identifier: .gregorian)
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+
+        return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
+            .filter { event in
+                guard event.workInfo == nil,
+                      !WorkClockTitleMatcher.isClockInTitle(event.title),
+                      !WorkClockTitleMatcher.isClockOutTitle(event.title),
+                      calendar.isDate(event.startDate, inSameDayAs: dayStart) else {
+                    return false
+                }
+
+                if event.shiftTemplateID == template.id {
+                    return true
+                }
+
+                return event.shiftTemplateID == nil && event.title == template.displayName
+            }
+            .sorted { $0.createdAt < $1.createdAt }
+            .first
+    }
+
 
     private func upsertWorkClockEvent(_ event: CalendarEvent, kind: WorkClockKind) async throws {
         let sessionId = event.workInfo?.workSessionId
@@ -358,6 +492,16 @@ class MonthCalendarViewModel: ObservableObject {
 
     func selectDay(_ cell: CalendarDayCell) {
         selectedDayCell = cell
+        selectedDate = cell.date.toDate()
+
+        if isShiftInputMode {
+            guard let selectedShiftTemplate else { return }
+            Task {
+                await createShiftEvent(on: cell.date.toDate(), template: selectedShiftTemplate)
+            }
+            return
+        }
+
         showingDayDetail = true
     }
 

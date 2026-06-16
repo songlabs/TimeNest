@@ -81,6 +81,11 @@ enum LocalizedString: String {
     case calendarMoreEventsCount = "calendar.more_events_count"
     case eventNotFound = "event.not_found"
 
+    // MARK: - Shift Input
+
+    case shiftInputTitle = "shift_input.title"
+    case shiftInputEmpty = "shift_input.empty"
+
     // MARK: - Event Marker
 
     case eventMarkerDayOff = "event_marker.day_off"

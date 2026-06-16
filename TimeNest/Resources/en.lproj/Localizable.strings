@@ -71,6 +71,10 @@
 
 "event.not_found" = "Event not found.";
 
+/* Shift Input */
+"shift_input.title" = "Shift Input";
+"shift_input.empty" = "No enabled shifts";
+
 /* Event Marker */
 "event_marker.day_off" = "Day off";
 "event_marker.memo" = "Memo";

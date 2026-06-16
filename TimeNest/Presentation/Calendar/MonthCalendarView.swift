@@ -32,6 +32,9 @@ struct MonthCalendarView: View {
                     onStatisticsTapped: {
                         showingStatistics = true
                     },
+                    onShiftInputTapped: {
+                        viewModel.enterShiftInputMode()
+                    },
                     onPrevious: handlePrevious,
                     onNext: handleNext,
                     onTitleTapped: {
@@ -67,6 +70,13 @@ struct MonthCalendarView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if viewModel.isShiftInputMode {
+                shiftInputPanel
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: viewModel.isShiftInputMode)
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
@@ -162,6 +172,23 @@ struct MonthCalendarView: View {
                 )
             }
         }
+    }
+
+    private var shiftInputPanel: some View {
+        ShiftInputPanelView(
+            templates: viewModel.shiftTemplates,
+            selectedTemplate: viewModel.selectedShiftTemplate,
+            onSelectTemplate: { template in
+                viewModel.selectShiftTemplate(template)
+            },
+            onDone: {
+                viewModel.exitShiftInputMode()
+            }
+        )
+        .environmentObject(localization)
+        .padding(.horizontal, 10)
+        .padding(.bottom, 8)
+        .background(ShiftCalendarColors.backgroundColor)
     }
 
     @ViewBuilder
@@ -419,6 +446,111 @@ struct MonthCalendarView: View {
             calendarBottomToolbar
         }
         .background(ShiftCalendarColors.backgroundColor)
+    }
+}
+
+// MARK: - ShiftInputPanelView
+
+private struct ShiftInputPanelView: View {
+    let templates: [ShiftTimeTemplate]
+    let selectedTemplate: ShiftTimeTemplate?
+    let onSelectTemplate: (ShiftTimeTemplate) -> Void
+    let onDone: () -> Void
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Capsule()
+                .fill(WorkStatisticsColors.handle)
+                .frame(
+                    width: WorkStatisticsLayout.handleWidth,
+                    height: WorkStatisticsLayout.handleHeight
+                )
+                .padding(.top, 10)
+
+            HStack(spacing: 12) {
+                Text(LocalizedStringKey(LocalizedString.shiftInputTitle.rawValue))
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(WorkStatisticsColors.primaryText)
+                    .lineLimit(1)
+
+                Spacer()
+
+                Button(action: onDone) {
+                    Text(LocalizedStringKey(LocalizedString.done.rawValue))
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(ShiftCalendarColors.primaryBlue)
+                        .padding(.horizontal, 12)
+                        .frame(height: 32)
+                        .background(WorkStatisticsColors.sectionBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                }
+                .buttonStyle(PlainButtonStyle())
+            }
+            .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+
+            if templates.isEmpty {
+                Text(LocalizedStringKey(LocalizedString.shiftInputEmpty.rawValue))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(WorkStatisticsColors.secondaryText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+                    .padding(.bottom, 18)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(templates) { template in
+                            Button {
+                                onSelectTemplate(template)
+                            } label: {
+                                VStack(spacing: 2) {
+                                    Text(template.displayName)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+
+                                    Text(template.displayTime)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.8)
+                                }
+                                .foregroundColor(buttonTextColor(for: template))
+                                .padding(.horizontal, 12)
+                                .frame(width: 104, height: 48)
+                                .background(buttonBackgroundColor(for: template))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                        .stroke(buttonBorderColor(for: template), lineWidth: isSelected(template) ? 2 : 0.8)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+                    .padding(.bottom, 18)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .background(WorkStatisticsColors.sheetBackground)
+        .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.sheetCornerRadius, style: .continuous))
+        .shadow(color: Color.black.opacity(0.16), radius: 18, x: 0, y: -4)
+    }
+
+    private func isSelected(_ template: ShiftTimeTemplate) -> Bool {
+        selectedTemplate?.id == template.id
+    }
+
+    private func buttonBackgroundColor(for template: ShiftTimeTemplate) -> Color {
+        isSelected(template) ? template.color : template.color.opacity(0.24)
+    }
+
+    private func buttonTextColor(for template: ShiftTimeTemplate) -> Color {
+        isSelected(template) ? template.buttonTextColor : WorkStatisticsColors.primaryText
+    }
+
+    private func buttonBorderColor(for template: ShiftTimeTemplate) -> Color {
+        isSelected(template) ? ShiftCalendarColors.primaryBlue : WorkStatisticsColors.border
     }
 }
 

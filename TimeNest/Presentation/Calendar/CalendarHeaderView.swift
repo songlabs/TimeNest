@@ -6,6 +6,7 @@ struct CalendarHeaderView: View {
     let title: String
     let displayMode: CalendarViewMode
     let onStatisticsTapped: () -> Void
+    let onShiftInputTapped: () -> Void
     let onPrevious: () -> Void
     let onNext: () -> Void
     let onTitleTapped: () -> Void
@@ -80,6 +81,12 @@ struct CalendarHeaderView: View {
     /// 右侧更多菜单：收纳低频入口。
     private var moreMenu: some View {
         Menu {
+            if displayMode == .month {
+                Button(action: onShiftInputTapped) {
+                    Label(LocalizedStringKey(LocalizedString.shiftInputTitle.rawValue), systemImage: "calendar.badge.plus")
+                }
+            }
+
             Button(action: onStatisticsTapped) {
                 Label(LocalizedStringKey(LocalizedString.workStatistics.rawValue), systemImage: "chart.bar.xaxis")
             }
@@ -121,6 +128,7 @@ struct CalendarHeaderView: View {
         title: "2026 年 6 月",
         displayMode: .month,
         onStatisticsTapped: {},
+        onShiftInputTapped: {},
         onPrevious: {},
         onNext: {},
         onTitleTapped: {},
@@ -135,6 +143,7 @@ struct CalendarHeaderView: View {
         title: "2026 年 6 月",
         displayMode: .week,
         onStatisticsTapped: {},
+        onShiftInputTapped: {},
         onPrevious: {},
         onNext: {},
         onTitleTapped: {},
@@ -149,6 +158,7 @@ struct CalendarHeaderView: View {
         title: "2026 年 6 月 10 日（三）",
         displayMode: .day,
         onStatisticsTapped: {},
+        onShiftInputTapped: {},
         onPrevious: {},
         onNext: {},
         onTitleTapped: {},

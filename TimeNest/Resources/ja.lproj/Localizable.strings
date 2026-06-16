@@ -71,6 +71,10 @@
 
 "event.not_found" = "予定が見つかりません。";
 
+/* Shift Input */
+"shift_input.title" = "シフト入力";
+"shift_input.empty" = "有効なシフトがありません";
+
 /* Event Marker */
 "event_marker.day_off" = "お休み";
 "event_marker.memo" = "メモ";

@@ -71,6 +71,10 @@
 
 "event.not_found" = "일정을 찾을 수 없습니다.";
 
+/* Shift Input */
+"shift_input.title" = "근무 입력";
+"shift_input.empty" = "활성화된 근무가 없습니다";
+
 /* Event Marker */
 "event_marker.day_off" = "휴무";
 "event_marker.memo" = "메모";

@@ -71,6 +71,10 @@
 
 "event.not_found" = "未找到日程。";
 
+/* Shift Input */
+"shift_input.title" = "班次输入";
+"shift_input.empty" = "没有启用的班次";
+
 /* Event Marker */
 "event_marker.day_off" = "休息";
 "event_marker.memo" = "备忘";
