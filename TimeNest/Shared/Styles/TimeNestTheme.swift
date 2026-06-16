@@ -67,6 +67,77 @@ enum TimeNestTheme {
     static let smallCornerRadius: CGFloat = 6
 }
 
+/// Settings-aligned modal shell metrics shared by popup-style surfaces.
+enum SettingsModalSurface {
+    static let background = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .secondarySystemBackground : .systemGroupedBackground
+    })
+    static let headerBackground = background
+    static let sectionBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .tertiarySystemBackground : .secondarySystemGroupedBackground
+    })
+    static let fieldBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .tertiarySystemBackground : .systemBackground
+    })
+    static let separator = TimeNestTheme.divider.opacity(0.55)
+    static let primaryText = TimeNestTheme.primaryText
+    static let secondaryText = TimeNestTheme.secondaryText
+
+    static let topCornerRadius: CGFloat = 28
+    static let horizontalPadding: CGFloat = 20
+    static let headerVerticalPadding: CGFloat = 14
+    static let closeButtonSize: CGFloat = 36
+    static let titleFontSize: CGFloat = 28
+    static let titleFontWeight: Font.Weight = .bold
+    static let shadowColor = Color.black.opacity(0.12)
+}
+
+struct SettingsModalHeaderView: View {
+    private let title: Text
+    private let closeAction: () -> Void
+
+    init(title: LocalizedStringKey, closeAction: @escaping () -> Void) {
+        self.title = Text(title)
+        self.closeAction = closeAction
+    }
+
+    init(title: String, closeAction: @escaping () -> Void) {
+        self.title = Text(title)
+        self.closeAction = closeAction
+    }
+
+    var body: some View {
+        ZStack {
+            title
+                .font(.system(size: SettingsModalSurface.titleFontSize, weight: SettingsModalSurface.titleFontWeight))
+                .foregroundColor(SettingsModalSurface.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+
+            HStack {
+                Color.clear
+                    .frame(
+                        width: SettingsModalSurface.closeButtonSize,
+                        height: SettingsModalSurface.closeButtonSize
+                    )
+
+                Spacer()
+
+                ModalHeaderCloseButton(action: closeAction)
+                    .frame(
+                        width: SettingsModalSurface.closeButtonSize,
+                        height: SettingsModalSurface.closeButtonSize
+                    )
+            }
+        }
+        .padding(.horizontal, SettingsModalSurface.horizontalPadding)
+        .padding(.vertical, SettingsModalSurface.headerVerticalPadding)
+        .background(SettingsModalSurface.headerBackground)
+    }
+}
+
 /// Modal / sheet header close button shared by popup-style surfaces.
 struct ModalHeaderCloseButton: View {
     let action: () -> Void
@@ -81,7 +152,7 @@ struct ModalHeaderCloseButton: View {
 
 private enum ModalHeaderCloseButtonMetrics {
     static let iconName = "xmark"
-    static let size: CGFloat = 36
+    static let size: CGFloat = SettingsModalSurface.closeButtonSize
     static let iconSize: CGFloat = 15
     static let borderWidth: CGFloat = 0.6
     static let pressedScale: CGFloat = 0.94
@@ -97,7 +168,7 @@ private enum ModalHeaderCloseButtonMetrics {
     }
 
     static var backgroundColor: Color {
-        Color(.secondarySystemBackground)
+        Color(.tertiarySystemBackground)
     }
 
     static var disabledBackgroundColor: Color {

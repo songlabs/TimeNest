@@ -190,7 +190,6 @@ struct MonthCalendarView: View {
         .environmentObject(localization)
         .padding(.horizontal, ShiftInputPanelLayout.outerHorizontalPadding)
         .padding(.bottom, ShiftInputPanelLayout.outerBottomPadding)
-        .background(BottomSheetSurfaceColors.outerBackground)
     }
 
     @ViewBuilder
@@ -457,26 +456,11 @@ private struct ShiftInputPanelView: View {
     let onDone: () -> Void
 
     var body: some View {
-        VStack(spacing: ShiftInputPanelLayout.panelSpacing) {
-            Capsule()
-                .fill(WorkStatisticsColors.handle)
-                .frame(
-                    width: WorkStatisticsLayout.handleWidth,
-                    height: WorkStatisticsLayout.handleHeight
-                )
-                .padding(.top, ShiftInputPanelLayout.handleTopPadding)
-
-            HStack(spacing: ShiftInputPanelLayout.headerSpacing) {
-                Text(LocalizedStringKey(LocalizedString.shiftInputTitle.rawValue))
-                    .font(.system(size: ShiftInputPanelLayout.titleFontSize, weight: .semibold))
-                    .foregroundColor(WorkStatisticsColors.primaryText)
-                    .lineLimit(1)
-
-                Spacer()
-
-                ModalHeaderCloseButton(action: onDone)
-            }
-            .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+        VStack(spacing: 0) {
+            SettingsModalHeaderView(
+                title: LocalizedStringKey(LocalizedString.shiftInputTitle.rawValue),
+                closeAction: onDone
+            )
 
             if templates.isEmpty {
                 Text(LocalizedStringKey(LocalizedString.shiftInputEmpty.rawValue))
@@ -484,6 +468,7 @@ private struct ShiftInputPanelView: View {
                     .foregroundColor(WorkStatisticsColors.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+                    .padding(.top, ShiftInputPanelLayout.contentTopPadding)
                     .padding(.bottom, ShiftInputPanelLayout.emptyBottomPadding)
             } else {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -516,14 +501,25 @@ private struct ShiftInputPanelView: View {
                         }
                     }
                     .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+                    .padding(.top, ShiftInputPanelLayout.contentTopPadding)
                     .padding(.bottom, ShiftInputPanelLayout.buttonBottomPadding)
                 }
             }
         }
         .frame(maxWidth: .infinity)
         .background(WorkStatisticsColors.sheetBackground)
-        .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.sheetCornerRadius, style: .continuous))
-        .shadow(color: Color.black.opacity(0.16), radius: 18, x: 0, y: -4)
+        .clipShape(
+            UnevenRoundedRectangle(
+                cornerRadii: RectangleCornerRadii(
+                    topLeading: WorkStatisticsLayout.sheetCornerRadius,
+                    bottomLeading: 0,
+                    bottomTrailing: 0,
+                    topTrailing: WorkStatisticsLayout.sheetCornerRadius
+                ),
+                style: .continuous
+            )
+        )
+        .shadow(color: SettingsModalSurface.shadowColor, radius: 18, x: 0, y: -4)
     }
 
     private func isSelected(_ template: ShiftTimeTemplate) -> Bool {

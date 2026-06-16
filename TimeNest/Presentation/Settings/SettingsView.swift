@@ -18,6 +18,38 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        Group {
+            if let onClose {
+                VStack(spacing: 0) {
+                    SettingsModalHeaderView(
+                        title: localization.localized(.settingsTitle),
+                        closeAction: onClose
+                    )
+
+                    settingsForm
+                        .scrollContentBackground(.hidden)
+                        .background(SettingsModalSurface.background)
+                }
+                .background(SettingsModalSurface.background)
+            } else {
+                settingsForm
+                    .navigationTitle(localization.localized(.settingsTitle))
+            }
+        }
+        .onAppear {
+            notificationTime = SettingsNotificationTime.date(from: notificationTimeMinutes)
+            if notificationEnabled {
+                updateDailyNotification(enabled: true)
+            }
+
+            // 执行启动时的自动同步检查
+            Task {
+                await subscriptionManager.performAutoSync()
+            }
+        }
+    }
+
+    private var settingsForm: some View {
         Form {
             // MARK: - Language Section
             Section {
@@ -132,26 +164,7 @@ struct SettingsView: View {
             }
 
         }
-        .navigationTitle(localization.localized(.settingsTitle))
         .foregroundColor(.primary)
-        .toolbar {
-            if let onClose {
-                ToolbarItem(placement: .confirmationAction) {
-                    ModalHeaderCloseButton(action: onClose)
-                }
-            }
-        }
-        .onAppear {
-            notificationTime = SettingsNotificationTime.date(from: notificationTimeMinutes)
-            if notificationEnabled {
-                updateDailyNotification(enabled: true)
-            }
-
-            // 执行启动时的自动同步检查
-            Task {
-                await subscriptionManager.performAutoSync()
-            }
-        }
     }
 
     private func updateDailyNotification(enabled: Bool) {

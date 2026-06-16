@@ -241,69 +241,57 @@ struct ShiftCalendarLayout {
 
 struct WorkStatisticsLayout {
     static let sheetHeight: CGFloat = 560
-    static let sheetCornerRadius: CGFloat = 28
-    static let horizontalPadding: CGFloat = 20
+    static let sheetCornerRadius: CGFloat = SettingsModalSurface.topCornerRadius
+    static let horizontalPadding: CGFloat = SettingsModalSurface.horizontalPadding
     static let sectionSpacing: CGFloat = 16
     static let cardCornerRadius: CGFloat = 14
     static let pickerCornerRadius: CGFloat = 12
     static let primaryButtonHeight: CGFloat = 52
     static let rowVerticalPadding: CGFloat = 12
     static let tableColumnSpacing: CGFloat = 12
-    static let handleWidth: CGFloat = 52
-    static let handleHeight: CGFloat = 5
 }
 
 // MARK: - Shift Input Panel Layout
 
 struct ShiftInputPanelLayout {
-    static let outerHorizontalPadding: CGFloat = 10
-    static let outerBottomPadding: CGFloat = 8
-    static let panelSpacing: CGFloat = 10
-    static let handleTopPadding: CGFloat = 8
-    static let headerSpacing: CGFloat = 12
+    static let outerHorizontalPadding: CGFloat = 0
+    static let outerBottomPadding: CGFloat = 0
     static let buttonMinWidth: CGFloat = 68
     static let buttonHeight: CGFloat = 36
     static let buttonHorizontalPadding: CGFloat = 12
     static let buttonSpacing: CGFloat = 10
     static let buttonCornerRadius: CGFloat = 8
+    static let contentTopPadding: CGFloat = 8
     static let buttonBottomPadding: CGFloat = 12
     static let emptyBottomPadding: CGFloat = 14
-    static let titleFontSize: CGFloat = 18
     static let buttonTitleFontSize: CGFloat = 14
 }
 
-// MARK: - Shared Bottom Sheet Surface Colors
+// MARK: - Settings Modal Surface Colors
 
-struct BottomSheetSurfaceColors {
-    static let outerBackground = sheetBackground
-    static let sheetBackground = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark ? .secondarySystemBackground : .systemBackground
-    })
-    static let sectionBackground = Color(UIColor { traits in
-        traits.userInterfaceStyle == .dark ? .tertiarySystemBackground : .secondarySystemBackground
-    })
-    static let fieldBackground = Color(UIColor.tertiarySystemBackground)
+struct SettingsModalSurfaceColors {
+    static let sheetBackground = SettingsModalSurface.background
+    static let sectionBackground = SettingsModalSurface.sectionBackground
+    static let fieldBackground = SettingsModalSurface.fieldBackground
     static let tableHeaderBackground = sectionBackground
-    static let separator = Color(UIColor.separator).opacity(0.55)
-    static let primaryText = Color(UIColor.label)
-    static let secondaryText = Color(UIColor.secondaryLabel)
-    static let handle = Color(UIColor.tertiaryLabel)
-    static let border = Color(UIColor.separator).opacity(0.45)
+    static let separator = SettingsModalSurface.separator
+    static let primaryText = SettingsModalSurface.primaryText
+    static let secondaryText = SettingsModalSurface.secondaryText
+    static let border = TimeNestTheme.divider.opacity(0.45)
 }
 
 // MARK: - Statistics Bottom Sheet Colors
 
 struct WorkStatisticsColors {
-    static let sheetBackground = BottomSheetSurfaceColors.sheetBackground
-    static let sectionBackground = BottomSheetSurfaceColors.sectionBackground
-    static let fieldBackground = BottomSheetSurfaceColors.fieldBackground
-    static let tableHeaderBackground = BottomSheetSurfaceColors.tableHeaderBackground
+    static let sheetBackground = SettingsModalSurfaceColors.sheetBackground
+    static let sectionBackground = SettingsModalSurfaceColors.sectionBackground
+    static let fieldBackground = SettingsModalSurfaceColors.fieldBackground
+    static let tableHeaderBackground = SettingsModalSurfaceColors.tableHeaderBackground
     static let totalRowBackground = ShiftCalendarColors.primaryBlue.opacity(0.10)
-    static let separator = BottomSheetSurfaceColors.separator
-    static let primaryText = BottomSheetSurfaceColors.primaryText
-    static let secondaryText = BottomSheetSurfaceColors.secondaryText
-    static let handle = BottomSheetSurfaceColors.handle
-    static let border = BottomSheetSurfaceColors.border
+    static let separator = SettingsModalSurfaceColors.separator
+    static let primaryText = SettingsModalSurfaceColors.primaryText
+    static let secondaryText = SettingsModalSurfaceColors.secondaryText
+    static let border = SettingsModalSurfaceColors.border
 }
 
 // MARK: - Weekday Helpers

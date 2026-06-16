@@ -24,12 +24,14 @@ struct WorkStatisticsView: View {
                     }
                 }
                 .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+                .padding(.top, WorkStatisticsLayout.sectionSpacing)
                 .padding(.bottom, WorkStatisticsLayout.horizontalPadding)
             }
         }
         .background(WorkStatisticsColors.sheetBackground)
         .presentationDetents([.height(WorkStatisticsLayout.sheetHeight)])
         .presentationDragIndicator(.hidden)
+        .presentationBackground(WorkStatisticsColors.sheetBackground)
         .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
         .sheet(isPresented: $viewModel.showStartDatePicker) {
             datePickerSheet(
@@ -48,34 +50,10 @@ struct WorkStatisticsView: View {
     // MARK: - Header
 
     private var headerView: some View {
-        VStack(spacing: 12) {
-            Capsule()
-                .fill(WorkStatisticsColors.handle)
-                .frame(
-                    width: WorkStatisticsLayout.handleWidth,
-                    height: WorkStatisticsLayout.handleHeight
-                )
-                .padding(.top, 10)
-
-            HStack {
-                Text(localizedKey(.workStatisticsTitle))
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundColor(WorkStatisticsColors.primaryText)
-                    .lineLimit(1)
-
-                Spacer()
-
-                ModalHeaderCloseButton(action: { dismiss() })
-            }
-            .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
-            .padding(.bottom, 14)
-        }
-        .background(WorkStatisticsColors.sheetBackground)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(WorkStatisticsColors.separator)
-                .frame(height: 0.5)
-        }
+        SettingsModalHeaderView(
+            title: localizedKey(.workStatisticsTitle),
+            closeAction: { dismiss() }
+        )
     }
 
     // MARK: - Filter Section
