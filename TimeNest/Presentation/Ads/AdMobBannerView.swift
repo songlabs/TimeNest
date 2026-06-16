@@ -3,7 +3,6 @@ import SwiftUI
 import UIKit
 
 struct AdMobBannerView: UIViewRepresentable {
-    let width: CGFloat
     let adUnitID: String
     @Binding var bannerHeight: CGFloat
 
@@ -12,42 +11,30 @@ struct AdMobBannerView: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> BannerView {
-        let bannerView = BannerView(adSize: Self.adSize(for: width))
+        let bannerView = BannerView(adSize: AdSizeBanner)
         bannerView.delegate = context.coordinator
         context.coordinator.bannerView = bannerView
         return bannerView
     }
 
     func updateUIView(_ bannerView: BannerView, context: Context) {
-        let adWidth = floor(width)
-        guard adWidth > 0 else {
-            context.coordinator.updateHeight(0)
-            return
-        }
-
         guard let rootViewController = UIApplication.shared.timeNestRootViewController else {
             context.coordinator.updateHeight(0)
             return
         }
 
-        let adSize = Self.adSize(for: adWidth)
         bannerView.rootViewController = rootViewController
         bannerView.adUnitID = adUnitID
 
-        if context.coordinator.shouldLoad(width: adWidth, adUnitID: adUnitID) {
-            context.coordinator.markLoading(width: adWidth, adUnitID: adUnitID)
-            bannerView.adSize = adSize
+        if context.coordinator.shouldLoad(adUnitID: adUnitID) {
+            context.coordinator.markLoading(adUnitID: adUnitID)
+            bannerView.adSize = AdSizeBanner
             bannerView.load(Request())
         }
     }
 
-    private static func adSize(for width: CGFloat) -> AdSize {
-        largeAnchoredAdaptiveBanner(width: width)
-    }
-
     final class Coordinator: NSObject, BannerViewDelegate {
         private var bannerHeight: Binding<CGFloat>
-        private var loadedWidth: CGFloat?
         private var loadedAdUnitID: String?
         weak var bannerView: BannerView?
 
@@ -55,12 +42,11 @@ struct AdMobBannerView: UIViewRepresentable {
             self.bannerHeight = bannerHeight
         }
 
-        func shouldLoad(width: CGFloat, adUnitID: String) -> Bool {
-            loadedWidth != width || loadedAdUnitID != adUnitID
+        func shouldLoad(adUnitID: String) -> Bool {
+            loadedAdUnitID != adUnitID
         }
 
-        func markLoading(width: CGFloat, adUnitID: String) {
-            loadedWidth = width
+        func markLoading(adUnitID: String) {
             loadedAdUnitID = adUnitID
             updateHeight(0)
         }
@@ -72,7 +58,7 @@ struct AdMobBannerView: UIViewRepresentable {
         }
 
         func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            updateHeight(bannerView.adSize.size.height)
+            updateHeight(AdConfiguration.bannerHeight)
         }
 
         func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
