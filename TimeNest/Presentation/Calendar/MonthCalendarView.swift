@@ -652,16 +652,17 @@ struct DayCellView: View {
     private var eventLabelRows: [EventLabelRow] {
         let clockIn = cell.events.first(where: \.isClockInEvent)
         let clockOut = cell.events.first(where: \.isClockOutEvent)
-        var didInsertWorkClockRow = false
+        let shiftRows = cell.events
+            .filter { !$0.isWorkClockEvent && $0.shiftTemplateID != nil }
+            .map(EventLabelRow.event)
+        let normalRows = cell.events
+            .filter { !$0.isWorkClockEvent && $0.shiftTemplateID == nil }
+            .map(EventLabelRow.event)
+        let workClockRows: [EventLabelRow] = (clockIn != nil || clockOut != nil)
+            ? [.workClock(clockIn: clockIn, clockOut: clockOut)]
+            : []
 
-        return cell.events.compactMap { event in
-            if event.isWorkClockEvent {
-                guard !didInsertWorkClockRow else { return nil }
-                didInsertWorkClockRow = true
-                return .workClock(clockIn: clockIn, clockOut: clockOut)
-            }
-            return .event(event)
-        }
+        return shiftRows + workClockRows + normalRows
     }
 
     @ViewBuilder
@@ -690,20 +691,20 @@ struct DayCellView: View {
 
     @ViewBuilder
     private func workClockLabelView(clockIn: EventOccurrence?, clockOut: EventOccurrence?) -> some View {
-        HStack(spacing: 4) {
-            if let clockIn {
-                Text(eventLabel(for: clockIn))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+        HStack(spacing: 0) {
+            Text(clockIn.map { eventLabel(for: $0) } ?? "")
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(1)
 
-            Spacer(minLength: 4)
-
-            if let clockOut {
-                Text(eventLabel(for: clockOut))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
+            Text(clockOut.map { eventLabel(for: $0) } ?? "")
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .truncationMode(.tail)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .layoutPriority(1)
         }
         .font(.system(size: 10, weight: .medium))
         .foregroundColor(ShiftCalendarColors.primaryBlueDark)
