@@ -123,8 +123,8 @@ struct TimeNestFileSharingView: View {
         .navigationTitle(localization.localized(.fileSharingTitle))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(localization.localized(.done)) {
+            ToolbarItem(placement: .confirmationAction) {
+                ModalHeaderCloseButton {
                     dismiss()
                 }
             }

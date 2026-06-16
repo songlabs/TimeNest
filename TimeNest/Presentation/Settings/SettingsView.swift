@@ -11,6 +11,12 @@ struct SettingsView: View {
     @State private var notificationTime: Date = SettingsNotificationTime.defaultDate
     @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
 
+    private let onClose: (() -> Void)?
+
+    init(onClose: (() -> Void)? = nil) {
+        self.onClose = onClose
+    }
+
     var body: some View {
         Form {
             // MARK: - Language Section
@@ -128,6 +134,13 @@ struct SettingsView: View {
         }
         .navigationTitle(localization.localized(.settingsTitle))
         .foregroundColor(.primary)
+        .toolbar {
+            if let onClose {
+                ToolbarItem(placement: .confirmationAction) {
+                    ModalHeaderCloseButton(action: onClose)
+                }
+            }
+        }
         .onAppear {
             notificationTime = SettingsNotificationTime.date(from: notificationTimeMinutes)
             if notificationEnabled {

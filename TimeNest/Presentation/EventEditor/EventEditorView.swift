@@ -266,7 +266,6 @@ struct EventEditorView: View {
                                     reminderOffsetMinutes: $reminderOffsetMinutes,
                                     reminderOptions: reminderOptions,
                                     reminderTitleFormatter: { reminderTitle(for: $0) },
-                                    cancelTitle: localization.localized(.cancel),
                                     showingReminderPicker: $showingReminderPicker
                                 )
                             }
@@ -288,17 +287,13 @@ struct EventEditorView: View {
                                 hourlyRateTitle: localization.localized(.editorHourlyRate),
                                 currencyUnit: localization.localized(.editorCurrencyUnit),
                                 timeTitle: localization.localized(.editorTime),
-                                doneTitle: localization.localized(.done),
-                                cancelTitle: localization.localized(.cancel),
                                 onWorkInTap: { handleWorkClockTap(.clockIn) },
                                 onWorkOutTap: { handleWorkClockTap(.clockOut) }
                             )
                             .sheet(isPresented: $showingRestTimePicker) {
                                 RestTimePickerSheet(
                                     restTime: $restTime,
-                                    title: localization.localized(.editorRestTime),
-                                    doneTitle: localization.localized(.done),
-                                    cancelTitle: localization.localized(.cancel)
+                                    title: localization.localized(.editorRestTime)
                                 )
                             }
 
@@ -797,7 +792,6 @@ private struct ReminderSection: View {
     @Binding var reminderOffsetMinutes: Int?
     let reminderOptions: [Int?]
     let reminderTitleFormatter: (Int?) -> String
-    let cancelTitle: String
     @Binding var showingReminderPicker: Bool
 
     var body: some View {
@@ -834,7 +828,6 @@ private struct ReminderSection: View {
                 reminderOffsetMinutes: $reminderOffsetMinutes,
                 reminderOptions: reminderOptions,
                 reminderTitleFormatter: reminderTitleFormatter,
-                cancelTitle: cancelTitle,
                 showingReminderPicker: $showingReminderPicker
             )
         }
@@ -848,7 +841,6 @@ private struct ReminderPickerSheet: View {
     @Binding var reminderOffsetMinutes: Int?
     let reminderOptions: [Int?]
     let reminderTitleFormatter: (Int?) -> String
-    let cancelTitle: String
     @Binding var showingReminderPicker: Bool
 
     var body: some View {
@@ -878,8 +870,8 @@ private struct ReminderPickerSheet: View {
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(cancelTitle) {
+                ToolbarItem(placement: .confirmationAction) {
+                    ModalHeaderCloseButton {
                         showingReminderPicker = false
                         dismiss()
                     }
@@ -1300,10 +1292,7 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
     @Environment(\.dismiss) private var dismiss
 
     let title: String
-    let doneTitle: String
-    let cancelTitle: String
-    let onCancel: () -> Void
-    let onDone: () -> Void
+    let onClose: () -> Void
     @ViewBuilder let pickerContent: () -> PickerContent
 
     var body: some View {
@@ -1320,16 +1309,8 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(doneTitle) {
-                        onDone()
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
-
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(cancelTitle) {
-                        onCancel()
+                    ModalHeaderCloseButton {
+                        onClose()
                         dismiss()
                     }
                 }
@@ -1342,16 +1323,11 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
 private struct RestTimePickerSheet: View {
     @Binding var restTime: Double // 休息时间（小时）
     let title: String
-    let doneTitle: String
-    let cancelTitle: String
 
     var body: some View {
         WorkInfoTimePickerSheet(
             title: title,
-            doneTitle: doneTitle,
-            cancelTitle: cancelTitle,
-            onCancel: {},
-            onDone: {}
+            onClose: {}
         ) {
             DatePicker(
                 "",
@@ -1418,8 +1394,6 @@ private struct WorkInfoSection: View {
     let hourlyRateTitle: String
     let currencyUnit: String
     let timeTitle: String
-    let doneTitle: String
-    let cancelTitle: String
     let onWorkInTap: () -> Void
     let onWorkOutTap: () -> Void
 
@@ -1475,10 +1449,7 @@ private struct WorkInfoSection: View {
         .sheet(item: $editingWorkTime) { target in
             WorkInfoTimePickerSheet(
                 title: target.pickerTitle(workInTitle: workInTitle, workOutTitle: workOutTitle, timeTitle: timeTitle),
-                doneTitle: doneTitle,
-                cancelTitle: cancelTitle,
-                onCancel: { editingWorkTime = nil },
-                onDone: { editingWorkTime = nil }
+                onClose: { editingWorkTime = nil }
             ) {
                 DatePicker(
                     "",

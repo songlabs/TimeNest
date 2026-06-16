@@ -34,7 +34,7 @@ struct HolidayRegionSelectionView: View {
             .navigationTitle(localization.localized(.holidayRegionSelectionTitle))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.localized(.done)) {
+                    ModalHeaderCloseButton {
                         dismiss()
                     }
                 }

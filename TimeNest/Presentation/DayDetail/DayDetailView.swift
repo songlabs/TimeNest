@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct DayDetailView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
@@ -23,6 +24,13 @@ struct DayDetailView: View {
                 .padding()
             }
             .navigationTitle(localization.localized(.dayDetailTitle))
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    ModalHeaderCloseButton {
+                        dismiss()
+                    }
+                }
+            }
             .sheet(isPresented: $showingAddEvent) {
                 let initialDate = cell.date.toDate()
                 EventEditorView(

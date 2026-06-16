@@ -110,8 +110,10 @@ struct MonthCalendarView: View {
             )
         }
         .sheet(isPresented: $showingSettings) {
-            NavigationView {
-                SettingsView()
+            NavigationStack {
+                SettingsView(onClose: {
+                    showingSettings = false
+                })
                     .environmentObject(localization)
             }
         }
@@ -472,16 +474,7 @@ private struct ShiftInputPanelView: View {
 
                 Spacer()
 
-                Button(action: onDone) {
-                    Text(LocalizedStringKey(LocalizedString.done.rawValue))
-                        .font(.system(size: ShiftInputPanelLayout.doneFontSize, weight: .semibold))
-                        .foregroundColor(ShiftCalendarColors.primaryBlue)
-                        .padding(.horizontal, ShiftInputPanelLayout.doneButtonHorizontalPadding)
-                        .frame(height: ShiftInputPanelLayout.doneButtonHeight)
-                        .background(WorkStatisticsColors.sectionBackground)
-                        .clipShape(RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous))
-                }
-                .buttonStyle(PlainButtonStyle())
+                ModalHeaderCloseButton(action: onDone)
             }
             .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
 
@@ -504,7 +497,7 @@ private struct ShiftInputPanelView: View {
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
                                     .foregroundColor(buttonTextColor(for: template))
-                                    .padding(.horizontal, ShiftInputPanelLayout.doneButtonHorizontalPadding)
+                                    .padding(.horizontal, ShiftInputPanelLayout.buttonHorizontalPadding)
                                     .frame(minWidth: ShiftInputPanelLayout.buttonMinWidth, minHeight: ShiftInputPanelLayout.buttonHeight)
                                     .background(buttonBackgroundColor(for: template))
                                     .overlay(

@@ -65,15 +65,7 @@ struct WorkStatisticsView: View {
 
                 Spacer()
 
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(WorkStatisticsColors.secondaryText)
-                        .frame(width: 36, height: 36)
-                        .background(WorkStatisticsColors.sectionBackground)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(PlainButtonStyle())
+                ModalHeaderCloseButton(action: { dismiss() })
             }
             .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
             .padding(.bottom, 14)
@@ -286,7 +278,7 @@ struct WorkStatisticsView: View {
     // MARK: - Date Picker
 
     private func datePickerSheet(titleKey: LocalizedString, selection: Binding<Date>) -> some View {
-        NavigationView {
+        NavigationStack {
             DatePicker(
                 localizedKey(titleKey),
                 selection: selection,
@@ -299,7 +291,7 @@ struct WorkStatisticsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(localizedKey(.done)) {
+                    ModalHeaderCloseButton {
                         viewModel.showStartDatePicker = false
                         viewModel.showEndDatePicker = false
                     }

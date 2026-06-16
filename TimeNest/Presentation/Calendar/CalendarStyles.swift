@@ -216,16 +216,14 @@ struct ShiftInputPanelLayout {
     static let panelSpacing: CGFloat = 10
     static let handleTopPadding: CGFloat = 8
     static let headerSpacing: CGFloat = 12
-    static let doneButtonHeight: CGFloat = 32
-    static let doneButtonHorizontalPadding: CGFloat = 12
     static let buttonMinWidth: CGFloat = 68
     static let buttonHeight: CGFloat = 36
+    static let buttonHorizontalPadding: CGFloat = 12
     static let buttonSpacing: CGFloat = 10
     static let buttonCornerRadius: CGFloat = 8
     static let buttonBottomPadding: CGFloat = 12
     static let emptyBottomPadding: CGFloat = 14
     static let titleFontSize: CGFloat = 18
-    static let doneFontSize: CGFloat = 15
     static let buttonTitleFontSize: CGFloat = 14
 }
 

@@ -66,3 +66,77 @@ enum TimeNestTheme {
     /// 统一小圆角（用于小控件）
     static let smallCornerRadius: CGFloat = 6
 }
+
+/// Modal / sheet header close button shared by popup-style surfaces.
+struct ModalHeaderCloseButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: ModalHeaderCloseButtonMetrics.iconName)
+        }
+        .buttonStyle(ModalHeaderCloseButtonStyle())
+    }
+}
+
+private enum ModalHeaderCloseButtonMetrics {
+    static let iconName = "xmark"
+    static let size: CGFloat = 36
+    static let iconSize: CGFloat = 15
+    static let borderWidth: CGFloat = 0.6
+    static let pressedScale: CGFloat = 0.94
+    static let pressedOpacity: Double = 0.78
+    static let disabledOpacity: Double = 0.45
+
+    static var foregroundColor: Color {
+        Color(.secondaryLabel)
+    }
+
+    static var disabledForegroundColor: Color {
+        TimeNestTheme.disabledButtonText
+    }
+
+    static var backgroundColor: Color {
+        Color(.secondarySystemBackground)
+    }
+
+    static var disabledBackgroundColor: Color {
+        TimeNestTheme.disabledButtonBackground
+    }
+
+    static var borderColor: Color {
+        Color(.separator).opacity(0.22)
+    }
+}
+
+private struct ModalHeaderCloseButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: ModalHeaderCloseButtonMetrics.iconSize, weight: .semibold))
+            .foregroundColor(isEnabled ? ModalHeaderCloseButtonMetrics.foregroundColor : ModalHeaderCloseButtonMetrics.disabledForegroundColor)
+            .frame(
+                width: ModalHeaderCloseButtonMetrics.size,
+                height: ModalHeaderCloseButtonMetrics.size
+            )
+            .background(
+                Circle()
+                    .fill(isEnabled ? ModalHeaderCloseButtonMetrics.backgroundColor : ModalHeaderCloseButtonMetrics.disabledBackgroundColor)
+            )
+            .overlay(
+                Circle()
+                    .stroke(ModalHeaderCloseButtonMetrics.borderColor, lineWidth: ModalHeaderCloseButtonMetrics.borderWidth)
+            )
+            .scaleEffect(configuration.isPressed ? ModalHeaderCloseButtonMetrics.pressedScale : 1)
+            .opacity(opacity(isPressed: configuration.isPressed))
+            .contentShape(Circle())
+    }
+
+    private func opacity(isPressed: Bool) -> Double {
+        guard isEnabled else {
+            return ModalHeaderCloseButtonMetrics.disabledOpacity
+        }
+        return isPressed ? ModalHeaderCloseButtonMetrics.pressedOpacity : 1
+    }
+}

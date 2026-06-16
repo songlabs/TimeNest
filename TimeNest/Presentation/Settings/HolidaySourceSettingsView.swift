@@ -35,7 +35,7 @@ struct HolidaySourceSettingsView: View {
         .navigationTitle(localization.localized(.holidaySubscriptionSourceSettings))
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button(localization.localized(.done)) {
+                ModalHeaderCloseButton {
                     dismiss()
                 }
             }
