@@ -72,7 +72,6 @@ private enum EventEditorStyle {
     static let shiftActionButtonWidth: CGFloat = 88
     static let shiftActionButtonHeight: CGFloat = 32
     static let shiftActionButtonCornerRadius: CGFloat = 8
-    static let shiftTemplateButtonSpacing: CGFloat = 12
     static let workColumnSpacing: CGFloat = 12
     static let workActionButtonFont = Font.subheadline.weight(.semibold)
     static let workInfoTimePillWidth: CGFloat = 92
@@ -267,10 +266,6 @@ struct EventEditorView: View {
                             }
                             .cardContainer()
 
-                            ShiftTemplateSection(templates: shiftTemplates, selectedTemplateID: $selectedShiftTemplateID) { template in
-                                applyShiftTemplate(template)
-                            }
-
                             WorkInfoSection(
                                 restTime: $restTime,
                                 transportFee: $transportFee,
@@ -356,10 +351,6 @@ struct EventEditorView: View {
 
     private var canSave: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && validationMessage == nil
-    }
-
-    private var shiftTemplates: [ShiftTimeTemplate] {
-        ShiftTimeTemplate.enabled()
     }
 
     private var validationMessage: String? {
@@ -678,51 +669,6 @@ struct EventEditorView: View {
 
     private static func makeDefaultEventEndDate(startDate: Date) -> Date {
         CalendarEvent.defaultEndDate(for: startDate, isAllDay: false)
-    }
-
-    private func applyShiftTemplate(_ template: ShiftTimeTemplate) {
-        guard let startTime = template.startHourMinute,
-              let endTime = template.endHourMinute else { return }
-
-        let calendar = Calendar(identifier: .gregorian)
-        let baseDate = calendar.startOfDay(for: startDate)
-        let start = calendar.date(
-            bySettingHour: startTime.hour,
-            minute: startTime.minute,
-            second: 0,
-            of: baseDate
-        ) ?? startDate
-
-        let endBaseDate: Date
-        if endTime.hour < startTime.hour || (endTime.hour == startTime.hour && endTime.minute <= startTime.minute) {
-            endBaseDate = calendar.date(byAdding: .day, value: 1, to: baseDate) ?? baseDate
-        } else {
-            endBaseDate = baseDate
-        }
-
-        let end = calendar.date(
-            bySettingHour: endTime.hour,
-            minute: endTime.minute,
-            second: 0,
-            of: endBaseDate
-        ) ?? CalendarEvent.defaultEndDate(for: start, isAllDay: false)
-
-        isAllDay = false
-        startDate = start
-        endDate = end
-        selectedShiftTemplateID = template.id
-
-        // 只有当标题为空或标题是默认班次名称时才覆盖
-        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-           isDefaultShiftTitle(title) {
-            title = template.displayName
-        }
-    }
-
-    /// 判断标题是否为任意一个启用班次模板的显示名称
-    private func isDefaultShiftTitle(_ title: String) -> Bool {
-        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        return shiftTemplates.contains { $0.displayName == normalizedTitle }
     }
 
     private func normalizeForAllDayChange(_ allDay: Bool) {
@@ -1329,43 +1275,6 @@ private struct TitleInputSection: View {
     }
 }
 
-// MARK: - Shift Template Section
-
-/// 班次模板选择组件
-private struct ShiftTemplateSection: View {
-    let templates: [ShiftTimeTemplate]
-    @Binding var selectedTemplateID: ShiftTimeTemplateID?
-    let onSelect: (ShiftTimeTemplate) -> Void
-
-    var body: some View {
-        LazyVGrid(
-            columns: [
-                GridItem(
-                    .adaptive(
-                        minimum: EventEditorStyle.shiftActionButtonWidth,
-                        maximum: EventEditorStyle.shiftActionButtonWidth
-                    ),
-                    spacing: EventEditorStyle.shiftTemplateButtonSpacing,
-                    alignment: .leading
-                )
-            ],
-            alignment: .leading,
-            spacing: EventEditorStyle.shiftTemplateButtonSpacing
-        ) {
-            ForEach(templates) { template in
-                Button {
-                    onSelect(template)
-                } label: {
-                    Text(template.displayName)
-                }
-                .buttonStyle(ShiftTemplateButtonStyle(backgroundColor: template.color.opacity(0.24)))
-            }
-        }
-        .padding(EventEditorStyle.cardPadding)
-        .cardContainer()
-    }
-}
-
 // MARK: - Work Info Time Picker Sheet
 
 private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
@@ -1619,20 +1528,6 @@ private struct WorkInfoSection: View {
         return localized != key ? localized : key
     }
 
-}
-
-private struct ShiftTemplateButtonStyle: ButtonStyle {
-    let backgroundColor: Color
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(EventEditorStyle.workActionButtonFont)
-            .foregroundColor(EventEditorStyle.primaryText)
-            .frame(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight)
-            .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius, style: .continuous))
-            .opacity(configuration.isPressed ? 0.85 : 1)
-    }
 }
 
 private extension WorkInfoSection {
