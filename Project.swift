@@ -2,6 +2,12 @@ import ProjectDescription
 
 let project = Project(
     name: "TimeNest",
+    packages: [
+        .remote(
+            url: "https://github.com/googleads/swift-package-manager-google-mobile-ads.git",
+            requirement: .upToNextMajor(from: "13.0.0")
+        )
+    ],
     targets: [
         .target(
             name: "TimeNest",
@@ -15,6 +21,9 @@ let project = Project(
                 "TimeNest/Resources/**/*.strings",
                 "TimeNest/PrivacyInfo.xcprivacy",
                 "TimeNest/Resources/Assets.xcassets"
+            ],
+            dependencies: [
+                .package(product: "GoogleMobileAds")
             ],
             settings: Settings.settings(
                 base: [

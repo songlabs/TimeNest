@@ -197,18 +197,14 @@ struct MonthCalendarView: View {
             // 月历表格 - 最大化占据空间
             GeometryReader { geometry in
                 let isShiftInputMode = viewModel.isShiftInputMode
-                let adBannerHeight: CGFloat = isShiftInputMode ? 0 : ShiftCalendarLayout.adBannerHeight
-                let toolbarHeight: CGFloat = isShiftInputMode ? 0 : ShiftCalendarLayout.footerToolbarHeight
                 let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
                 let dateRowCount = max(1, grid.days.count / 7)
                 let minimumDateCellHeight = isShiftInputMode
                     ? ShiftCalendarLayout.shiftInputDayCellMinHeight
                     : ShiftCalendarLayout.dayCellMinHeight
 
-                // 可用高度 = 总高度 - adBanner - toolbar（header 已在 VStack 中占用）
-                let availableHeight = geometry.size.height - adBannerHeight - toolbarHeight
                 // 星期行固定高度 + 当前月份实际需要的日期行
-                let dateCellHeight = max(minimumDateCellHeight, (availableHeight - weekdayRowHeight) / CGFloat(dateRowCount))
+                let dateCellHeight = max(minimumDateCellHeight, (geometry.size.height - weekdayRowHeight) / CGFloat(dateRowCount))
                 let containerWidth = geometry.size.width
                 let cellWidth = containerWidth / 7.0
                 let gridHeight = weekdayRowHeight + dateCellHeight * CGFloat(dateRowCount)
@@ -270,14 +266,17 @@ struct MonthCalendarView: View {
             .frame(maxHeight: .infinity)
 
             if !viewModel.isShiftInputMode {
-                // 广告 banner 占位
-                AdBannerPlaceholderView()
-
-                // 底部工具栏
-                calendarBottomToolbar
+                calendarBottomSection
             }
         }
         .background(ShiftCalendarColors.backgroundColor)
+    }
+
+    private var calendarBottomSection: some View {
+        VStack(spacing: 0) {
+            CalendarAdBannerContainer()
+            calendarBottomToolbar
+        }
     }
 
     private var calendarBottomToolbar: some View {
@@ -425,11 +424,7 @@ struct MonthCalendarView: View {
             )
             .environmentObject(localization)
 
-            // 广告 banner 占位
-            AdBannerPlaceholderView()
-
-            // 底部工具栏 - 绑定到 viewModel.displayMode
-            calendarBottomToolbar
+            calendarBottomSection
         }
         .background(ShiftCalendarColors.backgroundColor)
     }
@@ -445,11 +440,7 @@ struct MonthCalendarView: View {
             )
             .environmentObject(localization)
 
-            // 广告 banner 占位
-            AdBannerPlaceholderView()
-
-            // 底部工具栏 - 绑定到 viewModel.displayMode
-            calendarBottomToolbar
+            calendarBottomSection
         }
         .background(ShiftCalendarColors.backgroundColor)
     }

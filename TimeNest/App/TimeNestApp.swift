@@ -1,3 +1,4 @@
+import GoogleMobileAds
 import SwiftUI
 
 @main
@@ -15,6 +16,8 @@ struct TimeNestApp: App {
     private let localizationUseCase: CalendarLocalizationUseCase
 
     init() {
+        Self.configureAdsIfNeeded()
+
         self.eventUseCase = EventUseCase(
             repository: eventRepository,
             notificationScheduler: notificationScheduler
@@ -30,6 +33,11 @@ struct TimeNestApp: App {
             localizationUseCase: localizationUseCase,
             eventUseCase: eventUseCase
         )
+    }
+
+    private static func configureAdsIfNeeded() {
+        guard AdConfiguration.isEnabled else { return }
+        MobileAds.shared.start(completionHandler: nil)
     }
 
     var body: some Scene {

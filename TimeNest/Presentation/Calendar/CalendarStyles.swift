@@ -183,9 +183,6 @@ struct ShiftCalendarLayout {
     // 选中日期信息条
     static let selectedDateInfoHeight: CGFloat = 40
 
-    // 广告 banner
-    static let adBannerHeight: CGFloat = 58
-
     // 底部 TabBar
     static let tabBarHeight: CGFloat = 64
 
