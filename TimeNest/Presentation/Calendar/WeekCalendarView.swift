@@ -445,13 +445,13 @@ struct CalendarEventBlockView: View {
         VStack(alignment: .leading, spacing: 2) {
             Text(event.title)
                 .font(.system(size: compact ? 10 : 12, weight: .semibold))
-                .foregroundColor(ShiftCalendarColors.whiteText)
+                .foregroundColor(eventForegroundColor)
                 .lineLimit(1)
 
             if !compact {
                 Text(timeText)
                     .font(.system(size: 10, weight: .regular))
-                    .foregroundColor(ShiftCalendarColors.whiteText.opacity(0.90))
+                    .foregroundColor(eventForegroundColor.opacity(0.90))
                     .lineLimit(1)
             }
         }
@@ -464,6 +464,13 @@ struct CalendarEventBlockView: View {
 
     private var eventColor: Color {
         event.shiftTemplateID?.color ?? ShiftCalendarColors.primaryBlue
+    }
+
+    private var eventForegroundColor: Color {
+        guard let shiftTemplateID = event.shiftTemplateID else {
+            return ShiftCalendarColors.whiteText
+        }
+        return ShiftDisplayColors.solidForegroundColor(for: shiftTemplateID.color)
     }
 }
 

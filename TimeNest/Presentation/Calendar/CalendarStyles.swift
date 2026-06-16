@@ -64,6 +64,18 @@ extension String {
         return shiftLabelColors[index]
     }
 
+    var shiftLabelBackgroundColor: Color {
+        ShiftDisplayColors.calendarLabelBackgroundColor(for: shiftLabelColor)
+    }
+
+    var shiftLabelForegroundColor: Color {
+        ShiftDisplayColors.calendarLabelForegroundColor(for: shiftLabelColor)
+    }
+
+    var shiftLabelBorderColor: Color {
+        ShiftDisplayColors.calendarLabelBorderColor(for: shiftLabelColor)
+    }
+
     // 显示名称就是字符串本身
     var shiftDisplayName: String {
         self
@@ -74,6 +86,8 @@ extension String {
 
 enum ShiftDisplayColors {
     static let backgroundOpacity: Double = 0.12
+    static let calendarLabelBackgroundOpacity: Double = 0.28
+    static let calendarLabelBorderOpacity: Double = 0.42
     static let selectionStrokeColor = ShiftCalendarColors.primaryBlue
 
     static func backgroundColor(for color: Color) -> Color {
@@ -82,6 +96,37 @@ enum ShiftDisplayColors {
 
     static func foregroundColor(for color: Color) -> Color {
         Color(UIColor.label)
+    }
+
+    static func calendarLabelBackgroundColor(for color: Color) -> Color {
+        color.opacity(calendarLabelBackgroundOpacity)
+    }
+
+    static func calendarLabelForegroundColor(for color: Color) -> Color {
+        Color.black.opacity(0.82)
+    }
+
+    static func calendarLabelBorderColor(for color: Color) -> Color {
+        color.opacity(calendarLabelBorderOpacity)
+    }
+
+    static func solidForegroundColor(for color: Color) -> Color {
+        isLight(color) ? Color.black.opacity(0.82) : .white
+    }
+
+    private static func isLight(_ color: Color) -> Bool {
+        let uiColor = UIColor(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+            return false
+        }
+
+        let brightness = (red * 299 + green * 587 + blue * 114) / 1000
+        return brightness >= 0.58
     }
 }
 
@@ -227,19 +272,38 @@ struct ShiftInputPanelLayout {
     static let buttonTitleFontSize: CGFloat = 14
 }
 
-// MARK: - Statistics Bottom Sheet Colors
+// MARK: - Shared Bottom Sheet Surface Colors
 
-struct WorkStatisticsColors {
-    static let sheetBackground = Color(UIColor.systemBackground)
-    static let sectionBackground = Color(UIColor.secondarySystemBackground)
+struct BottomSheetSurfaceColors {
+    static let outerBackground = sheetBackground
+    static let sheetBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .secondarySystemBackground : .systemBackground
+    })
+    static let sectionBackground = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark ? .tertiarySystemBackground : .secondarySystemBackground
+    })
     static let fieldBackground = Color(UIColor.tertiarySystemBackground)
-    static let tableHeaderBackground = Color(UIColor.secondarySystemBackground)
-    static let totalRowBackground = ShiftCalendarColors.primaryBlue.opacity(0.10)
+    static let tableHeaderBackground = sectionBackground
     static let separator = Color(UIColor.separator).opacity(0.55)
     static let primaryText = Color(UIColor.label)
     static let secondaryText = Color(UIColor.secondaryLabel)
     static let handle = Color(UIColor.tertiaryLabel)
     static let border = Color(UIColor.separator).opacity(0.45)
+}
+
+// MARK: - Statistics Bottom Sheet Colors
+
+struct WorkStatisticsColors {
+    static let sheetBackground = BottomSheetSurfaceColors.sheetBackground
+    static let sectionBackground = BottomSheetSurfaceColors.sectionBackground
+    static let fieldBackground = BottomSheetSurfaceColors.fieldBackground
+    static let tableHeaderBackground = BottomSheetSurfaceColors.tableHeaderBackground
+    static let totalRowBackground = ShiftCalendarColors.primaryBlue.opacity(0.10)
+    static let separator = BottomSheetSurfaceColors.separator
+    static let primaryText = BottomSheetSurfaceColors.primaryText
+    static let secondaryText = BottomSheetSurfaceColors.secondaryText
+    static let handle = BottomSheetSurfaceColors.handle
+    static let border = BottomSheetSurfaceColors.border
 }
 
 // MARK: - Weekday Helpers

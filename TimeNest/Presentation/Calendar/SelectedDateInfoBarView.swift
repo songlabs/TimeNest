@@ -25,11 +25,15 @@ struct SelectedDateInfoBarView: View {
                 if let shiftType = cell.shiftType {
                     Text(shiftType)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white)
+                        .foregroundColor(shiftType.shiftLabelForegroundColor)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(shiftType.shiftLabelColor)
-                        .cornerRadius(3)
+                        .background(shiftType.shiftLabelBackgroundColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .stroke(shiftType.shiftLabelBorderColor, lineWidth: 0.7)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
                 }
             }
 

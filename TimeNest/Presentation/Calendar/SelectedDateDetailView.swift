@@ -33,11 +33,15 @@ struct SelectedDateDetailView: View {
                 if let shiftType = cell.shiftType {
                     Text(shiftType)
                         .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white)
+                        .foregroundColor(shiftType.shiftLabelForegroundColor)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(shiftType.shiftLabelColor)
-                        .cornerRadius(4)
+                        .background(shiftType.shiftLabelBackgroundColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .stroke(shiftType.shiftLabelBorderColor, lineWidth: 0.7)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
                 }
             }
             .padding(.horizontal, 12)

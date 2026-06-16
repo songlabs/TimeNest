@@ -190,7 +190,7 @@ struct MonthCalendarView: View {
         .environmentObject(localization)
         .padding(.horizontal, ShiftInputPanelLayout.outerHorizontalPadding)
         .padding(.bottom, ShiftInputPanelLayout.outerBottomPadding)
-        .background(ShiftCalendarColors.backgroundColor)
+        .background(BottomSheetSurfaceColors.outerBackground)
     }
 
     @ViewBuilder
@@ -590,9 +590,13 @@ struct DayCellView: View {
                     // 排班标签 - 底部居中，圆角矩形样式
                     Text(shiftType)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(.white)
+                        .foregroundColor(shiftType.shiftLabelForegroundColor)
                         .frame(maxWidth: .infinity, minHeight: ShiftCalendarLayout.shiftLabelHeight)
-                        .background(shiftType.shiftLabelColor)
+                        .background(shiftType.shiftLabelBackgroundColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: ShiftCalendarLayout.shiftLabelCornerRadius, style: .continuous)
+                                .stroke(shiftType.shiftLabelBorderColor, lineWidth: 0.8)
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: ShiftCalendarLayout.shiftLabelCornerRadius, style: .continuous))
                         .padding(.horizontal, 2)
                         .padding(.bottom, 8)
@@ -670,7 +674,11 @@ struct DayCellView: View {
             .padding(.vertical, 2)
             .frame(maxWidth: .infinity)
             .background(eventLabelBackgroundColor(for: event))
-            .cornerRadius(3)
+            .overlay(
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .stroke(eventLabelBorderColor(for: event), lineWidth: 0.7)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
     }
 
     @ViewBuilder
@@ -712,14 +720,21 @@ struct DayCellView: View {
         guard let shiftTemplateID = event.shiftTemplateID else {
             return ShiftCalendarColors.primaryBlueDark
         }
-        return shiftTemplateID.displayForegroundColor
+        return ShiftDisplayColors.calendarLabelForegroundColor(for: shiftTemplateID.color)
     }
 
     private func eventLabelBackgroundColor(for event: EventOccurrence) -> Color {
         guard let shiftTemplateID = event.shiftTemplateID else {
             return ShiftCalendarColors.primaryBlue.opacity(0.12)
         }
-        return shiftTemplateID.displayBackgroundColor
+        return ShiftDisplayColors.calendarLabelBackgroundColor(for: shiftTemplateID.color)
+    }
+
+    private func eventLabelBorderColor(for event: EventOccurrence) -> Color {
+        guard let shiftTemplateID = event.shiftTemplateID else {
+            return .clear
+        }
+        return ShiftDisplayColors.calendarLabelBorderColor(for: shiftTemplateID.color)
     }
 
     private func workClockLabelBackgroundColor(clockIn: EventOccurrence?, clockOut: EventOccurrence?) -> Color {
