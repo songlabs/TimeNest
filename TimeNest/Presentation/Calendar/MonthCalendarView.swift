@@ -70,13 +70,15 @@ struct MonthCalendarView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            if viewModel.isShiftInputMode {
-                shiftInputPanel
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
-        }
         .animation(.easeInOut(duration: 0.2), value: viewModel.isShiftInputMode)
+        .sheet(isPresented: shiftInputSheetBinding) {
+            shiftInputPanel
+                .presentationDetents([.height(ShiftInputPanelLayout.sheetHeight)])
+                .presentationDragIndicator(.hidden)
+                .presentationBackground(WorkStatisticsColors.sheetBackground)
+                .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
+                .presentationBackgroundInteraction(.enabled(upThrough: .height(ShiftInputPanelLayout.sheetHeight)))
+        }
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
@@ -174,6 +176,17 @@ struct MonthCalendarView: View {
                 )
             }
         }
+    }
+
+    private var shiftInputSheetBinding: Binding<Bool> {
+        Binding(
+            get: { viewModel.isShiftInputMode },
+            set: { isPresented in
+                if !isPresented {
+                    viewModel.exitShiftInputMode()
+                }
+            }
+        )
     }
 
     private var shiftInputPanel: some View {

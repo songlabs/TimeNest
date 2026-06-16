@@ -265,6 +265,12 @@ struct ShiftInputPanelLayout {
     static let buttonBottomPadding: CGFloat = 12
     static let emptyBottomPadding: CGFloat = 14
     static let buttonTitleFontSize: CGFloat = 14
+    static let sheetHeight: CGFloat =
+        SettingsModalSurface.closeButtonSize
+        + SettingsModalSurface.headerVerticalPadding * 2
+        + contentTopPadding
+        + buttonHeight
+        + buttonBottomPadding
 }
 
 // MARK: - Settings Modal Surface Colors
