@@ -172,14 +172,15 @@ struct MonthCalendarView: View {
                 let adBannerHeight: CGFloat = ShiftCalendarLayout.adBannerHeight
                 let toolbarHeight: CGFloat = CalendarBottomToolbarLayout.toolbarHeight
                 let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
+                let dateRowCount = max(1, grid.days.count / 7)
 
                 // 可用高度 = 总高度 - adBanner - toolbar（header 已在 VStack 中占用）
                 let availableHeight = geometry.size.height - adBannerHeight - toolbarHeight
-                // 星期行固定高度 + 6 行日期
-                let dateCellHeight = max(ShiftCalendarLayout.dayCellMinHeight, (availableHeight - weekdayRowHeight) / 6.0)
+                // 星期行固定高度 + 当前月份实际需要的日期行
+                let dateCellHeight = max(ShiftCalendarLayout.dayCellMinHeight, (availableHeight - weekdayRowHeight) / CGFloat(dateRowCount))
                 let containerWidth = geometry.size.width
                 let cellWidth = containerWidth / 7.0
-                let gridHeight = weekdayRowHeight + dateCellHeight * 6
+                let gridHeight = weekdayRowHeight + dateCellHeight * CGFloat(dateRowCount)
 
                 // Cell 层 + 网格线 overlay
                 VStack(spacing: 0) {
@@ -190,8 +191,8 @@ struct MonthCalendarView: View {
                     )
                     .frame(height: weekdayRowHeight)
 
-                    // 第 1～6 行：日期
-                    ForEach(0..<6, id: \.self) { rowIndex in
+                    // 日期行：按当前月份实际周数渲染
+                    ForEach(0..<dateRowCount, id: \.self) { rowIndex in
                         HStack(alignment: .top, spacing: 0) {
                             ForEach(0..<7, id: \.self) { colIndex in
                                 let dayIndex = rowIndex * 7 + colIndex
@@ -228,6 +229,7 @@ struct MonthCalendarView: View {
                     gridLinesOverlay(
                         cellWidth: cellWidth,
                         dateCellHeight: dateCellHeight,
+                        dateRowCount: dateRowCount,
                         containerWidth: containerWidth,
                         gridHeight: gridHeight
                     )
@@ -269,15 +271,15 @@ struct MonthCalendarView: View {
 
     /// 网格线 overlay - 使用 Path 精确绘制连续网格线
     @ViewBuilder
-    private func gridLinesOverlay(cellWidth: CGFloat, dateCellHeight: CGFloat, containerWidth: CGFloat, gridHeight: CGFloat) -> some View {
+    private func gridLinesOverlay(cellWidth: CGFloat, dateCellHeight: CGFloat, dateRowCount: Int, containerWidth: CGFloat, gridHeight: CGFloat) -> some View {
         let lineWidth = ShiftCalendarLayout.gridLineWidth
         let weekdayRowHeight: CGFloat = ShiftCalendarLayout.weekdayRowHeight
 
         // 横线位置（不等高行）：
         // 第 0 条：0（顶部）
-        // 第 1～6 条：weekdayRowHeight + dateCellHeight * 1～6（日期行底部）
-        // 共 7 条横线（星期行底部不绘制，避免与 WeekdayHeaderView 背景重叠）
-        let horizontalLines: [CGFloat] = [0] + (1...6).map { weekdayRowHeight + dateCellHeight * CGFloat($0) }
+        // 后续横线：weekdayRowHeight + dateCellHeight * 日期行序号（日期行底部）
+        // 星期行底部不绘制，避免与 WeekdayHeaderView 背景重叠
+        let horizontalLines: [CGFloat] = [0] + (1...dateRowCount).map { weekdayRowHeight + dateCellHeight * CGFloat($0) }
 
         // 竖线位置：0, cellWidth, cellWidth*2, ..., cellWidth*7 (共 8 条)
         let verticalLines: [CGFloat] = (0...7).map { CGFloat($0) * cellWidth }
