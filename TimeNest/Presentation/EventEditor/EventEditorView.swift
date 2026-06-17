@@ -896,22 +896,6 @@ private struct EventTimeSection: View {
     @Binding var showingEndDatePicker: Bool
     @Binding var showingEndTimePicker: Bool
 
-    private let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "ja_JP")
-        formatter.dateFormat = "yyyy/MM/dd"
-        return formatter
-    }()
-
-    private let timeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = Locale(identifier: "ja_JP")
-        formatter.dateFormat = "HH:mm"
-        return formatter
-    }()
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // 第一行：終日 + Toggle，独立一行
@@ -1074,11 +1058,11 @@ private struct EventTimeSection: View {
     }
 
     private func formatDateOnly(_ date: Date) -> String {
-        dateFormatter.string(from: date)
+        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
     }
 
     private func formatTimeOnly(_ date: Date) -> String {
-        timeFormatter.string(from: date)
+        LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
     }
 
     private func pickerTitle(for mode: TimePickerMode) -> String {
@@ -1191,6 +1175,8 @@ private struct TimePickerSheet: View {
                 }
             }
         }
+        .environment(\.locale, LocalizationManager.shared.calendarLocale)
+        .environment(\.calendar, LocalizationManager.shared.calendar)
     }
 
     private func dateRangeForMode() -> ClosedRange<Date> {
@@ -1316,6 +1302,8 @@ private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
                 }
             }
         }
+        .environment(\.locale, LocalizationManager.shared.calendarLocale)
+        .environment(\.calendar, LocalizationManager.shared.calendar)
     }
 }
 

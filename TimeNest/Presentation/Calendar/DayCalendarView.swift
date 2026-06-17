@@ -257,12 +257,13 @@ private struct CurrentTimeLineDay: View {
 private func makePreviewCell() -> CalendarDayCell {
     let today = Date()
     let dateOnly = DateOnly(from: today)!
+    let localization = LocalizationManager.preview(languageCode: "ja")
 
     return CalendarDayCell(
         id: dateOnly.id,
         date: dateOnly,
         dayText: "\(dateOnly.day)",
-        weekdayText: "日",
+        weekdayText: localization.shortWeekdaySymbol(for: today),
         holidays: [],
         events: [
             EventOccurrence(

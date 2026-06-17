@@ -311,7 +311,7 @@ struct EventRowView: View {
             id: "2026-05-27",
             date: DateOnly(year: 2026, month: 5, day: 27),
             dayText: "27",
-            weekdayText: "二",
+            weekdayText: LocalizationManager.preview(languageCode: "ja").shortWeekdaySymbol(for: DateOnly(year: 2026, month: 5, day: 27).toDate()),
             holidays: [],
             events: [],
             isToday: false,

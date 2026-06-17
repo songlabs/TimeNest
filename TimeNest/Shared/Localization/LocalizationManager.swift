@@ -22,20 +22,17 @@ final class LocalizationManager: ObservableObject {
 
     /// 当前对应的 Locale
     var currentLocale: Locale {
-        switch selectedLanguageCode {
-        case "system":
-            return .current
-        case "zhHans":
-            return Locale(identifier: "zh_Hans")
-        case "ja":
-            return Locale(identifier: "ja")
-        case "ko":
-            return Locale(identifier: "ko")
-        case "enUS":
-            return Locale(identifier: "en_US")
-        default:
-            return .current
-        }
+        locale(for: currentLanguage)
+    }
+
+    /// 日历 UI 使用的 Locale，必须跟随 App 内语言设置。
+    var calendarLocale: Locale {
+        currentLocale
+    }
+
+    /// 日历 UI 使用的 Gregorian Calendar，避免日期格式跟随系统历法。
+    var calendar: Calendar {
+        calendar(for: currentLanguage)
     }
 
     /// 初始化
@@ -117,101 +114,122 @@ final class LocalizationManager: ObservableObject {
         return Bundle.main
     }
 
+    /// 根据指定语言获取 Locale。
+    /// - Parameter language: App 内显示语言
+    /// - Returns: 对应地区化 Locale
+    func locale(for language: DisplayLanguage) -> Locale {
+        switch language {
+        case .system:
+            return .current
+        case .zhHans:
+            return Locale(identifier: "zh_Hans_CN")
+        case .ja:
+            return Locale(identifier: "ja_JP")
+        case .ko:
+            return Locale(identifier: "ko_KR")
+        case .enUS:
+            return Locale(identifier: "en_US")
+        }
+    }
+
+    /// 根据指定语言获取 Gregorian Calendar。
+    /// - Parameter language: App 内显示语言
+    /// - Returns: 已绑定 Locale 的 Gregorian Calendar
+    func calendar(for language: DisplayLanguage) -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.locale = locale(for: language)
+        return calendar
+    }
+
+    /// 创建跟随 App 内语言的 DateFormatter。
+    /// - Parameters:
+    ///   - dateFormat: 固定日期格式
+    ///   - language: App 内显示语言，默认使用当前语言
+    /// - Returns: 已绑定 Gregorian Calendar 和 App Locale 的 formatter
+    func dateFormatter(dateFormat: String, language: DisplayLanguage? = nil) -> DateFormatter {
+        let displayLanguage = language ?? currentLanguage
+        let formatter = DateFormatter()
+        formatter.calendar = calendar(for: displayLanguage)
+        formatter.locale = locale(for: displayLanguage)
+        formatter.dateFormat = dateFormat
+        return formatter
+    }
+
     /// 获取当前语言对应的星期短符号
     /// - Parameter weekStartPolicy: 每周开始日策略
     /// - Returns: 7 个星期短符号数组
     func shortWeekdaySymbols(weekStartPolicy: WeekStartPolicy = .sunday) -> [String] {
-        let language = currentLanguage
-        let symbols: [DisplayLanguage: [String]] = [
-            .zhHans: ["日", "一", "二", "三", "四", "五", "六"],
-            .ja: ["日", "月", "火", "水", "木", "金", "土"],
-            .ko: ["일", "월", "화", "수", "목", "금", "토"],
-            .enUS: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-            .system: ["日", "一", "二", "三", "四", "五", "六"]
-        ]
+        shortWeekdaySymbols(language: currentLanguage, weekStartPolicy: weekStartPolicy)
+    }
 
-        var symbolsArray = symbols[language] ?? symbols[.zhHans]!
+    /// 获取指定语言对应的星期短符号
+    /// - Parameters:
+    ///   - language: App 内显示语言
+    ///   - weekStartPolicy: 每周开始日策略
+    /// - Returns: 7 个星期短符号数组
+    func shortWeekdaySymbols(language: DisplayLanguage, weekStartPolicy: WeekStartPolicy = .sunday) -> [String] {
+        let formatter = dateFormatter(dateFormat: "E", language: language)
+        let symbols = shouldUseVeryShortWeekdaySymbols(for: language)
+            ? formatter.veryShortWeekdaySymbols
+            : formatter.shortWeekdaySymbols
 
-        // 根据 weekStartPolicy 调整顺序
-        switch weekStartPolicy {
-        case .sunday:
-            // 默认顺序：日 一 二 三 四 五 六
-            break
-        case .monday:
-            // 周一开始：一 二 三 四 五 六 日
-            symbolsArray.append(symbolsArray.removeFirst())
-        case .saturday:
-            // 周六开始：六 日 一 二 三 四 五
-            // 先移到周一开始，再反转逻辑
-            // 原数组：日 一 二 三 四 五 六
-            // 目标：六 日 一 二 三 四 五
-            // 从末尾取出"六"放到开头
-            let last = symbolsArray.removeLast()
-            symbolsArray.insert(last, at: 0)
-        case .system:
-            // 系统默认，使用周日开始
-            break
-        }
-
-        return symbolsArray
+        return orderedWeekdaySymbols(symbols ?? fallbackShortWeekdaySymbols(for: language), weekStartPolicy: weekStartPolicy)
     }
 
     /// 获取当前语言对应的完整星期符号
     /// - Parameter weekStartPolicy: 每周开始日策略
     /// - Returns: 7 个完整星期符号数组
     func fullWeekdaySymbols(weekStartPolicy: WeekStartPolicy = .sunday) -> [String] {
-        let language = currentLanguage
-        let symbols: [DisplayLanguage: [String]] = [
-            .zhHans: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"],
-            .ja: ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"],
-            .ko: ["일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"],
-            .enUS: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            .system: ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
-        ]
+        fullWeekdaySymbols(language: currentLanguage, weekStartPolicy: weekStartPolicy)
+    }
 
-        var symbolsArray = symbols[language] ?? symbols[.zhHans]!
-
-        // 根据 weekStartPolicy 调整顺序
-        switch weekStartPolicy {
-        case .sunday:
-            // 默认顺序：星期日 星期一 星期二 星期三 星期四 星期五 星期六
-            break
-        case .monday:
-            // 周一开始：星期一 星期二 星期三 星期四 星期五 星期六 星期日
-            symbolsArray.append(symbolsArray.removeFirst())
-        case .saturday:
-            // 周六开始：星期六 星期日 星期一 星期二 星期三 星期四 星期五
-            let last = symbolsArray.removeLast()
-            symbolsArray.insert(last, at: 0)
-        case .system:
-            // 系统默认，使用周日开始
-            break
-        }
-
-        return symbolsArray
+    /// 获取指定语言对应的完整星期符号
+    /// - Parameters:
+    ///   - language: App 内显示语言
+    ///   - weekStartPolicy: 每周开始日策略
+    /// - Returns: 7 个完整星期符号数组
+    func fullWeekdaySymbols(language: DisplayLanguage, weekStartPolicy: WeekStartPolicy = .sunday) -> [String] {
+        let formatter = dateFormatter(dateFormat: "EEEE", language: language)
+        return orderedWeekdaySymbols(formatter.weekdaySymbols ?? fallbackFullWeekdaySymbols(for: language), weekStartPolicy: weekStartPolicy)
     }
 
     /// 获取月份标题
     /// - Parameter date: 用于提取年月
     /// - Returns: 本地化后的月份标题，如 "2026 年 5 月" 或 "May 2026"
     func monthTitle(for date: Date) -> String {
-        let language = currentLanguage
-        let calendar = Calendar(identifier: .gregorian)
+        let calendar = calendar(for: currentLanguage)
         let year = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
 
-        switch language {
-        case .zhHans, .system:
+        return monthTitle(year: year, month: month, language: currentLanguage)
+    }
+
+    /// 获取指定语言的月份标题
+    /// - Parameters:
+    ///   - year: 年
+    ///   - month: 月
+    ///   - language: App 内显示语言
+    /// - Returns: 本地化后的月份标题
+    func monthTitle(year: Int, month: Int, language: DisplayLanguage) -> String {
+        switch effectiveCalendarLanguage(for: language) {
+        case .zhHans:
             return "\(year)年\(month)月"
         case .ja:
             return "\(year)年\(month)月"
         case .ko:
             return "\(year)년 \(month)월"
         case .enUS:
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US")
-            formatter.dateFormat = "MMMM yyyy"
+            let formatter = dateFormatter(dateFormat: "MMMM yyyy", language: language)
+            var components = DateComponents()
+            components.year = year
+            components.month = month
+            components.day = 1
+            guard let date = calendar(for: language).date(from: components) else {
+                return "\(year)/\(month)"
+            }
             return formatter.string(from: date)
+        case .system:
+            return "\(year)年\(month)月"
         }
     }
 
@@ -219,25 +237,22 @@ final class LocalizationManager: ObservableObject {
     /// - Parameter date: 用于提取年月日
     /// - Returns: 本地化后的日期标题
     func dayTitle(for date: Date) -> String {
-        let calendar = Calendar(identifier: .gregorian)
+        let calendar = calendar(for: currentLanguage)
         let year = calendar.component(.year, from: date)
         let month = calendar.component(.month, from: date)
         let day = calendar.component(.day, from: date)
-        let weekdaySymbols = shortWeekdaySymbols(weekStartPolicy: .sunday)
-        let weekdayIndex = calendar.component(.weekday, from: date) - 1
-        let weekdayText = weekdaySymbols[weekdayIndex]
+        let weekdayText = shortWeekdaySymbol(for: date, language: currentLanguage)
 
-        switch currentLanguage {
-        case .zhHans, .system, .ja:
+        switch effectiveCalendarLanguage(for: currentLanguage) {
+        case .zhHans, .ja:
             return "\(year)年\(month)月\(day)日（\(weekdayText)）"
         case .ko:
             return "\(year)년 \(month)월 \(day)일 (\(weekdayText))"
         case .enUS:
-            let formatter = DateFormatter()
-            formatter.locale = Locale(identifier: "en_US")
-            formatter.calendar = calendar
-            formatter.dateFormat = "MMM d, yyyy"
+            let formatter = dateFormatter(dateFormat: "MMM d, yyyy")
             return "\(formatter.string(from: date)) (\(weekdayText))"
+        case .system:
+            return "\(year)年\(month)月\(day)日（\(weekdayText)）"
         }
     }
 
@@ -245,17 +260,31 @@ final class LocalizationManager: ObservableObject {
     /// - Parameter month: 月份 (1-12)
     /// - Returns: 本地化后的月份名称，如 "5 月" 或 "May"
     func monthName(for month: Int) -> String {
-        let language = currentLanguage
+        monthName(for: month, language: currentLanguage)
+    }
 
-        switch language {
-        case .zhHans, .system, .ja:
+    /// 获取指定语言的单个月份名称
+    /// - Parameters:
+    ///   - month: 月份 (1-12)
+    ///   - language: App 内显示语言
+    /// - Returns: 本地化后的月份名称
+    func monthName(for month: Int, language: DisplayLanguage) -> String {
+        switch effectiveCalendarLanguage(for: language) {
+        case .zhHans, .ja:
             return "\(month)月"
         case .ko:
             return "\(month)월"
         case .enUS:
-            let months = ["January", "February", "March", "April", "May", "June",
-                         "July", "August", "September", "October", "November", "December"]
-            return months[month - 1]
+            var components = DateComponents()
+            components.month = month
+            components.day = 1
+            components.year = 2000
+            guard let date = calendar(for: language).date(from: components) else {
+                return "\(month)"
+            }
+            return dateFormatter(dateFormat: "MMMM", language: language).string(from: date)
+        case .system:
+            return "\(month)月"
         }
     }
 
@@ -263,24 +292,29 @@ final class LocalizationManager: ObservableObject {
     /// - Parameter date: 日期
     /// - Returns: 本地化后的日期字符串，如 "5/22（金）" 或 "5/22 (Fri)"
     func formattedDateShort(for date: Date) -> String {
-        let calendar = Calendar(identifier: .gregorian)
+        formattedDateShort(for: date, language: currentLanguage)
+    }
+
+    /// 获取指定语言的短日期字符串
+    /// - Parameters:
+    ///   - date: 日期
+    ///   - language: App 内显示语言
+    /// - Returns: 本地化后的短日期字符串
+    func formattedDateShort(for date: Date, language: DisplayLanguage) -> String {
+        let calendar = calendar(for: language)
         let month = calendar.component(.month, from: date)
         let day = calendar.component(.day, from: date)
-        let weekdayIndex = calendar.component(.weekday, from: date)
+        let weekdaySymbol = shortWeekdaySymbol(for: date, language: language)
 
-        // 获取星期符号（索引从 1 开始，Sunday=1）
-        let symbols = shortWeekdaySymbols()
-        let weekdaySymbol = symbols[(weekdayIndex - 1 + 7) % 7]
-
-        switch currentLanguage {
-        case .zhHans, .system:
-            return "\(month)/\(day)（\(weekdaySymbol)）"
-        case .ja:
+        switch effectiveCalendarLanguage(for: language) {
+        case .zhHans, .ja:
             return "\(month)/\(day)（\(weekdaySymbol)）"
         case .ko:
             return "\(month)월 \(day)일 (\(weekdaySymbol))"
         case .enUS:
             return "\(month)/\(day) (\(weekdaySymbol))"
+        case .system:
+            return "\(month)/\(day)（\(weekdaySymbol)）"
         }
     }
 
@@ -288,10 +322,82 @@ final class LocalizationManager: ObservableObject {
     /// - Parameter date: 日期
     /// - Returns: 星期短符号，如 "金" 或 "Fri"
     func shortWeekdaySymbol(for date: Date) -> String {
-        let calendar = Calendar(identifier: .gregorian)
+        shortWeekdaySymbol(for: date, language: currentLanguage)
+    }
+
+    /// 获取指定语言的星期短符号（单个日期）
+    /// - Parameters:
+    ///   - date: 日期
+    ///   - language: App 内显示语言
+    /// - Returns: 星期短符号
+    func shortWeekdaySymbol(for date: Date, language: DisplayLanguage) -> String {
+        let calendar = calendar(for: language)
         let weekdayIndex = calendar.component(.weekday, from: date)
-        let symbols = shortWeekdaySymbols()
+        let symbols = shortWeekdaySymbols(language: language, weekStartPolicy: .sunday)
         return symbols[(weekdayIndex - 1 + 7) % 7]
+    }
+
+    private func effectiveCalendarLanguage(for language: DisplayLanguage) -> DisplayLanguage {
+        switch language {
+        case .system:
+            let languageCode = Locale.current.language.languageCode?.identifier ?? "en"
+            switch languageCode {
+            case "zh":
+                return .zhHans
+            case "ja":
+                return .ja
+            case "ko":
+                return .ko
+            case "en":
+                return .enUS
+            default:
+                return .enUS
+            }
+        default:
+            return language
+        }
+    }
+
+    private func shouldUseVeryShortWeekdaySymbols(for language: DisplayLanguage) -> Bool {
+        switch effectiveCalendarLanguage(for: language) {
+        case .zhHans:
+            return true
+        case .system, .ja, .ko, .enUS:
+            return false
+        }
+    }
+
+    private func orderedWeekdaySymbols(_ symbols: [String], weekStartPolicy: WeekStartPolicy) -> [String] {
+        let normalizedSymbols = symbols.count == 7 ? symbols : fallbackShortWeekdaySymbols(for: .enUS)
+        let startIndex = firstWeekday(for: weekStartPolicy) - 1
+        guard startIndex > 0 else { return normalizedSymbols }
+        return Array(normalizedSymbols[startIndex...]) + Array(normalizedSymbols[..<startIndex])
+    }
+
+    private func firstWeekday(for policy: WeekStartPolicy) -> Int {
+        switch policy {
+        case .sunday:
+            return 1
+        case .monday:
+            return 2
+        case .saturday:
+            return 7
+        case .system:
+            return Calendar.current.firstWeekday
+        }
+    }
+
+    private func fallbackShortWeekdaySymbols(for language: DisplayLanguage) -> [String] {
+        let formatter = dateFormatter(dateFormat: "E", language: language == .system ? .enUS : language)
+        if shouldUseVeryShortWeekdaySymbols(for: language) {
+            return formatter.veryShortWeekdaySymbols ?? dateFormatter(dateFormat: "E", language: .enUS).shortWeekdaySymbols
+        }
+        return formatter.shortWeekdaySymbols ?? dateFormatter(dateFormat: "E", language: .enUS).shortWeekdaySymbols
+    }
+
+    private func fallbackFullWeekdaySymbols(for language: DisplayLanguage) -> [String] {
+        let formatter = dateFormatter(dateFormat: "EEEE", language: language == .system ? .enUS : language)
+        return formatter.weekdaySymbols ?? dateFormatter(dateFormat: "EEEE", language: .enUS).weekdaySymbols
     }
 }
 

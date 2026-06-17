@@ -86,10 +86,8 @@ struct SelectedDateDetailView: View {
     }
 
     private var formattedDateTitle: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "M/d"
         let date = cell.date.toDate()
-        return formatter.string(from: date)
+        return LocalizationManager.shared.dateFormatter(dateFormat: "M/d").string(from: date)
     }
 
     private func markerTypeToString(_ marker: EventMarkerType) -> String {

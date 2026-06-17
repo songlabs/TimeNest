@@ -747,18 +747,18 @@ class MonthCalendarViewModel: ObservableObject {
     private func createPlaceholderCell(for date: Date) -> CalendarDayCell {
         let dateOnly = DateOnly(from: date) ?? DateOnly(year: 2000, month: 1, day: 1)
         let calendar = Calendar(identifier: .gregorian)
-        let weekdaySymbols = LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: .sunday)
-        let weekdayIndex = calendar.component(.weekday, from: date) - 1
+        let weekdayIndex = (calendar.component(.weekday, from: date) - 1 + 7) % 7
+        let weekdayText = LocalizationManager.shared.shortWeekdaySymbol(for: date)
         
         return CalendarDayCell(
             id: dateOnly.id,
             date: dateOnly,
             dayText: "\(dateOnly.day)",
-            weekdayText: weekdaySymbols[weekdayIndex],
+            weekdayText: weekdayText,
             holidays: [],
             events: [],
             isToday: false,
-            isWeekend: false,
+            isWeekend: weekdayIndex == 0 || weekdayIndex == 6,
             isInCurrentMonth: true,
             shiftType: nil,
             eventMarkers: []

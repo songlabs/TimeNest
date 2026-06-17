@@ -3,6 +3,7 @@ import SwiftUI
 /// 打工统计面板 - Bottom Sheet 样式
 struct WorkStatisticsView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var localization: LocalizationManager
     @ObservedObject var viewModel: WorkStatisticsViewModel
 
     private let statisticIconName = "chart.bar.xaxis"
@@ -276,6 +277,8 @@ struct WorkStatisticsView: View {
                 }
             }
         }
+        .environment(\.locale, localization.calendarLocale)
+        .environment(\.calendar, localization.calendar)
         .presentationDetents([.height(320)])
     }
 
@@ -293,7 +296,7 @@ struct WorkStatisticsView: View {
     viewModel.showEndDatePicker = false
 
     return WorkStatisticsView(viewModel: viewModel)
-        .environmentObject(LocalizationManager.preview(languageCode: "zh-Hans"))
+        .environmentObject(LocalizationManager.preview(languageCode: "zhHans"))
         .background(Color(UIColor.systemGray5))
 }
 #endif

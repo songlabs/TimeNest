@@ -275,9 +275,7 @@ class WorkStatisticsViewModel: ObservableObject {
     }
 
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy/MM/dd"
-        return formatter.string(from: date)
+        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
     }
 
     private func formatDuration(minutes: Int) -> String {

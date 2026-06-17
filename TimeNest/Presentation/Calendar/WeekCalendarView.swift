@@ -510,14 +510,13 @@ private func makePreviewCells() -> [CalendarDayCell] {
     for offset in -3...3 {
         if let date = calendar.date(byAdding: .day, value: offset, to: today) {
             let dateOnly = DateOnly(from: date)!
-            let weekdayIndex = Calendar.current.component(.weekday, from: date) - 1
-            let weekdaySymbols = LocalizationManager.shared.shortWeekdaySymbols(weekStartPolicy: .sunday)
+            let weekdayIndex = (calendar.component(.weekday, from: date) - 1 + 7) % 7
 
             cells.append(CalendarDayCell(
                 id: dateOnly.id,
                 date: dateOnly,
                 dayText: "\(dateOnly.day)",
-                weekdayText: weekdaySymbols[weekdayIndex],
+                weekdayText: LocalizationManager.preview(languageCode: "ja").shortWeekdaySymbol(for: date),
                 holidays: [],
                 events: [],
                 isToday: offset == 0,

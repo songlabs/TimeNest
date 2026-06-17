@@ -310,10 +310,10 @@ enum CalendarWeekdayKind {
 
 extension ShiftCalendarColors {
     static func weekdayKind(for weekdayText: String) -> CalendarWeekdayKind {
-        if ["日", "Sun", "Sunday", "일", "dom"].contains(weekdayText) {
+        if weekdaySymbols(at: 0).contains(weekdayText) {
             return .sunday
         }
-        if ["土", "Sat", "Saturday", "토", "sab"].contains(weekdayText) {
+        if weekdaySymbols(at: 6).contains(weekdayText) {
             return .saturday
         }
         return .weekday
@@ -328,5 +328,17 @@ extension ShiftCalendarColors {
         case .weekday:
             return nil
         }
+    }
+
+    private static func weekdaySymbols(at sundayBasedIndex: Int) -> Set<String> {
+        let languages: [DisplayLanguage] = [.zhHans, .ja, .ko, .enUS, .system]
+        return Set(languages.flatMap { language in
+            let shortSymbols = LocalizationManager.shared.shortWeekdaySymbols(language: language, weekStartPolicy: .sunday)
+            let fullSymbols = LocalizationManager.shared.fullWeekdaySymbols(language: language, weekStartPolicy: .sunday)
+            return [shortSymbols, fullSymbols].compactMap { symbols -> String? in
+                guard symbols.indices.contains(sundayBasedIndex) else { return nil }
+                return symbols[sundayBasedIndex]
+            }
+        })
     }
 }

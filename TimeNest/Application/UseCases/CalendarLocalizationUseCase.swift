@@ -2,49 +2,11 @@ import Foundation
 
 class CalendarLocalizationUseCase {
     func monthTitle(year: Int, month: Int, language: DisplayLanguage) -> String {
-        switch language {
-        case .system, .zhHans, .ja:
-            return "\(year)年\(month)月"
-        case .ko:
-            return "\(year)년 \(month)월"
-        case .enUS:
-            let months = [
-                "January", "February", "March", "April", "May", "June",
-                "July", "August", "September", "October", "November", "December"
-            ]
-            return "\(months[month - 1]) \(year)"
-        }
+        LocalizationManager.shared.monthTitle(year: year, month: month, language: language)
     }
     
     func weekdaySymbols(language: DisplayLanguage, weekStartPolicy: WeekStartPolicy) -> [String] {
-        let symbols: [DisplayLanguage: [String]] = [
-            .zhHans: ["日", "一", "二", "三", "四", "五", "六"],
-            .ja: ["日", "月", "火", "水", "木", "金", "土"],
-            .ko: ["일", "월", "화", "수", "목", "금", "토"],
-            .enUS: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-        ]
-        
-        var symbolsArray = symbols[language] ?? symbols[.zhHans]!
-        
-        switch weekStartPolicy {
-        case .sunday:
-            break
-        case .monday:
-            symbolsArray.append(symbolsArray.removeFirst())
-        case .saturday:
-            let last = symbolsArray.removeLast()
-            symbolsArray.insert(last, at: 0)
-        case .system:
-            let firstWeekday = Calendar.current.firstWeekday
-            if firstWeekday == 2 {
-                symbolsArray.append(symbolsArray.removeFirst())
-            } else if firstWeekday == 7 {
-                let last = symbolsArray.removeLast()
-                symbolsArray.insert(last, at: 0)
-            }
-        }
-
-        return symbolsArray
+        LocalizationManager.shared.shortWeekdaySymbols(language: language, weekStartPolicy: weekStartPolicy)
     }
     
     func holidayName(_ holiday: Holiday, language: DisplayLanguage) -> String {
