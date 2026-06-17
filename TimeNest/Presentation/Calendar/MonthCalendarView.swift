@@ -111,7 +111,10 @@ struct MonthCalendarView: View {
                 }
             )
         }
-        .sheet(isPresented: $showingSettings) {
+        .sheet(isPresented: $showingSettings, onDismiss: {
+            // 无论通过关闭按钮还是下拉手势关闭，都刷新 shiftTemplates
+            viewModel.refreshShiftTemplates()
+        }) {
             NavigationStack {
                 SettingsView(onClose: {
                     showingSettings = false

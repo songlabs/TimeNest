@@ -260,6 +260,7 @@
 "shift_time.add_button" = "Add Shift";
 "shift_time.new_shift_name" = "New Shift";
 "shift_time.edit_shift_title" = "Edit Shift";
+"shift_time.delete_button" = "Delete";
 
 /* Work Statistics */
 "work_statistics.title" = "Work Statistics";

@@ -499,12 +499,20 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
     static func all(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
         // 固定模板：day, night
         let fixedTemplates: [ShiftTimeTemplateID] = [.day, .night]
-        var templates: [ShiftTimeTemplate] = fixedTemplates.map { id in
+        var templates: [ShiftTimeTemplate] = []
+        
+        for id in fixedTemplates {
+            // 跳过已删除的模板
+            let deletedKey = "shiftTemplate.deleted.\(id.id)"
+            if defaults.bool(forKey: deletedKey) {
+                continue
+            }
+            
             let displayName = migrateDisplayName(
                 stored: defaults.string(forKey: id.displayNameKey),
                 template: id
             )
-            return ShiftTimeTemplate(
+            templates.append(ShiftTimeTemplate(
                 id: id,
                 nameKey: id.nameKey,
                 displayName: displayName,
@@ -513,20 +521,27 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                 startTime: defaults.string(forKey: id.startTimeKey) ?? id.defaultStartTime,
                 endTime: defaults.string(forKey: id.endTimeKey) ?? id.defaultEndTime,
                 enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true
-            )
+            ))
         }
-        
+
         // 加载自定义班次
         let customKeys = Set(
             defaults.dictionaryRepresentation()
                 .filter { $0.key.hasPrefix("shiftTime.custom.") && $0.key.hasSuffix(".id") }
                 .map { String($0.key.prefix($0.key.count - 3)) }
         )
-        
+
         for prefix in customKeys {
             if let uuidString = defaults.string(forKey: prefix + ".id"),
                let uuid = UUID(uuidString: uuidString) {
                 let id = ShiftTimeTemplateID.custom(uuid)
+                
+                // 跳过已删除的模板
+                let deletedKey = "shiftTemplate.deleted.\(id.id)"
+                if defaults.bool(forKey: deletedKey) {
+                    continue
+                }
+                
                 // 自定义班次优先显示保存的 displayName，为空时才使用默认值
                 let displayName = defaults.string(forKey: prefix + ".displayName") ?? ""
                 templates.append(ShiftTimeTemplate(
@@ -541,7 +556,7 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                 ))
             }
         }
-        
+
         return templates
     }
 
@@ -557,7 +572,8 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                 return "白班"
             }
         case .night:
-            if stored == "夜" || stored == "夜勤" {
+            // 只迁移「夜」，不迁移「夜勤」（用户自定义的值）
+            if stored == "夜" {
                 return "夜班"
             }
         case .custom:
@@ -670,7 +686,7 @@ struct ShiftTimeSettingsView: View {
             ForEach(shiftTemplates) { template in
                 ShiftTimeSettingsRow(
                     template: template,
-                    onToggle: toggleEnabled,
+                    onDelete: deleteShiftTemplate,
                     onTap: { selectedShift = template.id }
                 )
             }
@@ -720,12 +736,13 @@ struct ShiftTimeSettingsView: View {
         shiftTemplates = ShiftTimeTemplate.all()
     }
 
-    private func toggleEnabled(_ template: ShiftTimeTemplate) {
-        if let index = shiftTemplates.firstIndex(where: { $0.id == template.id }) {
-            var updated = shiftTemplates[index]
-            updated.enabled.toggle()
-            shiftTemplates[index] = updated
-        }
+    private func deleteShiftTemplate(_ template: ShiftTimeTemplate) {
+        // 记录已删除的模板 ID，防止自动恢复
+        let deletedKey = "shiftTemplate.deleted.\(template.id.id)"
+        UserDefaults.standard.set(true, forKey: deletedKey)
+        
+        shiftTemplates.removeAll { $0.id == template.id }
+        saveShiftTemplates()
     }
 
     private func updateShiftTemplate(_ template: ShiftTimeTemplate) {
@@ -777,18 +794,24 @@ struct ShiftToggleActiveButtonStyle: ButtonStyle {
 
 private struct ShiftTimeSettingsRow: View {
     let template: ShiftTimeTemplate
-    let onToggle: (ShiftTimeTemplate) -> Void
+    let onDelete: (ShiftTimeTemplate) -> Void
     let onTap: () -> Void
+    @EnvironmentObject var localization: LocalizationManager
 
     var body: some View {
         HStack(spacing: 12) {
-            // ON/OFF Button
+            // Delete Button
             Button {
-                onToggle(template)
+                onDelete(template)
             } label: {
-                Text(template.enabled ? "ON" : "OFF")
+                Text(localization.localized(.shiftTimeDeleteButton))
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 28)
+                    .background(Color.red)
+                    .cornerRadius(6)
             }
-            .buttonStyle(ShiftToggleActiveButtonStyle(backgroundColor: template.enabled ? .blue : .gray))
+            .buttonStyle(.plain)
 
             // Shift Name: 优先显示 displayName，为空时 fallback 到本地化名称
             if !template.displayName.isEmpty {

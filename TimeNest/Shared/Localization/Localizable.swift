@@ -225,6 +225,7 @@ enum LocalizedString: String {
     case shiftTimeColor = "shift_time.color"
     case shiftTimeAddButton = "shift_time.add_button"
     case shiftTimeNewShiftName = "shift_time.new_shift_name"
+    case shiftTimeDeleteButton = "shift_time.delete_button"
 
     // MARK: - Day Detail
 

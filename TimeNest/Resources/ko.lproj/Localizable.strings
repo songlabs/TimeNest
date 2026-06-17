@@ -260,6 +260,7 @@
 "shift_time.add_button" = "근무 추가";
 "shift_time.new_shift_name" = "새 근무";
 "shift_time.edit_shift_title" = "근무 편집";
+"shift_time.delete_button" = "삭제";
 
 /* Work Statistics */
 "work_statistics.title" = "알바 통계";

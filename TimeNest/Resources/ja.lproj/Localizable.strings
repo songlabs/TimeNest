@@ -260,6 +260,7 @@
 "shift_time.add_button" = "シフトを追加";
 "shift_time.new_shift_name" = "新しいシフト";
 "shift_time.edit_shift_title" = "シフトを編集";
+"shift_time.delete_button" = "削除";
 
 /* Work Statistics */
 "work_statistics.title" = "アルバイト統計";

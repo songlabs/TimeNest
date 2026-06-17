@@ -13,7 +13,7 @@ class MonthCalendarViewModel: ObservableObject {
     @Published var showingDayDetail: Bool = false
     @Published var isShiftInputMode: Bool = false
     @Published var selectedShiftTemplate: ShiftTimeTemplate?
-    @Published private(set) var shiftTemplates: [ShiftTimeTemplate] = ShiftTimeTemplate.enabled()
+    @Published private(set) var shiftTemplates: [ShiftTimeTemplate] = ShiftTimeTemplate.all()
     
     // 视图模式：month / week / day
     @Published var displayMode: CalendarViewMode = .month
@@ -275,7 +275,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func refreshShiftTemplates() {
-        shiftTemplates = ShiftTimeTemplate.enabled()
+        shiftTemplates = ShiftTimeTemplate.all()
         if let selectedShiftTemplate,
            !shiftTemplates.contains(where: { $0.id == selectedShiftTemplate.id }) {
             self.selectedShiftTemplate = shiftTemplates.first

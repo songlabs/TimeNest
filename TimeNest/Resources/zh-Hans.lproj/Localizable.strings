@@ -260,6 +260,7 @@
 "shift_time.add_button" = "新增班次";
 "shift_time.new_shift_name" = "新班次";
 "shift_time.edit_shift_title" = "编辑班次";
+"shift_time.delete_button" = "删除";
 
 /* Work Statistics */
 "work_statistics.title" = "打工统计";

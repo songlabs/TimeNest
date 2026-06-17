@@ -69,6 +69,8 @@ public enum TimeNestStrings: Sendable {
       public static let detail = TimeNestStrings.tr("Localizable", "common.detail")
       /// Done
       public static let done = TimeNestStrings.tr("Localizable", "common.done")
+      /// More menu
+      public static let moreMenu = TimeNestStrings.tr("Localizable", "common.more_menu")
       /// Not Implemented
       public static let notImplemented = TimeNestStrings.tr("Localizable", "common.not_implemented")
       /// OK
@@ -129,6 +131,18 @@ public enum TimeNestStrings: Sendable {
       public static let title = TimeNestStrings.tr("Localizable", "editor.title")
       /// Transport Fee
       public static let transportFee = TimeNestStrings.tr("Localizable", "editor.transportFee")
+      /// Clock-in data already exists for this day. Overwrite it with the current time?
+      public static let workInOverwriteMessage = TimeNestStrings.tr("Localizable", "editor.work_in_overwrite_message")
+      /// Overwrite clock-in data?
+      public static let workInOverwriteTitle = TimeNestStrings.tr("Localizable", "editor.work_in_overwrite_title")
+      /// Clock-out data already exists for this day. Overwrite it with the current time?
+      public static let workOutOverwriteMessage = TimeNestStrings.tr("Localizable", "editor.work_out_overwrite_message")
+      /// Overwrite clock-out data?
+      public static let workOutOverwriteTitle = TimeNestStrings.tr("Localizable", "editor.work_out_overwrite_title")
+      /// Overwrite
+      public static let workOverwriteButton = TimeNestStrings.tr("Localizable", "editor.work_overwrite_button")
+      /// Cancel
+      public static let workOverwriteCancelButton = TimeNestStrings.tr("Localizable", "editor.work_overwrite_cancel_button")
       /// Clock In
       public static let workIn = TimeNestStrings.tr("Localizable", "editor.workIn")
       /// Clock Out
@@ -373,6 +387,8 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum Notification: Sendable {
+      /// Check today’s schedule
+      public static let dailyScheduleCheck = TimeNestStrings.tr("Localizable", "notification.daily_schedule_check")
       /// Enable Notifications
       public static let enabled = TimeNestStrings.tr("Localizable", "notification.enabled")
       /// Event starting soon
@@ -467,19 +483,26 @@ public enum TimeNestStrings: Sendable {
       public static let start = TimeNestStrings.tr("Localizable", "shift.start")
     }
 
+    public enum ShiftInput: Sendable {
+      /// No enabled shifts
+      public static let empty = TimeNestStrings.tr("Localizable", "shift_input.empty")
+      /// Shift Input
+      public static let title = TimeNestStrings.tr("Localizable", "shift_input.title")
+    }
+
     public enum ShiftTime: Sendable {
       /// Add Shift
       public static let addButton = TimeNestStrings.tr("Localizable", "shift_time.add_button")
       /// Color
       public static let color = TimeNestStrings.tr("Localizable", "shift_time.color")
+      /// Delete
+      public static let deleteButton = TimeNestStrings.tr("Localizable", "shift_time.delete_button")
       /// Display Name
       public static let displayName = TimeNestStrings.tr("Localizable", "shift_time.display_name")
       /// Set the start and end times. For night shifts that span across midnight, the end time can be earlier than the start time.
       public static let editFooter = TimeNestStrings.tr("Localizable", "shift_time.edit_footer")
       /// Edit Shift
       public static let editShiftTitle = TimeNestStrings.tr("Localizable", "shift_time.edit_shift_title")
-      /// Edit Shift Time
-      public static let editTitle = TimeNestStrings.tr("Localizable", "shift_time.edit_title")
       /// End Time
       public static let endTime = TimeNestStrings.tr("Localizable", "shift_time.end_time")
       /// New Shift
@@ -532,6 +555,11 @@ public enum TimeNestStrings: Sendable {
       public static let system = TimeNestStrings.tr("Localizable", "week_start.system")
     }
 
+    public enum Work: Sendable {
+      /// Next day
+      public static let nextDayPrefix = TimeNestStrings.tr("Localizable", "work.nextDayPrefix")
+    }
+
     public enum WorkStatistics: Sendable {
       /// Amount
       public static let columnAmount = TimeNestStrings.tr("Localizable", "work_statistics.column_amount")
@@ -541,9 +569,15 @@ public enum TimeNestStrings: Sendable {
       public static let columnTime = TimeNestStrings.tr("Localizable", "work_statistics.column_time")
       /// Total
       public static let columnTotal = TimeNestStrings.tr("Localizable", "work_statistics.column_total")
-      /// End Year/Month
+      /// Adjust the filters and tap the statistics button
+      public static let emptyMessage = TimeNestStrings.tr("Localizable", "work_statistics.empty_message")
+      /// No statistics yet
+      public static let emptyTitle = TimeNestStrings.tr("Localizable", "work_statistics.empty_title")
+      /// End Date
       public static let endDateMonth = TimeNestStrings.tr("Localizable", "work_statistics.end_date_month")
-      /// Start Year/Month
+      /// Loading...
+      public static let loading = TimeNestStrings.tr("Localizable", "work_statistics.loading")
+      /// Start Date
       public static let startDateMonth = TimeNestStrings.tr("Localizable", "work_statistics.start_date_month")
       /// Work Statistics
       public static let title = TimeNestStrings.tr("Localizable", "work_statistics.title")
