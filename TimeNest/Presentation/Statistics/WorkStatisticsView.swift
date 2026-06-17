@@ -286,17 +286,3 @@ struct WorkStatisticsView: View {
         LocalizedStringKey(key.rawValue)
     }
 }
-
-// MARK: - Preview
-
-#if DEBUG
-#Preview("Work Statistics") {
-    let viewModel = WorkStatisticsViewModel()
-    viewModel.showStartDatePicker = false
-    viewModel.showEndDatePicker = false
-
-    return WorkStatisticsView(viewModel: viewModel)
-        .environmentObject(LocalizationManager.preview(languageCode: "zhHans"))
-        .background(Color(UIColor.systemGray5))
-}
-#endif

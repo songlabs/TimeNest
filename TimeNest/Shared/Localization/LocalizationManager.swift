@@ -400,13 +400,3 @@ final class LocalizationManager: ObservableObject {
         return formatter.weekdaySymbols ?? dateFormatter(dateFormat: "EEEE", language: .enUS).weekdaySymbols
     }
 }
-
-// MARK: - Preview Helper
-
-#if DEBUG
-extension LocalizationManager {
-    static func preview(languageCode: String = "system") -> LocalizationManager {
-        LocalizationManager(savedCode: languageCode)
-    }
-}
-#endif

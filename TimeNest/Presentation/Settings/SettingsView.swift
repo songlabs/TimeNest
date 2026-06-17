@@ -316,17 +316,6 @@ private struct SettingsValueRow: View {
     }
 }
 
-// MARK: - Preview
-
-#if DEBUG
-#Preview {
-    NavigationView {
-        SettingsView()
-            .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-    }
-}
-#endif
-
 // MARK: - Shift Time Settings
 
 extension ShiftTimeTemplateID {

@@ -28,10 +28,3 @@ struct ListPlaceholderView: View {
         .id(localization.selectedLanguageCode)
     }
 }
-
-#if DEBUG
-#Preview {
-    ListPlaceholderView(titleKey: .listCalendar)
-        .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-}
-#endif

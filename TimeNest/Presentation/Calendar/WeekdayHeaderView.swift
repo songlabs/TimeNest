@@ -20,12 +20,3 @@ struct WeekdayHeaderView: View {
         .background(ShiftCalendarColors.primaryBlue)
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    WeekdayHeaderView(
-        weekdaySymbols: LocalizationManager.preview(languageCode: "ja").shortWeekdaySymbols(),
-        cellWidth: 50
-    )
-}

@@ -824,16 +824,3 @@ struct DayCellView: View {
         }
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    MonthCalendarView(
-        calendarDisplayUseCase: CalendarDisplayUseCase(
-            holidayUseCase: HolidayUseCase(holidayProvider: BundleHolidayProvider()),
-            localizationUseCase: CalendarLocalizationUseCase(),
-            eventUseCase: EventUseCase(repository: InMemoryEventRepository())
-        ),
-        eventUseCase: EventUseCase(repository: InMemoryEventRepository())
-    )
-}

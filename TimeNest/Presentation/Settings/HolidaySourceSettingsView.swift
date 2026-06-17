@@ -604,16 +604,3 @@ struct RecommendedSourceRow: View {
         }
     }
 }
-
-#if DEBUG
-#Preview {
-    NavigationStack {
-        HolidaySourceSettingsView(
-            viewModel: HolidaySubscriptionSettingsViewModel(
-                subscriptionManager: .shared
-            )
-        )
-        .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-    }
-}
-#endif

@@ -92,21 +92,3 @@ struct CalendarBottomToolbarView: View {
         .ignoresSafeArea(edges: .bottom)
     }
 }
-
-// MARK: - Preview
-
-#if DEBUG
-#Preview {
-    VStack {
-        Spacer()
-        CalendarBottomToolbarView(
-            selectedViewMode: .constant(.month),
-            onTodayTapped: {},
-            onAddEventTapped: {},
-            onModeChanged: { _ in }
-        )
-        .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-    }
-    .background(ShiftCalendarColors.backgroundColor)
-}
-#endif

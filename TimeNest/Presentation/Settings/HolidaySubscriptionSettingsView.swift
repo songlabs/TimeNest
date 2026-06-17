@@ -320,12 +320,3 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
         allAvailableSubscriptions = subscriptionManager.allAvailableSubscriptions
     }
 }
-
-#if DEBUG
-#Preview {
-    NavigationStack {
-        HolidaySubscriptionSettingsView()
-        .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-    }
-}
-#endif

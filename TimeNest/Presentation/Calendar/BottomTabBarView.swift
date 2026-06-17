@@ -92,16 +92,3 @@ struct TabButton: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-
-// MARK: - Preview
-
-#if DEBUG
-#Preview {
-    VStack {
-        Spacer()
-        BottomTabBarView(selectedTab: .constant(.monthCalendar))
-            .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-    }
-    .background(ShiftCalendarColors.backgroundColor)
-}
-#endif

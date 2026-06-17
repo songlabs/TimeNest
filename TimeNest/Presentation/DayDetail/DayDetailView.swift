@@ -301,29 +301,3 @@ struct EventRowView: View {
         return formatter.string(from: date)
     }
 }
-
-// MARK: - Preview
-
-#if DEBUG
-#Preview {
-    DayDetailView(
-        cell: CalendarDayCell(
-            id: "2026-05-27",
-            date: DateOnly(year: 2026, month: 5, day: 27),
-            dayText: "27",
-            weekdayText: LocalizationManager.preview(languageCode: "ja").shortWeekdaySymbol(for: DateOnly(year: 2026, month: 5, day: 27).toDate()),
-            holidays: [],
-            events: [],
-            isToday: false,
-            isWeekend: false,
-            isInCurrentMonth: true,
-            shiftType: "早班",
-            eventMarkers: []
-        ),
-        onDeleteEvent: { _ in },
-        onCreateEvent: { _, _, _, _, _, _, _, _ in },
-        onUpdateEvent: { _, _, _, _, _, _, _, _, _ in }
-    )
-    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-}
-#endif

@@ -21,19 +21,3 @@ struct ContentView: View {
         .environmentObject(localization)
     }
 }
-
-// MARK: - Preview
-
-#if DEBUG
-#Preview {
-    ContentView(
-        calendarDisplayUseCase: CalendarDisplayUseCase(
-            holidayUseCase: HolidayUseCase(holidayProvider: BundleHolidayProvider()),
-            localizationUseCase: CalendarLocalizationUseCase(),
-            eventUseCase: EventUseCase(repository: InMemoryEventRepository())
-        ),
-        eventUseCase: EventUseCase(repository: InMemoryEventRepository())
-    )
-    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-}
-#endif

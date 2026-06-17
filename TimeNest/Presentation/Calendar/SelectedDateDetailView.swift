@@ -105,26 +105,3 @@ struct SelectedDateDetailView: View {
         }
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    SelectedDateDetailView(
-        cell: CalendarDayCell(
-            id: "2026-05-21",
-            date: DateOnly(year: 2026, month: 5, day: 21),
-            dayText: "21",
-            weekdayText: "木",
-            holidays: [],
-            events: [],
-            isToday: false,
-            isWeekend: false,
-            isInCurrentMonth: true,
-            shiftType: "休み",
-            eventMarkers: [.clover]
-        ),
-        onAddEventTapped: {}
-    )
-    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-    .background(ShiftCalendarColors.backgroundColor)
-}

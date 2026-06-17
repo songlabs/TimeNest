@@ -108,14 +108,3 @@ struct YearMonthPickerView: View {
         localization.monthName(for: month)
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    YearMonthPickerView(currentDate: Date(), onSelect: { year, month in
-        _ = (year, month)
-    })
-    .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-    .padding()
-    .background(ShiftCalendarColors.backgroundColor)
-}

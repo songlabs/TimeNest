@@ -33,11 +33,3 @@ struct AddEventButtonRow: View {
         .padding(.top, 12)
     }
 }
-
-// MARK: - Preview
-
-#Preview {
-    AddEventButtonRow(onTap: {})
-        .environmentObject(LocalizationManager.preview(languageCode: "ja"))
-        .background(ShiftCalendarColors.backgroundColor)
-}
