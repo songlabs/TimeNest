@@ -1,5 +1,12 @@
 Command line invocation:
-    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -scheme TimeNest -destination "platform=iOS Simulator,name=iPhone 17 Pro"
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild build -workspace TimeNest.xcworkspace -scheme TimeNest -destination "platform=iOS Simulator,name=iPhone 17"
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  GoogleMobileAds: https://github.com/googleads/swift-package-manager-google-mobile-ads.git @ 13.5.0
+  GoogleUserMessagingPlatform: https://github.com/googleads/swift-package-manager-google-user-messaging-platform.git @ 3.1.0
 
 ComputePackagePrebuildTargetDependencyGraph
 
@@ -13,220 +20,45 @@ CreateBuildOperation
 
 ComputeTargetDependencyGraph
 note: Building targets in dependency order
-note: Target dependency graph (1 target)
-    Target 'TimeNest' in project 'TimeNest' (no dependencies)
+note: Target dependency graph (5 targets)
+    Target 'TimeNest' in project 'TimeNest'
+        ➜ Explicit dependency on target 'GoogleMobileAds' in project 'GoogleMobileAds'
+    Target 'GoogleMobileAds' in project 'GoogleMobileAds'
+        ➜ Explicit dependency on target 'GoogleMobileAdsTarget' in project 'GoogleMobileAds'
+        ➜ Explicit dependency on target 'GoogleUserMessagingPlatform' in project 'GoogleUserMessagingPlatform'
+    Target 'GoogleMobileAdsTarget' in project 'GoogleMobileAds'
+        ➜ Explicit dependency on target 'GoogleUserMessagingPlatform' in project 'GoogleUserMessagingPlatform'
+    Target 'GoogleUserMessagingPlatform' in project 'GoogleUserMessagingPlatform'
+        ➜ Explicit dependency on target 'UserMessagingPlatformTarget' in project 'GoogleUserMessagingPlatform'
+    Target 'UserMessagingPlatformTarget' in project 'GoogleUserMessagingPlatform' (no dependencies)
 
 GatherProvisioningInputs
 
 CreateBuildDescription
 
-ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -x c -c /dev/null
-
-ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets
-
-ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
-
-ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
-
-ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
-
-Build description signature: 02e1b852e76c3f974e408ba76338b6a7
-Build description path: /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/XCBuildData/02e1b852e76c3f974e408ba76338b6a7.xcbuilddata
 ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
-    cd /Users/song/Projects/iOS/TimeNest/TimeNest.xcodeproj
+    cd /Users/song/Projects/iOS/TimeNest
     /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -o /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache
-
-CreateBuildDirectory /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
-    cd /Users/song/Projects/iOS/TimeNest/TimeNest.xcodeproj
-    builtin-create-build-directory /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
-
-CreateBuildDirectory /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator
-    cd /Users/song/Projects/iOS/TimeNest/TimeNest.xcodeproj
-    builtin-create-build-directory /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest-27e31c6c71904ad77ab9dce48ee608f5-VFS-iphonesimulator/all-product-headers.yaml
-    cd /Users/song/Projects/iOS/TimeNest/TimeNest.xcodeproj
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest-27e31c6c71904ad77ab9dce48ee608f5-VFS-iphonesimulator/all-product-headers.yaml
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.hmap (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.hmap
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-target-headers.hmap (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-target-headers.hmap
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibPath-normal-arm64.txt (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibPath-normal-arm64.txt
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibInstallName-normal-arm64.txt (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibInstallName-normal-arm64.txt
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-non-framework-target-headers.hmap (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-non-framework-target-headers.hmap
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyStaticMetadataFileList (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyStaticMetadataFileList
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyMetadataFileList (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyMetadataFileList
-
-MkDir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /bin/mkdir -p /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftConstValuesFileList (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftConstValuesFileList
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.LinkFileList (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.LinkFileList
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/Entitlements-Simulated.plist (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/Entitlements-Simulated.plist
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList
-
-WriteAuxiliaryFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    write-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json
-
-ProcessProductPackaging "" /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-    Entitlements:
-    
-    {
-    "application-identifier" = "S5NA4Y24ZD.com.song.TimeNest";
-}
-    
-    builtin-productPackagingUtility -entitlements -format xml -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent
-
-ProcessProductPackagingDER /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent.der (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /usr/bin/derq query -f xml -i /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent.der --raw
-
-CpResource /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/PrivacyInfo.xcprivacy /Users/song/Projects/iOS/TimeNest/TimeNest/PrivacyInfo.xcprivacy (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Users/song/Projects/iOS/TimeNest/TimeNest/PrivacyInfo.xcprivacy /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app
-
-MkDir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /bin/mkdir -p /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned
-
-Ld /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/__preview.dylib normal (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -install_name @rpath/TimeNest.debug.dylib -Xlinker -dead_strip -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_dependency_info.dat -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent.der -Xlinker -no_adhoc_codesign -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/__preview.dylib
-
-MkDir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/unthinned (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /bin/mkdir -p /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/unthinned
-
-GenerateAssetSymbols /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets --compile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app --output-format human-readable-text --notices --warnings --export-dependency-info /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_dependencies --output-partial-info-plist /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 17.0 --platform iphonesimulator --bundle-identifier com.song.TimeNest --generate-swift-asset-symbol-extensions NO --generate-swift-asset-symbols /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.swift --generate-objc-asset-symbols /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.h --generate-asset-symbol-index /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols-Index.plist
-/* com.apple.actool.document.warnings */
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][83.5x83.5][][][2x][][][][]: warning: AppIcon.appiconset/Icon-40@3x.png is 120x120 but should be 167x167.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][76x76][][][1x][][][][]: warning: AppIcon.appiconset/Icon-40@2x.png is 80x80 but should be 76x76.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][83.5x83.5][][][2x][][][][]: warning: AppIcon.appiconset/Icon-40@3x.png is 120x120 but should be 167x167.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][76x76][][][1x][][][][]: warning: AppIcon.appiconset/Icon-40@2x.png is 80x80 but should be 76x76.
-/* com.apple.actool.compilation-results */
-/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols-Index.plist
-/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.h
-/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.swift
-
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/zh-Hans.lproj/Localizable.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/zh-Hans.lproj/Localizable.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/zh-Hans.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/zh-Hans.lproj/Localizable.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/zh-Hans.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/zh-Hans.lproj/InfoPlist.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/zh-Hans.lproj/InfoPlist.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename InfoPlist.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/zh-Hans.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/zh-Hans.lproj/InfoPlist.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/zh-Hans.lproj/InfoPlist.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ko.lproj/InfoPlist.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ko.lproj/InfoPlist.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename InfoPlist.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ko.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ko.lproj/InfoPlist.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ko.lproj/InfoPlist.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ko.lproj/Localizable.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ko.lproj/Localizable.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ko.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ko.lproj/Localizable.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ko.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/en.lproj/Localizable.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/en.lproj/Localizable.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/en.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/en.lproj/Localizable.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/en.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ja.lproj/Localizable.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ja.lproj/Localizable.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename Localizable.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ja.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ja.lproj/Localizable.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ja.lproj/Localizable.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ja.lproj/InfoPlist.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ja.lproj/InfoPlist.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename InfoPlist.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/ja.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ja.lproj/InfoPlist.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/ja.lproj/InfoPlist.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CopyStringsFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/en.lproj/InfoPlist.strings /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/en.lproj/InfoPlist.strings (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copyStrings --validate --outputencoding binary --outfilename InfoPlist.strings --outdir /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/en.lproj -- /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/en.lproj/InfoPlist.strings
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/en.lproj/InfoPlist.strings:1:1: note: detected encoding of input file as Unicode (UTF-8) (in target 'TimeNest' from project 'TimeNest')
-
-CompileAssetCatalogVariant thinned /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets --compile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone18,1 --filter-for-device-os-version 26.5 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 17.0 --platform iphonesimulator
-/* com.apple.actool.notices */
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets: warning: Accent color ‘AccentColor’ is not present in any asset catalogs.
-/* com.apple.actool.document.warnings */
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][83.5x83.5][][][2x][][][][]: warning: AppIcon.appiconset/Icon-40@3x.png is 120x120 but should be 167x167.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][76x76][][][1x][][][][]: warning: AppIcon.appiconset/Icon-40@2x.png is 80x80 but should be 76x76.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset: warning: A 76x76@2x app icon is required for iPad apps targeting iOS 7.0 and later
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset: warning: A 83.5x83.5@2x app icon is required for iPad apps targeting iOS 9.0 and later
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][83.5x83.5][][][2x][][][][]: warning: AppIcon.appiconset/Icon-40@3x.png is 120x120 but should be 167x167.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][76x76][][][1x][][][][]: warning: AppIcon.appiconset/Icon-40@2x.png is 80x80 but should be 76x76.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][83.5x83.5][][][2x][][][][]: warning: AppIcon.appiconset/Icon-40@3x.png is 120x120 but should be 167x167.
-/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][76x76][][][1x][][][][]: warning: AppIcon.appiconset/Icon-40@2x.png is 80x80 but should be 76x76.
-/* com.apple.actool.compilation-results */
-/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_thinned
-/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned/AppIcon60x60@2x.png
-/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned/Assets.car
-
 
 SwiftDriver TimeNest normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name TimeNest -Onone @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-target-headers.hmap -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources-normal/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h -working-directory /Users/song/Projects/iOS/TimeNest -experimental-emit-module-separately -disable-cmo
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name TimeNest -Onone @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/UserMessagingPlatformTarget.modulemap -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest-27e31c6c71904ad77ab9dce48ee608f5-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/SourcePackages/checkouts/swift-package-manager-google-user-messaging-platform/UserMessagingPlatformTarget/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources-normal/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h -working-directory /Users/song/Projects/iOS/TimeNest -experimental-emit-module-separately -disable-cmo
+
+CompileAssetCatalogVariant thinned /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    /Applications/Xcode.app/Contents/Developer/usr/bin/actool /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets --compile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned --output-format human-readable-text --notices --warnings --export-dependency-info /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_dependencies_thinned --output-partial-info-plist /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_thinned --app-icon AppIcon --accent-color AccentColor --compress-pngs --enable-on-demand-resources YES --filter-for-thinning-device-configuration iPhone18,3 --filter-for-device-os-version 26.5 --development-region en --target-device iphone --target-device ipad --minimum-deployment-target 17.0 --platform iphonesimulator
+/* com.apple.actool.notices */
+/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets: warning: Accent color ‘AccentColor’ is not present in any asset catalogs.
+/* com.apple.actool.document.notices */
+/Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets:./AppIcon.appiconset/[][ipad][76x76][][][1x][][][][]: notice: 76x76@1x app icons only apply to iPad apps targeting releases of iOS prior to 10.0.
+/* com.apple.actool.compilation-results */
+/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_thinned
+/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned/AppIcon60x60@2x.png
+/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned/AppIcon76x76@2x~ipad.png
+/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned/Assets.car
+
 
 SwiftCompile normal arm64 Compiling\ LocalizedText.swift,\ ReminderStep.swift,\ ReminderTemplate.swift,\ ScheduledReminder.swift,\ ShiftTimeTemplateID.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/LocalizedText.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/ReminderStep.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/ReminderTemplate.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/ScheduledReminder.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/ShiftTimeTemplateID.swift (in target 'TimeNest' from project 'TimeNest')
-
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/LocalizedText.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
@@ -244,28 +76,6 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Mode
     
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/ShiftTimeTemplateID.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 Compiling\ TuistAssets+TimeNest.swift,\ TuistBundle+TimeNest.swift,\ TuistStrings+TimeNest.swift,\ ContentView.swift,\ PlaceholderView.swift /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistAssets+TimeNest.swift /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistBundle+TimeNest.swift /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistStrings+TimeNest.swift /Users/song/Projects/iOS/TimeNest/TimeNest/App/ContentView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/App/PlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistAssets+TimeNest.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistBundle+TimeNest.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistStrings+TimeNest.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/App/ContentView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/App/PlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
@@ -291,6 +101,49 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application
     cd /Users/song/Projects/iOS/TimeNest
     
 
+SwiftCompile normal arm64 Compiling\ TimeNestApp.swift,\ MonthGrid.swift,\ HolidayNameLocalizer.swift,\ HolidaySubscriptionManager.swift,\ CalendarDisplayUseCase.swift /Users/song/Projects/iOS/TimeNest/TimeNest/App/TimeNestApp.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/DTO/MonthGrid.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidayNameLocalizer.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidaySubscriptionManager.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/UseCases/CalendarDisplayUseCase.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/App/TimeNestApp.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/DTO/MonthGrid.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidayNameLocalizer.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidaySubscriptionManager.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/UseCases/CalendarDisplayUseCase.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 Compiling\ TuistAssets+TimeNest.swift,\ TuistBundle+TimeNest.swift,\ TuistStrings+TimeNest.swift,\ ContentView.swift,\ PlaceholderView.swift /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistAssets+TimeNest.swift /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistBundle+TimeNest.swift /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistStrings+TimeNest.swift /Users/song/Projects/iOS/TimeNest/TimeNest/App/ContentView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/App/PlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistAssets+TimeNest.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistBundle+TimeNest.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/Derived/Sources/TuistStrings+TimeNest.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/App/ContentView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/App/PlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
 SwiftCompile normal arm64 Compiling\ Holiday.swift,\ HolidayEvent.swift,\ HolidayRecommendedSource.swift,\ HolidaySubscription.swift,\ ImportSource.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/Holiday.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/HolidayEvent.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/HolidayRecommendedSource.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/HolidaySubscription.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/ImportSource.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/Holiday.swift (in target 'TimeNest' from project 'TimeNest')
@@ -310,28 +163,6 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Mode
     
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/ImportSource.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 Compiling\ TimeNestExportFile.swift,\ DisplayLanguage.swift,\ HolidayRegion.swift,\ HolidayType.swift,\ ImportSourceType.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/TimeNestExportFile.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/DisplayLanguage.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayRegion.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayType.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ImportSourceType.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/TimeNestExportFile.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/DisplayLanguage.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayRegion.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayType.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ImportSourceType.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
@@ -357,29 +188,11 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Mode
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 Compiling\ RecurrenceRule.swift,\ ReminderStatus.swift,\ WeekStartPolicy.swift,\ BundleHolidayProvider.swift,\ EventRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/RecurrenceRule.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ReminderStatus.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/WeekStartPolicy.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/BundleHolidayProvider.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/EventRepository.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/RecurrenceRule.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ReminderStatus.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/WeekStartPolicy.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/BundleHolidayProvider.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
+SwiftCompile normal arm64 Compiling\ EventRepository.swift,\ ExternalCalendarImporting.swift,\ TimeNestFileDecoder.swift,\ TimeNestFileEncoder.swift,\ HolidayEventCacheRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/EventRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ExternalCalendarImporting.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/FileSharing/TimeNestFileDecoder.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/FileSharing/TimeNestFileEncoder.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/HolidayEventCacheRepository.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/EventRepository.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
-
-SwiftCompile normal arm64 Compiling\ ExternalCalendarImporting.swift,\ TimeNestFileDecoder.swift,\ TimeNestFileEncoder.swift,\ HolidayEventCacheRepository.swift,\ HolidayProviding.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ExternalCalendarImporting.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/FileSharing/TimeNestFileDecoder.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/FileSharing/TimeNestFileEncoder.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/HolidayEventCacheRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/HolidayProviding.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ExternalCalendarImporting.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
@@ -397,76 +210,55 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastruct
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/HolidayProviding.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 Compiling\ TimeNestExportFile.swift,\ DisplayLanguage.swift,\ HolidayRegion.swift,\ HolidayType.swift,\ ImportSourceType.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/TimeNestExportFile.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/DisplayLanguage.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayRegion.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayType.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ImportSourceType.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Models/TimeNestExportFile.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 Compiling\ AddEventButtonRow.swift,\ BottomTabBarView.swift,\ CalendarBottomToolbarView.swift,\ CalendarHeaderView.swift,\ CalendarStyles.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/AddEventButtonRow.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/BottomTabBarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarBottomToolbarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarHeaderView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarStyles.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/AddEventButtonRow.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/DisplayLanguage.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/BottomTabBarView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayRegion.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarBottomToolbarView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/HolidayType.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarHeaderView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ImportSourceType.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarStyles.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 Compiling\ RecurrenceRule.swift,\ ReminderStatus.swift,\ WeekStartPolicy.swift,\ AdConfiguration.swift,\ BundleHolidayProvider.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/RecurrenceRule.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ReminderStatus.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/WeekStartPolicy.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/Ads/AdConfiguration.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/BundleHolidayProvider.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/RecurrenceRule.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 Compiling\ ICSDownloadService.swift,\ ICSParsingService.swift,\ InMemoryEventRepository.swift,\ InMemoryReminderRepository.swift,\ MockReminderScheduler.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSDownloadService.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSParsingService.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryEventRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryReminderRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/MockReminderScheduler.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSDownloadService.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/ReminderStatus.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSParsingService.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Domain/Rules/WeekStartPolicy.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryEventRepository.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/Ads/AdConfiguration.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryReminderRepository.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/BundleHolidayProvider.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
+
+SwiftCompile normal arm64 Compiling\ MockReminderScheduler.swift,\ MockWeatherProvider.swift,\ ReminderRepository.swift,\ ReminderScheduling.swift,\ WeatherProviding.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/MockReminderScheduler.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/MockWeatherProvider.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ReminderRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ReminderScheduling.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/WeatherProviding.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/MockReminderScheduler.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
-
-SwiftCompile normal arm64 Compiling\ SelectedDateInfoBarView.swift,\ WeekCalendarView.swift,\ WeekdayHeaderView.swift,\ YearMonthPickerView.swift,\ DayDetailView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/SelectedDateInfoBarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekCalendarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekdayHeaderView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/YearMonthPickerView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/DayDetail/DayDetailView.swift (in target 'TimeNest' from project 'TimeNest')
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/SelectedDateInfoBarView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekdayHeaderView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/YearMonthPickerView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/DayDetail/DayDetailView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 Compiling\ MockWeatherProvider.swift,\ ReminderRepository.swift,\ ReminderScheduling.swift,\ WeatherProviding.swift,\ AdBannerPlaceholderView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/MockWeatherProvider.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ReminderRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ReminderScheduling.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/WeatherProviding.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/AdBannerPlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/MockWeatherProvider.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
@@ -484,68 +276,28 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastruct
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/AdBannerPlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 Compiling\ CalendarHeaderView.swift,\ CalendarStyles.swift,\ CalendarViewMode.swift,\ DayCalendarView.swift,\ MonthCalendarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarHeaderView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarStyles.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarViewMode.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/DayCalendarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/MonthCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarHeaderView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 Compiling\ EventEditorView.swift,\ HolidayRegionSelectionView.swift,\ HolidaySourceSettingsView.swift,\ HolidaySubscriptionSettingsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/EventEditor/EventEditorView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidayRegionSelectionView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySourceSettingsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySubscriptionSettingsView.swift (in target 'TimeNest' from project 'TimeNest')
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/EventEditor/EventEditorView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarStyles.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidayRegionSelectionView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarViewMode.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySourceSettingsView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/DayCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySubscriptionSettingsView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/MonthCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 Compiling\ SettingsView.swift,\ ShiftSharePlaceholderView.swift,\ TimeNestFileSharingView.swift,\ WorkStatisticsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/SettingsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/ShiftSharePlaceholderView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/TimeNestFileSharingView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Statistics/WorkStatisticsView.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/SettingsView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/ShiftSharePlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/TimeNestFileSharingView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Statistics/WorkStatisticsView.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 Compiling\ TimeNestApp.swift,\ MonthGrid.swift,\ HolidayNameLocalizer.swift,\ HolidaySubscriptionManager.swift,\ CalendarDisplayUseCase.swift /Users/song/Projects/iOS/TimeNest/TimeNest/App/TimeNestApp.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/DTO/MonthGrid.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidayNameLocalizer.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidaySubscriptionManager.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Application/UseCases/CalendarDisplayUseCase.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/App/TimeNestApp.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/DTO/MonthGrid.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidayNameLocalizer.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/HolidaySubscriptionManager.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Application/UseCases/CalendarDisplayUseCase.swift (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 Compiling\ WorkStatisticsViewModel.swift,\ DateOnly.swift,\ AppError.swift,\ Localizable.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Statistics/WorkStatisticsViewModel.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Date/DateOnly.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Error/AppError.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Localization/Localizable.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 Compiling\ WorkStatisticsViewModel.swift,\ DateOnly.swift,\ AppError.swift,\ Localizable.swift,\ LocalizationManager.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Statistics/WorkStatisticsViewModel.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Date/DateOnly.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Error/AppError.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Localization/Localizable.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Localization/LocalizationManager.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Statistics/WorkStatisticsViewModel.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
@@ -563,45 +315,54 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Loca
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftEmitModule normal arm64 Emitting\ module\ for\ TimeNest (in target 'TimeNest' from project 'TimeNest')
-
-EmitSwiftModule normal arm64 (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    
-
-SwiftCompile normal arm64 Compiling\ LocalizationManager.swift,\ AppNotifications.swift,\ TabBarVisibilityState.swift,\ GeneratedAssetSymbols.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Localization/LocalizationManager.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Notifications/AppNotifications.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/TabBarVisibilityState.swift /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'TimeNest' from project 'TimeNest')
-
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Localization/LocalizationManager.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Notifications/AppNotifications.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 Compiling\ YearMonthPickerView.swift,\ DayDetailView.swift,\ EventEditorDateNormalizer.swift,\ EventEditorView.swift,\ HolidayRegionSelectionView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/YearMonthPickerView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/DayDetail/DayDetailView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/EventEditor/EventEditorDateNormalizer.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/EventEditor/EventEditorView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidayRegionSelectionView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/YearMonthPickerView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/TabBarVisibilityState.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/DayDetail/DayDetailView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/EventEditor/EventEditorDateNormalizer.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftDriverJobDiscovery normal arm64 Compiling RecurrenceRule.swift, ReminderStatus.swift, WeekStartPolicy.swift, BundleHolidayProvider.swift, EventRepository.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 Compiling\ CalendarViewMode.swift,\ DayCalendarView.swift,\ MonthCalendarView.swift,\ MonthCalendarViewModel.swift,\ SelectedDateDetailView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarViewMode.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/DayCalendarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/MonthCalendarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/MonthCalendarViewModel.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/SelectedDateDetailView.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarViewMode.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/EventEditor/EventEditorView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/DayCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidayRegionSelectionView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/MonthCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 Compiling\ AdMobBannerView.swift,\ CalendarAdBannerContainer.swift,\ AddEventButtonRow.swift,\ BottomTabBarView.swift,\ CalendarBottomToolbarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Ads/AdMobBannerView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Ads/CalendarAdBannerContainer.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/AddEventButtonRow.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/BottomTabBarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarBottomToolbarView.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Ads/AdMobBannerView.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Ads/CalendarAdBannerContainer.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/AddEventButtonRow.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/BottomTabBarView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/CalendarBottomToolbarView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 Compiling\ MonthCalendarViewModel.swift,\ SelectedDateDetailView.swift,\ SelectedDateInfoBarView.swift,\ WeekCalendarView.swift,\ WeekdayHeaderView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/MonthCalendarViewModel.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/SelectedDateDetailView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/SelectedDateInfoBarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekCalendarView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekdayHeaderView.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/MonthCalendarViewModel.swift (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
@@ -611,142 +372,197 @@ SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentatio
     cd /Users/song/Projects/iOS/TimeNest
     
 
-SwiftDriverJobDiscovery normal arm64 Compiling TimeNestExportFile.swift, DisplayLanguage.swift, HolidayRegion.swift, HolidayType.swift, ImportSourceType.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/SelectedDateInfoBarView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Calendar/WeekdayHeaderView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 Compiling\ HolidaySourceSettingsView.swift,\ HolidaySubscriptionSettingsView.swift,\ SettingsView.swift,\ TimeNestFileSharingView.swift,\ WorkStatisticsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySourceSettingsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySubscriptionSettingsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/SettingsView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/TimeNestFileSharingView.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Statistics/WorkStatisticsView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySourceSettingsView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/HolidaySubscriptionSettingsView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/SettingsView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Settings/TimeNestFileSharingView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Presentation/Statistics/WorkStatisticsView.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ TimeNest (in target 'TimeNest' from project 'TimeNest')
+
+EmitSwiftModule normal arm64 (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 Compiling\ AppNotifications.swift,\ TimeNestTheme.swift,\ TabBarVisibilityState.swift,\ GeneratedAssetSymbols.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Notifications/AppNotifications.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Styles/TimeNestTheme.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/TabBarVisibilityState.swift /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Notifications/AppNotifications.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/Styles/TimeNestTheme.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Shared/TabBarVisibilityState.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+LinkAssetCatalog /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    builtin-linkAssetCatalog --thinned /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned --thinned-dependencies /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_unthinned --output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app --plist-output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist
+note: Emplaced /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Assets.car (in target 'TimeNest' from project 'TimeNest')
+note: Emplaced /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/AppIcon60x60@2x.png (in target 'TimeNest' from project 'TimeNest')
+note: Emplaced /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/AppIcon76x76@2x~ipad.png (in target 'TimeNest' from project 'TimeNest')
+
+SwiftDriverJobDiscovery normal arm64 Compiling RecurrenceRule.swift, ReminderStatus.swift, WeekStartPolicy.swift, AdConfiguration.swift, BundleHolidayProvider.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftCompile normal arm64 Compiling\ HolidayProviding.swift,\ ICSDownloadService.swift,\ ICSParsingService.swift,\ InMemoryEventRepository.swift,\ InMemoryReminderRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/HolidayProviding.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSDownloadService.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSParsingService.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryEventRepository.swift /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryReminderRepository.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/HolidayProviding.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSDownloadService.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/ICSParsingService.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryEventRepository.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+SwiftCompile normal arm64 /Users/song/Projects/iOS/TimeNest/TimeNest/Infrastructure/InMemoryReminderRepository.swift (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    
+
+ProcessInfoPlistFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Info.plist /Users/song/Projects/iOS/TimeNest/TimeNest/Info.plist (in target 'TimeNest' from project 'TimeNest')
+    cd /Users/song/Projects/iOS/TimeNest
+    builtin-infoPlistUtility /Users/song/Projects/iOS/TimeNest/TimeNest/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist -scanforprivacyfile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Frameworks/GoogleMobileAds.framework -scanforprivacyfile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Frameworks/UserMessagingPlatform.framework -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Info.plist
+
+SwiftDriverJobDiscovery normal arm64 Compiling MockReminderScheduler.swift, MockWeatherProvider.swift, ReminderRepository.swift, ReminderScheduling.swift, WeatherProviding.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftDriverJobDiscovery normal arm64 Compiling CalendarLocalizationUseCase.swift, EventUseCase.swift, HolidayUseCase.swift, ReminderUseCase.swift, TimeNestFileExportUseCase.swift (in target 'TimeNest' from project 'TimeNest')
 
-SwiftDriverJobDiscovery normal arm64 Compiling ExternalCalendarImporting.swift, TimeNestFileDecoder.swift, TimeNestFileEncoder.swift, HolidayEventCacheRepository.swift, HolidayProviding.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftDriverJobDiscovery normal arm64 Compiling TimeNestExportFile.swift, DisplayLanguage.swift, HolidayRegion.swift, HolidayType.swift, ImportSourceType.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftDriverJobDiscovery normal arm64 Compiling EventRepository.swift, ExternalCalendarImporting.swift, TimeNestFileDecoder.swift, TimeNestFileEncoder.swift, HolidayEventCacheRepository.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftDriverJobDiscovery normal arm64 Compiling LocalizedText.swift, ReminderStep.swift, ReminderTemplate.swift, ScheduledReminder.swift, ShiftTimeTemplateID.swift (in target 'TimeNest' from project 'TimeNest')
 
-SwiftDriverJobDiscovery normal arm64 Compiling TimeNestFileImportUseCase.swift, CalendarDisplaySetting.swift, CalendarEvent.swift, EventCategory.swift, EventOccurrence.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftDriverJobDiscovery normal arm64 Compiling WorkStatisticsViewModel.swift, DateOnly.swift, AppError.swift, Localizable.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftDriverJobDiscovery normal arm64 Compiling TuistAssets+TimeNest.swift, TuistBundle+TimeNest.swift, TuistStrings+TimeNest.swift, ContentView.swift, PlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftDriverJobDiscovery normal arm64 Compiling Holiday.swift, HolidayEvent.swift, HolidayRecommendedSource.swift, HolidaySubscription.swift, ImportSource.swift (in target 'TimeNest' from project 'TimeNest')
 
-SwiftDriverJobDiscovery normal arm64 Compiling ICSDownloadService.swift, ICSParsingService.swift, InMemoryEventRepository.swift, InMemoryReminderRepository.swift, MockReminderScheduler.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftDriverJobDiscovery normal arm64 Compiling TimeNestFileImportUseCase.swift, CalendarDisplaySetting.swift, CalendarEvent.swift, EventCategory.swift, EventOccurrence.swift (in target 'TimeNest' from project 'TimeNest')
 
-SwiftDriverJobDiscovery normal arm64 Compiling MockWeatherProvider.swift, ReminderRepository.swift, ReminderScheduling.swift, WeatherProviding.swift, AdBannerPlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftDriverJobDiscovery normal arm64 Compiling AdMobBannerView.swift, CalendarAdBannerContainer.swift, AddEventButtonRow.swift, BottomTabBarView.swift, CalendarBottomToolbarView.swift (in target 'TimeNest' from project 'TimeNest')
 
-SwiftDriverJobDiscovery normal arm64 Compiling LocalizationManager.swift, AppNotifications.swift, TabBarVisibilityState.swift, GeneratedAssetSymbols.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftDriverJobDiscovery normal arm64 Compiling TuistAssets+TimeNest.swift, TuistBundle+TimeNest.swift, TuistStrings+TimeNest.swift, ContentView.swift, PlaceholderView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftDriverJobDiscovery normal arm64 Compiling AppNotifications.swift, TimeNestTheme.swift, TabBarVisibilityState.swift, GeneratedAssetSymbols.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftDriverJobDiscovery normal arm64 Compiling TimeNestApp.swift, MonthGrid.swift, HolidayNameLocalizer.swift, HolidaySubscriptionManager.swift, CalendarDisplayUseCase.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftDriverJobDiscovery normal arm64 Compiling HolidayProviding.swift, ICSDownloadService.swift, ICSParsingService.swift, InMemoryEventRepository.swift, InMemoryReminderRepository.swift (in target 'TimeNest' from project 'TimeNest')
+
+SwiftDriverJobDiscovery normal arm64 Compiling WorkStatisticsViewModel.swift, DateOnly.swift, AppError.swift, Localizable.swift, LocalizationManager.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftDriverJobDiscovery normal arm64 Emitting module for TimeNest (in target 'TimeNest' from project 'TimeNest')
 
 SwiftDriver\ Compilation\ Requirements TimeNest normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name TimeNest -Onone @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-target-headers.hmap -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources-normal/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h -working-directory /Users/song/Projects/iOS/TimeNest -experimental-emit-module-separately -disable-cmo
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name TimeNest -Onone @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/UserMessagingPlatformTarget.modulemap -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest-27e31c6c71904ad77ab9dce48ee608f5-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/SourcePackages/checkouts/swift-package-manager-google-user-messaging-platform/UserMessagingPlatformTarget/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources-normal/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h -working-directory /Users/song/Projects/iOS/TimeNest -experimental-emit-module-separately -disable-cmo
 
-SwiftMergeGeneratedHeaders /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/TimeNest-Swift.h /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h (in target 'TimeNest' from project 'TimeNest')
+Copy /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftsourceinfo (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    builtin-swiftHeaderTool -arch arm64 /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/TimeNest-Swift.h
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftsourceinfo /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
 
-Copy /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.swiftdoc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftdoc (in target 'TimeNest' from project 'TimeNest')
+Copy /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.abi.json /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.abi.json (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftdoc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.abi.json /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.abi.json
 
-Copy /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.swiftmodule /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+SwiftDriverJobDiscovery normal arm64 Compiling MonthCalendarViewModel.swift, SelectedDateDetailView.swift, SelectedDateInfoBarView.swift, WeekCalendarView.swift, WeekdayHeaderView.swift (in target 'TimeNest' from project 'TimeNest')
 
-Copy /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.abi.json /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.abi.json (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.abi.json /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/arm64-apple-ios-simulator.abi.json
+SwiftDriverJobDiscovery normal arm64 Compiling CalendarHeaderView.swift, CalendarStyles.swift, CalendarViewMode.swift, DayCalendarView.swift, MonthCalendarView.swift (in target 'TimeNest' from project 'TimeNest')
 
-Copy /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftsourceinfo (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftsourceinfo /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+SwiftDriverJobDiscovery normal arm64 Compiling YearMonthPickerView.swift, DayDetailView.swift, EventEditorDateNormalizer.swift, EventEditorView.swift, HolidayRegionSelectionView.swift (in target 'TimeNest' from project 'TimeNest')
 
-SwiftDriverJobDiscovery normal arm64 Compiling AddEventButtonRow.swift, BottomTabBarView.swift, CalendarBottomToolbarView.swift, CalendarHeaderView.swift, CalendarStyles.swift (in target 'TimeNest' from project 'TimeNest')
-
-LinkAssetCatalog /Users/song/Projects/iOS/TimeNest/TimeNest/Resources/Assets.xcassets (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-linkAssetCatalog --thinned /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/thinned --thinned-dependencies /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_dependencies_thinned --thinned-info-plist-content /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_thinned --unthinned /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_output/unthinned --unthinned-dependencies /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_dependencies_unthinned --unthinned-info-plist-content /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist_unthinned --output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app --plist-output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist
-note: Emplaced /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/AppIcon60x60@2x.png (in target 'TimeNest' from project 'TimeNest')
-note: Emplaced /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Assets.car (in target 'TimeNest' from project 'TimeNest')
-
-ProcessInfoPlistFile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Info.plist /Users/song/Projects/iOS/TimeNest/TimeNest/Info.plist (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-infoPlistUtility /Users/song/Projects/iOS/TimeNest/TimeNest/Info.plist -producttype com.apple.product-type.application -genpkginfo /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/PkgInfo -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/assetcatalog_generated_info.plist -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Info.plist
-
-SwiftDriverJobDiscovery normal arm64 Compiling SelectedDateInfoBarView.swift, WeekCalendarView.swift, WeekdayHeaderView.swift, YearMonthPickerView.swift, DayDetailView.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftDriverJobDiscovery normal arm64 Compiling SettingsView.swift, ShiftSharePlaceholderView.swift, TimeNestFileSharingView.swift, WorkStatisticsView.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftDriverJobDiscovery normal arm64 Compiling CalendarViewMode.swift, DayCalendarView.swift, MonthCalendarView.swift, MonthCalendarViewModel.swift, SelectedDateDetailView.swift (in target 'TimeNest' from project 'TimeNest')
-
-SwiftDriverJobDiscovery normal arm64 Compiling EventEditorView.swift, HolidayRegionSelectionView.swift, HolidaySourceSettingsView.swift, HolidaySubscriptionSettingsView.swift (in target 'TimeNest' from project 'TimeNest')
+SwiftDriverJobDiscovery normal arm64 Compiling HolidaySourceSettingsView.swift, HolidaySubscriptionSettingsView.swift, SettingsView.swift, TimeNestFileSharingView.swift, WorkStatisticsView.swift (in target 'TimeNest' from project 'TimeNest')
 
 SwiftDriver\ Compilation TimeNest normal arm64 com.apple.xcode.tools.swift.compiler (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name TimeNest -Onone @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList -DDEBUG -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-target-headers.hmap -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources-normal/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h -working-directory /Users/song/Projects/iOS/TimeNest -experimental-emit-module-separately -disable-cmo
+    builtin-Swift-Compilation -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name TimeNest -Onone @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList -DDEBUG -Xcc -fmodule-map-file\=/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/GeneratedModuleMaps-iphonesimulator/UserMessagingPlatformTarget.modulemap -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -target arm64-apple-ios17.0-simulator -g -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -c -j18 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/song/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphonesimulator26.5-23F73-6cfe768891a92b912361537c460fe42b.sdkstatcache -output-file-map /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/song/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_const_extract_protocols.json -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-generated-files.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-own-target-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-all-non-framework-target-headers.hmap -Xcc -ivfsoverlay -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest-27e31c6c71904ad77ab9dce48ee608f5-VFS-iphonesimulator/all-product-headers.yaml -Xcc -iquote -Xcc /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-project-headers.hmap -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/SourcePackages/checkouts/swift-package-manager-google-user-messaging-platform/UserMessagingPlatformTarget/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/include -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources-normal/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources/arm64 -Xcc -I/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-Swift.h -working-directory /Users/song/Projects/iOS/TimeNest -experimental-emit-module-separately -disable-cmo
 
-Ld /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib normal (in target 'TimeNest' from project 'TimeNest')
+Ld /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib normal (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -filelist /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.LinkFileList -install_name @rpath/TimeNest.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-linker-args.resp -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -Xlinker -no_adhoc_codesign -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -dynamiclib -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -filelist /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.LinkFileList -install_name @rpath/TimeNest.debug.dylib -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.swiftmodule @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest-linker-args.resp -Wl,-no_warn_duplicate_libraries -Wl,-no_warn_duplicate_libraries -L/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -framework WebKit -Xlinker -alias -Xlinker _main -Xlinker ___debug_main_executable_dylib_entry_point -framework GoogleMobileAds -framework UserMessagingPlatform -Xlinker -no_adhoc_codesign -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib -Xlinker -add_ast_path -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/GoogleMobileAds.build/Debug-iphonesimulator/GoogleMobileAdsTarget.build/Objects-normal/arm64/GoogleMobileAdsTarget.swiftmodule @/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/GoogleMobileAds.build/Debug-iphonesimulator/GoogleMobileAdsTarget.build/Objects-normal/arm64/GoogleMobileAdsTarget-linker-args.resp
 
-ConstructStubExecutorLinkFileList /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-ExecutorLinkFileList-normal-arm64.txt (in target 'TimeNest' from project 'TimeNest')
+ConstructStubExecutorLinkFileList /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-ExecutorLinkFileList-normal-arm64.txt (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    construct-stub-executor-link-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-ExecutorLinkFileList-normal-arm64.txt
+    construct-stub-executor-link-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor_no_swift_entry_point.a /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libPreviewsJITStubExecutor.a --output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-ExecutorLinkFileList-normal-arm64.txt
 note: Using stub executor library with Swift entry point. (in target 'TimeNest' from project 'TimeNest')
 
-Ld /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest normal (in target 'TimeNest' from project 'TimeNest')
+Ld /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest normal (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-ExecutorLinkFileList-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent.der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib -Xlinker -no_adhoc_codesign -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios17.0-simulator -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk -O0 -L/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -F/Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator -Xlinker -rpath -Xlinker @executable_path -Xlinker -rpath -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/PackageFrameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -e ___debug_blank_executor_main -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_dylib -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibPath-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __debug_instlnm -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-DebugDylibInstallName-normal-arm64.txt -Xlinker -filelist -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest-ExecutorLinkFileList-normal-arm64.txt -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __entitlements -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __ents_der -Xlinker /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.app-Simulated.xcent.der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib -Xlinker -no_adhoc_codesign -o /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest
 
-CopySwiftLibs /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
+CopySwiftLibs /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Frameworks --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/PlugIns --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/SystemExtensions --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+    builtin-swiftStdLibTool --copy --verbose --sign - --scan-executable /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Frameworks --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/PlugIns --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/SystemExtensions --scan-folder /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Extensions --platform iphonesimulator --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
 
 ExtractAppIntentsMetadata (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name TimeNest --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F42 --platform-family iOS --deployment-target 17.0 --bundle-identifier com.song.TimeNest --output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app --target-triple arm64-apple-ios17.0-simulator --binary-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest --dependency-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_dependency_info.dat --stringsdata-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList --metadata-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyMetadataFileList --static-metadata-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyStaticMetadataFileList --swift-const-vals-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
-2026-06-14 22:36:42.152 appintentsmetadataprocessor[9822:241560] Starting appintentsmetadataprocessor export
-2026-06-14 22:36:42.152 appintentsmetadataprocessor[9822:241560] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --module-name TimeNest --sdk-root /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator26.5.sdk --xcode-version 17F42 --platform-family iOS --deployment-target 17.0 --bundle-identifier com.song.TimeNest --output /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app --target-triple arm64-apple-ios17.0-simulator --binary-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest --dependency-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest_dependency_info.dat --stringsdata-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftFileList --metadata-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyMetadataFileList --static-metadata-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyStaticMetadataFileList --swift-const-vals-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/Objects-normal/arm64/TimeNest.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --validate-assistant-intents --no-app-shortcuts-localization
+2026-06-17 17:58:28.128 appintentsmetadataprocessor[2075:25919] Starting appintentsmetadataprocessor export
+2026-06-17 17:58:28.129 appintentsmetadataprocessor[2075:25919] warning: Metadata extraction skipped. No AppIntents.framework dependency found.
 
-AppIntentsSSUTraining (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Info.plist --temp-dir-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/ssu --bundle-id com.song.TimeNest --product-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app --extracted-metadata-path /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Metadata.appintents --metadata-file-list /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Intermediates.noindex/TimeNest.build/Debug-iphonesimulator/TimeNest.build/TimeNest.DependencyMetadataFileList --source-file /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/Info.plist --archive-ssu-assets
-2026-06-14 22:36:42.162 appintentsnltrainingprocessor[9823:241561] Parsing options for appintentsnltrainingprocessor
-2026-06-14 22:36:42.162 appintentsnltrainingprocessor[9823:241561] Starting AppIntents SSU YAML Generation
-2026-06-14 22:36:42.162 appintentsnltrainingprocessor[9823:241561] No AppShortcuts found - Skipping.
-
-CodeSign /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib (in target 'TimeNest' from project 'TimeNest')
+CodeSign /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
     Signing Identity:     "Sign to Run Locally"
     
-    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/TimeNest.debug.dylib
 
-CodeSign /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/__preview.dylib (in target 'TimeNest' from project 'TimeNest')
+CodeSign /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/__preview.dylib (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
     Signing Identity:     "Sign to Run Locally"
     
-    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app/__preview.dylib
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app/__preview.dylib
 
-CodeSign /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
+CodeSign /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
     
     Signing Identity:     "Sign to Run Locally"
     
-    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app
+    /usr/bin/codesign --force --sign - --timestamp\=none --generate-entitlement-der /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app
 
-RegisterExecutionPolicyException /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
+Validate /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
     cd /Users/song/Projects/iOS/TimeNest
-    builtin-RegisterExecutionPolicyException /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app
-
-Validate /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    builtin-validationUtility /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app -shallow-bundle -infoplist-subpath Info.plist
-
-Touch /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app (in target 'TimeNest' from project 'TimeNest')
-    cd /Users/song/Projects/iOS/TimeNest
-    /usr/bin/touch -c /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-emqjywvqixqjuyduleugzrrqykza/Build/Products/Debug-iphonesimulator/TimeNest.app
+    builtin-validationUtility /Users/song/Library/Developer/Xcode/DerivedData/TimeNest-dgjlvjixpnsxjjcecbqrgykpuymu/Build/Products/Debug-iphonesimulator/TimeNest.app -shallow-bundle -infoplist-subpath Info.plist
 
 ** BUILD SUCCEEDED **
 

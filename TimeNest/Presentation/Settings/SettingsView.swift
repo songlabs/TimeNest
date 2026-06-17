@@ -347,7 +347,7 @@ extension ShiftTimeTemplateID {
         case .night:
             return "夜班"
         case .custom:
-            return "新班次"
+            return ""
         }
     }
 
@@ -853,14 +853,10 @@ private struct ShiftTimeEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                // 显示名称
+                // 标题（与新規予定一致的 placeholder 样式）
                 Section {
-                    HStack {
-                        Text(localization.localized(.shiftTimeDisplayName))
-                        Spacer()
-                        TextField("", text: $displayName)
-                            .textFieldStyle(.plain)
-                    }
+                    TextField(localization.localized(.editorTitle), text: $displayName)
+                        .textFieldStyle(.plain)
                 }
 
                 // 颜色
@@ -931,8 +927,19 @@ private struct ShiftTimeEditSheet: View {
     }
 
     private func save() {
-        let colorHex = color.toHex()
+        // 标题不能为空
+        guard !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            let alert = UIAlertController(
+                title: localization.localized(.editorError),
+                message: String(localized: "Please enter a title", comment: "Validation error for empty title"),
+                preferredStyle: .alert
+            )
+            alert.addAction(UIAlertAction(title: localization.localized(.ok), style: .default))
+            return
+        }
         
+        let colorHex = color.toHex()
+
         let template = ShiftTimeTemplate(
             id: shiftID,
             nameKey: shiftID.nameKey,
