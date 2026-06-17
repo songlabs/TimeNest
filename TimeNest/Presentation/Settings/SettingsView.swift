@@ -676,39 +676,63 @@ extension ShiftTimeTemplateID {
 }
 
 struct ShiftTimeSettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
     @State private var selectedShift: ShiftTimeTemplateID?
     @State private var shiftTemplates: [ShiftTimeTemplate] = []
     @State private var showAddShift: Bool = false
 
     var body: some View {
-        List {
-            ForEach(shiftTemplates) { template in
-                ShiftTimeSettingsRow(
-                    template: template,
-                    onDelete: deleteShiftTemplate,
-                    onTap: { selectedShift = template.id }
-                )
-            }
-            
-            Section {
-                Button {
-                    showAddShift = true
-                } label: {
-                    HStack {
-                        Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.accentColor)
-                        Text(localization.localized(.shiftTimeAddButton))
-                            .foregroundColor(.accentColor)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                // Header
+                HStack {
+                    Text(localization.localized(.shiftTimeSettingsTitle))
+                        .font(.title.weight(.semibold))
+                        .foregroundColor(SettingsModalSurface.primaryText)
+                    
+                    Spacer()
+                    
+                    ModalHeaderCloseButton {
+                        dismiss()
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
                 }
-                .buttonStyle(.plain)
+                .padding(.bottom, 8)
+                
+                // Shift List
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(shiftTemplates) { template in
+                        ShiftTimeSettingsRow(
+                            template: template,
+                            onDelete: deleteShiftTemplate,
+                            onEdit: {
+                                selectedShift = template.id
+                            }
+                        )
+                    }
+                }
+                
+                // Add Button
+                HStack {
+                    Spacer()
+                    Button {
+                        showAddShift = true
+                    } label: {
+                        Text(localization.localized(.shiftTimeAddButton))
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Color.blue)
+                            .foregroundColor(.white)
+                            .cornerRadius(8)
+                    }
+                    Spacer()
+                }
+                .padding(.top, 8)
             }
+            .padding()
         }
-        .navigationTitle(localization.localized(.shiftTimeSettingsTitle))
-        .navigationBarTitleDisplayMode(.inline)
+        .background(SettingsModalSurface.background)
         .sheet(item: $selectedShift) { shiftID in
             ShiftTimeEditSheet(
                 shiftID: shiftID,
@@ -730,6 +754,7 @@ struct ShiftTimeSettingsView: View {
         .onChange(of: shiftTemplates) { _, _ in
             saveShiftTemplates()
         }
+        .navigationBarBackButtonHidden(true)
     }
 
     private func loadShiftTemplates() {
@@ -748,11 +773,13 @@ struct ShiftTimeSettingsView: View {
     private func updateShiftTemplate(_ template: ShiftTimeTemplate) {
         if let index = shiftTemplates.firstIndex(where: { $0.id == template.id }) {
             shiftTemplates[index] = template
+            saveShiftTemplates()
         }
     }
 
     private func addNewShiftTemplate(_ template: ShiftTimeTemplate) {
         shiftTemplates.append(template)
+        saveShiftTemplates()
     }
 
     private func saveShiftTemplates() {
@@ -795,32 +822,21 @@ struct ShiftToggleActiveButtonStyle: ButtonStyle {
 private struct ShiftTimeSettingsRow: View {
     let template: ShiftTimeTemplate
     let onDelete: (ShiftTimeTemplate) -> Void
-    let onTap: () -> Void
+    let onEdit: () -> Void
     @EnvironmentObject var localization: LocalizationManager
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Delete Button
-            Button {
-                onDelete(template)
-            } label: {
-                Text(localization.localized(.shiftTimeDeleteButton))
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 44, height: 28)
-                    .background(Color.red)
-                    .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
-
+        HStack {
             // Shift Name: 优先显示 displayName，为空时 fallback 到本地化名称
             if !template.displayName.isEmpty {
                 Text(template.displayName)
-                    .font(.body.weight(.medium))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(.primary)
             } else {
                 Text(LocalizedStringKey(template.nameKey.rawValue))
-                    .font(.body.weight(.medium))
+                    .font(.subheadline)
+                    .fontWeight(.medium)
                     .foregroundColor(.primary)
             }
 
@@ -828,21 +844,25 @@ private struct ShiftTimeSettingsRow: View {
 
             // Time Range
             Text(template.displayTime)
-                .font(.body)
-                .foregroundColor(.secondary)
-                .monospacedDigit()
-
-            // Chevron
-            Image(systemName: "chevron.right")
                 .font(.caption)
                 .foregroundColor(.secondary)
-                .padding(.leading, 8)
+                .monospacedDigit()
+            
+            // Edit Button
+            Button(action: onEdit) {
+                Image(systemName: "pencil")
+                    .foregroundColor(.blue)
+            }
+
+            // Delete Button
+            Button(action: { onDelete(template) }) {
+                Image(systemName: "trash")
+                    .foregroundColor(.red)
+            }
         }
-        .padding(.vertical, 8)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-        }
+        .padding()
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(8)
     }
 }
 
@@ -933,6 +953,7 @@ private struct ShiftTimeEditSheet: View {
             }
             .navigationTitle(localization.localized(.shiftTimeEditTitle))
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localization.localized(.cancel)) {

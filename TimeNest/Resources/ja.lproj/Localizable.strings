@@ -239,7 +239,7 @@
 "app_error.unknown" = "不明なエラーです";
 
 /* Shift Time */
-"shift_time.settings_title" = "シフト時間をカスタマイズ";
+"shift_time.settings_title" = "シフトカスタマイズ";
 "shift.common" = "よく使うシフト";
 "shift.day" = "日勤";
 "shift.night" = "夜勤";
