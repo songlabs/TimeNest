@@ -62,12 +62,17 @@ struct MonthCalendarView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.isShiftInputMode)
         .sheet(isPresented: shiftInputSheetBinding, onDismiss: openPendingModalDestination) {
-            shiftInputPanel
-                .presentationDetents([.height(ShiftInputPanelLayout.sheetHeight)])
-                .presentationDragIndicator(.hidden)
-                .presentationBackground(WorkStatisticsColors.sheetBackground)
-                .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
-                .presentationBackgroundInteraction(.enabled(upThrough: .height(ShiftInputPanelLayout.sheetHeight)))
+            ZStack(alignment: .top) {
+                WorkStatisticsColors.sheetBackground
+                    .ignoresSafeArea(edges: .bottom)
+
+                shiftInputPanel
+            }
+            .presentationDetents([.height(ShiftInputPanelLayout.sheetHeight)])
+            .presentationDragIndicator(.hidden)
+            .presentationBackground(WorkStatisticsColors.sheetBackground)
+            .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
+            .presentationBackgroundInteraction(.enabled(upThrough: .height(ShiftInputPanelLayout.sheetHeight)))
         }
         .onAppear {
             Task {
@@ -568,19 +573,6 @@ private struct ShiftInputPanelView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .background(WorkStatisticsColors.sheetBackground)
-        .clipShape(
-            UnevenRoundedRectangle(
-                cornerRadii: RectangleCornerRadii(
-                    topLeading: WorkStatisticsLayout.sheetCornerRadius,
-                    bottomLeading: 0,
-                    bottomTrailing: 0,
-                    topTrailing: WorkStatisticsLayout.sheetCornerRadius
-                ),
-                style: .continuous
-            )
-        )
-        .shadow(color: SettingsModalSurface.shadowColor, radius: 18, x: 0, y: -4)
     }
 
     private func isSelected(_ template: ShiftTimeTemplate) -> Bool {
