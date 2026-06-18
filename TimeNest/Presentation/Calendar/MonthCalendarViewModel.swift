@@ -287,7 +287,9 @@ class MonthCalendarViewModel: ObservableObject {
             guard let dates = shiftEventDates(on: date, template: template) else { return }
             let now = Date()
 
-            if let existingEvent = try await existingGeneratedShiftEvent(on: date, template: template) {
+            // 查找当天是否已有任意班次（不限模板）
+            if let existingEvent = try await existingAnyShiftEvent(on: date) {
+                // 已有班次：覆盖旧班次
                 let updatedEvent = CalendarEvent(
                     id: existingEvent.id,
                     title: template.displayName,
@@ -308,6 +310,7 @@ class MonthCalendarViewModel: ObservableObject {
                 )
                 try await eventUseCase.updateEvent(updatedEvent)
             } else {
+                // 无班次：新增班次
                 let event = CalendarEvent(
                     id: UUID(),
                     title: template.displayName,
@@ -383,6 +386,38 @@ class MonthCalendarViewModel: ObservableObject {
                 }
 
                 return event.shiftTemplateID == nil && event.title == template.displayName
+            }
+            .sorted { $0.createdAt < $1.createdAt }
+            .first
+    }
+
+    /// 查找当天是否已有任意班次（不限模板 ID）
+    /// 用于实现「同一天只能存在一个班次」的规则
+    private func existingAnyShiftEvent(on date: Date) async throws -> CalendarEvent? {
+        let calendar = Calendar(identifier: .gregorian)
+        let dayStart = calendar.startOfDay(for: date)
+        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+
+        return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
+            .filter { event in
+                // 排除：出勤/退勤、普通日程（无 shiftTemplateID 且不是班次标题）
+                guard event.workInfo == nil,
+                      !WorkClockTitleMatcher.isClockInTitle(event.title),
+                      !WorkClockTitleMatcher.isClockOutTitle(event.title),
+                      calendar.isDate(event.startDate, inSameDayAs: dayStart) else {
+                    return false
+                }
+
+                // 班次事件的判断标准：
+                // 1. 有 shiftTemplateID（明确的班次模板关联）
+                // 2. 或标题与某个班次模板的 displayName 匹配（兼容旧数据）
+                if event.shiftTemplateID != nil {
+                    return true
+                }
+
+                // 检查标题是否与任意班次模板的 displayName 匹配
+                let allTemplates = ShiftTimeTemplate.all()
+                return allTemplates.contains { $0.displayName == event.title }
             }
             .sorted { $0.createdAt < $1.createdAt }
             .first
