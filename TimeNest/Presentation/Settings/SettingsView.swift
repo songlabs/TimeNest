@@ -827,27 +827,29 @@ private struct ShiftTimeSettingsRow: View {
 
     var body: some View {
         HStack {
-            // Shift Name: 优先显示 displayName，为空时 fallback 到本地化名称
-            if !template.displayName.isEmpty {
-                Text(template.displayName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
-            } else {
-                Text(LocalizedStringKey(template.nameKey.rawValue))
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(.primary)
+            HStack(spacing: 12) {
+                // Shift Name: 优先显示 displayName，为空时 fallback 到本地化名称
+                if !template.displayName.isEmpty {
+                    Text(template.displayName)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                } else {
+                    Text(LocalizedStringKey(template.nameKey.rawValue))
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                }
+
+                // Time Range
+                Text(template.displayTime)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .monospacedDigit()
             }
 
             Spacer()
 
-            // Time Range
-            Text(template.displayTime)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .monospacedDigit()
-            
             // Edit Button
             Button(action: onEdit) {
                 Image(systemName: "pencil")
