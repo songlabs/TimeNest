@@ -37,6 +37,7 @@ struct SettingsView: View {
                 await subscriptionManager.performAutoSync()
             }
         }
+        .presentationDetents([.custom(SettingsCompactDetent.self)])
     }
 
     private var settingsForm: some View {
@@ -148,9 +149,11 @@ private enum SettingsStyle {
     static let divider = SettingsModalSurface.separator
 
     static let horizontalPadding: CGFloat = TimeNestTheme.externalPadding
-    static let sectionSpacing: CGFloat = 22
-    static let topPadding: CGFloat = 18
-    static let bottomPadding: CGFloat = 28
+    static let sectionSpacing: CGFloat = 16
+    static let topPadding: CGFloat = 12
+    static let bottomPadding: CGFloat = 12
+    static let sheetCompactHeight: CGFloat = 620
+    static let sheetMaximumHeightRatio: CGFloat = 0.82
     static let rowHorizontalPadding: CGFloat = 16
     static let rowMinHeight: CGFloat = 56
     static let cardCornerRadius: CGFloat = 26
@@ -159,6 +162,15 @@ private enum SettingsStyle {
     static let accessorySpacing: CGFloat = 6
     static let rowContentSpacing: CGFloat = 8
     static let rowAccessoryMinSpacing: CGFloat = 8
+}
+
+private struct SettingsCompactDetent: CustomPresentationDetent {
+    static func height(in context: Context) -> CGFloat? {
+        min(
+            SettingsStyle.sheetCompactHeight,
+            context.maxDetentValue * SettingsStyle.sheetMaximumHeightRatio
+        )
+    }
 }
 
 private struct SettingsPickerOption: Identifiable {

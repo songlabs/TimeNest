@@ -64,8 +64,14 @@ private enum EventEditorStyle {
 
     /// 统一卡片圆角
     static let horizontalPadding: CGFloat = 16
-    static let sectionSpacing: CGFloat = 22
+    static let sectionSpacing: CGFloat = 16
     static let cardPadding: CGFloat = 16
+    static let contentTopPadding: CGFloat = 12
+    static let contentBottomPadding: CGFloat = 12
+    static let headerBottomPadding: CGFloat = 12
+    static let workInfoVerticalPadding: CGFloat = 12
+    static let sheetCompactHeight: CGFloat = 600
+    static let sheetMaximumHeightRatio: CGFloat = 0.82
     static let rowHeight: CGFloat = 48
     static let controlHeight: CGFloat = 36
     static let compactControlHeight: CGFloat = 30
@@ -86,6 +92,15 @@ private enum EventEditorStyle {
 
     /// 顶部按钮圆角
     static let headerButtonCornerRadius: CGFloat = 24
+}
+
+private struct EventEditorCompactDetent: CustomPresentationDetent {
+    static func height(in context: Context) -> CGFloat? {
+        min(
+            EventEditorStyle.sheetCompactHeight,
+            context.maxDetentValue * EventEditorStyle.sheetMaximumHeightRatio
+        )
+    }
 }
 
 private enum EditorFocusedField: Hashable {
@@ -306,8 +321,8 @@ struct EventEditorView: View {
                             }
                         }
                         .padding(.horizontal, EventEditorStyle.horizontalPadding)
-                        .padding(.top, 18)
-                        .padding(.bottom, 28)
+                        .padding(.top, EventEditorStyle.contentTopPadding)
+                        .padding(.bottom, EventEditorStyle.contentBottomPadding)
                     }
                     .scrollIndicators(.hidden)
                 }
@@ -339,6 +354,7 @@ struct EventEditorView: View {
                 )
             }
         }
+        .presentationDetents([.custom(EventEditorCompactDetent.self)])
     }
 
     private var isEditing: Bool {
@@ -743,7 +759,7 @@ private struct EditorHeader: View {
         }
         .padding(.horizontal, EventEditorStyle.horizontalPadding)
         .padding(.top, 22)
-        .padding(.bottom, 18)
+        .padding(.bottom, EventEditorStyle.headerBottomPadding)
         .background(EventEditorStyle.pageBackground)
     }
 }
@@ -1432,7 +1448,8 @@ private struct WorkInfoSection: View {
                 currencyField(title: hourlyRateTitle, value: $hourlyRate, field: .hourlyRate)
             }
         }
-        .padding(EventEditorStyle.cardPadding)
+        .padding(.horizontal, EventEditorStyle.cardPadding)
+        .padding(.vertical, EventEditorStyle.workInfoVerticalPadding)
         .cardContainer()
         .sheet(item: $editingWorkTime) { target in
             WorkInfoTimePickerSheet(
