@@ -282,9 +282,7 @@ struct MonthCalendarView: View {
             }
             .frame(maxHeight: .infinity)
 
-            if !viewModel.isShiftInputMode {
-                calendarBottomSection
-            }
+            calendarBottomSection
         }
         .background(ShiftCalendarColors.backgroundColor)
     }
@@ -292,7 +290,9 @@ struct MonthCalendarView: View {
     private var calendarBottomSection: some View {
         VStack(spacing: 0) {
             CalendarAdBannerContainer()
-            calendarBottomToolbar
+            if !viewModel.isShiftInputMode {
+                calendarBottomToolbar
+            }
         }
     }
 
