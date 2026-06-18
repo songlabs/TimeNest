@@ -282,7 +282,7 @@ struct WorkStatisticsView: View {
         .presentationDetents([.height(320)])
     }
 
-    private func localizedKey(_ key: LocalizedString) -> LocalizedStringKey {
-        LocalizedStringKey(key.rawValue)
+    private func localizedKey(_ key: LocalizedString) -> String {
+        localization.localized(key)
     }
 }

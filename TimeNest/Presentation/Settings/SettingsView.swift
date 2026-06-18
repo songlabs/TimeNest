@@ -355,9 +355,9 @@ extension ShiftTimeTemplateID {
     var defaultDisplayName: String {
         switch self {
         case .day:
-            return "白班"
+            return LocalizationManager.shared.localized(.shiftDay)
         case .night:
-            return "夜班"
+            return LocalizationManager.shared.localized(.shiftNight)
         case .custom:
             return ""
         }
@@ -440,6 +440,10 @@ extension ShiftTimeTemplateID {
         }
     }
 
+    var displayNameCustomizedKey: String {
+        "\(displayNameKey).customized"
+    }
+
     var noteKey: String {
         switch self {
         case .day:
@@ -477,6 +481,7 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
     var startTime: String
     var endTime: String
     var enabled: Bool
+    var usesLocalizedDefaultName: Bool = false
 
     var displayTime: String {
         "\(startTime)〜\(endTime)"
@@ -520,10 +525,10 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                 continue
             }
             
-            let displayName = migrateDisplayName(
-                stored: defaults.string(forKey: id.displayNameKey),
-                template: id
-            )
+            let usesLocalizedDefaultName = usesLocalizedDefaultDisplayName(for: id, defaults: defaults)
+            let displayName = usesLocalizedDefaultName
+                ? id.defaultDisplayName
+                : (defaults.string(forKey: id.displayNameKey) ?? id.defaultDisplayName)
             templates.append(ShiftTimeTemplate(
                 id: id,
                 nameKey: id.nameKey,
@@ -532,7 +537,8 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                 colorHex: defaults.string(forKey: id.colorHexKey) ?? id.defaultColorHex,
                 startTime: defaults.string(forKey: id.startTimeKey) ?? id.defaultStartTime,
                 endTime: defaults.string(forKey: id.endTimeKey) ?? id.defaultEndTime,
-                enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true
+                enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true,
+                usesLocalizedDefaultName: usesLocalizedDefaultName
             ))
         }
 
@@ -572,27 +578,41 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
         return templates
     }
 
-    /// 迁移旧默认值：白→白班，夜→夜班
-    private static func migrateDisplayName(stored: String?, template: ShiftTimeTemplateID) -> String {
-        guard let stored = stored else {
-            return template.defaultDisplayName
+    /// 识别旧版本自动保存的内置名称；其他值均视为用户自定义名称。
+    static func usesLocalizedDefaultDisplayName(
+        for template: ShiftTimeTemplateID,
+        defaults: UserDefaults = .standard
+    ) -> Bool {
+        guard !defaults.bool(forKey: template.displayNameCustomizedKey) else {
+            return false
         }
-        // 只对旧默认值做迁移，用户自定义的值保持不变
+        guard let stored = defaults.string(forKey: template.displayNameKey) else {
+            return true
+        }
+        return isKnownDefaultDisplayName(stored, for: template)
+    }
+
+    static func isKnownDefaultDisplayName(_ name: String, for template: ShiftTimeTemplateID) -> Bool {
         switch template {
         case .day:
-            if stored == "白" || stored == "日勤" {
-                return "白班"
-            }
+            return ["白", "白班", "日勤", "Day Shift", "주간"].contains(name)
         case .night:
-            // 只迁移「夜」，不迁移「夜勤」（用户自定义的值）
-            if stored == "夜" {
-                return "夜班"
-            }
+            return ["夜", "夜班", "夜勤", "Night Shift", "야간"].contains(name)
         case .custom:
-            // 自定义班次不需要迁移
-            break
+            return false
         }
-        return stored
+    }
+
+    static func isKnownDefaultDisplayName(_ name: String) -> Bool {
+        isKnownDefaultDisplayName(name, for: .day)
+            || isKnownDefaultDisplayName(name, for: .night)
+    }
+
+    static func localizedDisplayName(for storedName: String, templateID: ShiftTimeTemplateID?) -> String {
+        guard let templateID, isKnownDefaultDisplayName(storedName, for: templateID) else {
+            return storedName
+        }
+        return templateID.defaultDisplayName
     }
 
     static func enabled(from defaults: UserDefaults = .standard) -> [ShiftTimeTemplate] {
@@ -629,7 +649,8 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
         lhs.colorHex == rhs.colorHex &&
         lhs.startTime == rhs.startTime &&
         lhs.endTime == rhs.endTime &&
-        lhs.enabled == rhs.enabled
+        lhs.enabled == rhs.enabled &&
+        lhs.usesLocalizedDefaultName == rhs.usesLocalizedDefaultName
     }
 }
 
@@ -763,8 +784,8 @@ struct ShiftTimeSettingsView: View {
         .onAppear {
             loadShiftTemplates()
         }
-        .onChange(of: shiftTemplates) { _, _ in
-            saveShiftTemplates()
+        .onChange(of: localization.selectedLanguageCode) { _, _ in
+            loadShiftTemplates()
         }
         .navigationBarBackButtonHidden(true)
     }
@@ -797,7 +818,17 @@ struct ShiftTimeSettingsView: View {
     private func saveShiftTemplates() {
         let defaults = UserDefaults.standard
         for template in shiftTemplates {
-            defaults.set(template.displayName, forKey: template.id.displayNameKey)
+            if template.usesLocalizedDefaultName {
+                defaults.removeObject(forKey: template.id.displayNameKey)
+                defaults.removeObject(forKey: template.id.displayNameCustomizedKey)
+            } else {
+                defaults.set(template.displayName, forKey: template.id.displayNameKey)
+                if case .day = template.id {
+                    defaults.set(true, forKey: template.id.displayNameCustomizedKey)
+                } else if case .night = template.id {
+                    defaults.set(true, forKey: template.id.displayNameCustomizedKey)
+                }
+            }
             defaults.set(template.note, forKey: template.id.noteKey)
             defaults.set(template.colorHex, forKey: template.id.colorHexKey)
             defaults.set(template.startTime, forKey: template.id.startTimeKey)
@@ -847,7 +878,7 @@ private struct ShiftTimeSettingsRow: View {
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
                 } else {
-                    Text(LocalizedStringKey(template.nameKey.rawValue))
+                    Text(localization.localized(template.nameKey))
                         .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
@@ -893,13 +924,21 @@ private struct ShiftTimeEditSheet: View {
     @State private var color: Color
     @State private var startTime: String
     @State private var endTime: String
+    private let initialDisplayName: String
+    private let initialUsesLocalizedDefaultName: Bool
 
     init(shiftID: ShiftTimeTemplateID, isNew: Bool = false, onSave: @escaping (ShiftTimeTemplate) -> Void) {
         self.shiftID = shiftID
         self.isNew = isNew
         self.onSave = onSave
         let defaults = UserDefaults.standard
-        _displayName = State(initialValue: defaults.string(forKey: shiftID.displayNameKey) ?? shiftID.defaultDisplayName)
+        let existingTemplate = ShiftTimeTemplate.all(from: defaults).first { $0.id == shiftID }
+        let initialDisplayName = isNew
+            ? LocalizationManager.shared.localized(.shiftTimeNewShiftName)
+            : (existingTemplate?.displayName ?? shiftID.defaultDisplayName)
+        self.initialDisplayName = initialDisplayName
+        self.initialUsesLocalizedDefaultName = existingTemplate?.usesLocalizedDefaultName ?? false
+        _displayName = State(initialValue: initialDisplayName)
         _note = State(initialValue: defaults.string(forKey: shiftID.noteKey) ?? "")
         let defaultHex = defaults.string(forKey: shiftID.colorHexKey) ?? shiftID.defaultColorHex
         _color = State(initialValue: Color(hex: defaultHex) ?? .blue)
@@ -989,7 +1028,7 @@ private struct ShiftTimeEditSheet: View {
         guard !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             let alert = UIAlertController(
                 title: localization.localized(.editorError),
-                message: String(localized: "Please enter a title", comment: "Validation error for empty title"),
+                message: localization.localized(.validationTitleRequired),
                 preferredStyle: .alert
             )
             alert.addAction(UIAlertAction(title: localization.localized(.ok), style: .default))
@@ -997,16 +1036,20 @@ private struct ShiftTimeEditSheet: View {
         }
         
         let colorHex = color.toHex()
+        let normalizedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let usesLocalizedDefaultName = initialUsesLocalizedDefaultName
+            && normalizedDisplayName == initialDisplayName
 
         let template = ShiftTimeTemplate(
             id: shiftID,
             nameKey: shiftID.nameKey,
-            displayName: displayName,
+            displayName: normalizedDisplayName,
             note: note,
             colorHex: colorHex,
             startTime: startTime,
             endTime: endTime,
-            enabled: true
+            enabled: true,
+            usesLocalizedDefaultName: usesLocalizedDefaultName
         )
         onSave(template)
         dismiss()

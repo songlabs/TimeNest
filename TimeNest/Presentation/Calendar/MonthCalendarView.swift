@@ -516,6 +516,8 @@ struct MonthCalendarView: View {
 // MARK: - ShiftInputPanelView
 
 private struct ShiftInputPanelView: View {
+    @EnvironmentObject private var localization: LocalizationManager
+
     let templates: [ShiftTimeTemplate]
     let selectedTemplate: ShiftTimeTemplate?
     let onSelectTemplate: (ShiftTimeTemplate) -> Void
@@ -524,12 +526,12 @@ private struct ShiftInputPanelView: View {
     var body: some View {
         VStack(spacing: 0) {
             SettingsModalHeaderView(
-                title: LocalizedStringKey(LocalizedString.shiftInputTitle.rawValue),
+                title: localization.localized(.shiftInputTitle),
                 closeAction: onDone
             )
 
             if templates.isEmpty {
-                Text(LocalizedStringKey(LocalizedString.shiftInputEmpty.rawValue))
+                Text(localization.localized(.shiftInputEmpty))
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(WorkStatisticsColors.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -759,7 +761,7 @@ struct DayCellView: View {
     private func eventLabel(for event: EventOccurrence) -> String {
         // 优先显示标题，标题为空时才 fallback 到时间
         if !event.title.isEmpty {
-            return event.title
+            return event.localizedDisplayTitle
         }
         // Fallback: 标题为空时显示时间
         return formatTime(event.startDate)

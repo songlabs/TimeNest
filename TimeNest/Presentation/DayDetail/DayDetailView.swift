@@ -208,7 +208,7 @@ struct EventRowView: View {
     var body: some View {
         HStack {
             HStack(spacing: 8) {
-                Text(event.title)
+                Text(event.localizedDisplayTitle)
                     .font(.subheadline)
                     .fontWeight(.medium)
 

@@ -150,6 +150,13 @@ extension ShiftTimeTemplateID {
     }
 }
 
+extension EventOccurrence {
+    /// 历史默认班次标题仅在展示层跟随 App 语言；持久化标题保持不变。
+    var localizedDisplayTitle: String {
+        ShiftTimeTemplate.localizedDisplayName(for: title, templateID: shiftTemplateID)
+    }
+}
+
 // MARK: - 事件标记颜色扩展
 
 extension EventMarkerType {

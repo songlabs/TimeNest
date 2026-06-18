@@ -106,6 +106,7 @@ enum LocalizedString: String {
     case save = "common.save"
     case cancel = "common.cancel"
     case ok = "common.ok"
+    case validationTitleRequired = "validation.title_required"
     case adPlaceholder = "common.ad_placeholder"
     case detail = "common.detail"
     case done = "common.done"

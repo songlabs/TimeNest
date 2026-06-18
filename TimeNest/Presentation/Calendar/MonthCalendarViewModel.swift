@@ -135,6 +135,7 @@ class MonthCalendarViewModel: ObservableObject {
         let newLanguage = LocalizationManager.shared.currentLanguage
         if currentSetting.displayLanguage != newLanguage {
             currentSetting.displayLanguage = newLanguage
+            refreshShiftTemplates()
             Task {
                 await reloadMonth()
             }
@@ -405,7 +406,9 @@ class MonthCalendarViewModel: ObservableObject {
                     return true
                 }
 
-                return event.shiftTemplateID == nil && event.title == template.displayName
+                return event.shiftTemplateID == nil
+                    && (event.title == template.displayName
+                        || ShiftTimeTemplate.isKnownDefaultDisplayName(event.title, for: template.id))
             }
             .sorted { $0.createdAt < $1.createdAt }
             .first
@@ -438,6 +441,7 @@ class MonthCalendarViewModel: ObservableObject {
                 // 检查标题是否与任意班次模板的 displayName 匹配
                 let allTemplates = ShiftTimeTemplate.all()
                 return allTemplates.contains { $0.displayName == event.title }
+                    || ShiftTimeTemplate.isKnownDefaultDisplayName(event.title)
             }
             .sorted { $0.createdAt < $1.createdAt }
             .first

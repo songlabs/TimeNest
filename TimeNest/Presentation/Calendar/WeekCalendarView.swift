@@ -208,7 +208,7 @@ private struct WeekAllDayColumn: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(visibleEvents, id: \.id) { event in
-                AllDayEventChipView(title: event.title, compact: true)
+                AllDayEventChipView(title: event.localizedDisplayTitle, compact: true)
             }
 
             if hiddenCount > 0 {
@@ -443,7 +443,7 @@ struct CalendarEventBlockView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(event.title)
+            Text(event.localizedDisplayTitle)
                 .font(.system(size: compact ? 10 : 12, weight: .semibold))
                 .foregroundColor(eventForegroundColor)
                 .lineLimit(1)

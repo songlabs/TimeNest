@@ -98,6 +98,7 @@
 "common.reset" = "恢复默认";
 "common.today" = "今天";
 "common.more_menu" = "更多菜单";
+"validation.title_required" = "请输入标题";
 
 /* Year Month Picker */
 "picker.select_year_month" = "选择年月";

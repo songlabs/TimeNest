@@ -3,6 +3,8 @@ import SwiftUI
 /// 日历 Header - 月/周/日共用同一套导航布局。
 /// 结构统一为：中间（左箭头 + 标题 + 右箭头）+ 右侧更多菜单。
 struct CalendarHeaderView: View {
+    @EnvironmentObject private var localization: LocalizationManager
+
     let title: String
     let displayMode: CalendarViewMode
     let onStatisticsTapped: () -> Void
@@ -83,16 +85,16 @@ struct CalendarHeaderView: View {
         Menu {
             if displayMode == .month {
                 Button(action: onShiftInputTapped) {
-                    Label(LocalizedStringKey(LocalizedString.shiftInputTitle.rawValue), systemImage: "calendar.badge.plus")
+                    Label(localization.localized(.shiftInputTitle), systemImage: "calendar.badge.plus")
                 }
             }
 
             Button(action: onStatisticsTapped) {
-                Label(LocalizedStringKey(LocalizedString.workStatistics.rawValue), systemImage: "chart.bar.xaxis")
+                Label(localization.localized(.workStatistics), systemImage: "chart.bar.xaxis")
             }
 
             Button(action: onSettingsTapped) {
-                Label(LocalizedStringKey(LocalizedString.settingsTitle.rawValue), systemImage: "gearshape")
+                Label(localization.localized(.settingsTitle), systemImage: "gearshape")
             }
         } label: {
             Image(systemName: "ellipsis")
@@ -101,8 +103,8 @@ struct CalendarHeaderView: View {
                 .frame(width: 36, height: 36)
         }
         .buttonStyle(PlainButtonStyle())
-        .accessibilityLabel(Text(LocalizedStringKey(LocalizedString.moreMenu.rawValue)))
-        .accessibilityHint(Text(LocalizedStringKey(LocalizedString.moreMenu.rawValue)))
+        .accessibilityLabel(Text(localization.localized(.moreMenu)))
+        .accessibilityHint(Text(localization.localized(.moreMenu)))
     }
 
     /// 左右箭头按钮：沿用月视图的浅蓝色圆形背景。
