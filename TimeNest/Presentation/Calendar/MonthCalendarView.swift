@@ -1,10 +1,16 @@
 import SwiftUI
 
+private enum CalendarModalDestination {
+    case statistics
+    case settings
+}
+
 struct MonthCalendarView: View {
     @StateObject private var viewModel: MonthCalendarViewModel
     @State private var showingYearMonthPicker = false
     @State private var showingSettings = false
     @State private var showingStatistics = false
+    @State private var pendingModalDestination: CalendarModalDestination?
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
 
@@ -29,9 +35,7 @@ struct MonthCalendarView: View {
                 CalendarHeaderView(
                     title: currentTitle,
                     displayMode: viewModel.displayMode,
-                    onStatisticsTapped: {
-                        showingStatistics = true
-                    },
+                    onStatisticsTapped: openStatistics,
                     onShiftInputTapped: {
                         viewModel.enterShiftInputMode()
                     },
@@ -42,9 +46,7 @@ struct MonthCalendarView: View {
                             showingYearMonthPicker = true
                         }
                     },
-                    onSettingsTapped: {
-                        showingSettings = true
-                    }
+                    onSettingsTapped: openSettings
                 )
 
                 // 视图内容
@@ -71,7 +73,7 @@ struct MonthCalendarView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.isShiftInputMode)
-        .sheet(isPresented: shiftInputSheetBinding) {
+        .sheet(isPresented: shiftInputSheetBinding, onDismiss: openPendingModalDestination) {
             shiftInputPanel
                 .presentationDetents([.height(ShiftInputPanelLayout.sheetHeight)])
                 .presentationDragIndicator(.hidden)
@@ -190,6 +192,42 @@ struct MonthCalendarView: View {
                 }
             }
         )
+    }
+
+    private func openStatistics() {
+        openModal(.statistics)
+    }
+
+    private func openSettings() {
+        openModal(.settings)
+    }
+
+    private func openModal(_ destination: CalendarModalDestination) {
+        guard viewModel.isShiftInputMode else {
+            presentModal(destination)
+            return
+        }
+
+        pendingModalDestination = destination
+        viewModel.exitShiftInputMode()
+    }
+
+    private func openPendingModalDestination() {
+        guard let destination = pendingModalDestination else { return }
+        pendingModalDestination = nil
+
+        DispatchQueue.main.async {
+            presentModal(destination)
+        }
+    }
+
+    private func presentModal(_ destination: CalendarModalDestination) {
+        switch destination {
+        case .statistics:
+            showingStatistics = true
+        case .settings:
+            showingSettings = true
+        }
     }
 
     private var shiftInputPanel: some View {
