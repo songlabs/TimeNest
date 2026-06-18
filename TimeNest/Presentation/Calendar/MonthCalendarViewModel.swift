@@ -12,6 +12,7 @@ class MonthCalendarViewModel: ObservableObject {
     @Published var selectedDayCell: CalendarDayCell?
     @Published var showingDayDetail: Bool = false
     @Published var isShiftInputMode: Bool = false
+    @Published var shiftInputTargetDate: Date?
     @Published var selectedShiftTemplate: ShiftTimeTemplate?
     @Published private(set) var shiftTemplates: [ShiftTimeTemplate] = ShiftTimeTemplate.all()
     
@@ -260,6 +261,7 @@ class MonthCalendarViewModel: ObservableObject {
     func enterShiftInputMode() {
         refreshShiftTemplates()
         isShiftInputMode = true
+        shiftInputTargetDate = nil
         showingDayDetail = false
         showingEventEditor = false
         selectedShiftTemplate = selectedShiftTemplate ?? shiftTemplates.first
@@ -267,11 +269,26 @@ class MonthCalendarViewModel: ObservableObject {
 
     func exitShiftInputMode() {
         isShiftInputMode = false
+        shiftInputTargetDate = nil
         selectedShiftTemplate = nil
     }
 
-    func selectShiftTemplate(_ template: ShiftTimeTemplate) {
+    func registerShift(_ template: ShiftTimeTemplate) async {
         selectedShiftTemplate = template
+
+        let targetDate = shiftInputTargetDate ?? selectedDate
+        guard await createShiftEvent(on: targetDate, template: template) else { return }
+
+        let calendar = Calendar(identifier: .gregorian)
+        guard let nextDate = calendar.date(byAdding: .day, value: 1, to: targetDate) else { return }
+
+        shiftInputTargetDate = nextDate
+        selectedDate = nextDate
+
+        if findCell(for: nextDate) == nil {
+            await reloadMonth()
+        }
+        selectedDayCell = findCell(for: nextDate)
     }
 
     func refreshShiftTemplates() {
@@ -282,9 +299,10 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func createShiftEvent(on date: Date, template: ShiftTimeTemplate) async {
+    @discardableResult
+    func createShiftEvent(on date: Date, template: ShiftTimeTemplate) async -> Bool {
         do {
-            guard let dates = shiftEventDates(on: date, template: template) else { return }
+            guard let dates = shiftEventDates(on: date, template: template) else { return false }
             let now = Date()
 
             // 查找当天是否已有任意班次（不限模板）
@@ -333,8 +351,10 @@ class MonthCalendarViewModel: ObservableObject {
             }
 
             await reloadMonth()
+            return true
         } catch {
             errorMessage = error.localizedDescription
+            return false
         }
     }
 
@@ -530,10 +550,7 @@ class MonthCalendarViewModel: ObservableObject {
         selectedDate = cell.date.toDate()
 
         if isShiftInputMode {
-            guard let selectedShiftTemplate else { return }
-            Task {
-                await createShiftEvent(on: cell.date.toDate(), template: selectedShiftTemplate)
-            }
+            shiftInputTargetDate = cell.date.toDate()
             return
         }
 

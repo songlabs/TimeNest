@@ -235,7 +235,9 @@ struct MonthCalendarView: View {
             templates: viewModel.shiftTemplates,
             selectedTemplate: viewModel.selectedShiftTemplate,
             onSelectTemplate: { template in
-                viewModel.selectShiftTemplate(template)
+                Task {
+                    await viewModel.registerShift(template)
+                }
             },
             onDone: {
                 viewModel.exitShiftInputMode()
@@ -284,7 +286,7 @@ struct MonthCalendarView: View {
                                         cell: cell,
                                         cellWidth: cellWidth,
                                         cellHeight: dateCellHeight,
-                                        isSelected: viewModel.selectedDayCell?.id == cell.id
+                                        isSelected: isDayCellSelected(cell)
                                     )
                                     .environmentObject(localization)
                                     .onTapGesture {
@@ -330,6 +332,15 @@ struct MonthCalendarView: View {
             CalendarAdBannerContainer()
             calendarBottomToolbar
         }
+    }
+
+    private func isDayCellSelected(_ cell: CalendarDayCell) -> Bool {
+        if viewModel.isShiftInputMode {
+            guard let targetDate = viewModel.shiftInputTargetDate else { return false }
+            return DateOnly(from: targetDate) == cell.date
+        }
+
+        return viewModel.selectedDayCell?.id == cell.id
     }
 
     private var calendarBottomToolbar: some View {
