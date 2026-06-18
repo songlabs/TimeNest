@@ -4,22 +4,18 @@ import UIKit
 
 struct AdMobBannerView: UIViewRepresentable {
     let adUnitID: String
-    @Binding var bannerHeight: CGFloat
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(bannerHeight: $bannerHeight)
+        Coordinator()
     }
 
     func makeUIView(context: Context) -> BannerView {
         let bannerView = BannerView(adSize: AdSizeBanner)
-        bannerView.delegate = context.coordinator
-        context.coordinator.bannerView = bannerView
         return bannerView
     }
 
     func updateUIView(_ bannerView: BannerView, context: Context) {
         guard let rootViewController = UIApplication.shared.timeNestRootViewController else {
-            context.coordinator.updateHeight(0)
             return
         }
 
@@ -33,14 +29,8 @@ struct AdMobBannerView: UIViewRepresentable {
         }
     }
 
-    final class Coordinator: NSObject, BannerViewDelegate {
-        private var bannerHeight: Binding<CGFloat>
+    final class Coordinator: NSObject {
         private var loadedAdUnitID: String?
-        weak var bannerView: BannerView?
-
-        init(bannerHeight: Binding<CGFloat>) {
-            self.bannerHeight = bannerHeight
-        }
 
         func shouldLoad(adUnitID: String) -> Bool {
             loadedAdUnitID != adUnitID
@@ -48,21 +38,6 @@ struct AdMobBannerView: UIViewRepresentable {
 
         func markLoading(adUnitID: String) {
             loadedAdUnitID = adUnitID
-            updateHeight(0)
-        }
-
-        func updateHeight(_ height: CGFloat) {
-            DispatchQueue.main.async {
-                self.bannerHeight.wrappedValue = height
-            }
-        }
-
-        func bannerViewDidReceiveAd(_ bannerView: BannerView) {
-            updateHeight(AdConfiguration.bannerHeight)
-        }
-
-        func bannerView(_ bannerView: BannerView, didFailToReceiveAdWithError error: Error) {
-            updateHeight(0)
         }
     }
 }

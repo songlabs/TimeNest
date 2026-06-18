@@ -49,26 +49,14 @@ struct MonthCalendarView: View {
                     onSettingsTapped: openSettings
                 )
 
-                // 视图内容
-                if viewModel.isLoading {
-                    ProgressView()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if let errorMessage = viewModel.errorMessage {
-                    Text(errorMessage)
-                        .foregroundColor(ShiftCalendarColors.sundayRed)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    switch viewModel.displayMode {
-                    case .month:
-                        if let grid = viewModel.grid {
-                            monthCalendarWithBottomSection(grid: grid)
+                calendarContent
+                    .overlay {
+                        if viewModel.isLoading {
+                            ProgressView()
                         }
-                    case .week:
-                        weekCalendarWithBottomSection()
-                    case .day:
-                        dayCalendarWithBottomSection()
                     }
-                }
+
+                calendarBottomSection
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
@@ -249,7 +237,29 @@ struct MonthCalendarView: View {
     }
 
     @ViewBuilder
-    private func calendarWithBottomSection(_ grid: MonthGrid) -> some View {
+    private var calendarContent: some View {
+        if let errorMessage = viewModel.errorMessage {
+            Text(errorMessage)
+                .foregroundColor(ShiftCalendarColors.sundayRed)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            switch viewModel.displayMode {
+            case .month:
+                if let grid = viewModel.grid {
+                    monthCalendarContent(grid: grid)
+                } else {
+                    Color.clear
+                }
+            case .week:
+                weekCalendarContent()
+            case .day:
+                dayCalendarContent()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func monthCalendarContent(grid: MonthGrid) -> some View {
         VStack(spacing: 0) {
             // 月历表格 - 最大化占据空间
             GeometryReader { geometry in
@@ -321,8 +331,6 @@ struct MonthCalendarView: View {
                 .frame(height: gridHeight)
             }
             .frame(maxHeight: .infinity)
-
-            calendarBottomSection
         }
         .background(ShiftCalendarColors.backgroundColor)
     }
@@ -468,15 +476,9 @@ struct MonthCalendarView: View {
         }
     }
 
-    /// 月视图容器
-    @ViewBuilder
-    private func monthCalendarWithBottomSection(grid: MonthGrid) -> some View {
-        calendarWithBottomSection(grid)
-    }
-
     /// 周视图容器
     @ViewBuilder
-    private func weekCalendarWithBottomSection() -> some View {
+    private func weekCalendarContent() -> some View {
         VStack(spacing: 0) {
             // 周视图内容
             WeekCalendarView(
@@ -487,15 +489,13 @@ struct MonthCalendarView: View {
                 }
             )
             .environmentObject(localization)
-
-            calendarBottomSection
         }
         .background(ShiftCalendarColors.backgroundColor)
     }
 
     /// 日视图容器
     @ViewBuilder
-    private func dayCalendarWithBottomSection() -> some View {
+    private func dayCalendarContent() -> some View {
         VStack(spacing: 0) {
             // 日视图内容
             DayCalendarView(
@@ -503,8 +503,6 @@ struct MonthCalendarView: View {
                 cell: viewModel.dayCell
             )
             .environmentObject(localization)
-
-            calendarBottomSection
         }
         .background(ShiftCalendarColors.backgroundColor)
     }
