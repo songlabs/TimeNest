@@ -290,9 +290,7 @@ struct MonthCalendarView: View {
     private var calendarBottomSection: some View {
         VStack(spacing: 0) {
             CalendarAdBannerContainer()
-            if !viewModel.isShiftInputMode {
-                calendarBottomToolbar
-            }
+            calendarBottomToolbar
         }
     }
 
