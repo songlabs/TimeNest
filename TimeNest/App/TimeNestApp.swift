@@ -1,10 +1,12 @@
 import GoogleMobileAds
+import SwiftData
 import SwiftUI
 
 @main
 struct TimeNestApp: App {
-    private let eventRepository: EventRepository = InMemoryEventRepository.shared
-    private let reminderRepository: ReminderRepository = InMemoryReminderRepository.shared
+    private let modelContainer: ModelContainer
+    private let eventRepository: EventRepository
+    private let reminderRepository: ReminderRepository
     private let reminderScheduler: ReminderScheduling = MockReminderScheduler()
     private let holidayProvider: HolidayProviding = BundleHolidayProvider()
     private let notificationScheduler: LocalNotificationScheduling = LocalNotificationService()
@@ -18,6 +20,29 @@ struct TimeNestApp: App {
     init() {
         Self.configureAdsIfNeeded()
 
+        let schema = Schema([
+            SwiftDataCalendarEventEntity.self,
+            SwiftDataReminderEntity.self
+        ])
+        let configuration = ModelConfiguration(
+            "TimeNest",
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .none
+        )
+        do {
+            modelContainer = try ModelContainer(
+                for: schema,
+                configurations: [configuration]
+            )
+        } catch {
+            fatalError("Failed to create SwiftData ModelContainer: \(error)")
+        }
+
+        let eventRepository = SwiftDataEventRepository(modelContainer: modelContainer)
+        let reminderRepository = SwiftDataReminderRepository(modelContainer: modelContainer)
+        self.eventRepository = eventRepository
+        self.reminderRepository = reminderRepository
         self.eventUseCase = EventUseCase(
             repository: eventRepository,
             notificationScheduler: notificationScheduler
@@ -47,6 +72,7 @@ struct TimeNestApp: App {
                 eventUseCase: eventUseCase
             )
             .environmentObject(LocalizationManager.shared)
+            .modelContainer(modelContainer)
         }
     }
 }

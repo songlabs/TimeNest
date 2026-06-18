@@ -11,12 +11,8 @@ struct TimeNestFileSharingView: View {
     private let importUseCase: TimeNestFileImportUseCase
 
     init(
-        exportUseCase: TimeNestFileExportUseCase = TimeNestFileExportUseCase(
-            eventRepository: InMemoryEventRepository.shared
-        ),
-        importUseCase: TimeNestFileImportUseCase = TimeNestFileImportUseCase(
-            eventRepository: InMemoryEventRepository.shared
-        )
+        exportUseCase: TimeNestFileExportUseCase,
+        importUseCase: TimeNestFileImportUseCase
     ) {
         self.exportUseCase = exportUseCase
         self.importUseCase = importUseCase
