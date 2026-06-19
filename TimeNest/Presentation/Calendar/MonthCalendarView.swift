@@ -631,8 +631,8 @@ private struct ShiftInputPanelView: View {
         template.displayBackgroundColor
     }
 
-    private func buttonTextColor(for template: ShiftTimeTemplate) -> Color {
-        template.displayForegroundColor
+    private func buttonTextColor(for _: ShiftTimeTemplate) -> Color {
+        ShiftCalendarColors.primaryText
     }
 
 }
@@ -645,7 +645,7 @@ private struct ShiftInputHeaderView: View {
         HStack(spacing: ShiftInputPanelLayout.headerControlSpacing) {
             Text(title)
                 .font(TimeNestTheme.Fonts.popupTitle)
-                .foregroundColor(SettingsModalSurface.primaryText)
+                .foregroundColor(ShiftCalendarColors.primaryText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
 
