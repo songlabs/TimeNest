@@ -156,6 +156,8 @@
 /* Holiday Source Settings */
 "holiday_source.url_header" = "Subscription URL";
 "holiday_source.url_footer" = "Please enter a valid HTTPS URL";
+"holiday_source.default" = "Default";
+"holiday_source.default_url_provider" = "The default URL is provided by Office Holidays (officeholidays.com)";
 "holiday_source.test_sync" = "Test";
 "holiday_source.error" = "Error";
 "holiday_source.enable_first" = "Please enable this subscription first";

@@ -156,6 +156,8 @@
 /* Holiday Source Settings */
 "holiday_source.url_header" = "订阅源 URL";
 "holiday_source.url_footer" = "请输入有效的 HTTPS URL";
+"holiday_source.default" = "初期值";
+"holiday_source.default_url_provider" = "初期值 URL 由 Office Holidays (officeholidays.com) 提供";
 "holiday_source.test_sync" = "测试";
 "holiday_source.error" = "错误";
 "holiday_source.enable_first" = "请先启用此订阅";

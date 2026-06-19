@@ -149,6 +149,8 @@ enum LocalizedString: String {
 
     case holidaySourceURLHeader = "holiday_source.url_header"
     case holidaySourceURLFooter = "holiday_source.url_footer"
+    case holidaySourceDefault = "holiday_source.default"
+    case holidaySourceDefaultURLProvider = "holiday_source.default_url_provider"
     case holidaySourceTestSync = "holiday_source.test_sync"
     case holidaySourceError = "holiday_source.error"
     case holidaySourceEnableFirst = "holiday_source.enable_first"

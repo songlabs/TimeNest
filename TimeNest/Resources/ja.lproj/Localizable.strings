@@ -156,6 +156,8 @@
 /* Holiday Source Settings */
 "holiday_source.url_header" = "購読元 URL";
 "holiday_source.url_footer" = "有効な HTTPS URL を入力してください";
+"holiday_source.default" = "初期値";
+"holiday_source.default_url_provider" = "初期値 URL は Office Holidays (officeholidays.com) が提供しています";
 "holiday_source.test_sync" = "テスト";
 "holiday_source.error" = "エラー";
 "holiday_source.enable_first" = "まずこの購読を有効にしてください";

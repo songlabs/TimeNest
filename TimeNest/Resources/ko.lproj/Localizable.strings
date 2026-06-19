@@ -155,7 +155,9 @@
 
 /* Holiday Source Settings */
 "holiday_source.url_header" = "구독 소스 URL";
-"holiday_source.url_footer" = "유효한 HTTPS URL 을 입력하세요";
+"holiday_source.url_footer" = "유효한 HTTPS URL을 입력하세요";
+"holiday_source.default" = "초기값";
+"holiday_source.default_url_provider" = "초기값 URL은 Office Holidays (officeholidays.com)에서 제공합니다";
 "holiday_source.test_sync" = "테스트";
 "holiday_source.error" = "오류";
 "holiday_source.enable_first" = "먼저 이 구독을 활성화하세요";
