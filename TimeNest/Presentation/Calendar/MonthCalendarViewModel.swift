@@ -262,10 +262,10 @@ class MonthCalendarViewModel: ObservableObject {
     func enterShiftInputMode() {
         refreshShiftTemplates()
         isShiftInputMode = true
-        shiftInputTargetDate = nil
+        shiftInputTargetDate = selectedDate
         showingDayDetail = false
         showingEventEditor = false
-        selectedShiftTemplate = selectedShiftTemplate ?? shiftTemplates.first
+        selectedShiftTemplate = nil
     }
 
     func exitShiftInputMode() {
@@ -275,13 +275,29 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func registerShift(_ template: ShiftTimeTemplate) async {
-        selectedShiftTemplate = template
-
         let targetDate = shiftInputTargetDate ?? selectedDate
         guard await createShiftEvent(on: targetDate, template: template) else { return }
 
+        await advanceShiftInputDate(after: targetDate)
+    }
+
+    func cancelShift() async {
+        let targetDate = shiftInputTargetDate ?? selectedDate
+
+        do {
+            if let existingEvent = try await existingAnyShiftEvent(on: targetDate) {
+                try await eventUseCase.deleteEvent(id: existingEvent.id)
+                await reloadMonth()
+            }
+            await advanceShiftInputDate(after: targetDate)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func advanceShiftInputDate(after date: Date) async {
         let calendar = Calendar(identifier: .gregorian)
-        guard let nextDate = calendar.date(byAdding: .day, value: 1, to: targetDate) else { return }
+        guard let nextDate = calendar.date(byAdding: .day, value: 1, to: date) else { return }
 
         shiftInputTargetDate = nextDate
         selectedDate = nextDate
@@ -290,18 +306,6 @@ class MonthCalendarViewModel: ObservableObject {
             await reloadMonth()
         }
         selectedDayCell = findCell(for: nextDate)
-    }
-
-    func removeShiftFromCurrentDate() async {
-        let targetDate = shiftInputTargetDate ?? selectedDate
-
-        do {
-            guard let existingEvent = try await existingAnyShiftEvent(on: targetDate) else { return }
-            try await eventUseCase.deleteEvent(id: existingEvent.id)
-            await reloadMonth()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
     }
 
     func refreshShiftTemplates() {
