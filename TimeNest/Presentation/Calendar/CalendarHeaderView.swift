@@ -29,7 +29,7 @@ struct CalendarHeaderView: View {
             Color.clear
                 .frame(width: 44)
 
-            HStack(spacing: titleSpacing) {
+            HStack(spacing: 6) {
                 navigationButton(icon: "chevron.left", action: onPrevious)
 
                 Button(action: onTitleTapped) {
@@ -46,16 +46,18 @@ struct CalendarHeaderView: View {
                             .foregroundColor(ShiftCalendarColors.primaryBlue)
                     }
                     .foregroundColor(ShiftCalendarColors.primaryText)
-                    .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .glassCapsuleStyle()
+                    .frame(minHeight: 36)
                 }
                 .buttonStyle(PlainButtonStyle())
-                .contentShape(Capsule())
+                .contentShape(Rectangle())
                 .accessibilityLabel(Text(localization.localized(.selectYearMonth)))
 
                 navigationButton(icon: "chevron.right", action: onNext)
             }
+            .padding(.horizontal, 4)
+            .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
+            .clipShape(Capsule())
             .frame(maxWidth: .infinity, alignment: .center)
 
             moreMenu
@@ -69,15 +71,6 @@ struct CalendarHeaderView: View {
             return .system(size: 28, weight: .semibold)
         case .day:
             return .system(size: 24, weight: .semibold)
-        }
-    }
-
-    private var titleSpacing: CGFloat {
-        switch displayMode {
-        case .month, .week:
-            return 18
-        case .day:
-            return 10
         }
     }
 
@@ -119,15 +112,14 @@ struct CalendarHeaderView: View {
         .accessibilityHint(Text(localization.localized(.moreMenu)))
     }
 
-    /// 左右箭头按钮：沿用月视图的浅蓝色圆形背景。
+    /// 左右箭头按钮：背景由共用导航容器统一提供。
     private func navigationButton(icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .medium))
                 .foregroundColor(ShiftCalendarColors.primaryBlue)
                 .frame(width: 36, height: 36)
-                .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
-                .clipShape(Circle())
+                .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
     }
