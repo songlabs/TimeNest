@@ -114,12 +114,7 @@ struct WorkStatisticsView: View {
                 }
                 .padding(.horizontal, 12)
                 .frame(minHeight: 46)
-                .background(WorkStatisticsColors.fieldBackground)
-                .overlay(
-                    RoundedRectangle(cornerRadius: WorkStatisticsLayout.pickerCornerRadius, style: .continuous)
-                        .stroke(WorkStatisticsColors.border, lineWidth: 0.8)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.pickerCornerRadius, style: .continuous))
+                .glassCapsuleStyle()
             }
             .buttonStyle(PlainButtonStyle())
         }

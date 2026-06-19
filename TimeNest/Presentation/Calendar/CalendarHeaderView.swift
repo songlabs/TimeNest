@@ -48,8 +48,7 @@ struct CalendarHeaderView: View {
                     .foregroundColor(ShiftCalendarColors.primaryText)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(ShiftCalendarColors.primaryBlue.opacity(0.10))
-                    .clipShape(Capsule())
+                    .glassCapsuleStyle()
                 }
                 .buttonStyle(PlainButtonStyle())
                 .contentShape(Capsule())

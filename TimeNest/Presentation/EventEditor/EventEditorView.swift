@@ -177,6 +177,7 @@ struct EventEditorView: View {
     @State private var transportFee: String = "" // 交通费
     @State private var hourlyRate: String = "" // 时给
     @State private var showingRestTimePicker: Bool = false // 休息时间选择器
+    @State private var editingWorkTime: WorkTimeEditTarget?
     @State private var pendingWorkClockConfirmation: WorkClockConfirmation?
     @State private var workSessionId: UUID
     @FocusState private var focusedField: EditorFocusedField?
@@ -262,9 +263,6 @@ struct EventEditorView: View {
                                     allDayTitle: localization.localized(.editorAllDay),
                                     startTitle: localization.localized(.editorStart),
                                     endTitle: localization.localized(.editorEnd),
-                                    timeTitle: localization.localized(.editorTime),
-                                    doneTitle: localization.localized(.done),
-                                    cancelTitle: localization.localized(.cancel),
                                     showingStartDatePicker: $showingStartDatePicker,
                                     showingStartTimePicker: $showingStartTimePicker,
                                     showingEndDatePicker: $showingEndDatePicker,
@@ -293,6 +291,7 @@ struct EventEditorView: View {
                                 showingRestTimePicker: $showingRestTimePicker,
                                 workInDate: $workInDate,
                                 workOutDate: $workOutDate,
+                                editingWorkTime: $editingWorkTime,
                                 eventTitle: $title,
                                 focusedField: $focusedField,
                                 workInTitle: localization.localized(.editorWorkIn),
@@ -301,16 +300,9 @@ struct EventEditorView: View {
                                 transportFeeTitle: localization.localized(.editorTransportFee),
                                 hourlyRateTitle: localization.localized(.editorHourlyRate),
                                 currencyUnit: localization.localized(.editorCurrencyUnit),
-                                timeTitle: localization.localized(.editorTime),
                                 onWorkInTap: { handleWorkClockTap(.clockIn) },
                                 onWorkOutTap: { handleWorkClockTap(.clockOut) }
                             )
-                            .sheet(isPresented: $showingRestTimePicker) {
-                                RestTimePickerSheet(
-                                    restTime: $restTime,
-                                    title: localization.localized(.editorRestTime)
-                                )
-                            }
 
                             if let validationMessage = validationMessage ?? errorMessage {
                                 Text(validationMessage)
@@ -326,6 +318,8 @@ struct EventEditorView: View {
                     }
                     .scrollIndicators(.hidden)
                 }
+
+                floatingPickerOverlay
             }
             .disabled(saving)
             .toolbar(.hidden, for: .navigationBar)
@@ -343,6 +337,11 @@ struct EventEditorView: View {
             .onChange(of: startDate) { oldValue, newValue in
                 handleStartDateChange(from: oldValue, to: newValue)
             }
+            .onChange(of: isFloatingPickerPresented) { _, isPresented in
+                if isPresented {
+                    focusedField = nil
+                }
+            }
             .alert(item: $pendingWorkClockConfirmation) { confirmation in
                 Alert(
                     title: Text(localization.localized(confirmation.titleKey)),
@@ -355,6 +354,95 @@ struct EventEditorView: View {
             }
         }
         .presentationDetents([.custom(EventEditorCompactDetent.self)])
+    }
+
+    @ViewBuilder
+    private var floatingPickerOverlay: some View {
+        if let mode = activeTimePickerMode {
+            FloatingPickerOverlay(onDismiss: dismissEventTimePicker) {
+                EventDateTimePickerPanel(
+                    title: eventPickerTitle(for: mode),
+                    startDate: $startDate,
+                    endDate: $endDate,
+                    isAllDay: isAllDay,
+                    doneTitle: localization.localized(.done),
+                    cancelTitle: localization.localized(.cancel),
+                    mode: mode,
+                    onCancel: dismissEventTimePicker,
+                    onDone: dismissEventTimePicker
+                )
+                .id(mode)
+            }
+        } else if showingRestTimePicker {
+            FloatingPickerOverlay(onDismiss: { showingRestTimePicker = false }) {
+                RestTimePickerPanel(
+                    restTime: $restTime,
+                    title: localization.localized(.editorRestTime),
+                    onClose: { showingRestTimePicker = false }
+                )
+            }
+        } else if let target = editingWorkTime {
+            FloatingPickerOverlay(onDismiss: { editingWorkTime = nil }) {
+                WorkInfoTimePickerPanel(
+                    title: target.pickerTitle(
+                        workInTitle: localization.localized(.editorWorkIn),
+                        workOutTitle: localization.localized(.editorWorkOut),
+                        timeTitle: localization.localized(.editorTime)
+                    ),
+                    onClose: { editingWorkTime = nil }
+                ) {
+                    DatePicker(
+                        "",
+                        selection: workTimeBinding(for: target),
+                        displayedComponents: .hourAndMinute
+                    )
+                    .datePickerStyle(.wheel)
+                    .labelsHidden()
+                    .frame(height: 150)
+                }
+            }
+        }
+    }
+
+    private var activeTimePickerMode: TimePickerMode? {
+        if showingStartDatePicker { return .startDate }
+        if showingStartTimePicker { return .startTime }
+        if showingEndDatePicker { return .endDate }
+        if showingEndTimePicker { return .endTime }
+        return nil
+    }
+
+    private var isFloatingPickerPresented: Bool {
+        activeTimePickerMode != nil || showingRestTimePicker || editingWorkTime != nil
+    }
+
+    private func dismissEventTimePicker() {
+        showingStartDatePicker = false
+        showingStartTimePicker = false
+        showingEndDatePicker = false
+        showingEndTimePicker = false
+    }
+
+    private func eventPickerTitle(for mode: TimePickerMode) -> String {
+        switch mode {
+        case .startDate:
+            return localization.localized(.editorStart)
+        case .startTime:
+            return "\(localization.localized(.editorStart)) \(localization.localized(.editorTime))"
+        case .endDate:
+            return localization.localized(.editorEnd)
+        case .endTime:
+            return "\(localization.localized(.editorEnd)) \(localization.localized(.editorTime))"
+        }
+    }
+
+    private func workTimeBinding(for target: WorkTimeEditTarget) -> Binding<Date> {
+        switch target {
+        case .workIn:
+            return $workInDate
+        case .workOut:
+            return $workOutDate
+        }
     }
 
     private var isEditing: Bool {
@@ -904,9 +992,6 @@ private struct EventTimeSection: View {
     let allDayTitle: String
     let startTitle: String
     let endTitle: String
-    let timeTitle: String
-    let doneTitle: String
-    let cancelTitle: String
     @Binding var showingStartDatePicker: Bool
     @Binding var showingStartTimePicker: Bool
     @Binding var showingEndDatePicker: Bool
@@ -944,12 +1029,7 @@ private struct EventTimeSection: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(EventEditorStyle.fieldBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
-                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                            )
+                            .glassCapsuleStyle()
                     }
                     .buttonStyle(.plain)
 
@@ -963,39 +1043,12 @@ private struct EventTimeSection: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(EventEditorStyle.fieldBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
-                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                            )
+                            .glassCapsuleStyle()
                     }
                     .buttonStyle(.plain)
                 }
 
                 Spacer()
-            }
-            .sheet(isPresented: $showingStartDatePicker) {
-                TimePickerSheet(
-                    title: pickerTitle(for: .startDate),
-                    startDate: $startDate,
-                    endDate: $endDate,
-                    isAllDay: isAllDay,
-                    doneTitle: doneTitle,
-                    cancelTitle: cancelTitle,
-                    mode: .startDate
-                )
-            }
-            .sheet(isPresented: $showingStartTimePicker) {
-                TimePickerSheet(
-                    title: pickerTitle(for: .startTime),
-                    startDate: $startDate,
-                    endDate: $endDate,
-                    isAllDay: isAllDay,
-                    doneTitle: doneTitle,
-                    cancelTitle: cancelTitle,
-                    mode: .startTime
-                )
             }
 
             // 第三行：終了 + 日期/时间按钮
@@ -1016,12 +1069,7 @@ private struct EventTimeSection: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(EventEditorStyle.fieldBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
-                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                            )
+                            .glassCapsuleStyle()
                     }
                     .buttonStyle(.plain)
 
@@ -1035,39 +1083,12 @@ private struct EventTimeSection: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 6)
                             .padding(.horizontal, 12)
-                            .background(EventEditorStyle.fieldBackground)
-                            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous)
-                                    .stroke(EventEditorStyle.buttonBorder, lineWidth: 1)
-                            )
+                            .glassCapsuleStyle()
                     }
                     .buttonStyle(.plain)
                 }
 
                 Spacer()
-            }
-            .sheet(isPresented: $showingEndDatePicker) {
-                TimePickerSheet(
-                    title: pickerTitle(for: .endDate),
-                    startDate: $startDate,
-                    endDate: $endDate,
-                    isAllDay: isAllDay,
-                    doneTitle: doneTitle,
-                    cancelTitle: cancelTitle,
-                    mode: .endDate
-                )
-            }
-            .sheet(isPresented: $showingEndTimePicker) {
-                TimePickerSheet(
-                    title: pickerTitle(for: .endTime),
-                    startDate: $startDate,
-                    endDate: $endDate,
-                    isAllDay: isAllDay,
-                    doneTitle: doneTitle,
-                    cancelTitle: cancelTitle,
-                    mode: .endTime
-                )
             }
         }
         .padding(EventEditorStyle.cardPadding)
@@ -1080,30 +1101,16 @@ private struct EventTimeSection: View {
     private func formatTimeOnly(_ date: Date) -> String {
         LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
     }
-
-    private func pickerTitle(for mode: TimePickerMode) -> String {
-        switch mode {
-        case .startDate:
-            return startTitle
-        case .startTime:
-            return "\(startTitle) \(timeTitle)"
-        case .endDate:
-            return endTitle
-        case .endTime:
-            return "\(endTitle) \(timeTitle)"
-        }
-    }
 }
 
-private enum TimePickerMode {
+private enum TimePickerMode: Hashable {
     case startDate
     case startTime
     case endDate
     case endTime
 }
 
-private struct TimePickerSheet: View {
-    @Environment(\.dismiss) private var dismiss
+private struct EventDateTimePickerPanel: View {
     let title: String
     @Binding var startDate: Date
     @Binding var endDate: Date
@@ -1111,10 +1118,22 @@ private struct TimePickerSheet: View {
     let doneTitle: String
     let cancelTitle: String
     let mode: TimePickerMode
+    let onCancel: () -> Void
+    let onDone: () -> Void
 
     @State private var tempDate: Date
 
-    init(title: String, startDate: Binding<Date>, endDate: Binding<Date>, isAllDay: Bool, doneTitle: String, cancelTitle: String, mode: TimePickerMode) {
+    init(
+        title: String,
+        startDate: Binding<Date>,
+        endDate: Binding<Date>,
+        isAllDay: Bool,
+        doneTitle: String,
+        cancelTitle: String,
+        mode: TimePickerMode,
+        onCancel: @escaping () -> Void,
+        onDone: @escaping () -> Void
+    ) {
         self.title = title
         _startDate = startDate
         _endDate = endDate
@@ -1122,6 +1141,8 @@ private struct TimePickerSheet: View {
         self.doneTitle = doneTitle
         self.cancelTitle = cancelTitle
         self.mode = mode
+        self.onCancel = onCancel
+        self.onDone = onDone
         
         // 根据模式初始化 tempDate
         switch mode {
@@ -1133,66 +1154,58 @@ private struct TimePickerSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if isAllDay {
-                            // 全天模式：只显示日期选择
-                            DatePicker(
-                                "",
-                                selection: $tempDate,
-                                in: dateRangeForMode(),
-                                displayedComponents: [.date]
-                            )
-                            .datePickerStyle(.graphical)
-                        } else {
-                            // 非全天模式：根据模式显示日期或时间
-                            switch mode {
-                            case .startDate, .endDate:
-                                // 日期选择：只显示日期
-                                DatePicker(
-                                    "",
-                                    selection: $tempDate,
-                                    in: dateRangeForMode(),
-                                    displayedComponents: [.date]
-                                )
-                                .datePickerStyle(.graphical)
-                                
-                            case .startTime, .endTime:
-                                // 时间选择：只显示时间
-                                DatePicker(
-                                    "",
-                                    selection: $tempDate,
-                                    displayedComponents: [.hourAndMinute]
-                                )
-                                .datePickerStyle(.wheel)
-                            }
-                        }
-                    }
-                    .padding(.vertical, 8)
-                }
-            }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(doneTitle) {
-                        commitSelection()
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                }
+        VStack(spacing: 14) {
+            Text(title)
+                .font(TimeNestTheme.Fonts.popupTitle)
+                .foregroundColor(TimeNestTheme.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
 
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(cancelTitle) {
-                        dismiss()
-                    }
+            pickerContent
+
+            FloatingPickerActionRow(
+                cancelTitle: cancelTitle,
+                confirmTitle: doneTitle,
+                confirmColor: ShiftCalendarColors.primaryBlue,
+                onCancel: onCancel,
+                onConfirm: {
+                    commitSelection()
+                    onDone()
                 }
-            }
+            )
         }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .frame(maxWidth: panelMaximumWidth)
+        .floatingPickerPanelStyle()
         .environment(\.locale, LocalizationManager.shared.calendarLocale)
         .environment(\.calendar, LocalizationManager.shared.calendar)
+    }
+
+    @ViewBuilder
+    private var pickerContent: some View {
+        if isAllDay || mode == .startDate || mode == .endDate {
+            DatePicker(
+                "",
+                selection: $tempDate,
+                in: dateRangeForMode(),
+                displayedComponents: [.date]
+            )
+            .datePickerStyle(.graphical)
+        } else {
+            DatePicker(
+                "",
+                selection: $tempDate,
+                displayedComponents: [.hourAndMinute]
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .frame(height: 150)
+        }
+    }
+
+    private var panelMaximumWidth: CGFloat {
+        isAllDay || mode == .startDate || mode == .endDate ? 340 : 300
     }
 
     private func dateRangeForMode() -> ClosedRange<Date> {
@@ -1288,50 +1301,50 @@ private struct TitleInputSection: View {
     }
 }
 
-// MARK: - Work Info Time Picker Sheet
+// MARK: - Work Info Time Picker Panel
 
-private struct WorkInfoTimePickerSheet<PickerContent: View>: View {
-    @Environment(\.dismiss) private var dismiss
-
+private struct WorkInfoTimePickerPanel<PickerContent: View>: View {
     let title: String
     let onClose: () -> Void
     @ViewBuilder let pickerContent: () -> PickerContent
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
-                        pickerContent()
-                    }
-                    .padding(.vertical, 8)
+        VStack(spacing: 14) {
+            ZStack {
+                Text(title)
+                    .font(TimeNestTheme.Fonts.popupTitle)
+                    .foregroundColor(TimeNestTheme.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity)
+
+                HStack {
+                    Spacer()
+                    ModalHeaderCloseButton(action: onClose)
                 }
             }
-            .navigationTitle(title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    ModalHeaderCloseButton {
-                        onClose()
-                        dismiss()
-                    }
-                }
-            }
+
+            pickerContent()
         }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .frame(maxWidth: 300)
+        .floatingPickerPanelStyle()
         .environment(\.locale, LocalizationManager.shared.calendarLocale)
         .environment(\.calendar, LocalizationManager.shared.calendar)
     }
 }
 
-/// 休息时间选择器（Sheet）
-private struct RestTimePickerSheet: View {
+/// 休息时间选择器浮层。
+private struct RestTimePickerPanel: View {
     @Binding var restTime: Double // 休息时间（小时）
     let title: String
+    let onClose: () -> Void
 
     var body: some View {
-        WorkInfoTimePickerSheet(
+        WorkInfoTimePickerPanel(
             title: title,
-            onClose: {}
+            onClose: onClose
         ) {
             DatePicker(
                 "",
@@ -1343,6 +1356,7 @@ private struct RestTimePickerSheet: View {
             )
             .datePickerStyle(.wheel)
             .labelsHidden()
+            .frame(height: 150)
         }
     }
 
@@ -1388,6 +1402,7 @@ private struct WorkInfoSection: View {
     @Binding var showingRestTimePicker: Bool
     @Binding var workInDate: Date
     @Binding var workOutDate: Date
+    @Binding var editingWorkTime: WorkTimeEditTarget?
     @Binding var eventTitle: String
     var focusedField: FocusState<EditorFocusedField?>.Binding
 
@@ -1397,11 +1412,8 @@ private struct WorkInfoSection: View {
     let transportFeeTitle: String
     let hourlyRateTitle: String
     let currencyUnit: String
-    let timeTitle: String
     let onWorkInTap: () -> Void
     let onWorkOutTap: () -> Void
-
-    @State private var editingWorkTime: WorkTimeEditTarget?
 
     var body: some View {
         VStack(spacing: 14) {
@@ -1415,7 +1427,7 @@ private struct WorkInfoSection: View {
                         workInfoTimeValuePillLabel(formatWorkTime(workInDate))
                     }
                     .buttonStyle(.plain)
-                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
+                    .contentShape(Capsule())
                 }
 
                 workColumn(title: restTimeTitle) {
@@ -1425,7 +1437,7 @@ private struct WorkInfoSection: View {
                         workInfoTimeValuePillLabel(formatRestTime(restTime))
                     }
                     .buttonStyle(.plain)
-                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
+                    .contentShape(Capsule())
                 }
 
                 workColumn(title: workOutTitle) {
@@ -1437,7 +1449,7 @@ private struct WorkInfoSection: View {
                         workInfoTimeValuePillLabel(formatWorkTime(workOutDate))
                     }
                     .buttonStyle(.plain)
-                    .contentShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
+                    .contentShape(Capsule())
                 }
             }
 
@@ -1451,20 +1463,6 @@ private struct WorkInfoSection: View {
         .padding(.horizontal, EventEditorStyle.cardPadding)
         .padding(.vertical, EventEditorStyle.workInfoVerticalPadding)
         .cardContainer()
-        .sheet(item: $editingWorkTime) { target in
-            WorkInfoTimePickerSheet(
-                title: target.pickerTitle(workInTitle: workInTitle, workOutTitle: workOutTitle, timeTitle: timeTitle),
-                onClose: { editingWorkTime = nil }
-            ) {
-                DatePicker(
-                    "",
-                    selection: workTimeBinding(for: target),
-                    displayedComponents: .hourAndMinute
-                )
-                .datePickerStyle(.wheel)
-                .labelsHidden()
-            }
-        }
     }
 
     private func workColumn<Content: View>(title: String, action: @escaping () -> Void, @ViewBuilder content: () -> Content) -> some View {
@@ -1497,17 +1495,7 @@ private struct WorkInfoSection: View {
             .foregroundColor(EventEditorStyle.fieldText)
             .frame(width: EventEditorStyle.workInfoTimePillWidth,
                    height: EventEditorStyle.workInfoTimePillHeight)
-            .background(EventEditorStyle.fieldBackground)
-            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.workInfoTimePillCornerRadius, style: .continuous))
-    }
-
-    private func workTimeBinding(for target: WorkTimeEditTarget) -> Binding<Date> {
-        switch target {
-        case .workIn:
-            return $workInDate
-        case .workOut:
-            return $workOutDate
-        }
+            .glassCapsuleStyle()
     }
 
     private func formatWorkTime(_ date: Date) -> String {

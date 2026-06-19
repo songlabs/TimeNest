@@ -981,6 +981,7 @@ private struct ShiftTimeEditSheet: View {
                             )
                             .labelsHidden()
                             .datePickerStyle(.compact)
+                            .glassCapsuleStyle()
                         }
 
                         HStack {
@@ -997,6 +998,7 @@ private struct ShiftTimeEditSheet: View {
                             )
                             .labelsHidden()
                             .datePickerStyle(.compact)
+                            .glassCapsuleStyle()
                         }
                     }
                     .padding(.vertical, 8)

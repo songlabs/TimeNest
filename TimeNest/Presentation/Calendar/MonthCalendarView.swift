@@ -169,14 +169,10 @@ struct MonthCalendarView: View {
     }
 
     private var yearMonthPickerOverlay: some View {
-        ZStack(alignment: .top) {
-            Color.black.opacity(0.10)
-                .ignoresSafeArea()
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    showingYearMonthPicker = false
-                }
-
+        FloatingPickerOverlay(
+            alignment: .top,
+            onDismiss: { showingYearMonthPicker = false }
+        ) {
             YearMonthPickerView(
                 currentDate: viewModel.selectedDate,
                 onCancel: {
@@ -190,11 +186,8 @@ struct MonthCalendarView: View {
                 }
             )
             .environmentObject(localization)
-            .padding(.horizontal, 16)
             .padding(.top, ShiftCalendarLayout.headerHeight + 8)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .zIndex(1)
     }
 
     private func openStatistics() {

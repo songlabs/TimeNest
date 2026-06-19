@@ -35,6 +35,23 @@ enum TimeNestTheme {
     
     /// 输入框/按钮边框色 - 跟随系统深浅模式自动切换
     static let fieldBorder = Color(.systemGray5)
+
+    /// 年月、日期、时间值控件的轻量玻璃 tint。
+    static let glassCapsuleTint = Color(UIColor { traits in
+        UIColor.systemBlue.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.14 : 0.08)
+    })
+
+    /// 年月、日期、时间值控件的自适应轻边框。
+    static let glassCapsuleBorder = Color(UIColor { traits in
+        UIColor.systemBlue.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.24 : 0.14)
+    })
+
+    static let floatingPickerBackdropOpacity: Double = 0.10
+    static let floatingPickerPanelCornerRadius: CGFloat = 22
+    static let floatingPickerPanelBorder = Color(UIColor { traits in
+        UIColor.white.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.20 : 0.55)
+    })
+    static let floatingPickerPanelShadow = Color.black.opacity(0.16)
     
     // MARK: - Divider Colors
     
@@ -68,6 +85,125 @@ enum TimeNestTheme {
 
     enum Fonts {
         static let popupTitle = Font.headline.weight(.bold)
+    }
+}
+
+extension View {
+    /// Shared material treatment for year, date, and time value capsules.
+    func glassCapsuleStyle() -> some View {
+        modifier(GlassCapsuleModifier())
+    }
+
+    func floatingPickerPanelStyle() -> some View {
+        modifier(FloatingPickerPanelModifier())
+    }
+}
+
+private struct GlassCapsuleModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background {
+                ZStack {
+                    Capsule()
+                        .fill(.thinMaterial)
+                    Capsule()
+                        .fill(TimeNestTheme.glassCapsuleTint)
+                }
+            }
+            .overlay {
+                Capsule()
+                    .stroke(TimeNestTheme.glassCapsuleBorder, lineWidth: 0.6)
+            }
+            .contentShape(Capsule())
+    }
+}
+
+private struct FloatingPickerPanelModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(
+                .ultraThinMaterial,
+                in: RoundedRectangle(
+                    cornerRadius: TimeNestTheme.floatingPickerPanelCornerRadius,
+                    style: .continuous
+                )
+            )
+            .overlay {
+                RoundedRectangle(
+                    cornerRadius: TimeNestTheme.floatingPickerPanelCornerRadius,
+                    style: .continuous
+                )
+                .stroke(TimeNestTheme.floatingPickerPanelBorder, lineWidth: 0.5)
+            }
+            .shadow(
+                color: TimeNestTheme.floatingPickerPanelShadow,
+                radius: 14,
+                x: 0,
+                y: 6
+            )
+    }
+}
+
+struct FloatingPickerOverlay<Content: View>: View {
+    private let alignment: Alignment
+    private let onDismiss: () -> Void
+    private let content: Content
+
+    init(
+        alignment: Alignment = .center,
+        onDismiss: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.alignment = alignment
+        self.onDismiss = onDismiss
+        self.content = content()
+    }
+
+    var body: some View {
+        ZStack(alignment: alignment) {
+            Color.black.opacity(TimeNestTheme.floatingPickerBackdropOpacity)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onDismiss)
+
+            content
+                .padding(.horizontal, 16)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: alignment)
+        .zIndex(1)
+    }
+}
+
+struct FloatingPickerActionRow: View {
+    let cancelTitle: String
+    let confirmTitle: String
+    let confirmColor: Color
+    let onCancel: () -> Void
+    let onConfirm: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(action: onCancel) {
+                Text(cancelTitle)
+                    .font(.system(size: 15, weight: .medium))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+                    .foregroundColor(.secondary)
+                    .background(Color.gray.opacity(0.15))
+                    .cornerRadius(10)
+            }
+
+            Button(action: onConfirm) {
+                Text(confirmTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 42)
+                    .foregroundColor(.white)
+                    .background(confirmColor)
+                    .cornerRadius(10)
+            }
+        }
+        .buttonStyle(.plain)
     }
 }
 
