@@ -721,7 +721,7 @@ struct ShiftTimeSettingsView: View {
                 // Header
                 HStack {
                     Text(localization.localized(.shiftTimeSettingsTitle))
-                        .font(.title.weight(.semibold))
+                        .font(TimeNestTheme.Fonts.popupTitle)
                         .foregroundColor(SettingsModalSurface.primaryText)
                     
                     Spacer()
@@ -845,6 +845,13 @@ struct ShiftTimeSettingsView: View {
 
 
 struct ShiftToggleActiveButtonStyle: ButtonStyle {
+    static let workAction = ShiftToggleActiveButtonStyle(
+        width: 88,
+        height: 32,
+        cornerRadius: 8,
+        font: .subheadline.weight(.semibold)
+    )
+
     var backgroundColor: Color = .blue
     var width: CGFloat = 44
     var height: CGFloat = 28

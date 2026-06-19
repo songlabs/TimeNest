@@ -1,5 +1,23 @@
 import SwiftUI
 
+private enum HolidaySubscriptionLayout {
+    static let sheetCompactHeight: CGFloat = 400
+    static let sheetMaximumHeightRatio: CGFloat = 0.62
+    static let headerBottomPadding: CGFloat = 2
+    static let rowVerticalPadding: CGFloat = 0
+    static let syncButtonWidth: CGFloat = 88
+    static let syncButtonHeight: CGFloat = 32
+}
+
+private struct HolidaySubscriptionCompactDetent: CustomPresentationDetent {
+    static func height(in context: Context) -> CGFloat? {
+        min(
+            HolidaySubscriptionLayout.sheetCompactHeight,
+            context.maxDetentValue * HolidaySubscriptionLayout.sheetMaximumHeightRatio
+        )
+    }
+}
+
 struct HolidaySubscriptionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
@@ -17,78 +35,64 @@ struct HolidaySubscriptionSettingsView: View {
     }
 
     private var customHeaderView: some View {
-        VStack(spacing: 0) {
-            // 返回按钮
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .frame(width: 56, height: 56)
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(Circle())
-                }
-
-                Spacer()
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 12)
-
-            // 标题
+        HStack(spacing: 8) {
             Text(localization.localized(.holidaySubscriptionSettingsTitle))
-                .font(.system(size: 34, weight: .bold))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 32)
-                .padding(.top, 24)
-                .padding(.bottom, 16)
+                .font(TimeNestTheme.Fonts.popupTitle)
+                .foregroundColor(SettingsModalSurface.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+
+            Spacer()
+
+            if viewModel.isSyncing {
+                ProgressView()
+                    .scaleEffect(0.8)
+                    .frame(
+                        width: HolidaySubscriptionLayout.syncButtonWidth,
+                        height: HolidaySubscriptionLayout.syncButtonHeight
+                    )
+            } else {
+                Button {
+                    Task {
+                        let result = await viewModel.syncAll()
+                        await MainActor.run {
+                            if result.isSuccess {
+                                syncResultTitle = localization.localized(.holidaySubscriptionSyncSuccessTitle)
+                                syncResultMessage = localization.localized(.holidaySubscriptionSyncSuccessMessage)
+                                showingSyncResult = true
+                            } else if let error = result.error {
+                                syncResultTitle = localization.localized(.holidaySubscriptionSyncFailedTitle)
+                                syncResultMessage = error.localizedDescription
+                                showingSyncResult = true
+                            }
+                        }
+                    }
+                } label: {
+                    Text(localization.localized(.holidaySubscriptionRefresh))
+                }
+                .buttonStyle(ShiftToggleActiveButtonStyle.workAction)
+                .disabled(viewModel.isSyncing)
+            }
+
+            ModalHeaderCloseButton {
+                dismiss()
+            }
         }
-        .background(Color(.systemBackground))
+        .padding(.horizontal, TimeNestTheme.externalPadding)
+        .padding(.top, TimeNestTheme.externalPadding)
+        .padding(.bottom, HolidaySubscriptionLayout.headerBottomPadding)
+        .background(SettingsModalSurface.background)
     }
 
     var body: some View {
         ZStack {
-            Color(.systemBackground)
+            SettingsModalSurface.background
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 customHeaderView
 
                 List {
-                    // 同步状态和刷新按钮
-                    Section {
-                        HStack {
-                            Spacer()
-
-                            if viewModel.isSyncing {
-                                ProgressView()
-                                    .scaleEffect(0.8)
-                            } else {
-                                Button {
-                                    Task {
-                                        let result = await viewModel.syncAll()
-                                        await MainActor.run {
-                                            if result.isSuccess {
-                                                syncResultTitle = localization.localized(.holidaySubscriptionSyncSuccessTitle)
-                                                syncResultMessage = localization.localized(.holidaySubscriptionSyncSuccessMessage)
-                                                showingSyncResult = true
-                                            } else if let error = result.error {
-                                                syncResultTitle = localization.localized(.holidaySubscriptionSyncFailedTitle)
-                                                syncResultMessage = error.localizedDescription
-                                                showingSyncResult = true
-                                            }
-                                        }
-                                    }
-                                } label: {
-                                    Text(localization.localized(.holidaySubscriptionRefresh))
-                                        .font(.system(size: 17, weight: .semibold))
-                                }
-                                .disabled(viewModel.isSyncing)
-                            }
-                        }
-                    }
-
                     // 订阅列表
                     if viewModel.allAvailableSubscriptions.isEmpty {
                         ContentUnavailableView {
@@ -116,8 +120,6 @@ struct HolidaySubscriptionSettingsView: View {
                                     )
                                 }
                             }
-                        } header: {
-                            Text(localization.localized(.holidaySubscriptionListHeader))
                         } footer: {
                             Text(localization.localized(.holidaySubscriptionMaxLimitNote))
                                 .listRowSeparator(.hidden)
@@ -125,10 +127,12 @@ struct HolidaySubscriptionSettingsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .listSectionSpacing(.compact)
                 .scrollContentBackground(.hidden)
-                .padding(.top, 8)
             }
         }
+        .background(SettingsModalSurface.background)
+        .presentationDetents([.custom(HolidaySubscriptionCompactDetent.self)])
         .navigationBarBackButtonHidden(true)
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
@@ -191,63 +195,14 @@ struct SubscriptionRowView: View {
             .buttonStyle(.plain)
             .frame(width: 28, height: 28)
 
-            // 中间：订阅信息
-            VStack(alignment: .leading, spacing: 4) {
-                Text(localization.localized(subscription.displayNameKey))
-                    .foregroundColor(.primary)
-                    .font(.body)
-
-                // 同步状态
-                HStack(spacing: 4) {
-                    syncStatusIcon
-                    Text(syncStatusText)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
+            Text(localization.localized(subscription.displayNameKey))
+                .foregroundColor(.primary)
+                .font(.body)
 
             Spacer()
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, HolidaySubscriptionLayout.rowVerticalPadding)
         .opacity(canToggle ? 1.0 : 0.6)
-    }
-    
-    private var syncStatusIcon: some View {
-        Image(systemName: iconForStatus(subscription.syncStatus))
-            .foregroundColor(forStatus(subscription.syncStatus))
-    }
-    
-    private func iconForStatus(_ status: SyncStatus) -> String {
-        switch status {
-        case .success:
-            return "checkmark.circle.fill"
-        case .failed:
-            return "exclamationmark.triangle.fill"
-        case .neverSynced:
-            return "arrow.triangle.2.circle.path.circle"
-        }
-    }
-    
-    private func forStatus(_ status: SyncStatus) -> Color {
-        switch status {
-        case .success:
-            return .green
-        case .failed:
-            return .red
-        case .neverSynced:
-            return .orange
-        }
-    }
-    
-    private var syncStatusText: String {
-        switch subscription.syncStatus {
-        case .success:
-            return localization.localized(.holidaySubscriptionSynced)
-        case .failed:
-            return localization.localized(.holidaySubscriptionSyncFailed)
-        case .neverSynced:
-            return localization.localized(.holidaySubscriptionNotSynced)
-        }
     }
 }
 
