@@ -6,6 +6,13 @@ import SwiftUI
 final class LocalizationManager: ObservableObject {
     /// 共享单例
     static let shared = LocalizationManager()
+
+    private let dateFormatterCache: NSCache<NSString, DateFormatter> = {
+        let cache = NSCache<NSString, DateFormatter>()
+        cache.countLimit = 32
+        return cache
+    }()
+
     /// 当前选择的语言代码
     /// 对应 DisplayLanguage 的 rawValue
     @Published var selectedLanguageCode: String
@@ -148,10 +155,19 @@ final class LocalizationManager: ObservableObject {
     /// - Returns: 已绑定 Gregorian Calendar 和 App Locale 的 formatter
     func dateFormatter(dateFormat: String, language: DisplayLanguage? = nil) -> DateFormatter {
         let displayLanguage = language ?? currentLanguage
+        let locale = locale(for: displayLanguage)
+        let calendar = calendar(for: displayLanguage)
+        let cacheKey = "\(locale.identifier)|\(calendar.timeZone.identifier)|\(dateFormat)" as NSString
+
+        if let cachedFormatter = dateFormatterCache.object(forKey: cacheKey) {
+            return cachedFormatter
+        }
+
         let formatter = DateFormatter()
-        formatter.calendar = calendar(for: displayLanguage)
-        formatter.locale = locale(for: displayLanguage)
+        formatter.calendar = calendar
+        formatter.locale = locale
         formatter.dateFormat = dateFormat
+        dateFormatterCache.setObject(formatter, forKey: cacheKey)
         return formatter
     }
 

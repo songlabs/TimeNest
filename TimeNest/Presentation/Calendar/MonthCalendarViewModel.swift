@@ -44,6 +44,7 @@ class MonthCalendarViewModel: ObservableObject {
     private let eventUseCase: EventUseCase
     private var currentSetting: CalendarDisplaySetting
     private let subscriptionManager: HolidaySubscriptionManager
+    private var reloadGeneration = 0
 
     private var languageObserver: AnyCancellable?
     private var subscriptionObserver: AnyCancellable?
@@ -153,6 +154,8 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func reloadMonth() async {
+        reloadGeneration &+= 1
+        let generation = reloadGeneration
         isLoading = true
         errorMessage = nil
 
@@ -167,11 +170,14 @@ class MonthCalendarViewModel: ObservableObject {
                 month: month,
                 setting: currentSetting
             )
+            guard generation == reloadGeneration else { return }
+
             // 完全替换旧的 grid，不要 append / merge
             self.grid = baseGrid
             refreshSelectedDayCell()
 
         } catch {
+            guard generation == reloadGeneration else { return }
             errorMessage = error.localizedDescription
             grid = nil
 

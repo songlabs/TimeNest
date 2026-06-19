@@ -52,6 +52,7 @@ class CalendarDisplayUseCase {
         let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart
         let monthInterval = DateInterval(start: monthStart, end: monthEnd)
         let occurrences = try await eventUseCase.occurrences(in: monthInterval)
+        let occurrencesByDate = Dictionary(grouping: occurrences, by: { $0.occurrenceDate.id })
 
         var cells: [CalendarDayCell] = []
 
@@ -83,7 +84,7 @@ class CalendarDisplayUseCase {
                 holidays = []
             }
 
-            let dayEvents = occurrences.filter { $0.occurrenceDate.id == dateOnly.id }
+            let dayEvents = occurrencesByDate[dateOnly.id] ?? []
 
             cells.append(CalendarDayCell(
                 id: dateOnly.id,

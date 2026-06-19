@@ -28,7 +28,7 @@ Current features:
 - Holiday subscriptions for Japan, China, Korea, and the United States
 - Language settings for Japanese, Simplified Chinese, English, Korean, and system mode
 - Local-first data handling
-- Manual TimeNest file import and export
+- Shift templates, work-time records, and work statistics
 
 - Release Notes: Initial TestFlight/App Store candidate with local calendar views, event management, holiday subscriptions, multilingual resources, and local-first data handling.
 - Review Notes: TimeNest does not require account login. Holiday subscription sync uses public HTTPS ICS URLs selected in the app. The app can launch and manage local events offline.
@@ -51,7 +51,7 @@ TimeNest は、日々の予定を管理するためのローカル優先カレ�
 - 日本、中国、韓国、米国の祝日購読
 - 日本語、簡体字中国語、英語、韓国語、システム言語設定
 - ローカル優先のデータ管理
-- TimeNest ファイルの手動インポート / エクスポート
+- シフト、勤務時間記録、勤務統計
 
 - Release Notes: ローカルカレンダー表示、予定管理、祝日購読、多言語リソース、ローカル優先のデータ管理を含む初回候補版です。
 - Review Notes: ログインは不要です。祝日同期は App 内で選択した公開 HTTPS ICS URL を使用します。オフラインでも起動とローカル予定管理が可能です。
@@ -74,7 +74,7 @@ TimeNest 是一款本地优先的日历与日程管理 App。
 - 日本、中国、韩国、美国节假日订阅
 - 日语、简体中文、英语、韩语和系统语言设置
 - 本地优先的数据处理方式
-- TimeNest 文件手动导入 / 导出
+- 班次、工时记录与工作统计
 
 - Release Notes: 初始候选版本，包含本地日历视图、日程管理、节假日订阅、多语言资源和本地优先数据处理。
 - Review Notes: TimeNest 不需要账号登录。节假日同步使用 App 内选择的公开 HTTPS ICS URL。App 可离线启动并管理本地日程。
@@ -97,7 +97,7 @@ TimeNest는 일상 일정을 관리하기 위한 로컬 우선 캘린더 앱입�
 - 일본, 중국, 한국, 미국 공휴일 구독
 - 일본어, 중국어 간체, 영어, 한국어 및 시스템 언어 설정
 - 로컬 우선 데이터 처리
-- TimeNest 파일 수동 가져오기 / 내보내기
+- 교대 근무, 근무 시간 기록 및 근무 통계
 
 - Release Notes: 로컬 캘린더 보기, 일정 관리, 공휴일 구독, 다국어 리소스, 로컬 우선 데이터 처리를 포함한 초기 후보 버전입니다.
 - Review Notes: TimeNest는 로그인 없이 사용할 수 있습니다. 공휴일 동기화는 앱에서 선택한 공개 HTTPS ICS URL을 사용합니다. 오프라인에서도 실행과 로컬 일정 관리가 가능합니다.

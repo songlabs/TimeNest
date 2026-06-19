@@ -64,6 +64,8 @@ class EventUseCase {
 
     func occurrences(in range: DateInterval) async throws -> [EventOccurrence] {
         let events = try await repository.events(in: range)
+        let calendar = Calendar(identifier: .gregorian)
+
         return events.map { event in
             let isWorkClockEvent =
                 WorkClockTitleMatcher.isClockInTitle(event.title) ||
@@ -90,7 +92,6 @@ class EventUseCase {
             )
         }
         .sorted { lhs, rhs in
-            let calendar = Calendar(identifier: .gregorian)
             let leftDay = calendar.startOfDay(for: lhs.workDate)
             let rightDay = calendar.startOfDay(for: rhs.workDate)
             if leftDay != rightDay { return leftDay < rightDay }

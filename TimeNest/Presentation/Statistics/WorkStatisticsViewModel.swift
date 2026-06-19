@@ -169,6 +169,7 @@ class WorkStatisticsViewModel: ObservableObject {
             clockInsByDay: legacyClockInsByDay,
             clockOutsByDay: legacyClockOutsByDay
         )
+        let selectedRange = statisticsRange()
 
         let completeSessions = (Array(sessions.values) + legacyGroups).compactMap { group -> (day: Date, clockIn: CalendarEvent, clockOut: CalendarEvent, inTime: Date, outTime: Date)? in
             guard let clockIn = group.clockIn, let clockOut = group.clockOut else { return nil }
@@ -176,7 +177,7 @@ class WorkStatisticsViewModel: ObservableObject {
             let outTime = effectiveClockOutTime(for: clockOut, clockInTime: inTime)
             guard outTime > inTime else { return nil }
             let day = calendar.startOfDay(for: clockIn.workInfo?.workDate ?? clockOut.workInfo?.workDate ?? inTime)
-            guard statisticsRange().contains(day) else { return nil }
+            guard selectedRange.contains(day) else { return nil }
             return (day, clockIn, clockOut, inTime, outTime)
         }.sorted {
             if $0.day != $1.day { return $0.day < $1.day }

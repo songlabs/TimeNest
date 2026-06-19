@@ -31,7 +31,7 @@ Test these modes from Settings:
 
 For each language:
 
-- Verify tab titles, settings rows, buttons, alerts, holiday subscription screens, event editor, and file sharing text.
+- Verify footer titles, settings rows, buttons, alerts, holiday subscription screens, event editor, statistics, and shift-entry text.
 - Verify month titles and weekday headers.
 - Verify view mode labels for month / week / day.
 - Verify no obvious untranslated placeholder keys appear.
@@ -75,7 +75,7 @@ Test at least:
 - Current Pro-size iPhone simulator or device.
 - Large iPhone simulator or device.
 
-Check calendar grid, toolbar, settings rows, event editor, alerts, and file sharing screens for clipping or inaccessible controls.
+Check calendar grid, toolbar, settings rows, event editor, statistics, shift entry, alerts, and the ad banner for clipping or inaccessible controls.
 
 ## 8. Dark / Light Mode
 
@@ -98,6 +98,6 @@ Watch for crashes or hangs when:
 - Switching languages repeatedly.
 - Rapidly changing month / week / day views.
 - Syncing holiday sources with poor network.
-- Importing an invalid TimeNest file.
+- Loading or failing to load the calendar banner ad.
 - Deleting events and immediately navigating away.
 - Entering empty or malformed event titles and URLs.

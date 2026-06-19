@@ -758,14 +758,28 @@ struct DayCellView: View {
     }
 
     private var eventLabelRows: [EventLabelRow] {
-        let clockIn = cell.events.first(where: \.isClockInEvent)
-        let clockOut = cell.events.first(where: \.isClockOutEvent)
-        let shiftRows = cell.events
-            .filter { !$0.isWorkClockEvent && $0.shiftTemplateID != nil }
-            .map(EventLabelRow.event)
-        let normalRows = cell.events
-            .filter { !$0.isWorkClockEvent && $0.shiftTemplateID == nil }
-            .map(EventLabelRow.event)
+        var clockIn: EventOccurrence?
+        var clockOut: EventOccurrence?
+        var shiftRows: [EventLabelRow] = []
+        var normalRows: [EventLabelRow] = []
+
+        for event in cell.events {
+            if event.isClockInEvent {
+                if clockIn == nil { clockIn = event }
+            }
+            if event.isClockOutEvent {
+                if clockOut == nil { clockOut = event }
+            }
+            if event.isWorkClockEvent {
+                continue
+            }
+            if event.shiftTemplateID != nil {
+                shiftRows.append(.event(event))
+            } else {
+                normalRows.append(.event(event))
+            }
+        }
+
         let workClockRows: [EventLabelRow] = (clockIn != nil || clockOut != nil)
             ? [.workClock(clockIn: clockIn, clockOut: clockOut)]
             : []
@@ -868,9 +882,7 @@ struct DayCellView: View {
     }
 
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
     }
 
     private var cellBackgroundColor: Color {

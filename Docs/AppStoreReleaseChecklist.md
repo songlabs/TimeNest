@@ -27,20 +27,21 @@
 ## 3. Privacy Manifest
 
 - Confirm `TimeNest/PrivacyInfo.xcprivacy` is included in the app target.
-- Current repository implementation does not include advertising, analytics, tracking SDKs, account sign-in, or cloud sync.
+- Current repository implementation includes Google Mobile Ads for a calendar banner. It does not include account sign-in or cloud sync.
 - Current repository implementation uses local storage and `UserDefaults` for local settings and state.
-- If future builds add SDKs, cloud sync, push notifications, accounts, crash reporting, or analytics, update the Privacy Manifest before upload.
+- Confirm the submitted Google Mobile Ads SDK version contributes all required privacy-manifest declarations, and review the app's own manifest against the production ad configuration.
+- If future builds add cloud sync, push notifications, accounts, crash reporting, or analytics, update the Privacy Manifest before upload.
 
 ## 4. App Privacy Labels
 
-Suggested draft for the current implementation:
+Do not finalize these answers until the production Google Mobile Ads configuration and consent flow have been reviewed:
 
-- Tracking: No.
-- Data Used to Track You: None.
-- Data Linked to You: None, based on the current repository implementation.
-- Data Not Linked to You: None, based on the current repository implementation.
+- Tracking: confirm from the submitted ad configuration and Google Mobile Ads data-use documentation.
+- Data Used to Track You: confirm from the submitted ad configuration.
+- Data Linked to You / Data Not Linked to You: include every category used by the advertising SDK or app.
 - Local-only data: user-created schedules, settings, holiday subscription URLs, and cached holiday data are stored locally by default.
 - Network access: holiday subscription sync accesses public HTTPS ICS URLs selected or confirmed by the user.
+- Advertising network access: the calendar banner can contact Google Mobile Ads when ads are enabled.
 
 Reconfirm these labels if any implementation changes before submission.
 
@@ -54,7 +55,7 @@ Prepare screenshots that accurately match the submitted build:
 - Event creation or editing.
 - Holiday subscription settings.
 - Language / settings screen.
-- Optional file import/export screen if included in release messaging.
+- Shift entry and work statistics, if included in release messaging.
 
 Avoid screenshots that show placeholder URLs, debug text, simulator artifacts, or unimplemented features as if they were complete.
 
@@ -85,7 +86,8 @@ Draft review notes:
 - The app launches without network access and stores schedules locally by default.
 - Holiday subscription sync uses public HTTPS ICS URLs selected inside the app.
 - If holiday sync is tested, use a supported region and recommended source from the holiday settings screen.
-- No paid content, ads, analytics, tracking, or cloud sync are included in the current build.
+- Calendar banner ads are included when `AdConfiguration.isEnabled` is `true`; there is currently no in-app remove-ads purchase flow.
+- Confirm analytics and tracking statements against the submitted Google Mobile Ads configuration.
 
 ## 10. Final Manual Checks Before Submit
 

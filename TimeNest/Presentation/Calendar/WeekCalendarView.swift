@@ -426,9 +426,7 @@ struct WeekTimeAxisView: View {
     }
 
     private func formatTime(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: date)
+        LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
     }
 
     private func hourID(_ hour: Int) -> String {

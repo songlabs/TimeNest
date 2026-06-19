@@ -1,67 +1,104 @@
 # TimeNest
 
-TimeNest is a local-first iPhone calendar app for managing daily schedules and subscribed public holidays. It is built with Swift, SwiftUI, and Apple-native local storage patterns for a small, maintainable MVP.
+TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It combines month, week, and day schedule views with shift and work-time records, public-holiday subscriptions, and an in-app language setting. User-created calendar data is stored on the device with SwiftData.
 
-## Main Features
+## Features
 
-- **Month / Week / Day calendar views**: browse schedules from a monthly grid, a 7-day week view, or a single-day timeline.
-- **Schedule management**: create, edit, and delete local calendar events.
-- **Holiday subscriptions**: enable Japan, China, Korea, and United States holiday regions and sync public ICS feeds selected by the user.
-- **Multilingual UI**: Japanese, Simplified Chinese, English, and Korean resources are included.
-- **Local-first design**: schedule data, display settings, holiday subscriptions, and holiday cache data are stored locally by default.
-- **File sharing**: export and import TimeNest data files for manual backup or transfer.
+- Month, week, and day calendar views with shared navigation and footer controls.
+- Create, edit, and delete timed or all-day events.
+- Shift templates, shift entry, same-day shift replacement, and shift deletion.
+- Clock-in, clock-out, rest time, transport fee, and hourly-rate records.
+- Work statistics for a selected date range.
+- Public-holiday subscriptions and ICS synchronization for Japan, China, Korea, and the United States.
+- Japanese, Simplified Chinese, English, and Korean UI resources, plus a system-language mode.
+- Light, dark, and system appearance settings.
+- A calendar banner-ad container backed by Google Mobile Ads.
 
-## Supported Languages
+The current codebase does not implement an in-app purchase or other user-facing remove-ads flow. `AdConfiguration` controls whether the banner is compiled into the calendar UI, and the checked-in configuration uses Google's test ad identifiers. Production ad identifiers and the intended ad-removal policy must be finalized before release.
 
-- Japanese (`ja`)
-- Simplified Chinese (`zh-Hans`)
-- English (`en`)
-- Korean (`ko`)
-- System language mode is available in the app settings.
+## Technology
 
-## Development Environment
-
-- Xcode 15 or later
-- iOS 17.0 or later
 - Swift 5.9
-- macOS with iOS Simulator for local build and test verification
+- SwiftUI
+- SwiftData local persistence
+- iOS 17.0 or later
+- Tuist project description with a checked-in Xcode project/workspace
+- Google Mobile Ads through Swift Package Manager
 
-## Build
+## Local Build
+
+Requirements:
+
+- Xcode with an iOS 17 or later SDK
+- A simulator installed locally
+- Network access when Swift Package Manager first resolves Google Mobile Ads
+
+The repository includes the `TimeNest` scheme. A simulator build can be run with:
 
 ```bash
 xcodebuild \
-  -project TimeNest.xcodeproj \
   -scheme TimeNest \
-  -destination 'generic/platform=iOS' \
-  clean build
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5' \
+  build
 ```
 
-## Test
+Replace the destination with an installed simulator when necessary. Signing, Bundle ID, target, and scheme settings should be managed in Xcode or `Project.swift`; release credentials are not stored in this README.
 
-```bash
-xcodebuild \
-  -project TimeNest.xcodeproj \
-  -scheme TimeNest \
-  -destination 'platform=iOS Simulator,name=iPhone 17 Pro' \
-  test
+## Project Layout
+
+```text
+TimeNest/
+  App/                 App entry point and root view
+  Application/         Calendar, event, holiday, reminder, and import/export use cases
+  Domain/              Models and business rules
+  Infrastructure/      SwiftData, notifications, ICS, holiday cache, ads, and adapters
+  Presentation/        Calendar, editor, settings, statistics, day detail, and ad views
+  Resources/           App icons and localized strings
+  Shared/              Date, localization, notification, and theme utilities
+Tests/TimeNestTests/    Unit-test sources
+Docs/                  App Store, TestFlight, metadata, and privacy drafts
+Project.swift          Tuist project definition
 ```
 
-If the selected simulator is not installed, choose an available iOS Simulator from Xcode and replace the destination.
+## Localization
 
-## Privacy Summary
+UI strings are maintained in all four `Localizable.strings` files:
 
-TimeNest is designed as a local-first calendar app. User-created schedules, local settings, holiday subscription URLs, and cached holiday data are stored on the device. The app does not include advertising, analytics, tracking SDKs, account sign-in, or cloud sync in the current repository implementation.
+- `TimeNest/Resources/ja.lproj/Localizable.strings`
+- `TimeNest/Resources/zh-Hans.lproj/Localizable.strings`
+- `TimeNest/Resources/en.lproj/Localizable.strings`
+- `TimeNest/Resources/ko.lproj/Localizable.strings`
 
-Holiday sync accesses public HTTPS ICS URLs when the user enables or tests a holiday subscription. The final App Store privacy policy URL and App Privacy Labels must be reviewed before release.
+When adding or changing UI text:
 
-## App Store Release Notes
+1. Reuse an existing `LocalizedString` key when it has the same meaning.
+2. Add every new key to `Localizable.swift` and all four language files in the same change.
+3. Resolve app UI text through `LocalizationManager` so the in-app language selection is respected.
+4. Do not translate user-entered event titles or customized shift names.
+5. Keep holiday display names region-native: Japanese holidays in Japanese, Chinese holidays in Chinese, Korean holidays in Korean, and US holidays in English.
 
-Before submitting to App Store Connect, confirm:
+## Data And Privacy
 
-- Bundle ID, signing team, certificates, and provisioning profiles.
-- App icon, version, build number, screenshots, subtitle, description, keywords, support URL, and privacy policy URL.
-- Privacy Manifest and App Privacy Labels match the current implementation.
-- TestFlight has covered fresh install, upgrade install, offline behavior, invalid ICS URL handling, multilingual UI, dark/light mode, and small/large screens.
-- Placeholder or disabled feature entries are either intentionally kept as MVP limitations or removed before production release.
+- Events and work information are stored locally with SwiftData.
+- Display settings and holiday-subscription choices are stored locally in app preferences.
+- Downloaded holiday data is cached on the device.
+- Holiday synchronization sends HTTPS requests to the public ICS provider selected in Settings.
+- Banner ads use Google Mobile Ads when `AdConfiguration.isEnabled` is `true`; SDK behavior and App Store privacy disclosures must be reviewed against the production configuration.
+- The app has no account sign-in or cloud synchronization in the current implementation.
 
-See `Docs/AppStoreReleaseChecklist.md`, `Docs/TestFlightChecklist.md`, `Docs/PrivacyPolicyDraft.md`, and `Docs/AppStoreMetadataDraft.md` for release preparation drafts.
+Uninstalling the app removes its local container under normal iOS behavior. Existing SwiftData entities and decoding compatibility must be treated as user-data migration code and should not be removed as ordinary cleanup.
+
+## App Store Release Checklist
+
+Before submission, confirm:
+
+- Replace Google test ad identifiers with the approved production configuration, or disable ads intentionally.
+- Decide and document the remove-ads policy; no purchase flow currently exists.
+- Validate the Privacy Manifest, App Privacy answers, privacy-policy URL, and Google Mobile Ads disclosures together.
+- Verify Bundle ID, signing, version/build numbers, icons, screenshots, metadata, support URL, and privacy-policy URL.
+- Verify fresh install and upgrade install behavior, especially SwiftData compatibility.
+- Verify month/week/day navigation, event editing, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
+- Verify all four app languages, system-language mode, week-start settings, and light/dark appearance.
+- Verify offline behavior and invalid or unavailable ICS sources.
+
+Additional release drafts are in `Docs/AppStoreReleaseChecklist.md`, `Docs/TestFlightChecklist.md`, `Docs/PrivacyPolicyDraft.md`, and `Docs/AppStoreMetadataDraft.md`.
