@@ -33,16 +33,27 @@ struct CalendarHeaderView: View {
                 navigationButton(icon: "chevron.left", action: onPrevious)
 
                 Button(action: onTitleTapped) {
-                    Text(title)
-                        .font(titleFont)
-                        .foregroundColor(ShiftCalendarColors.primaryText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(titleMinimumScaleFactor)
-                        .allowsTightening(true)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(spacing: 7) {
+                        Text(title)
+                            .font(titleFont)
+                            .lineLimit(1)
+                            .minimumScaleFactor(titleMinimumScaleFactor)
+                            .allowsTightening(true)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundColor(ShiftCalendarColors.primaryBlue)
+                    }
+                    .foregroundColor(ShiftCalendarColors.primaryText)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(ShiftCalendarColors.primaryBlue.opacity(0.10))
+                    .clipShape(Capsule())
                 }
                 .buttonStyle(PlainButtonStyle())
-                .contentShape(Rectangle())
+                .contentShape(Capsule())
+                .accessibilityLabel(Text(localization.localized(.selectYearMonth)))
 
                 navigationButton(icon: "chevron.right", action: onNext)
             }
@@ -101,6 +112,8 @@ struct CalendarHeaderView: View {
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundColor(ShiftCalendarColors.primaryBlue)
                 .frame(width: 36, height: 36)
+                .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
+                .clipShape(Circle())
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel(Text(localization.localized(.moreMenu)))

@@ -55,6 +55,7 @@ struct MonthCalendarView: View {
                         }
                     }
                     .layoutPriority(1)
+                    .simultaneousGesture(calendarSwipeGesture)
 
                 if viewModel.isShiftInputMode && viewModel.displayMode == .month {
                     VStack(spacing: 0) {
@@ -67,20 +68,16 @@ struct MonthCalendarView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+
+            if showingYearMonthPicker {
+                yearMonthPickerOverlay
+            }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.isShiftInputMode)
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
             }
-        }
-        .sheet(isPresented: $showingYearMonthPicker) {
-            YearMonthPickerView(currentDate: viewModel.selectedDate) { year, month in
-                Task {
-                    await viewModel.goToMonth(year: year, month: month)
-                }
-            }
-            .environmentObject(localization)
         }
         .sheet(isPresented: $viewModel.showingEventEditor) {
             EventEditorView(
@@ -169,6 +166,35 @@ struct MonthCalendarView: View {
                 )
             }
         }
+    }
+
+    private var yearMonthPickerOverlay: some View {
+        ZStack(alignment: .top) {
+            Color.black.opacity(0.10)
+                .ignoresSafeArea()
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    showingYearMonthPicker = false
+                }
+
+            YearMonthPickerView(
+                currentDate: viewModel.selectedDate,
+                onCancel: {
+                    showingYearMonthPicker = false
+                },
+                onSelect: { year, month in
+                    showingYearMonthPicker = false
+                    Task {
+                        await viewModel.goToMonth(year: year, month: month)
+                    }
+                }
+            )
+            .environmentObject(localization)
+            .padding(.horizontal, 16)
+            .padding(.top, ShiftCalendarLayout.headerHeight + 8)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .zIndex(1)
     }
 
     private func openStatistics() {
@@ -396,6 +422,25 @@ struct MonthCalendarView: View {
         case .day:
             viewModel.dayTitle()
         }
+    }
+
+    /// 日历内容区横向滑动：保留按钮导航，并避免将纵向滚动误判为切换。
+    private var calendarSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 50)
+            .onEnded { value in
+                let horizontalDistance = value.translation.width
+                let verticalDistance = value.translation.height
+
+                guard abs(horizontalDistance) > abs(verticalDistance) * 1.2 else {
+                    return
+                }
+
+                if horizontalDistance < 0 {
+                    handleNext()
+                } else {
+                    handlePrevious()
+                }
+            }
     }
 
     /// 处理上一按钮点击
