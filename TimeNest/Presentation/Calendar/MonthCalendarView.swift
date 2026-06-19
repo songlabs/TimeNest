@@ -57,8 +57,11 @@ struct MonthCalendarView: View {
                     .layoutPriority(1)
 
                 if viewModel.isShiftInputMode && viewModel.displayMode == .month {
-                    shiftInputPanel
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    VStack(spacing: 0) {
+                        CalendarAdBannerContainer()
+                        shiftInputPanel
+                    }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 } else {
                     calendarBottomSection
                 }
