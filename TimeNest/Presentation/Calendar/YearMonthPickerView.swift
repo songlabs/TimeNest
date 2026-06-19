@@ -78,7 +78,7 @@ struct YearMonthPickerView: View {
             
             FloatingPickerActionRow(
                 cancelTitle: localization.localized(.cancel),
-                confirmTitle: localization.localized(.ok),
+                confirmTitle: localization.localized(.done),
                 confirmColor: ShiftCalendarColors.primaryBlue,
                 onCancel: onCancel,
                 onConfirm: { onSelect(selectedYear, selectedMonth) }

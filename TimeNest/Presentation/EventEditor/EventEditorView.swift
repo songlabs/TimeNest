@@ -378,28 +378,32 @@ struct EventEditorView: View {
                 RestTimePickerPanel(
                     restTime: $restTime,
                     title: localization.localized(.editorRestTime),
-                    onClose: { showingRestTimePicker = false }
+                    cancelTitle: localization.localized(.cancel),
+                    doneTitle: localization.localized(.done),
+                    onCancel: { showingRestTimePicker = false },
+                    onDone: { showingRestTimePicker = false }
                 )
             }
         } else if let target = editingWorkTime {
             FloatingPickerOverlay(onDismiss: { editingWorkTime = nil }) {
-                WorkInfoTimePickerPanel(
+                FloatingDatePickerPanel(
                     title: target.pickerTitle(
                         workInTitle: localization.localized(.editorWorkIn),
                         workOutTitle: localization.localized(.editorWorkOut),
                         timeTitle: localization.localized(.editorTime)
                     ),
-                    onClose: { editingWorkTime = nil }
-                ) {
-                    DatePicker(
-                        "",
-                        selection: workTimeBinding(for: target),
-                        displayedComponents: .hourAndMinute
-                    )
-                    .datePickerStyle(.wheel)
-                    .labelsHidden()
-                    .frame(height: 150)
-                }
+                    initialSelection: workTime(for: target),
+                    cancelTitle: localization.localized(.cancel),
+                    doneTitle: localization.localized(.done),
+                    kind: .time,
+                    confirmColor: ShiftCalendarColors.primaryBlue,
+                    onCancel: { editingWorkTime = nil },
+                    onDone: { selection in
+                        setWorkTime(selection, for: target)
+                        editingWorkTime = nil
+                    }
+                )
+                .id(target)
             }
         }
     }
@@ -436,12 +440,21 @@ struct EventEditorView: View {
         }
     }
 
-    private func workTimeBinding(for target: WorkTimeEditTarget) -> Binding<Date> {
+    private func workTime(for target: WorkTimeEditTarget) -> Date {
         switch target {
         case .workIn:
-            return $workInDate
+            return workInDate
         case .workOut:
-            return $workOutDate
+            return workOutDate
+        }
+    }
+
+    private func setWorkTime(_ selection: Date, for target: WorkTimeEditTarget) {
+        switch target {
+        case .workIn:
+            workInDate = selection
+        case .workOut:
+            workOutDate = selection
         }
     }
 
@@ -1301,63 +1314,29 @@ private struct TitleInputSection: View {
     }
 }
 
-// MARK: - Work Info Time Picker Panel
-
-private struct WorkInfoTimePickerPanel<PickerContent: View>: View {
-    let title: String
-    let onClose: () -> Void
-    @ViewBuilder let pickerContent: () -> PickerContent
-
-    var body: some View {
-        VStack(spacing: 14) {
-            ZStack {
-                Text(title)
-                    .font(TimeNestTheme.Fonts.popupTitle)
-                    .foregroundColor(TimeNestTheme.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity)
-
-                HStack {
-                    Spacer()
-                    ModalHeaderCloseButton(action: onClose)
-                }
-            }
-
-            pickerContent()
-        }
-        .padding(18)
-        .frame(maxWidth: .infinity)
-        .frame(maxWidth: 300)
-        .floatingPickerPanelStyle()
-        .environment(\.locale, LocalizationManager.shared.calendarLocale)
-        .environment(\.calendar, LocalizationManager.shared.calendar)
-    }
-}
-
 /// 休息时间选择器浮层。
 private struct RestTimePickerPanel: View {
     @Binding var restTime: Double // 休息时间（小时）
     let title: String
-    let onClose: () -> Void
+    let cancelTitle: String
+    let doneTitle: String
+    let onCancel: () -> Void
+    let onDone: () -> Void
 
     var body: some View {
-        WorkInfoTimePickerPanel(
+        FloatingDatePickerPanel(
             title: title,
-            onClose: onClose
-        ) {
-            DatePicker(
-                "",
-                selection: Binding(
-                    get: { restTimeToDuration(restTime) },
-                    set: { restTime = durationToRestTime($0) }
-                ),
-                displayedComponents: [.hourAndMinute]
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .frame(height: 150)
-        }
+            initialSelection: restTimeToDuration(restTime),
+            cancelTitle: cancelTitle,
+            doneTitle: doneTitle,
+            kind: .time,
+            confirmColor: ShiftCalendarColors.primaryBlue,
+            onCancel: onCancel,
+            onDone: { selection in
+                restTime = durationToRestTime(selection)
+                onDone()
+            }
+        )
     }
 
     private func restTimeToDuration(_ hours: Double) -> Date {

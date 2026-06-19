@@ -34,17 +34,8 @@ struct WorkStatisticsView: View {
         .presentationDragIndicator(.hidden)
         .presentationBackground(WorkStatisticsColors.sheetBackground)
         .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
-        .sheet(isPresented: $viewModel.showStartDatePicker) {
-            datePickerSheet(
-                titleKey: .startDateMonth,
-                selection: $viewModel.startDate
-            )
-        }
-        .sheet(isPresented: $viewModel.showEndDatePicker) {
-            datePickerSheet(
-                titleKey: .endDateMonth,
-                selection: $viewModel.endDate
-            )
+        .overlay {
+            datePickerOverlay
         }
     }
 
@@ -249,32 +240,50 @@ struct WorkStatisticsView: View {
         .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
     }
 
-    // MARK: - Date Picker
+    // MARK: - Date Picker Overlay
 
-    private func datePickerSheet(titleKey: LocalizedString, selection: Binding<Date>) -> some View {
-        NavigationStack {
-            DatePicker(
-                localizedKey(titleKey),
-                selection: selection,
-                displayedComponents: [.date]
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .padding()
-            .navigationTitle(localizedKey(titleKey))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    ModalHeaderCloseButton {
-                        viewModel.showStartDatePicker = false
-                        viewModel.showEndDatePicker = false
+    @ViewBuilder
+    private var datePickerOverlay: some View {
+        if viewModel.showStartDatePicker {
+            FloatingPickerOverlay(onDismiss: dismissDatePicker) {
+                FloatingDatePickerPanel(
+                    title: localizedKey(.startDateMonth),
+                    initialSelection: viewModel.startDate,
+                    cancelTitle: localizedKey(.cancel),
+                    doneTitle: localizedKey(.done),
+                    kind: .date,
+                    confirmColor: ShiftCalendarColors.primaryBlue,
+                    onCancel: dismissDatePicker,
+                    onDone: { selection in
+                        viewModel.startDate = selection
+                        dismissDatePicker()
                     }
-                }
+                )
+                .id("statistics-start-date")
+            }
+        } else if viewModel.showEndDatePicker {
+            FloatingPickerOverlay(onDismiss: dismissDatePicker) {
+                FloatingDatePickerPanel(
+                    title: localizedKey(.endDateMonth),
+                    initialSelection: viewModel.endDate,
+                    cancelTitle: localizedKey(.cancel),
+                    doneTitle: localizedKey(.done),
+                    kind: .date,
+                    confirmColor: ShiftCalendarColors.primaryBlue,
+                    onCancel: dismissDatePicker,
+                    onDone: { selection in
+                        viewModel.endDate = selection
+                        dismissDatePicker()
+                    }
+                )
+                .id("statistics-end-date")
             }
         }
-        .environment(\.locale, localization.calendarLocale)
-        .environment(\.calendar, localization.calendar)
-        .presentationDetents([.height(320)])
+    }
+
+    private func dismissDatePicker() {
+        viewModel.showStartDatePicker = false
+        viewModel.showEndDatePicker = false
     }
 
     private func localizedKey(_ key: LocalizedString) -> String {

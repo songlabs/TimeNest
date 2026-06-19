@@ -911,6 +911,11 @@ private struct ShiftTimeSettingsRow: View {
     }
 }
 
+private enum ShiftTimePickerTarget: Hashable {
+    case start
+    case end
+}
+
 private struct ShiftTimeEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
@@ -924,6 +929,7 @@ private struct ShiftTimeEditSheet: View {
     @State private var color: Color
     @State private var startTime: String
     @State private var endTime: String
+    @State private var editingTime: ShiftTimePickerTarget?
     private let initialDisplayName: String
     private let initialUsesLocalizedDefaultName: Bool
 
@@ -947,81 +953,129 @@ private struct ShiftTimeEditSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                // 标题（与新規予定一致的 placeholder 样式）
-                Section {
-                    TextField(localization.localized(.editorTitle), text: $displayName)
-                        .textFieldStyle(.plain)
-                }
-
-                // 颜色
-                Section {
-                    HStack {
-                        Text(localization.localized(.shiftTimeColor))
-                        Spacer()
-                        ColorPicker("", selection: $color)
+        ZStack {
+            NavigationStack {
+                Form {
+                    // 标题（与新規予定一致的 placeholder 样式）
+                    Section {
+                        TextField(localization.localized(.editorTitle), text: $displayName)
+                            .textFieldStyle(.plain)
                     }
-                }
 
-                // 时间
-                Section {
-                    VStack(alignment: .leading, spacing: 12) {
+                    // 颜色
+                    Section {
                         HStack {
-                            Text(localization.localized(.shiftTimeStartTime))
-                                .font(.subheadline)
+                            Text(localization.localized(.shiftTimeColor))
                             Spacer()
-                            DatePicker(
-                                "",
-                                selection: Binding(
-                                    get: { ShiftTimeTemplate.date(from: startTime) },
-                                    set: { startTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
-                                ),
-                                displayedComponents: .hourAndMinute
-                            )
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            .glassCapsuleStyle()
-                        }
-
-                        HStack {
-                            Text(localization.localized(.shiftTimeEndTime))
-                                .font(.subheadline)
-                            Spacer()
-                            DatePicker(
-                                "",
-                                selection: Binding(
-                                    get: { ShiftTimeTemplate.date(from: endTime) },
-                                    set: { endTime = ShiftTimeTemplate.normalizedTimeString(from: $0) }
-                                ),
-                                displayedComponents: .hourAndMinute
-                            )
-                            .labelsHidden()
-                            .datePickerStyle(.compact)
-                            .glassCapsuleStyle()
+                            ColorPicker("", selection: $color)
                         }
                     }
-                    .padding(.vertical, 8)
-                } footer: {
-                    Text(localization.localized(.shiftTimeEditFooter))
-                }
-            }
-            .navigationTitle(localization.localized(.shiftTimeEditTitle))
-            .navigationBarTitleDisplayMode(.inline)
-            .navigationBarBackButtonHidden(true)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.localized(.cancel)) {
-                        dismiss()
+
+                    // 时间
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            HStack {
+                                Text(localization.localized(.shiftTimeStartTime))
+                                    .font(.subheadline)
+                                Spacer()
+                                timePickerButton(value: startTime, target: .start)
+                            }
+
+                            HStack {
+                                Text(localization.localized(.shiftTimeEndTime))
+                                    .font(.subheadline)
+                                Spacer()
+                                timePickerButton(value: endTime, target: .end)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    } footer: {
+                        Text(localization.localized(.shiftTimeEditFooter))
                     }
                 }
+                .navigationTitle(localization.localized(.shiftTimeEditTitle))
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarBackButtonHidden(true)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(localization.localized(.cancel)) {
+                            dismiss()
+                        }
+                    }
 
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(localization.localized(.save)) {
-                        save()
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(localization.localized(.save)) {
+                            save()
+                        }
                     }
                 }
             }
+
+            timePickerOverlay
+        }
+    }
+
+    private func timePickerButton(value: String, target: ShiftTimePickerTarget) -> some View {
+        Button {
+            editingTime = target
+        } label: {
+            Text(value)
+                .font(.body.monospacedDigit())
+                .foregroundColor(TimeNestTheme.primaryText)
+                .padding(.horizontal, 12)
+                .frame(height: 32)
+                .glassCapsuleStyle()
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var timePickerOverlay: some View {
+        if let target = editingTime {
+            FloatingPickerOverlay(onDismiss: { editingTime = nil }) {
+                FloatingDatePickerPanel(
+                    title: pickerTitle(for: target),
+                    initialSelection: pickerDate(for: target),
+                    cancelTitle: localization.localized(.cancel),
+                    doneTitle: localization.localized(.done),
+                    kind: .time,
+                    confirmColor: ShiftCalendarColors.primaryBlue,
+                    onCancel: { editingTime = nil },
+                    onDone: { selection in
+                        applyPickerSelection(selection, to: target)
+                        editingTime = nil
+                    }
+                )
+                .id(target)
+            }
+        }
+    }
+
+    private func pickerTitle(for target: ShiftTimePickerTarget) -> String {
+        switch target {
+        case .start:
+            return localization.localized(.shiftTimeStartTime)
+        case .end:
+            return localization.localized(.shiftTimeEndTime)
+        }
+    }
+
+    private func pickerDate(for target: ShiftTimePickerTarget) -> Date {
+        switch target {
+        case .start:
+            return ShiftTimeTemplate.date(from: startTime)
+        case .end:
+            return ShiftTimeTemplate.date(from: endTime)
+        }
+    }
+
+    private func applyPickerSelection(_ selection: Date, to target: ShiftTimePickerTarget) {
+        let normalizedTime = ShiftTimeTemplate.normalizedTimeString(from: selection)
+        switch target {
+        case .start:
+            startTime = normalizedTime
+        case .end:
+            endTime = normalizedTime
         }
     }
 

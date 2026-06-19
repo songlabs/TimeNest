@@ -182,28 +182,129 @@ struct FloatingPickerActionRow: View {
     let onConfirm: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 20) {
             Button(action: onCancel) {
                 Text(cancelTitle)
                     .font(.system(size: 15, weight: .medium))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 42)
+                    .frame(height: 44)
                     .foregroundColor(.secondary)
                     .background(Color.gray.opacity(0.15))
                     .cornerRadius(10)
             }
+            .frame(minWidth: 110, maxWidth: 120)
 
             Button(action: onConfirm) {
                 Text(confirmTitle)
                     .font(.system(size: 15, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 42)
+                    .frame(height: 44)
                     .foregroundColor(.white)
                     .background(confirmColor)
                     .cornerRadius(10)
             }
+            .frame(minWidth: 110, maxWidth: 120)
         }
+        .frame(maxWidth: .infinity)
         .buttonStyle(.plain)
+    }
+}
+
+enum FloatingDatePickerKind: Equatable {
+    case date
+    case time
+}
+
+struct FloatingDatePickerPanel: View {
+    let title: String
+    let cancelTitle: String
+    let doneTitle: String
+    let kind: FloatingDatePickerKind
+    let dateRange: ClosedRange<Date>?
+    let confirmColor: Color
+    let onCancel: () -> Void
+    let onDone: (Date) -> Void
+
+    @State private var selection: Date
+
+    init(
+        title: String,
+        initialSelection: Date,
+        cancelTitle: String,
+        doneTitle: String,
+        kind: FloatingDatePickerKind,
+        dateRange: ClosedRange<Date>? = nil,
+        confirmColor: Color = .accentColor,
+        onCancel: @escaping () -> Void,
+        onDone: @escaping (Date) -> Void
+    ) {
+        self.title = title
+        self.cancelTitle = cancelTitle
+        self.doneTitle = doneTitle
+        self.kind = kind
+        self.dateRange = dateRange
+        self.confirmColor = confirmColor
+        self.onCancel = onCancel
+        self.onDone = onDone
+        _selection = State(initialValue: initialSelection)
+    }
+
+    var body: some View {
+        VStack(spacing: 14) {
+            Text(title)
+                .font(TimeNestTheme.Fonts.popupTitle)
+                .foregroundColor(TimeNestTheme.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            picker
+
+            FloatingPickerActionRow(
+                cancelTitle: cancelTitle,
+                confirmTitle: doneTitle,
+                confirmColor: confirmColor,
+                onCancel: onCancel,
+                onConfirm: { onDone(selection) }
+            )
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity)
+        .frame(maxWidth: kind == .date ? 340 : 300)
+        .floatingPickerPanelStyle()
+        .environment(\.locale, LocalizationManager.shared.calendarLocale)
+        .environment(\.calendar, LocalizationManager.shared.calendar)
+    }
+
+    @ViewBuilder
+    private var picker: some View {
+        switch kind {
+        case .date:
+            if let dateRange {
+                DatePicker(
+                    "",
+                    selection: $selection,
+                    in: dateRange,
+                    displayedComponents: [.date]
+                )
+                .datePickerStyle(.graphical)
+            } else {
+                DatePicker(
+                    "",
+                    selection: $selection,
+                    displayedComponents: [.date]
+                )
+                .datePickerStyle(.graphical)
+            }
+        case .time:
+            DatePicker(
+                "",
+                selection: $selection,
+                displayedComponents: [.hourAndMinute]
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .frame(height: 150)
+        }
     }
 }
 
