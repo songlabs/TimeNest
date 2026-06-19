@@ -154,9 +154,9 @@
 "holiday_subscription.no_url" = "未設定";
 
 /* Holiday Source Settings */
-"holiday_source.url_header" = "ICS URL";
+"holiday_source.url_header" = "購読元 URL";
 "holiday_source.url_footer" = "有効な HTTPS URL を入力してください";
-"holiday_source.test_sync" = "同期テスト";
+"holiday_source.test_sync" = "テスト";
 "holiday_source.error" = "エラー";
 "holiday_source.enable_first" = "まずこの購読を有効にしてください";
 "holiday_source.no_events" = "ダウンロードした ICS に予定はありません";
@@ -164,7 +164,7 @@
 "holiday_source.test_success_title" = "同期テスト成功";
 
 /* Holiday Recommended Sources */
-"holiday_source.recommended_section" = "推奨ソース";
+"holiday_source.recommended_section" = "推奨購読元";
 "holiday_source.no_recommended_sources" = "推奨ソースはありません";
 "holiday_source.third_party_notice" = "この購読元は第三者によって提供されています。正確性および利用可能性は提供元に依存します。";
 "holiday_source.use_recommended_source_title" = "この推奨ソースを使用しますか？";

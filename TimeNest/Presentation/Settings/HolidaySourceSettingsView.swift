@@ -30,34 +30,24 @@ struct HolidaySourceEditView: View {
         HolidayRecommendedSources.sources(for: region)
     }
 
+    private var primaryRecommendedSource: HolidayRecommendedSource? {
+        recommendedSources.first
+    }
+
     private var customHeaderView: some View {
-        VStack(spacing: 0) {
-            // 返回按钮
-            HStack {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundColor(.primary)
-                        .frame(width: 56, height: 56)
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(Circle())
-                }
+        HStack {
+            Spacer()
 
-                Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 12)
-
-            // 标题
-            Text(localization.localized(subscription?.displayNameKey ?? region.localizedKey))
-                .font(.system(size: 34, weight: .bold))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 32)
-                .padding(.top, 24)
-                .padding(.bottom, 16)
+            .buttonStyle(HolidaySourceBlueIconButtonStyle())
         }
+        .padding(.horizontal, 24)
+        .padding(.top, 14)
+        .padding(.bottom, 8)
         .background(Color(.systemBackground))
     }
 
@@ -85,21 +75,41 @@ struct HolidaySourceEditView: View {
             VStack(spacing: 0) {
                 customHeaderView
 
-                Form {
+                VStack(alignment: .leading, spacing: 14) {
                     // MARK: - Error Section (when subscription not found)
                     if subscription == nil {
-                        Section {
-                            Text(localization.localized(.holidaySubscriptionSourceNotFound))
-                                .foregroundColor(.red)
-                        }
+                        Text(localization.localized(.holidaySubscriptionSourceNotFound))
+                            .foregroundColor(.red)
+                            .font(.subheadline)
                     }
 
-                    Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .center) {
+                            Text(localization.localized(.holidaySourceURLHeader))
+                                .font(.headline.weight(.semibold))
+                                .foregroundColor(.primary)
+
+                            Spacer()
+
+                            Button(localization.localized(.holidaySourceTestSync)) {
+                                Task {
+                                    await testSync()
+                                }
+                            }
+                            .buttonStyle(HolidaySourceBlueButtonStyle())
+                            .disabled(!isValidURL)
+                        }
+
                         TextField("https://...", text: $urlString)
                             .autocapitalization(.none)
                             .disableAutocorrection(true)
                             .keyboardType(.URL)
                             .focused($isURLFieldFocused)
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 16)
+                            .frame(height: 44)
+                            .background(Color(.secondarySystemBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                             .onChange(of: urlString) { _, newValue in
                                 validateURL(newValue)
                             }
@@ -107,10 +117,11 @@ struct HolidaySourceEditView: View {
                                 // 按下回车键时失焦，触发自动保存
                                 isURLFieldFocused = false
                             }
-                    } header: {
-                        Text(localization.localized(.holidaySourceURLHeader))
-                    } footer: {
+
                         Text(localization.localized(.holidaySourceURLFooter))
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 8)
                     }
                     .onChange(of: isURLFieldFocused) { _, newValue in
                         // TextField 失焦时触发自动保存
@@ -121,40 +132,33 @@ struct HolidaySourceEditView: View {
                         }
                     }
 
-                    Section {
-                        Button(localization.localized(.holidaySourceTestSync)) {
-                            Task {
-                                await testSync()
-                            }
-                        }
-                        .disabled(!isValidURL)
-                    }
+                    Divider()
+                        .padding(.top, 6)
 
                     // MARK: - Recommended Sources Section
                     if !recommendedSources.isEmpty {
-                        Section {
-                            if recommendedSources.isEmpty {
-                                Text(localization.localized(.holidaySourceNoRecommendedSources))
-                                    .foregroundColor(.secondary)
-                            } else {
-                                ForEach(recommendedSources) { source in
-                                    RecommendedSourceRow(source: source) {
-                                        selectedRecommendedSource = source
-                                        showingUseSourceAlert = true
-                                    }
-                                }
+                        Button(localization.localized(.holidaySourceRecommendedSection)) {
+                            if let source = primaryRecommendedSource {
+                                selectedRecommendedSource = source
+                                showingUseSourceAlert = true
                             }
-                        } header: {
-                            Text(localization.localized(.holidaySourceRecommendedSection))
-                        } footer: {
-                            Text(localization.localized(.holidaySourceThirdPartyNotice))
-                                .font(.caption)
+                        }
+                        .buttonStyle(HolidaySourceBlueButtonStyle(isFullWidth: true, height: 44, cornerRadius: 14, font: .headline.weight(.semibold)))
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(localization.localized(.holidaySourceOfficeHolidaysDescription))
+                                .font(.body)
+                                .foregroundColor(.primary)
+
+                            Text(primaryRecommendedSource?.host ?? "www.officeholidays.com")
+                                .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
+                        .padding(.horizontal, 8)
                     }
                 }
-                .scrollContentBackground(.hidden)
-                .padding(.top, 8)
+                .padding(.horizontal, 24)
+                .padding(.top, 18)
             }
         }
         .navigationBarBackButtonHidden(true)
@@ -472,6 +476,45 @@ struct HolidaySourceEditView: View {
             errorMessage = error.localizedDescription
             showError = true
         }
+    }
+}
+
+
+// MARK: - HolidaySource Button Styles
+
+private struct HolidaySourceBlueButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    var isFullWidth = false
+    var height: CGFloat = 36
+    var cornerRadius: CGFloat = 10
+    var font: Font = .subheadline.weight(.semibold)
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(font)
+            .foregroundColor(.white)
+            .padding(.horizontal, 18)
+            .frame(maxWidth: isFullWidth ? .infinity : nil)
+            .frame(height: height)
+            .background(isEnabled ? Color.blue : TimeNestTheme.disabledButtonBackground)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .opacity(configuration.isPressed ? 0.85 : 1)
+    }
+}
+
+private struct HolidaySourceBlueIconButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(width: 36, height: 36)
+            .background(isEnabled ? Color.blue : TimeNestTheme.disabledButtonBackground)
+            .clipShape(Circle())
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .contentShape(Circle())
     }
 }
 
