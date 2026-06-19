@@ -292,6 +292,18 @@ class MonthCalendarViewModel: ObservableObject {
         selectedDayCell = findCell(for: nextDate)
     }
 
+    func removeShiftFromCurrentDate() async {
+        let targetDate = shiftInputTargetDate ?? selectedDate
+
+        do {
+            guard let existingEvent = try await existingAnyShiftEvent(on: targetDate) else { return }
+            try await eventUseCase.deleteEvent(id: existingEvent.id)
+            await reloadMonth()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func refreshShiftTemplates() {
         shiftTemplates = ShiftTimeTemplate.all()
         if let selectedShiftTemplate,

@@ -10,7 +10,6 @@ struct MonthCalendarView: View {
     @State private var showingYearMonthPicker = false
     @State private var showingSettings = false
     @State private var showingStatistics = false
-    @State private var pendingModalDestination: CalendarModalDestination?
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
 
@@ -55,25 +54,18 @@ struct MonthCalendarView: View {
                             ProgressView()
                         }
                     }
+                    .layoutPriority(1)
 
-                calendarBottomSection
+                if viewModel.isShiftInputMode && viewModel.displayMode == .month {
+                    shiftInputPanel
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    calendarBottomSection
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.isShiftInputMode)
-        .sheet(isPresented: shiftInputSheetBinding, onDismiss: openPendingModalDestination) {
-            ZStack(alignment: .top) {
-                WorkStatisticsColors.sheetBackground
-                    .ignoresSafeArea(edges: .bottom)
-
-                shiftInputPanel
-            }
-            .presentationDetents([.height(ShiftInputPanelLayout.sheetHeight)])
-            .presentationDragIndicator(.hidden)
-            .presentationBackground(WorkStatisticsColors.sheetBackground)
-            .presentationCornerRadius(WorkStatisticsLayout.sheetCornerRadius)
-            .presentationBackgroundInteraction(.enabled(upThrough: .height(ShiftInputPanelLayout.sheetHeight)))
-        }
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
@@ -176,17 +168,6 @@ struct MonthCalendarView: View {
         }
     }
 
-    private var shiftInputSheetBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.isShiftInputMode },
-            set: { isPresented in
-                if !isPresented {
-                    viewModel.exitShiftInputMode()
-                }
-            }
-        )
-    }
-
     private func openStatistics() {
         openModal(.statistics)
     }
@@ -196,22 +177,10 @@ struct MonthCalendarView: View {
     }
 
     private func openModal(_ destination: CalendarModalDestination) {
-        guard viewModel.isShiftInputMode else {
-            presentModal(destination)
-            return
+        if viewModel.isShiftInputMode {
+            viewModel.exitShiftInputMode()
         }
-
-        pendingModalDestination = destination
-        viewModel.exitShiftInputMode()
-    }
-
-    private func openPendingModalDestination() {
-        guard let destination = pendingModalDestination else { return }
-        pendingModalDestination = nil
-
-        DispatchQueue.main.async {
-            presentModal(destination)
-        }
+        presentModal(destination)
     }
 
     private func presentModal(_ destination: CalendarModalDestination) {
@@ -230,6 +199,11 @@ struct MonthCalendarView: View {
             onSelectTemplate: { template in
                 Task {
                     await viewModel.registerShift(template)
+                }
+            },
+            onCancel: {
+                Task {
+                    await viewModel.removeShiftFromCurrentDate()
                 }
             },
             onDone: {
@@ -521,13 +495,16 @@ private struct ShiftInputPanelView: View {
     let templates: [ShiftTimeTemplate]
     let selectedTemplate: ShiftTimeTemplate?
     let onSelectTemplate: (ShiftTimeTemplate) -> Void
+    let onCancel: () -> Void
     let onDone: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            SettingsModalHeaderView(
+            ShiftInputHeaderView(
                 title: localization.localized(.shiftInputTitle),
-                closeAction: onDone
+                cancelTitle: localization.localized(.cancel),
+                onCancel: onCancel,
+                onClose: onDone
             )
 
             if templates.isEmpty {
@@ -535,46 +512,64 @@ private struct ShiftInputPanelView: View {
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(WorkStatisticsColors.secondaryText)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
+                    .padding(.horizontal, ShiftInputPanelLayout.contentHorizontalPadding)
                     .padding(.top, ShiftInputPanelLayout.contentTopPadding)
                     .padding(.bottom, ShiftInputPanelLayout.emptyBottomPadding)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: ShiftInputPanelLayout.buttonSpacing) {
-                        ForEach(templates) { template in
-                            Button {
-                                onSelectTemplate(template)
-                            } label: {
-                                Text(template.displayName)
-                                    .font(.system(size: ShiftInputPanelLayout.buttonTitleFontSize, weight: .semibold))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
-                                    .foregroundColor(buttonTextColor(for: template))
-                                    .padding(.horizontal, ShiftInputPanelLayout.buttonHorizontalPadding)
-                                    .frame(minWidth: ShiftInputPanelLayout.buttonMinWidth, minHeight: ShiftInputPanelLayout.buttonHeight)
-                                    .background(buttonBackgroundColor(for: template))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous)
-                                            .stroke(buttonBorderColor(for: template), lineWidth: isSelected(template) ? 2 : 0.8)
-                                    )
-                                    .clipShape(RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous))
-                                    .shadow(
-                                        color: isSelected(template) ? ShiftDisplayColors.selectionStrokeColor.opacity(0.16) : .clear,
-                                        radius: isSelected(template) ? 3 : 0,
-                                        x: 0,
-                                        y: 1
-                                    )
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                LazyVGrid(
+                    columns: [
+                        GridItem(
+                            .adaptive(
+                                minimum: ShiftInputPanelLayout.buttonMinWidth,
+                                maximum: ShiftInputPanelLayout.buttonMaxWidth
+                            ),
+                            spacing: ShiftInputPanelLayout.buttonSpacing
+                        )
+                    ],
+                    spacing: ShiftInputPanelLayout.buttonSpacing
+                ) {
+                    ForEach(templates) { template in
+                        Button {
+                            onSelectTemplate(template)
+                        } label: {
+                            Text(template.displayName)
+                                .font(.system(size: ShiftInputPanelLayout.buttonTitleFontSize, weight: .semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                                .foregroundColor(buttonTextColor(for: template))
+                                .padding(.horizontal, ShiftInputPanelLayout.buttonHorizontalPadding)
+                                .frame(
+                                    maxWidth: .infinity,
+                                    minHeight: ShiftInputPanelLayout.buttonHeight
+                                )
+                                .background(buttonBackgroundColor(for: template))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous)
+                                        .stroke(buttonBorderColor(for: template), lineWidth: isSelected(template) ? 2 : 0.8)
+                                )
+                                .clipShape(RoundedRectangle(cornerRadius: ShiftInputPanelLayout.buttonCornerRadius, style: .continuous))
+                                .shadow(
+                                    color: isSelected(template) ? ShiftDisplayColors.selectionStrokeColor.opacity(0.16) : .clear,
+                                    radius: isSelected(template) ? 3 : 0,
+                                    x: 0,
+                                    y: 1
+                                )
                         }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .padding(.horizontal, WorkStatisticsLayout.horizontalPadding)
-                    .padding(.top, ShiftInputPanelLayout.contentTopPadding)
-                    .padding(.bottom, ShiftInputPanelLayout.buttonBottomPadding)
                 }
+                .padding(.horizontal, ShiftInputPanelLayout.contentHorizontalPadding)
+                .padding(.top, ShiftInputPanelLayout.contentTopPadding)
+                .padding(.bottom, ShiftInputPanelLayout.buttonBottomPadding)
             }
         }
         .frame(maxWidth: .infinity)
+        .background(ShiftCalendarColors.backgroundColor)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(ShiftCalendarColors.separatorColor)
+                .frame(height: ShiftCalendarLayout.gridLineWidth)
+        }
     }
 
     private func isSelected(_ template: ShiftTimeTemplate) -> Bool {
@@ -591,6 +586,38 @@ private struct ShiftInputPanelView: View {
 
     private func buttonBorderColor(for template: ShiftTimeTemplate) -> Color {
         isSelected(template) ? ShiftDisplayColors.selectionStrokeColor : WorkStatisticsColors.border
+    }
+}
+
+private struct ShiftInputHeaderView: View {
+    let title: String
+    let cancelTitle: String
+    let onCancel: () -> Void
+    let onClose: () -> Void
+
+    var body: some View {
+        HStack(spacing: ShiftInputPanelLayout.headerControlSpacing) {
+            Text(title)
+                .font(TimeNestTheme.Fonts.popupTitle)
+                .foregroundColor(SettingsModalSurface.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+
+            Spacer(minLength: ShiftInputPanelLayout.headerControlSpacing)
+
+            Button(cancelTitle, action: onCancel)
+                .font(.body.weight(.semibold))
+                .foregroundColor(ShiftCalendarColors.primaryBlue)
+
+            ModalHeaderCloseButton(action: onClose)
+                .frame(
+                    width: SettingsModalSurface.closeButtonSize,
+                    height: SettingsModalSurface.closeButtonSize
+                )
+        }
+        .padding(.horizontal, ShiftInputPanelLayout.contentHorizontalPadding)
+        .padding(.vertical, ShiftInputPanelLayout.headerVerticalPadding)
+        .background(ShiftCalendarColors.backgroundColor)
     }
 }
 

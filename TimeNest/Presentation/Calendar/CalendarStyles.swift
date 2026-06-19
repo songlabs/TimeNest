@@ -263,7 +263,11 @@ struct WorkStatisticsLayout {
 struct ShiftInputPanelLayout {
     static let outerHorizontalPadding: CGFloat = 0
     static let outerBottomPadding: CGFloat = 0
+    static let headerVerticalPadding: CGFloat = 8
+    static let headerControlSpacing: CGFloat = 12
+    static let contentHorizontalPadding: CGFloat = 20
     static let buttonMinWidth: CGFloat = 68
+    static let buttonMaxWidth: CGFloat = 160
     static let buttonHeight: CGFloat = 36
     static let buttonHorizontalPadding: CGFloat = 12
     static let buttonSpacing: CGFloat = 10
@@ -272,12 +276,6 @@ struct ShiftInputPanelLayout {
     static let buttonBottomPadding: CGFloat = 12
     static let emptyBottomPadding: CGFloat = 14
     static let buttonTitleFontSize: CGFloat = 14
-    static let sheetHeight: CGFloat =
-        SettingsModalSurface.closeButtonSize
-        + SettingsModalSurface.headerVerticalPadding * 2
-        + contentTopPadding
-        + buttonHeight
-        + buttonBottomPadding
 }
 
 // MARK: - Settings Modal Surface Colors
