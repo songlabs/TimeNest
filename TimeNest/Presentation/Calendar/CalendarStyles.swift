@@ -244,6 +244,83 @@ struct ShiftCalendarLayout {
     static let tabBarIconSelectedSize: CGFloat = 24
 }
 
+// MARK: - Calendar Timeline
+
+enum CalendarTimelineLayout {
+    static let timeLabelWidth: CGFloat = 52
+    static let startHour = 0
+    static let endHour = 24
+    static let defaultVisibleHour = 9
+    static let hourHeight: CGFloat = 64
+}
+
+enum CalendarTimelineEventMetrics {
+    private static let calendar = Calendar(identifier: .gregorian)
+
+    static func allDayEvents(in events: [EventOccurrence]) -> [EventOccurrence] {
+        events.filter(\.isAllDay).sorted { $0.title < $1.title }
+    }
+
+    static func timedEvents(in events: [EventOccurrence]) -> [EventOccurrence] {
+        events.filter { !$0.isAllDay }.sorted { $0.startDate < $1.startDate }
+    }
+
+    static func allDayEventCount(in events: [EventOccurrence]) -> Int {
+        events.reduce(into: 0) { count, event in
+            if event.isAllDay {
+                count += 1
+            }
+        }
+    }
+
+    static func currentTimeOffset(for date: Date, hourHeight: CGFloat = CalendarTimelineLayout.hourHeight) -> CGFloat? {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        let hour = components.hour ?? 0
+        let minute = components.minute ?? 0
+        guard hour >= CalendarTimelineLayout.startHour, hour < CalendarTimelineLayout.endHour else {
+            return nil
+        }
+        return (CGFloat(hour - CalendarTimelineLayout.startHour) + CGFloat(minute) / 60) * hourHeight
+    }
+
+    static func verticalOffset(for date: Date, hourHeight: CGFloat = CalendarTimelineLayout.hourHeight) -> CGFloat {
+        CGFloat(minutesFromStartOfDay(date)) / 60 * hourHeight
+    }
+
+    static func eventHeight(
+        from startDate: Date,
+        to endDate: Date,
+        minimumHeight: CGFloat,
+        hourHeight: CGFloat = CalendarTimelineLayout.hourHeight
+    ) -> CGFloat {
+        let duration = max(15, minutesBetween(startDate, endDate))
+        return max(minimumHeight, CGFloat(duration) / 60 * hourHeight)
+    }
+
+    static func timeText(for event: EventOccurrence) -> String {
+        if event.isClockInEvent {
+            return formatTime(event.workInfo?.workInTime ?? event.startDate)
+        }
+        if event.isClockOutEvent {
+            return formatTime(event.workInfo?.workOutTime ?? event.startDate)
+        }
+        return "\(formatTime(event.startDate)) - \(formatTime(event.endDate))"
+    }
+
+    static func minutesFromStartOfDay(_ date: Date) -> Int {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return max(0, min(24 * 60, (components.hour ?? 0) * 60 + (components.minute ?? 0)))
+    }
+
+    static func minutesBetween(_ startDate: Date, _ endDate: Date) -> Int {
+        max(0, calendar.dateComponents([.minute], from: startDate, to: endDate).minute ?? 0)
+    }
+
+    private static func formatTime(_ date: Date) -> String {
+        LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
+    }
+}
+
 // MARK: - Statistics Bottom Sheet Layout
 
 struct WorkStatisticsLayout {

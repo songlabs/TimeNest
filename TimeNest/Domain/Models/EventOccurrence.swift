@@ -22,12 +22,16 @@ enum WorkClockKind: Hashable {
 }
 
 extension EventOccurrence {
+    var workClockKind: WorkClockKind? {
+        WorkClockTitleMatcher.kind(for: title)
+    }
+
     var isClockInEvent: Bool {
-        WorkClockTitleMatcher.isClockInTitle(title)
+        workClockKind == .clockIn
     }
 
     var isClockOutEvent: Bool {
-        WorkClockTitleMatcher.isClockOutTitle(title)
+        workClockKind == .clockOut
     }
 
     var isWorkClockEvent: Bool {
@@ -59,15 +63,27 @@ extension EventOccurrence {
 }
 
 extension CalendarEvent {
+    var workClockKind: WorkClockKind? {
+        WorkClockTitleMatcher.kind(for: title)
+    }
+
+    var isClockInEvent: Bool {
+        workClockKind == .clockIn
+    }
+
+    var isClockOutEvent: Bool {
+        workClockKind == .clockOut
+    }
+
     var workDate: Date {
         workInfo?.workDate ?? startDate
     }
 
     var actualWorkClockDate: Date {
-        if WorkClockTitleMatcher.isClockInTitle(title) {
+        if isClockInEvent {
             return workInfo?.workInTime ?? startDate
         }
-        if WorkClockTitleMatcher.isClockOutTitle(title) {
+        if isClockOutEvent {
             return workInfo?.workOutTime ?? startDate
         }
         return startDate
@@ -78,11 +94,22 @@ enum WorkClockTitleMatcher {
     private static let clockInTitles: Set<String> = ["出勤", "Clock In", "上班", "출근"]
     private static let clockOutTitles: Set<String> = ["退勤", "Clock Out", "下班", "퇴근"]
 
+    static func kind(for title: String) -> WorkClockKind? {
+        let normalizedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if clockInTitles.contains(normalizedTitle) {
+            return .clockIn
+        }
+        if clockOutTitles.contains(normalizedTitle) {
+            return .clockOut
+        }
+        return nil
+    }
+
     static func isClockInTitle(_ title: String) -> Bool {
-        clockInTitles.contains(title.trimmingCharacters(in: .whitespacesAndNewlines))
+        kind(for: title) == .clockIn
     }
 
     static func isClockOutTitle(_ title: String) -> Bool {
-        clockOutTitles.contains(title.trimmingCharacters(in: .whitespacesAndNewlines))
+        kind(for: title) == .clockOut
     }
 }

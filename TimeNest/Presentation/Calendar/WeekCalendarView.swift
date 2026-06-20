@@ -6,27 +6,19 @@ struct WeekCalendarView: View {
     let cells: [CalendarDayCell]
     let onDateSelected: (Date) -> Void
 
-    private let timeLabelWidth: CGFloat = 52
+    private let timeLabelWidth = CalendarTimelineLayout.timeLabelWidth
     private let dateHeaderHeight: CGFloat = 72
     private let allDayRowVerticalPadding: CGFloat = 8
     private let allDayChipHeight: CGFloat = 20
     private let allDayChipSpacing: CGFloat = 4
 
-    private var hasAllDayEvents: Bool {
-        cells.contains { cell in
-            cell.events.contains { $0.isAllDay }
-        }
-    }
-
-    private var allDayRowHeight: CGFloat {
-        guard hasAllDayEvents else { return 0 }
+    private var calculatedAllDayRowHeight: CGFloat {
         let maxVisibleRows = cells.map { cell in
-            let count = cell.events.filter { $0.isAllDay }.count
-            if count > 2 { return 3 }
-            return count
-        }.max() ?? 1
+            min(3, CalendarTimelineEventMetrics.allDayEventCount(in: cell.events))
+        }.max() ?? 0
+        guard maxVisibleRows > 0 else { return 0 }
         return allDayRowVerticalPadding * 2
-            + CGFloat(max(1, maxVisibleRows)) * allDayChipHeight
+            + CGFloat(maxVisibleRows) * allDayChipHeight
             + CGFloat(max(0, maxVisibleRows - 1)) * allDayChipSpacing
     }
 
@@ -34,6 +26,7 @@ struct WeekCalendarView: View {
         GeometryReader { geometry in
             let displayCellCount = max(cells.count, 1)
             let columnWidth = (geometry.size.width - timeLabelWidth) / CGFloat(displayCellCount)
+            let allDayRowHeight = calculatedAllDayRowHeight
 
             VStack(spacing: 0) {
                 WeekDateHeaderView(
@@ -45,7 +38,7 @@ struct WeekCalendarView: View {
                 )
                 .frame(height: dateHeaderHeight)
 
-                if hasAllDayEvents {
+                if allDayRowHeight > 0 {
                     WeekAllDayEventsRow(
                         cells: cells,
                         timeLabelWidth: timeLabelWidth,
@@ -187,7 +180,7 @@ struct WeekAllDayEventsRow: View {
     }
 
     private func allDayEvents(in cell: CalendarDayCell) -> [EventOccurrence] {
-        cell.events.filter { $0.isAllDay }.sorted { $0.title < $1.title }
+        CalendarTimelineEventMetrics.allDayEvents(in: cell.events)
     }
 
     private func isDateSelected(_ dateOnly: DateOnly) -> Bool {
@@ -257,10 +250,10 @@ struct WeekTimeAxisView: View {
     let columnWidth: CGFloat
     let selectedDate: Date
 
-    private let startHour = 0
-    private let endHour = 24
-    private let defaultVisibleHour = 9
-    private let hourHeight: CGFloat = 64
+    private let startHour = CalendarTimelineLayout.startHour
+    private let endHour = CalendarTimelineLayout.endHour
+    private let defaultVisibleHour = CalendarTimelineLayout.defaultVisibleHour
+    private let hourHeight = CalendarTimelineLayout.hourHeight
     private var contentHeight: CGFloat { CGFloat(endHour - startHour) * hourHeight }
 
     var body: some View {
@@ -321,11 +314,7 @@ struct WeekTimeAxisView: View {
     }
 
     private var currentTimeOffset: CGFloat? {
-        let components = Calendar(identifier: .gregorian).dateComponents([.hour, .minute], from: Date())
-        let hour = components.hour ?? 0
-        let minute = components.minute ?? 0
-        guard hour >= startHour, hour < endHour else { return nil }
-        return (CGFloat(hour - startHour) + CGFloat(minute) / 60.0) * hourHeight
+        CalendarTimelineEventMetrics.currentTimeOffset(for: Date(), hourHeight: hourHeight)
     }
 
     private var hourAnchors: some View {
@@ -394,39 +383,24 @@ struct WeekTimeAxisView: View {
     }
 
     private func timedEvents(in cell: CalendarDayCell) -> [EventOccurrence] {
-        cell.events.filter { !$0.isAllDay }.sorted { $0.startDate < $1.startDate }
+        CalendarTimelineEventMetrics.timedEvents(in: cell.events)
     }
 
     private func eventOffset(for event: EventOccurrence) -> CGFloat {
-        CGFloat(minutesFromStartOfDay(event.startDate)) / 60.0 * hourHeight
+        CalendarTimelineEventMetrics.verticalOffset(for: event.startDate, hourHeight: hourHeight)
     }
 
     private func eventHeight(for event: EventOccurrence) -> CGFloat {
-        let duration = max(15, minutesBetween(event.startDate, event.endDate))
-        return max(24, CGFloat(duration) / 60.0 * hourHeight)
+        CalendarTimelineEventMetrics.eventHeight(
+            from: event.startDate,
+            to: event.endDate,
+            minimumHeight: 24,
+            hourHeight: hourHeight
+        )
     }
 
     private func eventTimeText(for event: EventOccurrence) -> String {
-        if event.isClockInEvent {
-            return formatTime(event.workInfo?.workInTime ?? event.startDate)
-        }
-        if event.isClockOutEvent {
-            return formatTime(event.workInfo?.workOutTime ?? event.startDate)
-        }
-        return "\(formatTime(event.startDate)) - \(formatTime(event.endDate))"
-    }
-
-    private func minutesFromStartOfDay(_ date: Date) -> Int {
-        let components = Calendar(identifier: .gregorian).dateComponents([.hour, .minute], from: date)
-        return max(0, min(24 * 60, (components.hour ?? 0) * 60 + (components.minute ?? 0)))
-    }
-
-    private func minutesBetween(_ start: Date, _ end: Date) -> Int {
-        max(0, Calendar(identifier: .gregorian).dateComponents([.minute], from: start, to: end).minute ?? 0)
-    }
-
-    private func formatTime(_ date: Date) -> String {
-        LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
+        CalendarTimelineEventMetrics.timeText(for: event)
     }
 
     private func hourID(_ hour: Int) -> String {

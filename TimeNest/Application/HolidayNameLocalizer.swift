@@ -15,11 +15,20 @@ struct HolidayNameLocalizer {
         let cleanName = cleanRegionPrefix(from: rawName, region: region)
         let normalizedKey = normalizeName(cleanName)
 
-        let mapping = localizedMappings[region] ?? [:]
+        let mapping = Self.localizedMappings[region] ?? [:]
 
         // 先尝试精确匹配
         if let directMatch = mapping[normalizedKey] {
             return directMatch
+        }
+
+        let keyWithoutRegionalQualifier = normalizedKey.replacingOccurrences(
+            of: " (regional holiday)",
+            with: ""
+        )
+        if keyWithoutRegionalQualifier != normalizedKey,
+           let qualifierFreeMatch = mapping[keyWithoutRegionalQualifier] {
+            return qualifierFreeMatch
         }
 
         // 尝试去掉尾部数字变体后匹配（如 "Labour Day Holiday 2" -> "Labour Day Holiday"）
@@ -190,7 +199,6 @@ struct HolidayNameLocalizer {
     // MARK: - Japan Holiday Mappings
 
     private func buildJapanMappings() -> [String: String] {
-        var dict: [String: String] = [:]
         let mappings: [(String, String)] = [
             // 2026 年 5 月
             ("greenery day", "みどりの日"),
@@ -224,20 +232,12 @@ struct HolidayNameLocalizer {
             ("extra holiday for silver week", "シルバーウィーク 振替休日"),
             ("silver week", "シルバーウィーク")
         ]
-        for (key, value) in mappings {
-            let normalizedKey = key.lowercased()
-            // 如果 key 已存在：静默跳过（数据问题由测试负责发现）
-            if dict[normalizedKey] == nil {
-                dict[normalizedKey] = value
-            }
-        }
-        return dict
+        return buildMappings(mappings)
     }
 
     // MARK: - Korea Holiday Mappings
 
     private func buildKoreaMappings() -> [String: String] {
-        var dict: [String: String] = [:]
         let mappings: [(String, String)] = [
             // 2026 年 5 月
             ("childrens day", "어린이날"),
@@ -267,20 +267,12 @@ struct HolidayNameLocalizer {
             ("labor day", "노동절"),
             ("labour day", "노동절")
         ]
-        for (key, value) in mappings {
-            let normalizedKey = key.lowercased()
-            // 如果 key 已存在：静默跳过（数据问题由测试负责发现）
-            if dict[normalizedKey] == nil {
-                dict[normalizedKey] = value
-            }
-        }
-        return dict
+        return buildMappings(mappings)
     }
 
     // MARK: - USA Holiday Mappings
 
     private func buildUSAMappings() -> [String: String] {
-        var dict: [String: String] = [:]
         let mappings: [(String, String)] = [
             ("new years day", "New Year's Day"),
             ("martin luther king jr day", "Martin Luther King Jr. Day"),
@@ -310,25 +302,28 @@ struct HolidayNameLocalizer {
             ("us indigenous people's day", "Indigenous People's Day"),
             ("us indigenous people's day (regional holiday)", "Indigenous People's Day")
         ]
-        for (key, value) in mappings {
-            let normalizedKey = key.lowercased()
-            // 如果 key 已存在：静默跳过（数据问题由测试负责发现）
-            if dict[normalizedKey] == nil {
-                dict[normalizedKey] = value
+        return buildMappings(mappings)
+    }
+
+    private func buildMappings(_ mappings: [(String, String)]) -> [String: String] {
+        mappings.reduce(into: [:]) { result, mapping in
+            let normalizedKey = normalizeName(mapping.0)
+            if result[normalizedKey] == nil {
+                result[normalizedKey] = mapping.1
             }
         }
-        return dict
     }
 
     /// 节假日名称本地化映射表
     /// 键：标准化后的英文名称（去掉前缀、apostrophe、空格、转小写）
     /// 值：对应地区语言的显示名称
-    private var localizedMappings: [HolidayRegion: [String: String]] {
-        [
-            .japan: buildJapanMappings(),
-            .china: buildChinaMappings(),
-            .korea: buildKoreaMappings(),
-            .unitedStates: buildUSAMappings()
+    private static let localizedMappings: [HolidayRegion: [String: String]] = {
+        let localizer = HolidayNameLocalizer()
+        return [
+            .japan: localizer.buildJapanMappings(),
+            .china: localizer.buildChinaMappings(),
+            .korea: localizer.buildKoreaMappings(),
+            .unitedStates: localizer.buildUSAMappings()
         ]
-    }
+    }()
 }

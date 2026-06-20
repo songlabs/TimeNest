@@ -28,6 +28,7 @@ class CalendarDisplayUseCase {
         }
 
         let range = calendar.range(of: .day, in: .month, for: firstDayOfMonth) ?? (1..<31)
+        let daysInMonth = range.count
 
         let weekdaySymbols = localizationUseCase.weekdaySymbols(
             language: setting.displayLanguage,
@@ -54,12 +55,20 @@ class CalendarDisplayUseCase {
         let occurrences = try await eventUseCase.occurrences(in: monthInterval)
         let occurrencesByDate = Dictionary(grouping: occurrences, by: { $0.occurrenceDate.id })
 
+        let firstDate = DateOnly(from: monthStart) ?? DateOnly(year: year, month: month, day: 1)
+        let lastDate = DateOnly(year: year, month: month, day: daysInMonth)
+        let holidays = (try? await holidayUseCase.holidaysInDateRange(
+            from: firstDate,
+            to: lastDate,
+            setting: setting
+        )) ?? []
+        let holidaysByDate = Dictionary(grouping: holidays, by: \.date)
+
         var cells: [CalendarDayCell] = []
 
         let today = Date()
         let todayOnly = DateOnly(from: today)
 
-        let daysInMonth = range.count
         let totalCells = Int(ceil(Double(weekStartOffset + daysInMonth) / 7.0)) * 7
         let gridStartDate = calendar.date(byAdding: .day, value: -weekStartOffset, to: firstDayOfMonth) ?? firstDayOfMonth
 
@@ -73,16 +82,7 @@ class CalendarDisplayUseCase {
             let isToday = todayOnly == dateOnly
             let isWeekend = isSaturdayOrSunday(date: date, calendar: calendar)
 
-            let holidays: [Holiday]
-            if isInCurrentMonth {
-                holidays = (try? await holidayUseCase.holidaysInDateRange(
-                    from: dateOnly,
-                    to: dateOnly,
-                    setting: setting
-                )) ?? []
-            } else {
-                holidays = []
-            }
+            let holidays = isInCurrentMonth ? holidaysByDate[dateOnly] ?? [] : []
 
             let dayEvents = occurrencesByDate[dateOnly.id] ?? []
 

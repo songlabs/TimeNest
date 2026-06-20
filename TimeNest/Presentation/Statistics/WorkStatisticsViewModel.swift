@@ -130,27 +130,31 @@ class WorkStatisticsViewModel: ObservableObject {
         var legacyClockOutsByDay: [Date: [CalendarEvent]] = [:]
 
         for event in events {
-            guard isClockInEvent(event) || isClockOutEvent(event) else { continue }
+            guard let kind = workClockKind(for: event) else { continue }
             let workDay = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
 
             if let sessionId = event.workInfo?.workSessionId {
                 var group = sessions[sessionId] ?? WorkSessionGroup()
-                if isClockInEvent(event) {
+                switch kind {
+                case .clockIn:
                     let time = event.workInfo?.workInTime ?? event.startDate
                     if group.clockIn.map({ time < ($0.workInfo?.workInTime ?? $0.startDate) }) ?? true {
                         group.clockIn = event
                     }
-                } else if isClockOutEvent(event) {
+                case .clockOut:
                     let time = event.workInfo?.workOutTime ?? event.startDate
                     if group.clockOut.map({ time > ($0.workInfo?.workOutTime ?? $0.startDate) }) ?? true {
                         group.clockOut = event
                     }
                 }
                 sessions[sessionId] = group
-            } else if isClockInEvent(event) {
-                legacyClockInsByDay[workDay, default: []].append(event)
-            } else if isClockOutEvent(event) {
-                legacyClockOutsByDay[workDay, default: []].append(event)
+            } else {
+                switch kind {
+                case .clockIn:
+                    legacyClockInsByDay[workDay, default: []].append(event)
+                case .clockOut:
+                    legacyClockOutsByDay[workDay, default: []].append(event)
+                }
             }
         }
 
@@ -257,19 +261,20 @@ class WorkStatisticsViewModel: ObservableObject {
         )
     }
 
-    private func isClockInEvent(_ event: CalendarEvent) -> Bool {
-        if WorkClockTitleMatcher.isClockInTitle(event.title) { return true }
-        if WorkClockTitleMatcher.isClockOutTitle(event.title) { return false }
-        return event.workInfo?.workInTime != nil && event.workInfo?.workOutTime == nil
+    private func workClockKind(for event: CalendarEvent) -> WorkClockKind? {
+        if let kind = event.workClockKind {
+            return kind
+        }
+        if event.workInfo?.workInTime != nil, event.workInfo?.workOutTime == nil {
+            return .clockIn
+        }
+        if event.workInfo?.workOutTime != nil, event.workInfo?.workInTime == nil {
+            return .clockOut
+        }
+        return nil
     }
 
-    private func isClockOutEvent(_ event: CalendarEvent) -> Bool {
-        if WorkClockTitleMatcher.isClockOutTitle(event.title) { return true }
-        if WorkClockTitleMatcher.isClockInTitle(event.title) { return false }
-        return event.workInfo?.workOutTime != nil && event.workInfo?.workInTime == nil
-    }
-
-    private func loadEmptyStatisticsState() {
+    func loadEmptyStatisticsState() {
         statisticsData = []
         totalHours = "00:00"
         totalAmount = "¥0"

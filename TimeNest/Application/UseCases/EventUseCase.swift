@@ -67,9 +67,7 @@ class EventUseCase {
         let calendar = Calendar(identifier: .gregorian)
 
         return events.map { event in
-            let isWorkClockEvent =
-                WorkClockTitleMatcher.isClockInTitle(event.title) ||
-                WorkClockTitleMatcher.isClockOutTitle(event.title)
+            let isWorkClockEvent = event.workClockKind != nil
 
             let occurrenceDate = isWorkClockEvent
                 ? (event.workInfo?.workDate ?? event.startDate)

@@ -1,19 +1,6 @@
 import XCTest
 @testable import TimeNest
 
-final class SettingsNotificationTimeTests: XCTestCase {
-    func testDefaultNotificationTimeIsNineAM() {
-        XCTAssertEqual(SettingsNotificationTime.minutes(from: SettingsNotificationTime.defaultDate), 9 * 60)
-    }
-
-    func testNotificationTimeRoundTripsBetweenMinutesAndDate() {
-        let minutes = 21 * 60 + 35
-        let date = SettingsNotificationTime.date(from: minutes)
-
-        XCTAssertEqual(SettingsNotificationTime.minutes(from: date), minutes)
-    }
-}
-
 final class ShiftTimeTemplateLogicTests: XCTestCase {
     private var defaults: UserDefaults!
     private let suiteName = "ShiftTimeTemplateLogicTests"
@@ -82,6 +69,7 @@ final class ShiftTimeTemplateLogicTests: XCTestCase {
     }
 }
 
+@MainActor
 final class WorkStatisticsViewModelLogicTests: XCTestCase {
     func testSetDateRangeClampsEndDateWhenEndMonthIsBeforeStartMonth() throws {
         let calendar = Calendar(identifier: .gregorian)
@@ -104,7 +92,8 @@ final class WorkStatisticsViewModelLogicTests: XCTestCase {
         XCTAssertEqual(calendar.component(.year, from: viewModel.startDate), 2026)
         XCTAssertEqual(calendar.component(.month, from: viewModel.startDate), 2)
         XCTAssertEqual(calendar.component(.day, from: viewModel.startDate), 1)
-        XCTAssertEqual(calendar.component(.month, from: viewModel.endDate), 3)
+        XCTAssertEqual(calendar.component(.month, from: viewModel.endDate), 2)
+        XCTAssertEqual(calendar.component(.day, from: viewModel.endDate), 28)
     }
 
     func testLoadedEmptyStatisticsStateResetsTotals() {
@@ -153,5 +142,67 @@ final class EventEditorDateNormalizerTests: XCTestCase {
 
         XCTAssertEqual(calendar.component(.hour, from: normalized.startDate), 9)
         XCTAssertEqual(normalized.endDate, CalendarEvent.defaultEndDate(for: normalized.startDate, isAllDay: false))
+    }
+}
+
+final class WorkClockTitleMatcherTests: XCTestCase {
+    func testKindRecognizesSupportedLocalizedTitlesAndWhitespace() {
+        for title in ["出勤", "Clock In", "上班", "출근", "  Clock In\n"] {
+            XCTAssertEqual(WorkClockTitleMatcher.kind(for: title), .clockIn)
+        }
+        for title in ["退勤", "Clock Out", "下班", "퇴근", "\t退勤 "] {
+            XCTAssertEqual(WorkClockTitleMatcher.kind(for: title), .clockOut)
+        }
+        XCTAssertNil(WorkClockTitleMatcher.kind(for: "Custom shift"))
+    }
+}
+
+final class CalendarTimelineEventMetricsTests: XCTestCase {
+    func testTimelineCalculationsUseSharedHourScale() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 20, hour: 9, minute: 30)))
+        let end = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 20, hour: 11)))
+
+        XCTAssertEqual(CalendarTimelineEventMetrics.minutesFromStartOfDay(start), 9 * 60 + 30)
+        XCTAssertEqual(CalendarTimelineEventMetrics.minutesBetween(start, end), 90)
+        XCTAssertEqual(CalendarTimelineEventMetrics.verticalOffset(for: start), 9.5 * CalendarTimelineLayout.hourHeight)
+        XCTAssertEqual(
+            CalendarTimelineEventMetrics.eventHeight(from: start, to: end, minimumHeight: 24),
+            1.5 * CalendarTimelineLayout.hourHeight
+        )
+    }
+
+    func testTimelineEventGroupingAndOrdering() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let morning = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 20, hour: 9)))
+        let afternoon = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 20, hour: 15)))
+        let events = [
+            occurrence(title: "B", startDate: morning, isAllDay: true),
+            occurrence(title: "Later", startDate: afternoon, isAllDay: false),
+            occurrence(title: "A", startDate: morning, isAllDay: true),
+            occurrence(title: "Earlier", startDate: morning, isAllDay: false)
+        ]
+
+        XCTAssertEqual(CalendarTimelineEventMetrics.allDayEvents(in: events).map(\.title), ["A", "B"])
+        XCTAssertEqual(CalendarTimelineEventMetrics.timedEvents(in: events).map(\.title), ["Earlier", "Later"])
+        XCTAssertEqual(CalendarTimelineEventMetrics.allDayEventCount(in: events), 2)
+    }
+
+    private func occurrence(title: String, startDate: Date, isAllDay: Bool) -> EventOccurrence {
+        EventOccurrence(
+            id: UUID().uuidString,
+            eventID: UUID(),
+            occurrenceDate: DateOnly(from: startDate)!,
+            startDate: startDate,
+            endDate: startDate.addingTimeInterval(60 * 60),
+            isAllDay: isAllDay,
+            title: title,
+            note: nil,
+            categoryID: nil,
+            reminderOffsetMinutes: nil,
+            notificationID: nil,
+            shiftTemplateID: nil,
+            workInfo: nil
+        )
     }
 }

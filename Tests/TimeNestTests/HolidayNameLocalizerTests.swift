@@ -218,11 +218,11 @@ final class HolidayNameLocalizerTests: XCTestCase {
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "March 1st Movement (in lieu)", in: .korea),
-            "3·1 절 振替休日"
+            "3·1절 대체공휴일"
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "Independence Movement Day", in: .korea),
-            "3·1 절"
+            "3·1절"
         )
     }
 
@@ -240,7 +240,7 @@ final class HolidayNameLocalizerTests: XCTestCase {
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "Liberation Day (in lieu)", in: .korea),
-            "광복절 振替休日"
+            "광복절 대체공휴일"
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "Victory Day", in: .korea),
@@ -262,7 +262,7 @@ final class HolidayNameLocalizerTests: XCTestCase {
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "National Foundation Day (in lieu)", in: .korea),
-            "개천절 振替休日"
+            "개천절 대체공휴일"
         )
     }
 
@@ -280,7 +280,7 @@ final class HolidayNameLocalizerTests: XCTestCase {
     func testKoreaBuddhasBirthdayInLieu() {
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "Buddha's Birthday (in lieu)", in: .korea),
-            "부처님 오신 날 振替休日"
+            "부처님 오신 날 대체공휴일"
         )
     }
 
@@ -352,7 +352,7 @@ final class HolidayNameLocalizerTests: XCTestCase {
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "Independence Day (in lieu)", in: .unitedStates),
-            "Independence Day 振替休日"
+            "Independence Day (Observed)"
         )
     }
 
@@ -433,11 +433,11 @@ final class HolidayNameLocalizerTests: XCTestCase {
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "Juneteenth (in lieu)", in: .unitedStates),
-            "Juneteenth 振替休日"
+            "Juneteenth (Observed)"
         )
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "Juneteenth (in lieu) (Regional Holiday)", in: .unitedStates),
-            "Juneteenth 振替休日"
+            "Juneteenth (Observed)"
         )
     }
 
@@ -1098,6 +1098,31 @@ final class HolidayNameLocalizerTests: XCTestCase {
         }
     }
 
+    func testCalendarDisplayUseCaseLoadsHolidaysOnceForWholeMonth() async throws {
+        let provider = RecordingHolidayProvider()
+        let useCase = CalendarDisplayUseCase(
+            holidayUseCase: HolidayUseCase(
+                holidayProvider: provider,
+                cacheRepository: InMemoryHolidayEventCacheRepository()
+            ),
+            localizationUseCase: CalendarLocalizationUseCase(),
+            eventUseCase: EventUseCase(repository: InMemoryEventRepository())
+        )
+        let setting = CalendarDisplaySetting(
+            displayLanguage: .enUS,
+            selectedHolidayRegions: [.japan],
+            weekStartPolicy: .sunday,
+            showLunarCalendar: false
+        )
+
+        _ = try await useCase.monthGrid(year: 2026, month: 6, setting: setting)
+
+        XCTAssertEqual(provider.requests.count, 1)
+        XCTAssertEqual(provider.requests.first?.region, .japan)
+        XCTAssertEqual(provider.requests.first?.from, DateOnly(year: 2026, month: 6, day: 1))
+        XCTAssertEqual(provider.requests.first?.to, DateOnly(year: 2026, month: 6, day: 30))
+    }
+
     // MARK: - Release Readiness Regression Tests
 
     func testDateOnlyRoundTripUsesFixedTimeZone() throws {
@@ -1165,7 +1190,8 @@ final class HolidayNameLocalizerTests: XCTestCase {
             showLunarCalendar: false
         )
         let systemGrid = try await useCase.monthGrid(year: 2026, month: 6, setting: systemSetting)
-        XCTAssertEqual(systemGrid.days.count, 42)
+        XCTAssertEqual(systemGrid.days.count % 7, 0)
+        XCTAssertEqual(systemGrid.days.filter(\.isInCurrentMonth).count, 30)
         XCTAssertEqual(systemGrid.weekdaySymbols.count, 7)
     }
 
@@ -1267,17 +1293,22 @@ final class HolidayNameLocalizerTests: XCTestCase {
 
         try await useCase.createEvent(laterEvent)
         try await useCase.createEvent(event)
-        XCTAssertEqual(try await useCase.events(in: interval).map(\.title), ["Morning", "Afternoon"])
-        XCTAssertEqual(try await useCase.occurrences(in: interval).map(\.title), ["Morning", "Afternoon"])
+        let createdEvents = try await useCase.events(in: interval)
+        let createdOccurrences = try await useCase.occurrences(in: interval)
+        XCTAssertEqual(createdEvents.map(\.title), ["Morning", "Afternoon"])
+        XCTAssertEqual(createdOccurrences.map(\.title), ["Morning", "Afternoon"])
 
         var updatedEvent = event
         updatedEvent.title = "Updated Morning"
         try await useCase.updateEvent(updatedEvent)
-        XCTAssertEqual(try await repository.event(id: eventID)?.title, "Updated Morning")
+        let storedUpdatedEvent = try await repository.event(id: eventID)
+        XCTAssertEqual(storedUpdatedEvent?.title, "Updated Morning")
 
         try await useCase.deleteEvent(id: eventID)
-        XCTAssertNil(try await repository.event(id: eventID))
-        XCTAssertEqual(try await useCase.events(in: interval).map(\.title), ["Afternoon"])
+        let deletedEvent = try await repository.event(id: eventID)
+        let remainingEvents = try await useCase.events(in: interval)
+        XCTAssertNil(deletedEvent)
+        XCTAssertEqual(remainingEvents.map(\.title), ["Afternoon"])
     }
 
     func testCalendarDisplayUseCaseIncludesLateNightEventInDayCell() async throws {
@@ -1391,6 +1422,21 @@ class InMemoryHolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
     func getLastSyncTime(for region: HolidayRegion) -> Date? { nil }
 }
 
+private final class RecordingHolidayProvider: HolidayProviding {
+    struct Request {
+        let region: HolidayRegion
+        let from: DateOnly
+        let to: DateOnly
+    }
+
+    private(set) var requests: [Request] = []
+
+    func holidays(region: HolidayRegion, from: DateOnly, to: DateOnly) async throws -> [Holiday] {
+        requests.append(Request(region: region, from: from, to: to))
+        return []
+    }
+}
+
 final class LocalizationResourceParityTests: XCTestCase {
     func testLocalizableStringsKeysAreCompleteAndUniqueAcrossLanguages() throws {
         let resourceRoot = try sourceURL(for: "TimeNest/Resources")
@@ -1423,10 +1469,10 @@ final class LocalizationResourceParityTests: XCTestCase {
 
     func testDisplayLanguageCodesMapToExpectedLocales() {
         let cases: [(String, DisplayLanguage, String)] = [
-            ("ja", .ja, "ja"),
-            ("zhHans", .zhHans, "zh_Hans"),
+            ("ja", .ja, "ja_JP"),
+            ("zhHans", .zhHans, "zh_CN"),
             ("enUS", .enUS, "en_US"),
-            ("ko", .ko, "ko"),
+            ("ko", .ko, "ko_KR"),
             ("system", .system, Locale.current.identifier)
         ]
 
@@ -1487,7 +1533,8 @@ final class EventSchedulingUseCaseTests: XCTestCase {
             try await useCase.createEvent(event)
             XCTFail("Expected invalid date range to fail")
         } catch EventUseCaseError.invalidDateRange {
-            XCTAssertNil(try await repository.event(id: event.id))
+            let storedEvent = try await repository.event(id: event.id)
+            XCTAssertNil(storedEvent)
         }
     }
 
@@ -1499,7 +1546,8 @@ final class EventSchedulingUseCaseTests: XCTestCase {
 
         try await useCase.createEvent(event)
 
-        let savedEvent = try await XCTUnwrap(repository.event(id: event.id))
+        let storedEvent = try await repository.event(id: event.id)
+        let savedEvent = try XCTUnwrap(storedEvent)
         XCTAssertEqual(savedEvent.reminderOffsetMinutes, 10)
         XCTAssertNotNil(savedEvent.notificationID)
     }
@@ -1511,14 +1559,16 @@ final class EventSchedulingUseCaseTests: XCTestCase {
         let start = Date().addingTimeInterval(3600)
         var event = makeEvent(startDate: start, reminderOffsetMinutes: 10)
         try await useCase.createEvent(event)
-        let firstID = try await XCTUnwrap(repository.event(id: event.id)?.notificationID)
+        let createdEvent = try await repository.event(id: event.id)
+        let firstID = try XCTUnwrap(createdEvent?.notificationID)
 
         event.notificationID = firstID
         event.reminderOffsetMinutes = 30
         event.updatedAt = Date()
         try await useCase.updateEvent(event)
 
-        let updatedEvent = try await XCTUnwrap(repository.event(id: event.id))
+        let storedUpdatedEvent = try await repository.event(id: event.id)
+        let updatedEvent = try XCTUnwrap(storedUpdatedEvent)
         XCTAssertNotEqual(updatedEvent.notificationID, firstID)
         XCTAssertEqual(scheduler.cancelledIDs, [firstID])
     }
@@ -1529,12 +1579,14 @@ final class EventSchedulingUseCaseTests: XCTestCase {
         let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
         let event = makeEvent(startDate: Date().addingTimeInterval(3600), reminderOffsetMinutes: 10)
         try await useCase.createEvent(event)
-        let notificationID = try await XCTUnwrap(repository.event(id: event.id)?.notificationID)
+        let createdEvent = try await repository.event(id: event.id)
+        let notificationID = try XCTUnwrap(createdEvent?.notificationID)
 
         try await useCase.deleteEvent(id: event.id)
 
+        let deletedEvent = try await repository.event(id: event.id)
         XCTAssertEqual(scheduler.cancelledIDs, [notificationID])
-        XCTAssertNil(try await repository.event(id: event.id))
+        XCTAssertNil(deletedEvent)
     }
 
     func testAllDayEventSaveNormalizesToFullDayRange() async throws {
@@ -1547,7 +1599,8 @@ final class EventSchedulingUseCaseTests: XCTestCase {
 
         try await useCase.createEvent(event)
 
-        let savedEvent = try await XCTUnwrap(repository.event(id: event.id))
+        let storedEvent = try await repository.event(id: event.id)
+        let savedEvent = try XCTUnwrap(storedEvent)
         XCTAssertTrue(savedEvent.isAllDay)
         XCTAssertEqual(savedEvent.startDate, start)
         XCTAssertEqual(savedEvent.endDate, end)
@@ -1596,4 +1649,8 @@ final class EventNotificationSchedulerSpy: LocalNotificationScheduling {
     func cancelNotification(id: String) {
         cancelledIDs.append(id)
     }
+
+    func scheduleDailyScheduleCheck(hour: Int, minute: Int) async {}
+
+    func cancelDailyScheduleCheck() {}
 }

@@ -616,11 +616,15 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
                     id: id,
                     nameKey: id.nameKey,
                     displayName: displayName,
-                    note: defaults.string(forKey: prefix + ".note") ?? "",
-                    colorHex: defaults.string(forKey: prefix + ".colorHex") ?? id.defaultColorHex,
-                    startTime: defaults.string(forKey: prefix + ".startTime") ?? id.defaultStartTime,
-                    endTime: defaults.string(forKey: prefix + ".endTime") ?? id.defaultEndTime,
-                    enabled: defaults.object(forKey: prefix + ".enabled") as? Bool ?? true
+                    note: defaults.string(forKey: id.noteKey) ?? "",
+                    colorHex: defaults.string(forKey: id.colorHexKey) ?? id.defaultColorHex,
+                    startTime: defaults.string(forKey: id.startTimeKey)
+                        ?? defaults.string(forKey: prefix + ".startTime")
+                        ?? id.defaultStartTime,
+                    endTime: defaults.string(forKey: id.endTimeKey)
+                        ?? defaults.string(forKey: prefix + ".endTime")
+                        ?? id.defaultEndTime,
+                    enabled: defaults.object(forKey: id.enabledKey) as? Bool ?? true
                 ))
             }
         }

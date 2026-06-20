@@ -32,8 +32,7 @@ actor SwiftDataEventRepository: EventRepository {
             return try modelContext.fetch(descriptor)
                 .map(SwiftDataEventMapper.makeDomainModel)
                 .filter { event in
-                    let isWorkClockEvent = WorkClockTitleMatcher.isClockInTitle(event.title)
-                        || WorkClockTitleMatcher.isClockOutTitle(event.title)
+                    let isWorkClockEvent = event.workClockKind != nil
                     let workDate = isWorkClockEvent ? event.workInfo?.workDate : nil
                     return (event.startDate < range.end && event.endDate > range.start)
                         || (workDate.map { $0 >= range.start && $0 < range.end } ?? false)

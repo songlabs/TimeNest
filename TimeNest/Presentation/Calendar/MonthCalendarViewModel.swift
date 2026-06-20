@@ -562,13 +562,7 @@ class MonthCalendarViewModel: ObservableObject {
 
 
     private func workClockKind(for title: String) -> WorkClockKind? {
-        if WorkClockTitleMatcher.isClockInTitle(title) {
-            return .clockIn
-        }
-        if WorkClockTitleMatcher.isClockOutTitle(title) {
-            return .clockOut
-        }
-        return nil
+        WorkClockTitleMatcher.kind(for: title)
     }
 
     func selectDay(_ cell: CalendarDayCell) {
