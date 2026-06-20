@@ -137,4 +137,9 @@ Before submission, confirm:
 - Verify all four app languages, system-language mode, week-start settings, and light/dark appearance.
 - Verify offline behavior and invalid or unavailable ICS sources.
 
-Additional release drafts are in `Docs/AppStoreReleaseChecklist.md`, `Docs/TestFlightChecklist.md`, `Docs/PrivacyPolicyDraft.md`, and `Docs/AppStoreMetadataDraft.md`.
+Release-preparation documents:
+
+- [App Store release checklist](Docs/AppStoreReleaseChecklist.md)
+- [TestFlight checklist](Docs/TestFlightChecklist.md)
+- [Privacy policy draft](Docs/PrivacyPolicyDraft.md)
+- [App Store metadata draft](Docs/AppStoreMetadataDraft.md)

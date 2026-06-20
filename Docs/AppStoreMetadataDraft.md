@@ -2,13 +2,23 @@
 
 > Draft only. Replace placeholders with production URLs and confirm every claim against the submitted build before App Store upload.
 
+## Release Scope
+
+- App Name: TimeNest
+- Supported Locales: Japanese (`ja`), Simplified Chinese (`zh-Hans`), English (`en`), Korean (`ko`)
+- Core Features: month, week, and day calendar views; local schedule management; public-holiday subscriptions; shift and work-time management; multilingual UI; local-first data storage
+- Support URL: `TODO: publish a public support page before submission`
+- Privacy Policy URL: `TODO: publish the finalized privacy policy before submission`
+
+Do not enter a placeholder or inaccessible URL in App Store Connect.
+
 ## Category / Age Rating Suggestion
 
 - Primary Category: Productivity
 - Secondary Category: Utilities
 - Age Rating: 4+ suggested, subject to the App Store Connect age rating questionnaire.
-- Support URL: `https://example.com/timenest/support`
-- Privacy Policy URL: `https://example.com/timenest/privacy`
+- Support URL: `TODO`
+- Privacy Policy URL: `TODO`
 
 ## English (`en`)
 

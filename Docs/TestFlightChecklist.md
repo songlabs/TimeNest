@@ -1,103 +1,78 @@
 # TimeNest TestFlight Checklist
 
-> This checklist is for pre-release TestFlight verification. Record device model, iOS version, app version, build number, language, and network condition for each run.
+> Run this checklist against the exact internal TestFlight candidate. Record device model, iOS version, app version/build, language, appearance, and network condition. Current repository behavior includes ads and a Widget Extension, but no user-facing remove-ads purchase flow.
 
-## 1. Fresh Install
+## 1. Internal Test Setup
 
-- Install TimeNest from TestFlight on a device with no previous TimeNest data.
-- Launch the app from the Home Screen.
-- Confirm the month calendar opens without requiring network access.
-- Confirm default language, week start, and holiday subscription state are reasonable.
-- Create one all-day event and one timed event.
-- Close and reopen the app; confirm events remain visible.
+- [ ] Upload the Release archive and wait for App Store Connect processing to complete.
+- [ ] Add the build to the intended internal testing group and complete any required export-compliance information.
+- [ ] Record the tester, device, iOS version, TimeNest version/build, install type, language, and network state.
+- [ ] Install from TestFlight on at least one physical device; include one fresh install and, when an older build exists, one upgrade install.
+- [ ] Launch from the Home Screen and confirm startup completes without a crash or mandatory network connection.
 
-## 2. Permission Denial
+## 2. Core Calendar Views
 
-- Confirm the current build does not request unused permissions on first launch.
-- If a future build adds notifications or system calendar access, deny the permission and verify:
-  - The app remains usable.
-  - The user sees a clear message or can continue without that permission.
-  - No crash or blocked navigation occurs.
+- [ ] Month view: navigate previous/next months, cross a year boundary, verify today/selected-date state, and inspect month-edge dates.
+- [ ] Week view: switch from month view, confirm seven days and expected events, then navigate previous/next weeks.
+- [ ] Day view: open from calendar navigation, confirm timed/all-day ordering, navigate dates, and verify an empty day remains usable.
+- [ ] Return among month, week, and day views repeatedly; confirm selection and displayed date remain coherent.
 
-## 3. Multilingual UI
+## 3. Schedule Management
 
-Test these modes from Settings:
+- [ ] Create a timed event with title, note, start/end time, and optional reminder; confirm it appears on the expected date.
+- [ ] Edit the event and confirm all modified fields persist after closing and reopening the app.
+- [ ] Delete the event and confirm it disappears from month, week, day, and Widget data after refresh.
+- [ ] Create an all-day event, confirm it appears as all-day in month/week/day views, then edit and delete it.
+- [ ] Deny notification permission when prompted for a reminder; confirm the event still saves and the app remains usable.
 
-- Japanese
-- Simplified Chinese
-- English
-- Korean
-- System
+## 4. Holiday Subscriptions
 
-For each language:
+- [ ] Enable supported regions within the current subscription limit and sync a recommended HTTPS ICS source.
+- [ ] Confirm downloaded holidays appear and remain available after relaunch/offline use.
+- [ ] Test manual refresh, disable/re-enable, a malformed URL, a request failure, and an ICS response with no usable events.
+- [ ] Confirm failures show a readable error and do not remove unrelated local schedules.
+- [ ] Confirm holiday names remain native to the holiday region in every app-language mode.
 
-- Verify footer titles, settings rows, buttons, alerts, holiday subscription screens, event editor, statistics, and shift-entry text.
-- Verify month titles and weekday headers.
-- Verify view mode labels for month / week / day.
-- Verify no obvious untranslated placeholder keys appear.
+## 5. Shift and Work Records
 
-## 4. Month / Week / Day Views
+- [ ] Create or select a shift template and enter shifts across multiple dates.
+- [ ] Confirm one-action shift entry, replacement, deletion/cancel behavior, and date advancement match the current product rules.
+- [ ] Confirm shift actions do not delete unrelated timed, all-day, clock-in, or clock-out events.
+- [ ] Confirm clock-in/out, rest time, transport fee, hourly rate, and work statistics remain consistent where used.
 
-- Month view:
-  - Navigate previous and next months.
-  - Check month start, month end, and year boundary months.
-  - Verify today highlight.
-- Week view:
-  - Switch from month to week view.
-  - Confirm exactly 7 days are displayed.
-  - Tap a day and confirm day view opens.
-- Day view:
-  - Confirm events for the selected date appear in expected order.
-  - Confirm empty days do not crash or show broken layout.
+## 6. Languages and Appearance
 
-## 5. Holiday Subscription
+- [ ] Check Japanese, Simplified Chinese, English, Korean, and System language modes.
+- [ ] In each mode, inspect calendar headers, month/week/day labels, settings, event editor, holiday subscription, shift input, statistics, alerts, and Widget text.
+- [ ] Confirm no raw keys, mixed unintended languages, truncation, or incorrect date/weekday formatting.
+- [ ] Run core flows in light and dark appearance and confirm readable contrast.
+- [ ] Inspect a small and a large supported display for clipped calendar rows, controls, sheets, Widget content, or banners.
 
-- Enable Japan, China, Korea, and United States regions within the app limit.
-- Test recommended source selection.
-- Test valid HTTPS ICS sync.
-- Test invalid URL input.
-- Test an HTTPS URL that returns no events.
-- Confirm sync failure shows a user-readable error and does not block the app.
-- Confirm disabling all regions hides holidays.
+## 7. Widget and Deep Links
 
-## 6. Offline Testing
+- [ ] Add each Widget family/configuration intended for release and confirm it renders without placeholder-only content.
+- [ ] Confirm schedule, shift, holiday, language, and date changes refresh Widget content within expected WidgetKit timing.
+- [ ] Tap Widget dates/events and confirm the `timenest` deep link opens TimeNest at the expected date.
+- [ ] Relaunch and upgrade the app, then confirm the shared App Group snapshot remains readable by the Widget.
 
-- Launch the app in airplane mode.
-- Confirm calendar and existing local events load.
-- Confirm holiday sync failure is handled gracefully.
-- Confirm event create / edit / delete remains available locally.
+## 8. Ads and Privacy State
 
-## 7. Small / Large Screens
+- [ ] On the candidate build, confirm the expected banner location, loading/failure behavior, layout, and foreground/background recovery.
+- [ ] Confirm production candidates do not use Google's test App ID or banner unit ID. TestFlight-only validation must follow the team's approved AdMob test-device policy.
+- [ ] Confirm any ATT prompt, consent form, or privacy-options entry point required by the final configuration appears at the intended time and matches App Store privacy disclosures.
+- [ ] If the release intentionally has no ATT prompt, confirm this matches the approved non-ATT ad configuration and disclosures.
+- [ ] Confirm no remove-ads purchase or state is shown or promised; the current implementation has no user-facing remove-ads flow.
 
-Test at least:
+## 9. Lifecycle, Offline, and Stability
 
-- Small iPhone simulator or device.
-- Current Pro-size iPhone simulator or device.
-- Large iPhone simulator or device.
+- [ ] Force-quit and relaunch; confirm local schedules, shifts, settings, subscriptions, and Widget data persist.
+- [ ] Move the app to background and return to foreground repeatedly during calendar navigation, editing, holiday sync, and ad loading.
+- [ ] Launch in airplane mode; confirm existing local data and calendar views remain usable and holiday/ad failures are non-blocking.
+- [ ] Switch languages and calendar modes repeatedly, rapidly navigate dates, and delete an event while navigating; confirm no crash, hang, or corrupted state.
+- [ ] Review TestFlight crash feedback and Xcode Organizer diagnostics for the candidate build before submission.
 
-Check calendar grid, toolbar, settings rows, event editor, statistics, shift entry, alerts, and the ad banner for clipping or inaccessible controls.
+## 10. Final Internal-Test Sign-off
 
-## 8. Dark / Light Mode
-
-- Run the full core flow in light mode.
-- Run the full core flow in dark mode.
-- Confirm text contrast, holiday labels, selected date, today indicator, and bottom toolbar remain readable.
-
-## 9. Upgrade Install
-
-- Install an older TestFlight build if available.
-- Create events and set language / week start / holiday regions.
-- Upgrade to the candidate build.
-- Confirm existing data and settings remain usable.
-- Confirm no duplicate or corrupted holiday cache appears after sync.
-
-## 10. Crash / Exception Watch Points
-
-Watch for crashes or hangs when:
-
-- Switching languages repeatedly.
-- Rapidly changing month / week / day views.
-- Syncing holiday sources with poor network.
-- Loading or failing to load the calendar banner ad.
-- Deleting events and immediately navigating away.
-- Entering empty or malformed event titles and URLs.
+- [ ] No release-blocking crash, startup failure, data-loss issue, unreadable screen, broken Widget, or privacy-flow mismatch remains.
+- [ ] App Store metadata, screenshots, support URL, privacy-policy URL, version/build, ad configuration, and App Privacy answers match this exact build.
+- [ ] Internal tester name, date, result, and known non-blocking issues are recorded for the release decision.

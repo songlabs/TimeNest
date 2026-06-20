@@ -1,99 +1,75 @@
 # TimeNest App Store Release Checklist
 
-> Release-preparation checklist only. It does not guarantee App Review approval. Confirm every item in Apple Developer, App Store Connect, Xcode Organizer, and the submitted build before release.
+> Release-preparation checklist only. It does not guarantee App Review approval. Confirm manual items in Apple Developer, App Store Connect, Xcode Organizer, and the exact submitted build.
 
-## 1. App Store Connect Items
+## Repository Audit Snapshot (2026-06-20)
 
-- Create or confirm the App Store Connect app record.
-- Confirm app name, subtitle, description, keywords, promotional text, release notes, category, and age rating in each supported locale.
-- Prepare iPhone screenshots for required display sizes.
-- Prepare Support URL and Privacy Policy URL. Do not submit placeholder URLs.
-- Confirm review contact information and demo/review notes.
-- Confirm pricing and availability.
-- Confirm TestFlight internal and external tester groups.
+- [x] App target, test target, and Widget Extension are present; project shared schemes are `TimeNest` and `TimeNestWidgetExtension`, and the workspace also contains `TimeNest-Workspace`.
+- [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.widget`.
+- [x] App and Widget entitlements use the same App Group: `group.com.song.TimeNest`.
+- [x] Widget deep links use the registered `timenest` URL scheme.
+- [x] App and Widget versions currently match at `1.0 (1)`.
+- [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
+- [x] `ja`, `zh-Hans`, `en`, and `ko` each contain 306 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match.
+- [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
+- [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
+- [ ] Both checked-in Google Mobile Ads identifiers are official test IDs. Replace them with the approved production configuration, or intentionally disable ads, before submission.
+- [ ] The repository currently has no ATT request, `NSUserTrackingUsageDescription`, or app-level consent flow. Decide the production advertising/privacy behavior before submission; do not infer the final App Privacy answers from the test configuration.
 
-## 2. Bundle ID / Signing / Archive / Upload
+## 1. Developer Program and App Store Connect
 
-- Bundle ID: `com.song.TimeNest`.
-- Confirm the Bundle ID exists in Apple Developer.
-- Confirm capabilities in Apple Developer match the app target. Do not enable unused capabilities.
-- Confirm Automatic Signing or manual provisioning profile is valid for App Store distribution.
-- Confirm Team ID and certificate are correct in Xcode.
-- Increment `CFBundleShortVersionString` and `CFBundleVersion` for each upload.
-- Run a Release archive in Xcode Organizer.
-- Validate the archive before upload.
-- Upload to App Store Connect and confirm processing completes successfully.
+- [ ] Confirm the paid Apple Developer Program enrollment has changed from Pending to Active. While pending, do not submit a duplicate enrollment, pay again, or change Apple ID.
+- [ ] Confirm the App Store Connect app record uses the intended primary language and Bundle ID.
+- [ ] Fill app name, subtitle, description, keywords, promotional text, release notes, categories, age rating, pricing, and availability for each supported locale.
+- [ ] Fill review contact information and accurate review notes; no demo login is required because the current app has no account system.
+- [ ] Confirm all required App Store agreements, tax, and banking items that apply to the account.
 
-## 3. Privacy Manifest
+## 2. Bundle, Version, Signing, and Build
 
-- Confirm `TimeNest/PrivacyInfo.xcprivacy` is included in the app target.
-- Current repository implementation includes Google Mobile Ads for a calendar banner. It does not include account sign-in or cloud sync.
-- Current repository implementation uses local storage and `UserDefaults` for local settings and state.
-- Confirm the submitted Google Mobile Ads SDK version contributes all required privacy-manifest declarations, and review the app's own manifest against the production ad configuration.
-- If future builds add cloud sync, push notifications, accounts, crash reporting, or analytics, update the Privacy Manifest before upload.
+- [ ] Confirm `com.song.TimeNest` and `com.song.TimeNest.widget` exist under the active Developer Program team.
+- [ ] Confirm the App Group `group.com.song.TimeNest` is enabled for both identifiers and provisioning profiles.
+- [ ] Keep the existing app, Widget, target, and scheme names unchanged.
+- [ ] Confirm the release version and increment the build number for every uploaded build; keep App and Widget versions aligned.
+- [ ] Confirm Automatic Signing or distribution provisioning is valid for the intended App Store team.
+- [ ] Run the final `TimeNest` Release build, archive, validation, and upload from the exact release commit.
+- [ ] Confirm the uploaded build finishes App Store Connect processing without entitlement, privacy-manifest, icon, or architecture errors.
 
-## 4. App Privacy Labels
+## 3. App Icon and Localizations
 
-Do not finalize these answers until the production Google Mobile Ads configuration and consent flow have been reviewed:
+- [ ] Visually inspect the 1024x1024 marketing icon: no transparency, unintended padding, debug badge, or obsolete artwork.
+- [ ] Confirm App Store Connect displays the expected icon after build processing.
+- [ ] Recheck `ja`, `zh-Hans`, `en`, and `ko` key parity after any release-candidate change.
+- [ ] Verify all four languages plus System mode on device; confirm no raw localization keys or clipped release-critical text.
+- [ ] Keep user-entered event and custom shift names unchanged, and keep holiday names region-native.
 
-- Tracking: confirm from the submitted ad configuration and Google Mobile Ads data-use documentation.
-- Data Used to Track You: confirm from the submitted ad configuration.
-- Data Linked to You / Data Not Linked to You: include every category used by the advertising SDK or app.
-- Local-only data: user-created schedules, settings, holiday subscription URLs, and cached holiday data are stored locally by default.
-- Network access: holiday subscription sync accesses public HTTPS ICS URLs selected or confirmed by the user.
-- Advertising network access: the calendar banner can contact Google Mobile Ads when ads are enabled.
+## 4. Privacy, Permissions, Ads, and ATT
 
-Reconfirm these labels if any implementation changes before submission.
+- [ ] Publish the final privacy policy based on `Docs/PrivacyPolicyDraft.md`; replace the effective date and contact placeholder.
+- [ ] Enter a public Privacy Policy URL that is reachable without authentication.
+- [ ] Complete App Store App Privacy answers using the submitted Google Mobile Ads SDK/configuration and the app's public ICS requests, local notifications, local storage, and Widget App Group behavior.
+- [ ] Review the archive privacy report and all SDK privacy manifests. Confirm the app-level `PrivacyInfo.xcprivacy` and App Store answers remain accurate for the submitted build.
+- [ ] Decide whether production ads access IDFA or otherwise meet Apple's tracking definition. If ATT is required, add the authorization flow and localized purpose text in a separate, explicitly scoped change before loading ads.
+- [ ] If ATT is not used, confirm the production ad request configuration and App Privacy answers accurately reflect non-ATT behavior.
+- [ ] Review whether a Google UMP/regional consent flow is required for the intended distribution regions. The package is resolved transitively, but the current app does not invoke a consent flow.
+- [ ] Review Google's current `SKAdNetworkItems` guidance against the final ad configuration; the current `Info.plist` has no `SKAdNetworkItems` entry.
+- [ ] Confirm production App ID and banner unit ID are not Google test IDs; never commit or guess unapproved identifiers.
+- [ ] Reconfirm that the current app has no user-facing remove-ads purchase flow; do not advertise one.
 
-## 5. Screenshots
+## 5. URLs, Metadata, and Screenshots
 
-Prepare screenshots that accurately match the submitted build:
+- [ ] Publish a public Support URL with contact information and basic help for local data, reminders, holiday sync, language settings, Widget behavior, and ads.
+- [ ] Replace every `TODO` URL in `Docs/AppStoreMetadataDraft.md`; do not submit placeholder URLs.
+- [ ] Confirm metadata claims match the submitted build and do not describe login, cloud sync, sharing, analytics, or remove-ads features as implemented.
+- [ ] Prepare required iPhone screenshot sizes for each App Store locale selected in App Store Connect.
+- [ ] Capture: month view, week view, day view, event create/edit, holiday subscriptions, shift input/work statistics, and language/settings.
+- [ ] Add a Widget screenshot only if it is part of the release messaging and accurately reflects the submitted Widget.
+- [ ] Exclude test ads, placeholder URLs, debug text, simulator chrome, personal schedule data, and unimplemented features from screenshots.
 
-- Month calendar view.
-- Week calendar view.
-- Day calendar view.
-- Event creation or editing.
-- Holiday subscription settings.
-- Language / settings screen.
-- Shift entry and work statistics, if included in release messaging.
+## 6. Device and TestFlight Gate
 
-Avoid screenshots that show placeholder URLs, debug text, simulator artifacts, or unimplemented features as if they were complete.
-
-## 6. Support URL
-
-- Provide a real public support page or contact page.
-- Include basic troubleshooting for holiday sync, offline behavior, language settings, and local data.
-- Ensure the URL is reachable without authentication.
-
-## 7. Privacy Policy URL
-
-- Publish the final privacy policy based on `Docs/PrivacyPolicyDraft.md`.
-- Replace `support@example.com` and placeholder effective dates.
-- Ensure the URL is reachable without authentication.
-- Ensure the policy explains local data, public ICS URL access, and absence/presence of ads, analytics, tracking, and SDKs.
-
-## 8. Age Rating
-
-- Complete the App Store Connect questionnaire honestly.
-- Current app concept is a personal calendar / schedule utility and should generally be suitable for a low age rating.
-- Reassess if future versions add user-generated sharing, web browsing, messaging, or external content beyond public ICS sync.
-
-## 9. Review Notes
-
-Draft review notes:
-
-- TimeNest does not require account login.
-- The app launches without network access and stores schedules locally by default.
-- Holiday subscription sync uses public HTTPS ICS URLs selected inside the app.
-- If holiday sync is tested, use a supported region and recommended source from the holiday settings screen.
-- Calendar banner ads are included when `AdConfiguration.isEnabled` is `true`; there is currently no in-app remove-ads purchase flow.
-- Confirm analytics and tracking statements against the submitted Google Mobile Ads configuration.
-
-## 10. Final Manual Checks Before Submit
-
-- Build and unit tests pass on a macOS/Xcode environment.
-- Fresh install and upgrade install pass in TestFlight.
-- All supported languages show complete UI strings.
-- Placeholder, preview, mock, and debug-only views are either removed or intentionally excluded from user-facing production flows.
-- Invalid ICS URL and network failure show user-readable errors.
-- App icon, launch screen, display name, version, and build number are final.
+- [ ] Install the release candidate on a physical device and confirm launch, foreground/background return, and local data persistence.
+- [ ] Confirm notification permission allow/deny behavior when saving an event with a reminder.
+- [ ] Complete `Docs/TestFlightChecklist.md` on the exact candidate build.
+- [ ] Complete at least one TestFlight internal-test pass and record device, iOS version, app version/build, language, network state, and result.
+- [ ] Confirm fresh-install and upgrade-install behavior, including SwiftData compatibility and Widget refresh.
+- [ ] Resolve release-blocking crashes, upload errors, missing metadata, and privacy-answer mismatches before submission.
