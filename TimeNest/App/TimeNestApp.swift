@@ -3,6 +3,8 @@ import SwiftUI
 
 @main
 struct TimeNestApp: App {
+    @AppStorage("themeMode") private var themeMode: String = "system"
+
     private let modelContainer: ModelContainer
     private let eventRepository: EventRepository
     private let reminderRepository: ReminderRepository
@@ -81,12 +83,24 @@ struct TimeNestApp: App {
                 calendarDisplayUseCase: calendarDisplayUseCase,
                 eventUseCase: eventUseCase
             )
+            .preferredColorScheme(preferredColorScheme)
             .environmentObject(LocalizationManager.shared)
             .modelContainer(modelContainer)
             .task {
                 AdConsentManager.shared.requestConsentInfoIfNeeded()
                 await widgetSnapshotCoordinator.refresh()
             }
+        }
+    }
+
+    private var preferredColorScheme: ColorScheme? {
+        switch themeMode {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return nil
         }
     }
 }

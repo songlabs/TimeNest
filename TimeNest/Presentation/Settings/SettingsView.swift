@@ -133,7 +133,7 @@ struct SettingsView: View {
 
                     SettingsValueRow(
                         title: localization.localized(.aboutVersion),
-                        value: "1.0.0"
+                        value: appVersionText
                     )
 
                     SettingsDivider()
@@ -169,6 +169,15 @@ struct SettingsView: View {
             .sorted { $0.localizedKey < $1.localizedKey }
             .map { localization.localized($0.localizedKey) }
             .joined(separator: ", ")
+    }
+
+    private var appVersionText: String {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
+        guard let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String,
+              !build.isEmpty else {
+            return version
+        }
+        return "\(version) (\(build))"
     }
 }
 

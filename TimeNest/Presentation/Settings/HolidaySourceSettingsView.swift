@@ -461,14 +461,12 @@ struct HolidaySourceEditView: View {
 
             let events = try parseService.parse(data: data, region: region, sourceURL: testURLString)
 
-
-            if events.isEmpty {
-                errorMessage = localization.localized(.holidaySourceNoEvents)
-                showError = true
-            } else {
-                syncTestSuccessMessage = String(format: localization.localized(.holidaySourceTestSuccess), events.count)
-                showingSyncTestSuccess = true
+            guard !events.isEmpty else {
+                throw EnhancedICSError.noEvents
             }
+
+            syncTestSuccessMessage = String(format: localization.localized(.holidaySourceTestSuccess), events.count)
+            showingSyncTestSuccess = true
 
         } catch {
             errorMessage = error.localizedDescription

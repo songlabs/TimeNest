@@ -94,6 +94,10 @@ class ICSParseService: ICSParsing {
 
         // 4. DEBUG logs
 
+        guard !events.isEmpty else {
+            throw EnhancedICSError.noEvents
+        }
+
         return events
     }
 

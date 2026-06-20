@@ -223,10 +223,6 @@ class HolidaySubscriptionManager: ObservableObject {
                 let events = try await syncSingleWithResult(subscription: subscription)
                 totalEvents += events
             } catch {
-                updateSubscription(subscription.id) {
-                    $0.syncStatus = .failed
-                    $0.errorMessage = error.localizedDescription
-                }
                 if firstError == nil {
                     firstError = error
                     lastSyncError = error
@@ -241,34 +237,46 @@ class HolidaySubscriptionManager: ObservableObject {
     
     /// 同步单个订阅并返回事件数量
     private func syncSingleWithResult(subscription: HolidaySubscription) async throws -> Int {
-        guard let url = URL(string: subscription.urlString) else {
-            throw SubscriptionManagerError.invalidURL
+        do {
+            guard let url = URL(string: subscription.urlString) else {
+                throw SubscriptionManagerError.invalidURL
+            }
+
+            let host = url.host ?? ""
+            let regionName = subscription.region.localizedKey
+
+            // 下载并验证 ICS 数据
+            let data = try await downloadService.download(from: url, timeout: 30, region: regionName, host: host)
+            try downloadService.validateICSContent(data)
+
+            // 解析 ICS
+            let events = try await Task.detached { [parseService] in
+                try parseService.parse(data: data, region: subscription.region, sourceURL: subscription.urlString)
+            }.value
+
+            // 只有至少一个有效事件时才允许覆盖最后一次成功缓存。
+            guard !events.isEmpty else {
+                throw EnhancedICSError.noEvents
+            }
+
+            try await cacheRepository.saveEvents(events, for: subscription.region)
+
+            updateSubscription(subscription.id) {
+                $0.syncStatus = .success
+                $0.lastUpdatedAt = Date()
+                $0.errorMessage = nil
+            }
+
+            NotificationCenter.default.post(name: .holidayEventsDidUpdate, object: nil)
+
+            return events.count
+        } catch {
+            updateSubscription(subscription.id) {
+                $0.syncStatus = .failed
+                $0.errorMessage = error.localizedDescription
+            }
+            throw error
         }
-
-        let host = url.host ?? ""
-        let regionName = subscription.region.localizedKey
-
-        // 下载 ICS 数据
-        let data = try await downloadService.download(from: url, timeout: 30, region: regionName, host: host)
-
-        // 解析 ICS
-        let events = try await Task.detached { [parseService] in
-            try parseService.parse(data: data, region: subscription.region, sourceURL: subscription.urlString)
-        }.value
-
-        // 保存到缓存
-        try await cacheRepository.saveEvents(events, for: subscription.region)
-
-        // 更新订阅状态
-        updateSubscription(subscription.id) {
-            $0.syncStatus = .success
-            $0.lastUpdatedAt = Date()
-            $0.errorMessage = nil
-        }
-
-        NotificationCenter.default.post(name: .holidayEventsDidUpdate, object: nil)
-        
-        return events.count
     }
 
     /// 同步单个订阅（不返回事件数量）
