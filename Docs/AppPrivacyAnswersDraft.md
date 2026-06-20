@@ -18,6 +18,7 @@
 - Google Mobile Ads and Google UMP are integrated. The first release requires ads. Debug uses official test identifiers, while Release requires approved production identifiers and fails its build validation when they are missing or invalid.
 - Ads are gated by UMP `canRequestAds`, ad personalization is disabled, and the app does not request ATT.
 - The app currently has no in-app purchase or user-facing remove-ads flow.
+- Settings exposes the published Privacy Policy URL through the system URL-opening flow.
 
 ## App Store Connect Answering Draft
 
@@ -54,4 +55,5 @@ The Google Mobile Ads SDK may require disclosure of data types such as identifie
 - [ ] Confirm the exact Release build has `TIMENEST_ADS_ENABLED=YES` and its processed `Info.plist` contains the production App ID.
 - [ ] Confirm ATT and regional consent decisions.
 - [ ] Complete the App Store Connect App Privacy questionnaire manually using its current wording.
+- [ ] Confirm Settings > Support > Privacy Policy opens https://songlabs.github.io/timenest/privacy.html in the exact release candidate.
 - [ ] Confirm the submitted answers match the published privacy policy.

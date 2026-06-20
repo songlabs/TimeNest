@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct SettingsView: View {
+    private static let privacyPolicyURL = URL(string: "https://songlabs.github.io/timenest/privacy.html")
+
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject private var localization: LocalizationManager
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
@@ -124,6 +127,15 @@ struct SettingsView: View {
                     SettingsDivider()
 
                     SettingsActionRow(
+                        title: localization.localized(.aboutPrivacy),
+                        systemImage: "hand.raised"
+                    ) {
+                        openPrivacyPolicy()
+                    }
+
+                    SettingsDivider()
+
+                    SettingsActionRow(
                         title: localization.localized(.thirdPartyLicensesTitle),
                         systemImage: "doc.text"
                     ) {
@@ -182,6 +194,11 @@ struct SettingsView: View {
             return version
         }
         return "\(version) (\(build))"
+    }
+
+    private func openPrivacyPolicy() {
+        guard let url = Self.privacyPolicyURL else { return }
+        openURL(url) { _ in }
     }
 }
 

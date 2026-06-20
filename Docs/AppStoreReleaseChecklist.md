@@ -10,7 +10,7 @@
 - [x] Widget deep links use the registered `timenest` URL scheme.
 - [x] App and Widget versions currently match at `1.0 (1)`.
 - [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
-- [x] `ja`, `zh-Hans`, `en`, and `ko` each contain 306 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match.
+- [x] `ja`, `zh-Hans`, `en`, and `ko` each contain 314 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
 - [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
 - [x] Debug uses Google's official test IDs. Release is an ad-enabled target and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
@@ -49,9 +49,10 @@
 ## 4. Privacy, Permissions, Ads, and ATT
 
 - [x] Record the public Privacy Policy URL in release documents: https://songlabs.github.io/timenest/privacy.html
+- [x] Expose the public Privacy Policy from Settings > Support > Privacy Policy using the system URL-opening flow.
 - [ ] Confirm the published privacy policy matches the submitted build, including its effective date, support contact, and final advertising disclosure.
 - [x] Prepare `Docs/AppPrivacyAnswersDraft.md` covering local storage, Widget App Group sharing, public ICS requests, Google Mobile Ads uncertainty, and ATT decision points.
-- [ ] Complete App Store App Privacy answers using the submitted Google Mobile Ads SDK/configuration and the app's public ICS requests, local notifications, local storage, and Widget App Group behavior.
+- [ ] Submission gate: complete App Store Connect App Privacy answers using the submitted Google Mobile Ads SDK/configuration and the app's public ICS requests, local notifications, local storage, and Widget App Group behavior.
 - [ ] Review the archive privacy report and all SDK privacy manifests. Confirm the app-level `PrivacyInfo.xcprivacy` and App Store answers remain accurate for the submitted build.
 - [x] Current code does not call ATT and disables ad personalization before Mobile Ads initialization. If the policy changes to tracking/personalized ads, implement ATT separately before submission.
 - [ ] Confirm the submitted production configuration, App Privacy answers, privacy policy, and archive privacy report all reflect the current non-ATT behavior.

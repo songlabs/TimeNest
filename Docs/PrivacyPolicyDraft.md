@@ -4,6 +4,8 @@
 
 - Published Privacy Policy URL: https://songlabs.github.io/timenest/privacy.html
 - Support URL: https://songlabs.github.io/timenest/support.html
+- In-app entry: Settings > Support > Privacy Policy opens the published policy with the system URL-opening flow.
+- Pre-submission gate: confirm the entry works in the exact release candidate and the published policy matches that build, including the effective date and final advertising disclosure.
 
 ## 中文草案
 

@@ -46,7 +46,7 @@
 "about.version" = "버전";
 "about.developer" = "개발자";
 "about.developer_name" = "TimeNest 팀";
-"about.privacy" = "개인정보 보호 정책";
+"about.privacy" = "개인정보 처리방침";
 "about.terms" = "이용 약관";
 
 /* Notification */
