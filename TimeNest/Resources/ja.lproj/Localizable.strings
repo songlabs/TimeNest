@@ -304,7 +304,7 @@
 "help.category.views" = "月・週・日表示";
 "help.category.holidays" = "祝日・休日";
 "help.category.shifts" = "シフトと勤務記録";
-"help.category.ads" = "広告・復元";
+"help.category.ads" = "広告";
 "help.category.privacy" = "データとプライバシー";
 
 "help.events.add.question" = "予定を追加するには？";
@@ -348,11 +348,7 @@
 "help.shifts.statistics_missing.answer" = "対象期間内に出勤記録と退勤記録が保存され、時給などの必要な情報が入力されているか確認してください。シフトだけでは給与統計は自動作成されません。";
 
 "help.ads.about.question" = "広告について";
-"help.ads.about.answer" = "TimeNest では、アプリの運営を支えるために広告が表示されることがあります。";
-"help.ads.restore.question" = "以前広告を非表示にした方の復元について";
-"help.ads.restore.answer" = "設定に復元項目が表示される場合は、以前購入したときと同じ Apple Account で操作してください。";
-"help.ads.restore_failed.question" = "復元できない場合は？";
-"help.ads.restore_failed.answer" = "アプリを再起動しても復元できない場合は、「お問い合わせ」からご連絡ください。";
+"help.ads.about.answer" = "TimeNest では、アプリの運営を支えるために広告が表示されることがあります。現在のバージョンには広告を非表示にする購入機能はありません。";
 
 "help.privacy.storage.question" = "データはどこに保存されますか？";
 "help.privacy.storage.answer" = "予定やシフトなどのデータは、この端末内に保存されます。";
@@ -360,6 +356,19 @@
 "help.privacy.account.answer" = "TimeNest の利用にアカウント登録は必要ありません。";
 "help.privacy.delete_app.question" = "App を削除した場合のデータについて";
 "help.privacy.delete_app.answer" = "App を削除すると、端末内に保存された TimeNest のデータも削除されます。";
+"help.privacy.options.action" = "広告のプライバシー設定を管理";
+"help.privacy.options.description" = "この端末の広告に関するプライバシー設定を確認または変更します。";
+"help.privacy.options.error_title" = "プライバシー設定を開けません";
+"help.privacy.options.error_message" = "時間をおいてもう一度お試しください。";
+
+"third_party_licenses.title" = "第三者ライセンス";
+"third_party_licenses.description" = "TimeNest は以下の第三者コンポーネントを使用しています。完全な通知はプロジェクトの ThirdPartyNotices 文書に記載されています。";
+"third_party_licenses.license_type" = "ライセンス";
+"third_party_licenses.repository" = "ソースリポジトリを表示";
+"third_party_licenses.google_mobile_ads" = "Google Mobile Ads Swift Package Manager wrapper";
+"third_party_licenses.user_messaging_platform" = "Google User Messaging Platform Swift Package Manager wrapper";
+"third_party_licenses.apache_2" = "Apache-2.0";
+"third_party_licenses.google_copyright" = "Copyright 2021 Google LLC";
 
 /* Widgets */
 "widget.calendar.title" = "カレンダー";

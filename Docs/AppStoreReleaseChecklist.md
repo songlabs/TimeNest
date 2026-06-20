@@ -13,8 +13,10 @@
 - [x] `ja`, `zh-Hans`, `en`, and `ko` each contain 306 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
 - [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
-- [ ] Both checked-in Google Mobile Ads identifiers are official test IDs. Replace them with the approved production configuration, or intentionally disable ads, before submission.
-- [ ] The repository currently has no ATT request, `NSUserTrackingUsageDescription`, or app-level consent flow. Decide the production advertising/privacy behavior before submission; do not infer the final App Privacy answers from the test configuration.
+- [x] Debug uses Google's official test IDs. Release is an ad-enabled target and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
+- [ ] Replace `REQUIRED_PRODUCTION_ADMOB_APP_ID` and `REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID` in both Release build-setting sources with the approved production IDs.
+- [x] Google UMP now updates consent once per launch and gates Mobile Ads initialization and banner loading on `canRequestAds`. Publisher Privacy Treatment disables ad personalization.
+- [x] The current policy does not request ATT and therefore does not add `NSUserTrackingUsageDescription`.
 
 ## 1. Developer Program and App Store Connect
 
@@ -51,12 +53,17 @@
 - [x] Prepare `Docs/AppPrivacyAnswersDraft.md` covering local storage, Widget App Group sharing, public ICS requests, Google Mobile Ads uncertainty, and ATT decision points.
 - [ ] Complete App Store App Privacy answers using the submitted Google Mobile Ads SDK/configuration and the app's public ICS requests, local notifications, local storage, and Widget App Group behavior.
 - [ ] Review the archive privacy report and all SDK privacy manifests. Confirm the app-level `PrivacyInfo.xcprivacy` and App Store answers remain accurate for the submitted build.
-- [ ] Decide whether production ads access IDFA or otherwise meet Apple's tracking definition. If ATT is required, add the authorization flow and localized purpose text in a separate, explicitly scoped change before loading ads.
-- [ ] If ATT is not used, confirm the production ad request configuration and App Privacy answers accurately reflect non-ATT behavior.
-- [ ] Review whether a Google UMP/regional consent flow is required for the intended distribution regions. The package is resolved transitively, but the current app does not invoke a consent flow.
-- [ ] Review Google's current `SKAdNetworkItems` guidance against the final ad configuration; the current `Info.plist` has no `SKAdNetworkItems` entry.
-- [ ] Confirm production App ID and banner unit ID are not Google test IDs; never commit or guess unapproved identifiers.
+- [x] Current code does not call ATT and disables ad personalization before Mobile Ads initialization. If the policy changes to tracking/personalized ads, implement ATT separately before submission.
+- [ ] Confirm the submitted production configuration, App Privacy answers, privacy policy, and archive privacy report all reflect the current non-ATT behavior.
+- [x] Google UMP consent flow is centralized in the Ads layer. Help shows a localized privacy-options action only when UMP reports that an entry point is required.
+- [ ] Configure the intended GDPR/US-state privacy messages in the AdMob console for the production App ID and verify them on physical devices in applicable regions.
+- [x] `Info.plist` includes the `SKAdNetworkItems` list from Google's iOS quick-start guidance checked on 2026-06-20.
+- [ ] Confirm `TIMENEST_ADS_ENABLED=YES`, `TIMENEST_ADMOB_APP_ID` is the production App ID, and `TIMENEST_ADMOB_BANNER_UNIT_ID` is the production Banner Unit ID in the exact archive build settings.
+- [ ] Confirm the Release validation script succeeds and the processed archive `Info.plist` contains the production `GADApplicationIdentifier`, never Google's test App ID or a placeholder.
 - [ ] Reconfirm that the current app has no user-facing remove-ads purchase flow; do not advertise one.
+- [x] Record Google Mobile Ads 13.5.0 and Google User Messaging Platform 3.1.0 notices in `Docs/ThirdPartyNotices.md`.
+- [x] Expose the two wrapper attributions and Apache-2.0 license type through Settings > Third-party Licenses.
+- [ ] On a physical device, verify fresh-install UMP consent, returning-user consent, required privacy-options presentation, denied/no-consent layout stability, and production banner loading.
 
 ## 5. URLs, Metadata, and Screenshots
 

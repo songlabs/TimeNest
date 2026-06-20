@@ -304,7 +304,7 @@
 "help.category.views" = "Month, Week, and Day Views";
 "help.category.holidays" = "Holidays and Days Off";
 "help.category.shifts" = "Shifts and Work Records";
-"help.category.ads" = "Ads and Restore";
+"help.category.ads" = "Ads";
 "help.category.privacy" = "Data and Privacy";
 
 "help.events.add.question" = "How do I add an event?";
@@ -348,11 +348,7 @@
 "help.shifts.statistics_missing.answer" = "Check that clock-in and clock-out records were saved within the selected period and that required information such as the hourly rate was entered. A shift alone does not create pay statistics.";
 
 "help.ads.about.question" = "About ads";
-"help.ads.about.answer" = "TimeNest may display ads to support the operation of the app.";
-"help.ads.restore.question" = "Restoring a previous ad removal";
-"help.ads.restore.answer" = "If a restore option appears in Settings, use the same Apple Account used for the original purchase.";
-"help.ads.restore_failed.question" = "What if restore does not work?";
-"help.ads.restore_failed.answer" = "If restarting the app does not help, contact us using Contact Us.";
+"help.ads.about.answer" = "TimeNest may display ads to support the operation of the app. The current version does not offer an ad-removal purchase.";
 
 "help.privacy.storage.question" = "Where is my data stored?";
 "help.privacy.storage.answer" = "Data such as events and shifts is stored on this device.";
@@ -360,6 +356,19 @@
 "help.privacy.account.answer" = "You do not need to register an account to use TimeNest.";
 "help.privacy.delete_app.question" = "What happens to data if I delete the app?";
 "help.privacy.delete_app.answer" = "Deleting the app also deletes TimeNest data stored on the device.";
+"help.privacy.options.action" = "Manage Ad Privacy Options";
+"help.privacy.options.description" = "Review or change the advertising privacy choices for this device.";
+"help.privacy.options.error_title" = "Privacy Options Unavailable";
+"help.privacy.options.error_message" = "Please try again later.";
+
+"third_party_licenses.title" = "Third-party Licenses";
+"third_party_licenses.description" = "TimeNest uses the following third-party components. Full notices remain available in the project's ThirdPartyNotices document.";
+"third_party_licenses.license_type" = "License";
+"third_party_licenses.repository" = "View Source Repository";
+"third_party_licenses.google_mobile_ads" = "Google Mobile Ads Swift Package Manager wrapper";
+"third_party_licenses.user_messaging_platform" = "Google User Messaging Platform Swift Package Manager wrapper";
+"third_party_licenses.apache_2" = "Apache-2.0";
+"third_party_licenses.google_copyright" = "Copyright 2021 Google LLC";
 
 /* Widgets */
 "widget.calendar.title" = "Calendar";

@@ -22,6 +22,13 @@ let project = Project(
                 "TimeNest/PrivacyInfo.xcprivacy",
                 "TimeNest/Resources/Assets.xcassets"
             ],
+            scripts: [
+                .pre(
+                    script: "sh \"$SRCROOT/Scripts/validate_admob_release_config.sh\"",
+                    name: "Validate Release AdMob Configuration",
+                    basedOnDependencyAnalysis: false
+                )
+            ],
             dependencies: [
                 .package(product: "GoogleMobileAds"),
                 .target(name: "TimeNestWidgetExtension")
@@ -39,6 +46,24 @@ let project = Project(
                     "CODE_SIGN_STYLE": "Automatic",
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "TARGETED_DEVICE_FAMILY": "1,2"
+                ],
+                configurations: [
+                    .debug(
+                        name: "Debug",
+                        settings: [
+                            "TIMENEST_ADMOB_APP_ID": "ca-app-pub-3940256099942544~1458002511",
+                            "TIMENEST_ADMOB_BANNER_UNIT_ID": "ca-app-pub-3940256099942544/2435281174",
+                            "TIMENEST_ADS_ENABLED": "YES"
+                        ]
+                    ),
+                    .release(
+                        name: "Release",
+                        settings: [
+                            "TIMENEST_ADMOB_APP_ID": "REQUIRED_PRODUCTION_ADMOB_APP_ID",
+                            "TIMENEST_ADMOB_BANNER_UNIT_ID": "REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID",
+                            "TIMENEST_ADS_ENABLED": "YES"
+                        ]
+                    )
                 ]
             )
         ),

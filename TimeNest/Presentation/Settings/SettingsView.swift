@@ -7,6 +7,7 @@ struct SettingsView: View {
 
     @State private var showVersionInfo: Bool = false
     @State private var showingHelp = false
+    @State private var showingThirdPartyLicenses = false
     @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
 
     private let onClose: (() -> Void)?
@@ -115,6 +116,15 @@ struct SettingsView: View {
                     ) {
                         showingHelp = true
                     }
+
+                    SettingsDivider()
+
+                    SettingsActionRow(
+                        title: localization.localized(.thirdPartyLicensesTitle),
+                        systemImage: "doc.text"
+                    ) {
+                        showingThirdPartyLicenses = true
+                    }
                 }
 
                 SettingsCard {
@@ -142,6 +152,10 @@ struct SettingsView: View {
         .foregroundColor(SettingsStyle.primaryText)
         .sheet(isPresented: $showingHelp) {
             HelpView()
+                .environmentObject(localization)
+        }
+        .sheet(isPresented: $showingThirdPartyLicenses) {
+            ThirdPartyLicensesView()
                 .environmentObject(localization)
         }
     }

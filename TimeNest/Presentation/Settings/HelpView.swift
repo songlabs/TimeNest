@@ -83,9 +83,7 @@ private enum HelpFAQCategory: String, CaseIterable, Identifiable, Hashable {
             ]
         case .ads:
             [
-                HelpFAQItem(questionKey: .helpAdsAboutQuestion, answerKey: .helpAdsAboutAnswer),
-                HelpFAQItem(questionKey: .helpAdsRestoreQuestion, answerKey: .helpAdsRestoreAnswer),
-                HelpFAQItem(questionKey: .helpAdsRestoreFailedQuestion, answerKey: .helpAdsRestoreFailedAnswer)
+                HelpFAQItem(questionKey: .helpAdsAboutQuestion, answerKey: .helpAdsAboutAnswer)
             ]
         case .privacy:
             [
@@ -240,6 +238,8 @@ private struct HelpFAQCategoryView: View {
     let category: HelpFAQCategory
 
     @EnvironmentObject private var localization: LocalizationManager
+    @ObservedObject private var consentManager = AdConsentManager.shared
+    @State private var showingPrivacyOptionsError = false
 
     var body: some View {
         ScrollView {
@@ -260,11 +260,120 @@ private struct HelpFAQCategoryView: View {
                     .background(SettingsModalSurface.sectionBackground)
                     .clipShape(RoundedRectangle(cornerRadius: HelpLayout.cardCornerRadius, style: .continuous))
                 }
+
+                if category == .privacy && consentManager.isPrivacyOptionsRequired {
+                    Button {
+                        consentManager.presentPrivacyOptions { error in
+                            showingPrivacyOptionsError = error != nil
+                        }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(localization.localized(.helpPrivacyOptionsAction))
+                                .font(.headline)
+                                .foregroundColor(.accentColor)
+
+                            Text(localization.localized(.helpPrivacyOptionsDescription))
+                                .font(.body)
+                                .foregroundColor(SettingsModalSurface.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(HelpLayout.rowHorizontalPadding)
+                        .background(SettingsModalSurface.sectionBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: HelpLayout.cardCornerRadius, style: .continuous))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(HelpLayout.horizontalPadding)
         }
         .background(SettingsModalSurface.background)
         .navigationTitle(localization.localized(category.titleKey))
         .navigationBarTitleDisplayMode(.inline)
+        .alert(localization.localized(.helpPrivacyOptionsErrorTitle), isPresented: $showingPrivacyOptionsError) {
+            Button(localization.localized(.done), role: .cancel) {}
+        } message: {
+            Text(localization.localized(.helpPrivacyOptionsErrorMessage))
+        }
+    }
+}
+
+private struct ThirdPartyDependency: Identifiable {
+    let nameKey: LocalizedString
+    let repositoryURL: URL
+
+    var id: String { nameKey.rawValue }
+}
+
+struct ThirdPartyLicensesView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var localization: LocalizationManager
+
+    private let dependencies = [
+        ThirdPartyDependency(
+            nameKey: .thirdPartyGoogleMobileAds,
+            repositoryURL: URL(string: "https://github.com/googleads/swift-package-manager-google-mobile-ads")!
+        ),
+        ThirdPartyDependency(
+            nameKey: .thirdPartyUserMessagingPlatform,
+            repositoryURL: URL(string: "https://github.com/googleads/swift-package-manager-google-user-messaging-platform")!
+        )
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: HelpLayout.verticalSpacing) {
+                    Text(localization.localized(.thirdPartyLicensesDescription))
+                        .font(.body)
+                        .foregroundColor(SettingsModalSurface.secondaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    ForEach(dependencies) { dependency in
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(localization.localized(dependency.nameKey))
+                                .font(.headline)
+                                .foregroundColor(SettingsModalSurface.primaryText)
+
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(localization.localized(.thirdPartyLicenseType))
+                                    .foregroundColor(SettingsModalSurface.secondaryText)
+                                Spacer(minLength: 12)
+                                Text(localization.localized(.thirdPartyLicenseApache))
+                                    .foregroundColor(SettingsModalSurface.primaryText)
+                            }
+
+                            Text(localization.localized(.thirdPartyCopyrightGoogle))
+                                .font(.footnote)
+                                .foregroundColor(SettingsModalSurface.secondaryText)
+
+                            Link(
+                                localization.localized(.thirdPartyLicenseRepository),
+                                destination: dependency.repositoryURL
+                            )
+                            .font(.body.weight(.semibold))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(HelpLayout.rowHorizontalPadding)
+                        .background(SettingsModalSurface.sectionBackground)
+                        .clipShape(RoundedRectangle(cornerRadius: HelpLayout.cardCornerRadius, style: .continuous))
+                    }
+                }
+                .padding(HelpLayout.horizontalPadding)
+            }
+            .background(SettingsModalSurface.background)
+            .navigationTitle(localization.localized(.thirdPartyLicensesTitle))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(localization.localized(.done)) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .tint(.accentColor)
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 }

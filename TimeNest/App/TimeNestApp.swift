@@ -1,4 +1,3 @@
-import GoogleMobileAds
 import SwiftData
 import SwiftUI
 
@@ -19,8 +18,6 @@ struct TimeNestApp: App {
     private let widgetSnapshotCoordinator: WidgetSnapshotCoordinator
 
     init() {
-        Self.configureAdsIfNeeded()
-
         let schema = Schema([
             SwiftDataCalendarEventEntity.self,
             SwiftDataReminderEntity.self
@@ -78,11 +75,6 @@ struct TimeNestApp: App {
         }
     }
 
-    private static func configureAdsIfNeeded() {
-        guard AdConfiguration.isEnabled else { return }
-        MobileAds.shared.start(completionHandler: nil)
-    }
-
     var body: some Scene {
         WindowGroup {
             ContentView(
@@ -92,6 +84,7 @@ struct TimeNestApp: App {
             .environmentObject(LocalizationManager.shared)
             .modelContainer(modelContainer)
             .task {
+                AdConsentManager.shared.requestConsentInfoIfNeeded()
                 await widgetSnapshotCoordinator.refresh()
             }
         }

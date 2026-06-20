@@ -4,6 +4,7 @@ import UIKit
 
 struct AdMobBannerView: UIViewRepresentable {
     let adUnitID: String
+    let canRequestAds: Bool
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -15,6 +16,7 @@ struct AdMobBannerView: UIViewRepresentable {
     }
 
     func updateUIView(_ bannerView: BannerView, context: Context) {
+        guard canRequestAds else { return }
         guard let rootViewController = UIApplication.shared.timeNestRootViewController else {
             return
         }

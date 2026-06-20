@@ -15,7 +15,8 @@
 - App settings, holiday-subscription choices, subscription URLs, and downloaded holiday cache data are stored locally.
 - The app and Widget share a calendar snapshot through the App Group on the same device. This is local App-to-Widget data sharing, not cloud synchronization or a backend upload.
 - When a user enables, tests, or refreshes a holiday subscription, the app sends an HTTPS request to the public ICS provider selected by the user. That provider may receive network information such as an IP address and request metadata under its own policy.
-- Google Mobile Ads is integrated and currently enabled in the repository. The checked-in identifiers are test identifiers and are not the final production advertising configuration.
+- Google Mobile Ads and Google UMP are integrated. The first release requires ads. Debug uses official test identifiers, while Release requires approved production identifiers and fails its build validation when they are missing or invalid.
+- Ads are gated by UMP `canRequestAds`, ad personalization is disabled, and the app does not request ATT.
 - The app currently has no in-app purchase or user-facing remove-ads flow.
 
 ## App Store Connect Answering Draft
@@ -37,7 +38,7 @@ The Google Mobile Ads SDK may require disclosure of data types such as identifie
 - **TODO:** For each type, confirm whether it is linked to the user.
 - **TODO:** For each type, select the applicable purpose, such as third-party advertising, analytics, or app functionality.
 - **TODO:** Confirm whether any data is used for tracking under Apple's current definition.
-- **TODO:** Confirm whether regional consent or Google UMP behavior changes the declared processing.
+- **TODO:** Confirm the production AdMob console messages, regional UMP behavior, and privacy-options entry point against the submitted build.
 
 ### Tracking and ATT
 
@@ -50,6 +51,7 @@ The Google Mobile Ads SDK may require disclosure of data types such as identifie
 
 - [ ] Compare the exact archived build's privacy report and embedded SDK privacy manifests with this draft.
 - [ ] Confirm the production Google Mobile Ads App ID, banner unit ID, request configuration, and optional SDK features.
+- [ ] Confirm the exact Release build has `TIMENEST_ADS_ENABLED=YES` and its processed `Info.plist` contains the production App ID.
 - [ ] Confirm ATT and regional consent decisions.
 - [ ] Complete the App Store Connect App Privacy questionnaire manually using its current wording.
 - [ ] Confirm the submitted answers match the published privacy policy.

@@ -742,6 +742,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = DA4619F14F2739EC8403D233 /* Build configuration list for PBXNativeTarget "TimeNest" */;
 			buildPhases = (
+				4F4E9B7B31A2C8D400AD0001 /* Validate Release AdMob Configuration */,
 				EC46D8C8D467866AC40EB52B /* Sources */,
 				0DABFEB3E5E667218B46D59B /* Resources */,
 				33ED2341F6826CD2336E5478 /* Embed Foundation Extensions */,
@@ -869,6 +870,29 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4F4E9B7B31A2C8D400AD0001 /* Validate Release AdMob Configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Validate Release AdMob Configuration";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "sh \"$SRCROOT/Scripts/validate_admob_release_config.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		87017F18F3241A3FDEEA1ABE /* Sources */ = {
@@ -1186,6 +1210,9 @@
 					"@executable_path/Frameworks",
 				);
 				MACH_O_TYPE = mh_execute;
+				TIMENEST_ADMOB_APP_ID = REQUIRED_PRODUCTION_ADMOB_APP_ID;
+				TIMENEST_ADMOB_BANNER_UNIT_ID = REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID;
+				TIMENEST_ADS_ENABLED = YES;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
@@ -1223,6 +1250,9 @@
 					"@executable_path/Frameworks",
 				);
 				MACH_O_TYPE = mh_execute;
+				TIMENEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~1458002511";
+				TIMENEST_ADMOB_BANNER_UNIT_ID = "ca-app-pub-3940256099942544/2435281174";
+				TIMENEST_ADS_ENABLED = YES;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",

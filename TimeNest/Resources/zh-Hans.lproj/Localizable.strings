@@ -304,7 +304,7 @@
 "help.category.views" = "月、周、日视图";
 "help.category.holidays" = "节假日与休息日";
 "help.category.shifts" = "班次与工作记录";
-"help.category.ads" = "广告与恢复";
+"help.category.ads" = "广告";
 "help.category.privacy" = "数据与隐私";
 
 "help.events.add.question" = "如何添加日程？";
@@ -348,11 +348,7 @@
 "help.shifts.statistics_missing.answer" = "请确认目标期间内已经保存了出勤和退勤记录，并且时薪等必要信息已输入。只有班次本身不会自动生成工资统计。";
 
 "help.ads.about.question" = "关于广告";
-"help.ads.about.answer" = "为了支持 TimeNest 的运营，App 中可能会显示广告。";
-"help.ads.restore.question" = "关于恢复之前已隐藏广告的状态";
-"help.ads.restore.answer" = "如果设置中显示恢复项目，请使用之前购买时的同一 Apple Account 操作。";
-"help.ads.restore_failed.question" = "无法恢复怎么办？";
-"help.ads.restore_failed.answer" = "如果重新启动 App 后仍无法恢复，请通过“联系我们”与我们联系。";
+"help.ads.about.answer" = "为了支持 TimeNest 的运营，App 中可能会显示广告。当前版本不提供购买去广告功能。";
 
 "help.privacy.storage.question" = "数据保存在哪里？";
 "help.privacy.storage.answer" = "日程和班次等数据保存在此设备中。";
@@ -360,6 +356,19 @@
 "help.privacy.account.answer" = "使用 TimeNest 无需注册账号。";
 "help.privacy.delete_app.question" = "删除 App 后数据会怎样？";
 "help.privacy.delete_app.answer" = "删除 App 后，保存在设备内的 TimeNest 数据也会被删除。";
+"help.privacy.options.action" = "管理广告隐私选项";
+"help.privacy.options.description" = "查看或修改此设备上的广告隐私选择。";
+"help.privacy.options.error_title" = "无法打开隐私选项";
+"help.privacy.options.error_message" = "请稍后重试。";
+
+"third_party_licenses.title" = "第三方许可证";
+"third_party_licenses.description" = "TimeNest 使用以下第三方组件。完整声明保留在项目的 ThirdPartyNotices 文档中。";
+"third_party_licenses.license_type" = "许可证";
+"third_party_licenses.repository" = "查看源代码仓库";
+"third_party_licenses.google_mobile_ads" = "Google Mobile Ads Swift Package Manager wrapper";
+"third_party_licenses.user_messaging_platform" = "Google User Messaging Platform Swift Package Manager wrapper";
+"third_party_licenses.apache_2" = "Apache-2.0";
+"third_party_licenses.google_copyright" = "Copyright 2021 Google LLC";
 
 /* Widgets */
 "widget.calendar.title" = "日历";

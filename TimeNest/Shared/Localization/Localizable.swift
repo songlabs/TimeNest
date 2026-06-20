@@ -118,10 +118,6 @@ enum LocalizedString: String {
 
     case helpAdsAboutQuestion = "help.ads.about.question"
     case helpAdsAboutAnswer = "help.ads.about.answer"
-    case helpAdsRestoreQuestion = "help.ads.restore.question"
-    case helpAdsRestoreAnswer = "help.ads.restore.answer"
-    case helpAdsRestoreFailedQuestion = "help.ads.restore_failed.question"
-    case helpAdsRestoreFailedAnswer = "help.ads.restore_failed.answer"
 
     case helpPrivacyStorageQuestion = "help.privacy.storage.question"
     case helpPrivacyStorageAnswer = "help.privacy.storage.answer"
@@ -129,6 +125,19 @@ enum LocalizedString: String {
     case helpPrivacyAccountAnswer = "help.privacy.account.answer"
     case helpPrivacyDeleteAppQuestion = "help.privacy.delete_app.question"
     case helpPrivacyDeleteAppAnswer = "help.privacy.delete_app.answer"
+    case helpPrivacyOptionsAction = "help.privacy.options.action"
+    case helpPrivacyOptionsDescription = "help.privacy.options.description"
+    case helpPrivacyOptionsErrorTitle = "help.privacy.options.error_title"
+    case helpPrivacyOptionsErrorMessage = "help.privacy.options.error_message"
+
+    case thirdPartyLicensesTitle = "third_party_licenses.title"
+    case thirdPartyLicensesDescription = "third_party_licenses.description"
+    case thirdPartyLicenseType = "third_party_licenses.license_type"
+    case thirdPartyLicenseRepository = "third_party_licenses.repository"
+    case thirdPartyGoogleMobileAds = "third_party_licenses.google_mobile_ads"
+    case thirdPartyUserMessagingPlatform = "third_party_licenses.user_messaging_platform"
+    case thirdPartyLicenseApache = "third_party_licenses.apache_2"
+    case thirdPartyCopyrightGoogle = "third_party_licenses.google_copyright"
 
     // MARK: - Notification
 

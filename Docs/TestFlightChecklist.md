@@ -1,6 +1,6 @@
 # TimeNest TestFlight Checklist
 
-> Run this checklist against the exact internal TestFlight candidate. Record device model, iOS version, app version/build, language, appearance, and network condition. Current repository behavior includes ads and a Widget Extension, but no user-facing remove-ads purchase flow.
+> Run this checklist against the exact internal TestFlight candidate. Record device model, iOS version, app version/build, language, appearance, and network condition. The first release requires ads and includes a Widget Extension, but has no user-facing remove-ads purchase flow.
 
 ## 1. Internal Test Setup
 
@@ -60,9 +60,11 @@
 ## 8. Ads and Privacy State
 
 - [ ] On the candidate build, confirm the expected banner location, loading/failure behavior, layout, and foreground/background recovery.
+- [ ] Confirm the candidate was built with `TIMENEST_ADS_ENABLED=YES` and the approved production App ID and Banner Unit ID.
 - [ ] Confirm production candidates do not use Google's test App ID or banner unit ID. TestFlight-only validation must follow the team's approved AdMob test-device policy.
-- [ ] Confirm any ATT prompt, consent form, or privacy-options entry point required by the final configuration appears at the intended time and matches App Store privacy disclosures.
-- [ ] If the release intentionally has no ATT prompt, confirm this matches the approved non-ATT ad configuration and disclosures.
+- [ ] Confirm no banner request occurs before UMP reports `canRequestAds == true`; deny or interrupt consent and verify the fixed banner area does not jump.
+- [ ] Confirm required UMP consent forms appear at the intended time and Help exposes the privacy-options action only when UMP requires it.
+- [ ] Confirm no ATT prompt appears and that Publisher Privacy Treatment/non-personalized handling matches the approved non-ATT configuration and disclosures.
 - [ ] Confirm no remove-ads purchase or state is shown or promised; the current implementation has no user-facing remove-ads flow.
 
 ## 9. Lifecycle, Offline, and Stability

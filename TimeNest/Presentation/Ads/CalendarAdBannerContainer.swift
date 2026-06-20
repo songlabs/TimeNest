@@ -1,14 +1,23 @@
 import SwiftUI
 
 struct CalendarAdBannerContainer: View {
+    @ObservedObject private var consentManager = AdConsentManager.shared
+
     var body: some View {
         if AdConfiguration.isEnabled {
             HStack(spacing: 0) {
                 Spacer(minLength: 0)
 
-                AdMobBannerView(
-                    adUnitID: AdConfiguration.bannerAdUnitID
-                )
+                Group {
+                    if consentManager.canRequestAds {
+                        AdMobBannerView(
+                            adUnitID: AdConfiguration.bannerAdUnitID,
+                            canRequestAds: consentManager.canRequestAds
+                        )
+                    } else {
+                        Color.clear
+                    }
+                }
                 .frame(width: AdConfiguration.bannerWidth, height: AdConfiguration.bannerHeight)
 
                 Spacer(minLength: 0)

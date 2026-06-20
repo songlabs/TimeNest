@@ -14,7 +14,7 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 - Light, dark, and system appearance settings.
 - A calendar banner-ad container backed by Google Mobile Ads.
 
-The current codebase does not implement an in-app purchase or other user-facing remove-ads flow. `AdConfiguration` controls whether the banner is compiled into the calendar UI, and the checked-in configuration uses Google's test ad identifiers. Production ad identifiers and the intended ad-removal policy must be finalized before release.
+The first release is an ad-supported release and does not implement an in-app purchase or other user-facing remove-ads flow. Debug builds use Google's official test identifiers. Release builds require advertising to be enabled with approved production App and Banner IDs; missing, placeholder, malformed, or Google test IDs fail the Release build.
 
 ## Technology
 
@@ -23,7 +23,7 @@ The current codebase does not implement an in-app purchase or other user-facing 
 - SwiftData local persistence
 - iOS 17.0 or later
 - Tuist project description with a checked-in Xcode project/workspace
-- Google Mobile Ads through Swift Package Manager
+- Google Mobile Ads and Google User Messaging Platform through Swift Package Manager
 
 ## Local Build
 
@@ -43,6 +43,16 @@ xcodebuild \
 ```
 
 Replace the destination with an installed simulator when necessary. Signing, Bundle ID, target, and scheme settings should be managed in Xcode or `Project.swift`; release credentials are not stored in this README.
+
+## Release Advertising Configuration
+
+The checked-in Xcode project and `Project.swift` define the same three build settings:
+
+- `TIMENEST_ADS_ENABLED`: `YES` for both Debug and Release. The first release must include ads.
+- `TIMENEST_ADMOB_APP_ID`: Google's test App ID in Debug; replace `REQUIRED_PRODUCTION_ADMOB_APP_ID` in the Release configuration with the approved production App ID.
+- `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's test Banner Unit ID in Debug; replace `REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID` in the Release configuration with the approved production Banner Unit ID.
+
+`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. `Scripts/validate_admob_release_config.sh` rejects a Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when replacing the two Release values.
 
 ## Unit Tests
 
@@ -111,7 +121,7 @@ Calendar events, shifts, work records, settings, and holiday choices are stored 
 - Display settings and holiday-subscription choices are stored locally in app preferences.
 - Downloaded holiday data is cached on the device.
 - Holiday synchronization sends HTTPS requests to the public ICS provider selected in Settings.
-- Banner ads use Google Mobile Ads when `AdConfiguration.isEnabled` is `true`; SDK behavior and App Store privacy disclosures must be reviewed against the production configuration.
+- Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true`; ad personalization is disabled through Publisher Privacy Treatment, and no ATT prompt is requested.
 - The app has no account sign-in or cloud synchronization in the current implementation.
 
 Uninstalling the app removes its local container under normal iOS behavior. Existing SwiftData entities and decoding compatibility must be treated as user-data migration code and should not be removed as ordinary cleanup.
@@ -128,8 +138,9 @@ Uninstalling the app removes its local container under normal iOS behavior. Exis
 
 Before submission, confirm:
 
-- Replace Google test ad identifiers with the approved production configuration, or disable ads intentionally.
-- Decide and document the remove-ads policy; no purchase flow currently exists.
+- Replace both Release identifier placeholders with the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads.
+- Keep remove-ads claims out of version 1.0 metadata; no purchase or restore flow currently exists.
+- Configure and verify the required consent messages and privacy-options behavior in the AdMob console.
 - Validate the Privacy Manifest, App Privacy answers, privacy-policy URL, and Google Mobile Ads disclosures together.
 - Verify Bundle ID, signing, version/build numbers, icons, screenshots, metadata, support URL, and privacy-policy URL.
 - Verify fresh install and upgrade install behavior, especially SwiftData compatibility.
@@ -150,3 +161,4 @@ Release-preparation documents:
 - [App Privacy answers draft](Docs/AppPrivacyAnswersDraft.md)
 - [Export compliance notes](Docs/ExportComplianceNotes.md)
 - [Screenshot plan](Docs/ScreenshotPlan.md)
+- [Third-party notices](Docs/ThirdPartyNotices.md)
