@@ -288,3 +288,75 @@
 "editor.work_overwrite_button" = "覆盖";
 "editor.work_overwrite_cancel_button" = "取消";
 "work.nextDayPrefix" = "次日";
+
+/* Help */
+"settings.support" = "支持";
+"help.title" = "帮助";
+"help.contact" = "联系我们";
+"help.frequently_asked_questions" = "常见问题";
+"help.contact.email_subject" = "TimeNest 咨询";
+"help.contact.email_body" = "\n\n---\nApp 版本：%@\n构建版本：%@\niOS 版本：%@\n语言：%@";
+"help.mail_unavailable.title" = "无法打开邮件";
+"help.mail_unavailable.message" = "无法打开邮件 App。请复制 %@ 并手动联系我们。";
+"help.copy_email" = "复制邮箱地址";
+
+"help.category.events" = "添加与编辑日程";
+"help.category.views" = "月、周、日视图";
+"help.category.holidays" = "节假日与休息日";
+"help.category.shifts" = "班次与工作记录";
+"help.category.ads" = "广告与恢复";
+"help.category.privacy" = "数据与隐私";
+
+"help.events.add.question" = "如何添加日程？";
+"help.events.add.answer" = "点击日历右下角的添加按钮，填写内容后保存。";
+"help.events.all_day.question" = "什么是全天日程？";
+"help.events.all_day.answer" = "不指定开始和结束时间，并作为一整天的日程显示。";
+"help.events.edit_delete.question" = "如何编辑或删除日程？";
+"help.events.edit_delete.answer" = "从日期中打开日程详情，点击日程进行编辑，或使用删除按钮。";
+
+"help.views.switch.question" = "如何切换视图？";
+"help.views.switch.answer" = "在日历底部的“月、周、日”中选择视图。";
+"help.views.today.question" = "如何返回今天？";
+"help.views.today.answer" = "点击日历底部的“今天”。";
+"help.views.move.question" = "如何切换月份或周？";
+"help.views.move.answer" = "使用顶部的前后按钮，或在日历上左右滑动。";
+
+"help.holidays.show.question" = "如何显示节假日？";
+"help.holidays.show.answer" = "在设置的“节假日”中启用要显示的地区。";
+"help.holidays.missing.question" = "没有显示节假日怎么办？";
+"help.holidays.missing.answer" = "请确认地区的订阅状态，并在节假日设置页面中刷新。";
+"help.holidays.language.question" = "关于节假日名称的语言";
+"help.holidays.language.answer" = "节假日名称会使用所选地区对应的语言显示。";
+
+"help.shifts.add.question" = "如何添加班次？";
+"help.shifts.add.answer" = "从日历顶部菜单打开“班次输入”，选择日期后点击班次按钮即可添加。添加后会显示在月、周、日视图中。";
+"help.shifts.multiple.question" = "一天可以添加多个班次吗？";
+"help.shifts.multiple.answer" = "同一天只能保留一个班次。已经有班次时，再选择其他班次会覆盖当天原有班次，但不会删除普通日程、出勤记录或退勤记录。";
+"help.shifts.replace.question" = "如何修改当天班次？";
+"help.shifts.replace.answer" = "再次进入“班次输入”，选择同一天并点击新的班次即可替换。取消按钮只用于删除当前日期的班次，不会影响其他日程。";
+"help.shifts.change_time.question" = "如何自定义班次时间？";
+"help.shifts.change_time.answer" = "在设置的“自定义班次时间”中，可以修改白班、夜班和自定义班次的名称、开始时间、结束时间与颜色。修改后会用于之后创建的班次。";
+"help.shifts.difference.question" = "班次和工作记录有什么区别？";
+"help.shifts.difference.answer" = "班次表示预定的工作安排，例如白班或夜班。工作记录表示实际的出勤、退勤、休息时间、时薪和交通费，用于工作统计。";
+"help.shifts.record.question" = "如何记录出勤和退勤？";
+"help.shifts.record.answer" = "在新增或编辑日程时，可以输入出勤时间、退勤时间、休息时间、时薪和交通费。保存后，这些信息会作为工作记录参与统计。";
+"help.shifts.overnight.question" = "第二天下班如何处理？";
+"help.shifts.overnight.answer" = "夜班等跨日工作时，退勤时间可以记录为次日。统计时会按从出勤到次日退勤的实际时间计算，并扣除休息时间。";
+"help.shifts.statistics.question" = "工作统计如何计算？";
+"help.shifts.statistics.answer" = "工作统计会根据已记录的出勤时间、退勤时间、休息时间、时薪和交通费计算。基本规则是：工作时间 = 退勤时间 - 出勤时间 - 休息时间；工资 = 工作时间 × 时薪；合计 = 工资 + 交通费。";
+"help.shifts.statistics_missing.question" = "为什么统计结果没有显示？";
+"help.shifts.statistics_missing.answer" = "请确认目标期间内已经保存了出勤和退勤记录，并且时薪等必要信息已输入。只有班次本身不会自动生成工资统计。";
+
+"help.ads.about.question" = "关于广告";
+"help.ads.about.answer" = "为了支持 TimeNest 的运营，App 中可能会显示广告。";
+"help.ads.restore.question" = "关于恢复之前已隐藏广告的状态";
+"help.ads.restore.answer" = "如果设置中显示恢复项目，请使用之前购买时的同一 Apple Account 操作。";
+"help.ads.restore_failed.question" = "无法恢复怎么办？";
+"help.ads.restore_failed.answer" = "如果重新启动 App 后仍无法恢复，请通过“联系我们”与我们联系。";
+
+"help.privacy.storage.question" = "数据保存在哪里？";
+"help.privacy.storage.answer" = "日程和班次等数据保存在此设备中。";
+"help.privacy.account.question" = "需要账号吗？";
+"help.privacy.account.answer" = "使用 TimeNest 无需注册账号。";
+"help.privacy.delete_app.question" = "删除 App 后数据会怎样？";
+"help.privacy.delete_app.answer" = "删除 App 后，保存在设备内的 TimeNest 数据也会被删除。";

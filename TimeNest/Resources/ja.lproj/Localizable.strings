@@ -288,3 +288,75 @@
 "editor.work_overwrite_button" = "上書き";
 "editor.work_overwrite_cancel_button" = "キャンセル";
 "work.nextDayPrefix" = "翌日";
+
+/* Help */
+"settings.support" = "サポート";
+"help.title" = "ヘルプ";
+"help.contact" = "お問い合わせ";
+"help.frequently_asked_questions" = "よくある質問";
+"help.contact.email_subject" = "TimeNest お問い合わせ";
+"help.contact.email_body" = "\n\n---\nApp バージョン：%@\nビルド番号：%@\niOS バージョン：%@\n言語：%@";
+"help.mail_unavailable.title" = "メールを開けません";
+"help.mail_unavailable.message" = "メール App を開けませんでした。%@ をコピーして手動でお問い合わせください。";
+"help.copy_email" = "メールアドレスをコピー";
+
+"help.category.events" = "予定の追加・編集";
+"help.category.views" = "月・週・日表示";
+"help.category.holidays" = "祝日・休日";
+"help.category.shifts" = "シフトと勤務記録";
+"help.category.ads" = "広告・復元";
+"help.category.privacy" = "データとプライバシー";
+
+"help.events.add.question" = "予定を追加するには？";
+"help.events.add.answer" = "カレンダー右下の追加ボタンをタップし、内容を入力して保存します。";
+"help.events.all_day.question" = "終日予定とは？";
+"help.events.all_day.answer" = "開始・終了時刻を指定せず、その日全体の予定として表示する予定です。";
+"help.events.edit_delete.question" = "予定を編集・削除するには？";
+"help.events.edit_delete.answer" = "日付から予定の詳細を開き、予定をタップして編集するか、削除ボタンを使用します。";
+
+"help.views.switch.question" = "表示を切り替えるには？";
+"help.views.switch.answer" = "カレンダー下部の「月・週・日」から表示を選びます。";
+"help.views.today.question" = "今日に戻るには？";
+"help.views.today.answer" = "カレンダー下部の「今日」をタップします。";
+"help.views.move.question" = "月や週を移動するには？";
+"help.views.move.answer" = "上部の前後ボタンを使うか、カレンダーを左右にスワイプします。";
+
+"help.holidays.show.question" = "祝日を表示するには？";
+"help.holidays.show.answer" = "設定の「祝日」から表示したい地域を有効にします。";
+"help.holidays.missing.question" = "祝日が表示されない場合は？";
+"help.holidays.missing.answer" = "地域の購読状態を確認し、祝日設定画面で更新してください。";
+"help.holidays.language.question" = "祝日名の言語について";
+"help.holidays.language.answer" = "祝日名は、選択した地域に合わせた言語で表示されます。";
+
+"help.shifts.add.question" = "シフトを追加するには？";
+"help.shifts.add.answer" = "カレンダー上部のメニューから「シフト入力」を開き、日付を選んでシフトボタンをタップすると追加できます。追加したシフトは月・週・日表示に反映されます。";
+"help.shifts.multiple.question" = "1日に複数のシフトを追加できますか？";
+"help.shifts.multiple.answer" = "同じ日に保存できるシフトは1つだけです。すでにシフトがある日に別のシフトを選ぶと、その日のシフトが上書きされます。通常の予定、出勤記録、退勤記録は削除されません。";
+"help.shifts.replace.question" = "当日のシフトを変更するには？";
+"help.shifts.replace.answer" = "もう一度「シフト入力」を開き、同じ日付を選んで新しいシフトをタップすると置き換えられます。「キャンセル」ボタンは選択中の日付のシフトだけを削除し、ほかの予定には影響しません。";
+"help.shifts.change_time.question" = "シフト時間をカスタマイズするには？";
+"help.shifts.change_time.answer" = "設定の「シフトカスタマイズ」で、日勤、夜勤、カスタムシフトの名称、開始時刻、終了時刻、色を変更できます。変更内容は、その後に作成するシフトに使用されます。";
+"help.shifts.difference.question" = "シフトと勤務記録の違いは？";
+"help.shifts.difference.answer" = "シフトは日勤や夜勤などの予定された勤務を表します。勤務記録は実際の出勤、退勤、休憩時間、時給、交通費を記録したもので、勤務統計に使用されます。";
+"help.shifts.record.question" = "出勤と退勤を記録するには？";
+"help.shifts.record.answer" = "予定の追加または編集画面で、出勤時刻、退勤時刻、休憩時間、時給、交通費を入力できます。保存した内容は勤務記録として統計に反映されます。";
+"help.shifts.overnight.question" = "翌日の退勤はどのように扱われますか？";
+"help.shifts.overnight.answer" = "夜勤など日をまたぐ勤務では、退勤時刻を翌日として記録できます。統計では出勤から翌日の退勤までの実時間から休憩時間を差し引いて計算します。";
+"help.shifts.statistics.question" = "勤務統計はどのように計算されますか？";
+"help.shifts.statistics.answer" = "勤務統計は、記録した出勤時刻、退勤時刻、休憩時間、時給、交通費をもとに計算します。基本式は「勤務時間 = 退勤時刻 - 出勤時刻 - 休憩時間」「給与 = 勤務時間 × 時給」「合計 = 給与 + 交通費」です。";
+"help.shifts.statistics_missing.question" = "統計結果が表示されないのはなぜですか？";
+"help.shifts.statistics_missing.answer" = "対象期間内に出勤記録と退勤記録が保存され、時給などの必要な情報が入力されているか確認してください。シフトだけでは給与統計は自動作成されません。";
+
+"help.ads.about.question" = "広告について";
+"help.ads.about.answer" = "TimeNest では、アプリの運営を支えるために広告が表示されることがあります。";
+"help.ads.restore.question" = "以前広告を非表示にした方の復元について";
+"help.ads.restore.answer" = "設定に復元項目が表示される場合は、以前購入したときと同じ Apple Account で操作してください。";
+"help.ads.restore_failed.question" = "復元できない場合は？";
+"help.ads.restore_failed.answer" = "アプリを再起動しても復元できない場合は、「お問い合わせ」からご連絡ください。";
+
+"help.privacy.storage.question" = "データはどこに保存されますか？";
+"help.privacy.storage.answer" = "予定やシフトなどのデータは、この端末内に保存されます。";
+"help.privacy.account.question" = "アカウントは必要ですか？";
+"help.privacy.account.answer" = "TimeNest の利用にアカウント登録は必要ありません。";
+"help.privacy.delete_app.question" = "App を削除した場合のデータについて";
+"help.privacy.delete_app.answer" = "App を削除すると、端末内に保存された TimeNest のデータも削除されます。";

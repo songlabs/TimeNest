@@ -6,6 +6,7 @@ struct SettingsView: View {
     @AppStorage("themeMode") private var themeMode: String = "system"
 
     @State private var showVersionInfo: Bool = false
+    @State private var showingHelp = false
     @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
 
     private let onClose: (() -> Void)?
@@ -105,6 +106,18 @@ struct SettingsView: View {
                 }
 
                 SettingsCard {
+                    SettingsCardTitle(localization.localized(.settingsSupport))
+                    SettingsDivider()
+
+                    SettingsActionRow(
+                        title: localization.localized(.helpTitle),
+                        systemImage: "questionmark.circle"
+                    ) {
+                        showingHelp = true
+                    }
+                }
+
+                SettingsCard {
                     SettingsCardTitle(localization.localized(.settingsAbout))
                     SettingsDivider()
 
@@ -127,6 +140,10 @@ struct SettingsView: View {
         }
         .background(SettingsStyle.background)
         .foregroundColor(SettingsStyle.primaryText)
+        .sheet(isPresented: $showingHelp) {
+            HelpView()
+                .environmentObject(localization)
+        }
     }
 
     private var enabledSubscriptionsDisplayText: String {
@@ -308,6 +325,39 @@ private struct SettingsNavigationRow<Destination: View>: View {
                         .fixedSize()
                 }
             }
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct SettingsActionRow: View {
+    let title: String
+    let systemImage: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: SettingsStyle.rowContentSpacing) {
+                Image(systemName: systemImage)
+                    .font(.body.weight(.medium))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24)
+
+                Text(title)
+                    .font(.body)
+                    .foregroundColor(SettingsStyle.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer(minLength: SettingsStyle.rowAccessoryMinSpacing)
+
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(SettingsStyle.secondaryText)
+            }
+            .frame(minHeight: SettingsStyle.rowMinHeight)
+            .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

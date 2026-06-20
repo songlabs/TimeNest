@@ -288,3 +288,75 @@
 "editor.work_overwrite_button" = "Overwrite";
 "editor.work_overwrite_cancel_button" = "Cancel";
 "work.nextDayPrefix" = "Next day";
+
+/* Help */
+"settings.support" = "Support";
+"help.title" = "Help";
+"help.contact" = "Contact Us";
+"help.frequently_asked_questions" = "Frequently Asked Questions";
+"help.contact.email_subject" = "TimeNest Support Request";
+"help.contact.email_body" = "\n\n---\nApp version: %@\nBuild number: %@\niOS version: %@\nLanguage: %@";
+"help.mail_unavailable.title" = "Unable to Open Mail";
+"help.mail_unavailable.message" = "Mail could not be opened. Copy %@ and contact us manually.";
+"help.copy_email" = "Copy Email Address";
+
+"help.category.events" = "Adding and Editing Events";
+"help.category.views" = "Month, Week, and Day Views";
+"help.category.holidays" = "Holidays and Days Off";
+"help.category.shifts" = "Shifts and Work Records";
+"help.category.ads" = "Ads and Restore";
+"help.category.privacy" = "Data and Privacy";
+
+"help.events.add.question" = "How do I add an event?";
+"help.events.add.answer" = "Tap the add button at the bottom right of the calendar, enter the details, and save.";
+"help.events.all_day.question" = "What is an all-day event?";
+"help.events.all_day.answer" = "It is shown for the whole day without a specific start or end time.";
+"help.events.edit_delete.question" = "How do I edit or delete an event?";
+"help.events.edit_delete.answer" = "Open the day's event details, tap an event to edit it, or use the delete button.";
+
+"help.views.switch.question" = "How do I switch views?";
+"help.views.switch.answer" = "Select Month, Week, or Day at the bottom of the calendar.";
+"help.views.today.question" = "How do I return to today?";
+"help.views.today.answer" = "Tap Today at the bottom of the calendar.";
+"help.views.move.question" = "How do I move between months or weeks?";
+"help.views.move.answer" = "Use the previous and next buttons at the top, or swipe the calendar left or right.";
+
+"help.holidays.show.question" = "How do I show holidays?";
+"help.holidays.show.answer" = "Enable the region you want to display under Holidays in Settings.";
+"help.holidays.missing.question" = "What if holidays do not appear?";
+"help.holidays.missing.answer" = "Check the region's subscription status and refresh it on the holiday settings screen.";
+"help.holidays.language.question" = "What language are holiday names shown in?";
+"help.holidays.language.answer" = "Holiday names are shown in the language associated with the selected region.";
+
+"help.shifts.add.question" = "How do I add a shift?";
+"help.shifts.add.answer" = "Open Shift Input from the menu at the top of the calendar, select a date, and tap a shift button. The shift will appear in the month, week, and day views.";
+"help.shifts.multiple.question" = "Can I add multiple shifts on the same day?";
+"help.shifts.multiple.answer" = "Only one shift is kept for each day. Selecting another shift replaces the existing shift for that day, but does not delete regular events or clock-in and clock-out records.";
+"help.shifts.replace.question" = "How do I change the shift for a day?";
+"help.shifts.replace.answer" = "Open Shift Input again, select the same date, and tap the new shift to replace it. Cancel only deletes the shift on the selected date and does not affect other events.";
+"help.shifts.change_time.question" = "How do I customize shift times?";
+"help.shifts.change_time.answer" = "Under Customize Shift Times in Settings, you can change the name, start time, end time, and color for day, night, and custom shifts. The changes apply to shifts created afterward.";
+"help.shifts.difference.question" = "What is the difference between shifts and work records?";
+"help.shifts.difference.answer" = "A shift is a planned work schedule, such as a day or night shift. Work records contain actual clock-in and clock-out times, breaks, hourly rates, and transport costs used for work statistics.";
+"help.shifts.record.question" = "How do I record clock-in and clock-out times?";
+"help.shifts.record.answer" = "When adding or editing an event, you can enter clock-in and clock-out times, break time, hourly rate, and transport cost. After saving, this information is included in work statistics.";
+"help.shifts.overnight.question" = "How is an overnight clock-out handled?";
+"help.shifts.overnight.answer" = "For overnight work such as a night shift, the clock-out time can be recorded on the following day. Statistics use the actual time from clock-in to the next-day clock-out, minus break time.";
+"help.shifts.statistics.question" = "How are work statistics calculated?";
+"help.shifts.statistics.answer" = "Work statistics use recorded clock-in and clock-out times, break time, hourly rate, and transport cost. The basic rules are: work time = clock-out - clock-in - break; pay = work time × hourly rate; total = pay + transport cost.";
+"help.shifts.statistics_missing.question" = "Why are no statistics shown?";
+"help.shifts.statistics_missing.answer" = "Check that clock-in and clock-out records were saved within the selected period and that required information such as the hourly rate was entered. A shift alone does not create pay statistics.";
+
+"help.ads.about.question" = "About ads";
+"help.ads.about.answer" = "TimeNest may display ads to support the operation of the app.";
+"help.ads.restore.question" = "Restoring a previous ad removal";
+"help.ads.restore.answer" = "If a restore option appears in Settings, use the same Apple Account used for the original purchase.";
+"help.ads.restore_failed.question" = "What if restore does not work?";
+"help.ads.restore_failed.answer" = "If restarting the app does not help, contact us using Contact Us.";
+
+"help.privacy.storage.question" = "Where is my data stored?";
+"help.privacy.storage.answer" = "Data such as events and shifts is stored on this device.";
+"help.privacy.account.question" = "Do I need an account?";
+"help.privacy.account.answer" = "You do not need to register an account to use TimeNest.";
+"help.privacy.delete_app.question" = "What happens to data if I delete the app?";
+"help.privacy.delete_app.answer" = "Deleting the app also deletes TimeNest data stored on the device.";
