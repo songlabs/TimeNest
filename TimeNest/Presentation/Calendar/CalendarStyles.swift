@@ -287,6 +287,14 @@ enum CalendarTimelineEventMetrics {
         CGFloat(minutesFromStartOfDay(date)) / 60 * hourHeight
     }
 
+    static func verticalOffset(
+        for event: EventOccurrence,
+        hourHeight: CGFloat = CalendarTimelineLayout.hourHeight
+    ) -> CGFloat {
+        let visibleStart = visibleInterval(for: event)?.start ?? event.startDate
+        return verticalOffset(for: visibleStart, hourHeight: hourHeight)
+    }
+
     static func eventHeight(
         from startDate: Date,
         to endDate: Date,
@@ -295,6 +303,39 @@ enum CalendarTimelineEventMetrics {
     ) -> CGFloat {
         let duration = max(15, minutesBetween(startDate, endDate))
         return max(minimumHeight, CGFloat(duration) / 60 * hourHeight)
+    }
+
+    static func eventHeight(
+        for event: EventOccurrence,
+        minimumHeight: CGFloat,
+        hourHeight: CGFloat = CalendarTimelineLayout.hourHeight
+    ) -> CGFloat {
+        let interval = visibleInterval(for: event)
+        return eventHeight(
+            from: interval?.start ?? event.startDate,
+            to: interval?.end ?? event.endDate,
+            minimumHeight: minimumHeight,
+            hourHeight: hourHeight
+        )
+    }
+
+    static func visibleInterval(for event: EventOccurrence) -> DateInterval? {
+        guard !event.isAllDay, event.endDate > event.startDate else {
+            return nil
+        }
+
+        let dayStart = event.occurrenceDate.toDate(in: calendar.timeZone)
+        guard let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) else {
+            return nil
+        }
+
+        let visibleStart = max(event.startDate, dayStart)
+        let visibleEnd = min(event.endDate, dayEnd)
+        guard visibleEnd > visibleStart else {
+            return nil
+        }
+
+        return DateInterval(start: visibleStart, end: visibleEnd)
     }
 
     static func timeText(for event: EventOccurrence) -> String {

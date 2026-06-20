@@ -6,14 +6,14 @@ class HolidayUseCase {
     private let localizer: HolidayNameLocalizer
 
     /// 使用缓存仓库初始化（ICS 订阅模式）
-    init(cacheRepository: HolidayEventCacheRepositoryProtocol = HolidayEventCacheRepository()) {
+    init(cacheRepository: HolidayEventCacheRepositoryProtocol = HolidayEventCacheRepository.shared) {
         self.holidayProvider = nil
         self.cacheRepository = cacheRepository
         self.localizer = HolidayNameLocalizer()
     }
 
     /// 使用提供者初始化（向后兼容，用于测试）
-    init(holidayProvider: HolidayProviding, cacheRepository: HolidayEventCacheRepositoryProtocol = HolidayEventCacheRepository()) {
+    init(holidayProvider: HolidayProviding, cacheRepository: HolidayEventCacheRepositoryProtocol = HolidayEventCacheRepository.shared) {
         self.holidayProvider = holidayProvider
         self.cacheRepository = cacheRepository
         self.localizer = HolidayNameLocalizer()

@@ -185,13 +185,12 @@ struct DayTimeAxisView: View {
     }
 
     private func eventOffset(for event: EventOccurrence) -> CGFloat {
-        CalendarTimelineEventMetrics.verticalOffset(for: event.startDate, hourHeight: hourHeight)
+        CalendarTimelineEventMetrics.verticalOffset(for: event, hourHeight: hourHeight)
     }
 
     private func eventHeight(for event: EventOccurrence) -> CGFloat {
         CalendarTimelineEventMetrics.eventHeight(
-            from: event.startDate,
-            to: event.endDate,
+            for: event,
             minimumHeight: 28,
             hourHeight: hourHeight
         )

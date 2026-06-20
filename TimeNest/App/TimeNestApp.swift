@@ -16,6 +16,7 @@ struct TimeNestApp: App {
     private let reminderUseCase: ReminderUseCase
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let holidayUseCase: HolidayUseCase
+    private let holidaySubscriptionManager: HolidaySubscriptionManager
     private let localizationUseCase: CalendarLocalizationUseCase
     private let widgetSnapshotCoordinator: WidgetSnapshotCoordinator
 
@@ -53,7 +54,15 @@ struct TimeNestApp: App {
             reminderScheduler: reminderScheduler
         )
         self.reminderUseCase = reminderUseCase
-        let holidayUseCase = HolidayUseCase(holidayProvider: holidayProvider)
+        let holidayCacheRepository = HolidayEventCacheRepository.shared
+        let holidaySubscriptionManager = HolidaySubscriptionManager(
+            cacheRepository: holidayCacheRepository
+        )
+        self.holidaySubscriptionManager = holidaySubscriptionManager
+        let holidayUseCase = HolidayUseCase(
+            holidayProvider: holidayProvider,
+            cacheRepository: holidayCacheRepository
+        )
         self.holidayUseCase = holidayUseCase
         let localizationUseCase = CalendarLocalizationUseCase()
         self.localizationUseCase = localizationUseCase
@@ -66,7 +75,8 @@ struct TimeNestApp: App {
         let snapshotBuilder = WidgetSnapshotBuilder(
             calendarDisplayUseCase: calendarDisplayUseCase,
             eventUseCase: eventUseCase,
-            holidayUseCase: holidayUseCase
+            holidayUseCase: holidayUseCase,
+            holidaySubscriptionManager: holidaySubscriptionManager
         )
         let snapshotCoordinator = WidgetSnapshotCoordinator(builder: snapshotBuilder)
         self.widgetSnapshotCoordinator = snapshotCoordinator
@@ -81,7 +91,8 @@ struct TimeNestApp: App {
         WindowGroup {
             ContentView(
                 calendarDisplayUseCase: calendarDisplayUseCase,
-                eventUseCase: eventUseCase
+                eventUseCase: eventUseCase,
+                holidaySubscriptionManager: holidaySubscriptionManager
             )
             .preferredColorScheme(preferredColorScheme)
             .environmentObject(LocalizationManager.shared)

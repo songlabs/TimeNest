@@ -8,11 +8,15 @@ struct SettingsView: View {
     @State private var showVersionInfo: Bool = false
     @State private var showingHelp = false
     @State private var showingThirdPartyLicenses = false
-    @StateObject private var subscriptionManager = HolidaySubscriptionManager.shared
+    @StateObject private var subscriptionManager: HolidaySubscriptionManager
 
     private let onClose: (() -> Void)?
 
-    init(onClose: (() -> Void)? = nil) {
+    init(
+        subscriptionManager: HolidaySubscriptionManager,
+        onClose: (() -> Void)? = nil
+    ) {
+        _subscriptionManager = StateObject(wrappedValue: subscriptionManager)
         self.onClose = onClose
     }
 
@@ -67,7 +71,7 @@ struct SettingsView: View {
                         title: localization.localized(.settingsHolidayRegion),
                         value: enabledSubscriptionsDisplayText
                     ) {
-                        HolidaySubscriptionSettingsView()
+                        HolidaySubscriptionSettingsView(subscriptionManager: subscriptionManager)
                             .environmentObject(localization)
                     }
                 }

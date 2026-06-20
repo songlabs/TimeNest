@@ -5,15 +5,31 @@ final class WidgetSnapshotBuilder {
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
     private let holidayUseCase: HolidayUseCase
+    private let holidaySubscriptionManager: HolidaySubscriptionManager
 
-    init(
+    convenience init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
         eventUseCase: EventUseCase,
         holidayUseCase: HolidayUseCase
     ) {
+        self.init(
+            calendarDisplayUseCase: calendarDisplayUseCase,
+            eventUseCase: eventUseCase,
+            holidayUseCase: holidayUseCase,
+            holidaySubscriptionManager: .shared
+        )
+    }
+
+    init(
+        calendarDisplayUseCase: CalendarDisplayUseCase,
+        eventUseCase: EventUseCase,
+        holidayUseCase: HolidayUseCase,
+        holidaySubscriptionManager: HolidaySubscriptionManager
+    ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
         self.holidayUseCase = holidayUseCase
+        self.holidaySubscriptionManager = holidaySubscriptionManager
     }
 
     func build(now: Date = Date()) async throws -> WidgetSnapshot {
@@ -26,7 +42,7 @@ final class WidgetSnapshotBuilder {
         ) ?? .system
         let setting = CalendarDisplaySetting(
             displayLanguage: language,
-            selectedHolidayRegions: HolidaySubscriptionManager.shared.enabledRegions,
+            selectedHolidayRegions: holidaySubscriptionManager.enabledRegions,
             weekStartPolicy: weekStartPolicy,
             showLunarCalendar: false
         )

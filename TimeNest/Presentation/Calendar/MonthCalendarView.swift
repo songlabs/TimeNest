@@ -12,12 +12,19 @@ struct MonthCalendarView: View {
     @State private var showingStatistics = false
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
+    private let holidaySubscriptionManager: HolidaySubscriptionManager
 
-    init(calendarDisplayUseCase: CalendarDisplayUseCase, eventUseCase: EventUseCase) {
+    init(
+        calendarDisplayUseCase: CalendarDisplayUseCase,
+        eventUseCase: EventUseCase,
+        holidaySubscriptionManager: HolidaySubscriptionManager
+    ) {
+        self.holidaySubscriptionManager = holidaySubscriptionManager
         _viewModel = StateObject(
             wrappedValue: MonthCalendarViewModel(
                 calendarDisplayUseCase: calendarDisplayUseCase,
-                eventUseCase: eventUseCase
+                eventUseCase: eventUseCase,
+                subscriptionManager: holidaySubscriptionManager
             )
         )
         _statisticsViewModel = StateObject(wrappedValue: WorkStatisticsViewModel(eventUseCase: eventUseCase))
@@ -109,9 +116,10 @@ struct MonthCalendarView: View {
             viewModel.refreshShiftTemplates()
         }) {
             NavigationStack {
-                SettingsView(onClose: {
-                    showingSettings = false
-                })
+                SettingsView(
+                    subscriptionManager: holidaySubscriptionManager,
+                    onClose: { showingSettings = false }
+                )
                     .environmentObject(localization)
             }
         }

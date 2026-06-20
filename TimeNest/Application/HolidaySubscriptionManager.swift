@@ -47,7 +47,7 @@ class HolidaySubscriptionManager: ObservableObject {
     
     // MARK: - Shared Instance
     
-    static let shared = HolidaySubscriptionManager()
+    static let shared = HolidaySubscriptionManager(cacheRepository: HolidayEventCacheRepository.shared)
 
     // MARK: - Constants
 
@@ -85,7 +85,7 @@ class HolidaySubscriptionManager: ObservableObject {
     init(
         downloadService: ICSDownloading = ICSDownloadService(),
         parseService: ICSParsing = ICSParseService(),
-        cacheRepository: HolidayEventCacheRepositoryProtocol = HolidayEventCacheRepository(),
+        cacheRepository: HolidayEventCacheRepositoryProtocol = HolidayEventCacheRepository.shared,
         userDefaults: UserDefaults = .standard
     ) {
         self.downloadService = downloadService

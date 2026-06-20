@@ -13,6 +13,8 @@ protocol HolidayEventCacheRepositoryProtocol {
 /// 本地文件缓存仓库
 class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
 
+    static let shared = HolidayEventCacheRepository()
+
     private final class CacheStorage: @unchecked Sendable {
         private let lockQueue = DispatchQueue(label: "com.timenest.holidaycache", attributes: .concurrent)
         private var cache: [String: HolidayEventCache] = [:]

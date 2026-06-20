@@ -30,8 +30,12 @@ struct HolidaySubscriptionSettingsView: View {
     @State private var syncResultMessage = ""
     @State private var didHideTabBar = false
 
-    init() {
-        _viewModel = StateObject(wrappedValue: HolidaySubscriptionSettingsViewModel(subscriptionManager: .shared))
+    init(subscriptionManager: HolidaySubscriptionManager) {
+        _viewModel = StateObject(
+            wrappedValue: HolidaySubscriptionSettingsViewModel(
+                subscriptionManager: subscriptionManager
+            )
+        )
     }
 
     private var customHeaderView: some View {
