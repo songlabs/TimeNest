@@ -129,10 +129,6 @@ class HolidaySubscriptionManager: ObservableObject {
 
         updateSubscription(subscription.id) {
             $0.isEnabled = true
-            // 首次启用时立即同步
-            if $0.syncStatus == .neverSynced {
-                $0.syncStatus = .success  // 同步会在后台进行
-            }
         }
 
         NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
@@ -345,6 +341,12 @@ class HolidaySubscriptionManager: ObservableObject {
         }
 
         subscriptions = loaded
+
+        // 旧版在首次启用时可能未同步即写入 success。
+        for index in subscriptions.indices
+        where subscriptions[index].syncStatus == .success && subscriptions[index].lastUpdatedAt == nil {
+            subscriptions[index].syncStatus = .neverSynced
+        }
 
         // 确保所有地区都有订阅
         for region in HolidayRegion.allCases {

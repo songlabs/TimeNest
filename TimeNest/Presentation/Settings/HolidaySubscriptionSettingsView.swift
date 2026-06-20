@@ -115,7 +115,9 @@ struct HolidaySubscriptionSettingsView: View {
                                         isEnabled: viewModel.isEnabled(subscription.region),
                                         canToggle: viewModel.canToggle(subscription.region),
                                         onToggle: {
-                                            viewModel.toggleSubscription(subscription.region)
+                                            Task {
+                                                await viewModel.toggleSubscription(subscription.region)
+                                            }
                                         }
                                     )
                                 }
@@ -239,10 +241,12 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
         }
     }
     
-    func toggleSubscription(_ region: HolidayRegion) {
+    func toggleSubscription(_ region: HolidayRegion) async {
         guard let subscription = subscriptionManager.subscriptions.first(where: { $0.region == region }) else {
             return
         }
+
+        let shouldSyncAfterEnabling = !subscription.isEnabled && subscription.syncStatus == .neverSynced
         
         do {
             if subscription.isEnabled {
@@ -251,6 +255,10 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
                 try subscriptionManager.enable(subscription: subscription)
             }
             updateSubscriptions()
+
+            if shouldSyncAfterEnabling {
+                _ = await syncAll()
+            }
         } catch {
             #if DEBUG
             print("Toggle subscription failed: \(error)")
