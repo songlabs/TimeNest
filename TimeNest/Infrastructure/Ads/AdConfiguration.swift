@@ -1,3 +1,4 @@
+import AppTrackingTransparency
 import Combine
 import CoreGraphics
 import Foundation
@@ -69,9 +70,11 @@ final class AdConsentManager: ObservableObject {
     static let shared = AdConsentManager()
 
     @Published private(set) var canRequestAds = false
+    @Published private(set) var canLoadAds = false
     @Published private(set) var isPrivacyOptionsRequired = false
 
     private var hasRequestedConsentInfo = false
+    private var hasRequestedTrackingAuthorization = false
     private var hasStartedMobileAds = false
 
     private init() {}
@@ -82,12 +85,16 @@ final class AdConsentManager: ObservableObject {
 
         let parameters = RequestParameters()
         ConsentInformation.shared.requestConsentInfoUpdate(with: parameters) { [weak self] error in
-            guard let self else { return }
-            self.refreshConsentState()
+            Task { @MainActor in
+                guard let self else { return }
+                self.refreshConsentState()
 
-            guard error == nil else { return }
-            ConsentForm.loadAndPresentIfRequired(from: nil) { [weak self] _ in
-                self?.refreshConsentState()
+                guard error == nil else {
+                    self.prepareAdsAfterConsentFlow()
+                    return
+                }
+                try? await ConsentForm.loadAndPresentIfRequired(from: nil)
+                self.prepareAdsAfterConsentFlow()
             }
         }
 
@@ -102,8 +109,10 @@ final class AdConsentManager: ObservableObject {
         }
 
         ConsentForm.presentPrivacyOptionsForm(from: nil) { [weak self] error in
-            self?.refreshConsentState()
-            completion(error)
+            Task { @MainActor in
+                self?.prepareAdsAfterConsentFlow()
+                completion(error)
+            }
         }
     }
 
@@ -111,10 +120,41 @@ final class AdConsentManager: ObservableObject {
         let consentInformation = ConsentInformation.shared
         isPrivacyOptionsRequired = consentInformation.privacyOptionsRequirementStatus == .required
         canRequestAds = consentInformation.canRequestAds
+        if !canRequestAds {
+            canLoadAds = false
+        }
+    }
 
-        guard canRequestAds, !hasStartedMobileAds else { return }
+    private func prepareAdsAfterConsentFlow() {
+        refreshConsentState()
+        guard canRequestAds else { return }
+
+        switch ATTrackingManager.trackingAuthorizationStatus {
+        case .notDetermined:
+            guard !hasRequestedTrackingAuthorization else { return }
+            hasRequestedTrackingAuthorization = true
+            ATTrackingManager.requestTrackingAuthorization { [weak self] _ in
+                Task { @MainActor in
+                    self?.startMobileAdsIfAllowed()
+                }
+            }
+        case .authorized, .denied, .restricted:
+            startMobileAdsIfAllowed()
+        @unknown default:
+            startMobileAdsIfAllowed()
+        }
+    }
+
+    private func startMobileAdsIfAllowed() {
+        guard canRequestAds else { return }
+        if hasStartedMobileAds {
+            canLoadAds = true
+            return
+        }
+
         hasStartedMobileAds = true
         MobileAds.shared.requestConfiguration.publisherPrivacyPersonalizationState = .disabled
         MobileAds.shared.start(completionHandler: nil)
+        canLoadAds = true
     }
 }

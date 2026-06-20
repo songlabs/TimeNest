@@ -59,6 +59,7 @@ let project = Project(
                     .release(
                         name: "Release",
                         settings: [
+                            // Replace or override these build settings with the approved production IDs.
                             "TIMENEST_ADMOB_APP_ID": "REQUIRED_PRODUCTION_ADMOB_APP_ID",
                             "TIMENEST_ADMOB_BANNER_UNIT_ID": "REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID",
                             "TIMENEST_ADS_ENABLED": "YES"

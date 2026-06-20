@@ -19,8 +19,8 @@
 
 - Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; Widget support; four UI languages; and local-first storage.
 - Do not add claims about account sign-in, developer-operated cloud sync, team sharing, AI, in-app purchases, or a remove-ads flow. They are not part of version 1.0.
-- Do not describe TimeNest as completely ad-free. Google Mobile Ads is integrated, and banner ads may be used depending on the final production configuration.
-- **TODO:** Reconfirm the advertising wording and Widget inclusion against the exact submitted build.
+- Do not describe TimeNest as ad-free. Version 1.0 integrates Google Mobile Ads and is configured to display banner ads after the required consent flow permits ad requests.
+- **TODO:** Reconfirm banner behavior and Widget inclusion against the exact submitted build.
 
 ## Japanese (`ja`) - Primary
 

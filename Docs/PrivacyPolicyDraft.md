@@ -5,7 +5,7 @@
 - Published Privacy Policy URL: https://songlabs.github.io/timenest/privacy.html
 - Support URL: https://songlabs.github.io/timenest/support.html
 - In-app entry: Settings > Support > Privacy Policy opens the published policy with the system URL-opening flow.
-- Pre-submission gate: confirm the entry works in the exact release candidate and the published policy matches that build, including the effective date and final advertising disclosure.
+- Pre-submission gate: confirm the entry works in the exact release candidate and the published policy matches that build, including the effective date, final advertising disclosure, third-party retention/deletion handling, and a clear method to withdraw consent or reopen required privacy options.
 
 ## 中文草案
 
@@ -35,9 +35,9 @@ TimeNest 第一版是带广告发布的版本，不包含账号登录、云同�
 
 当前版本集成 Google Mobile Ads。根据 Google 的 iOS App Store 数据披露说明，该 SDK 可能处理 IP 地址（可能用于推断大致位置）、崩溃日志、性能数据、设备标识符、广告数据以及与广告或产品的互动数据。实际处理的数据取决于最终提交版本的 SDK、广告、地区、同意和可选功能配置。
 
-TimeNest 当前没有自行实现独立的分析、账号或后端上传功能，也未实现面向用户的去广告购买或恢复流程。App 会在每次启动时通过 Google User Messaging Platform 更新同意状态，仅在 UMP 返回允许请求广告后初始化并请求广告，并关闭广告个性化；根据用户选择和地区规则，Google 可能提供非个性化广告、受限广告或不提供广告。
+TimeNest 当前没有自行实现独立的分析、账号或后端上传功能，也未实现面向用户的去广告购买或恢复流程。App 会在每次启动时通过 Google User Messaging Platform 更新同意状态，仅在 UMP 返回允许请求广告后继续广告流程，并关闭广告个性化；根据用户选择和地区规则，Google 可能提供非个性化广告、受限广告或不提供广告。
 
-当前版本不调用 App Tracking Transparency，不弹出 ATT 授权提示，也不包含 `NSUserTrackingUsageDescription`。即使不请求 ATT，广告 SDK 仍可能处理上文列出的数据，因此必须根据最终提交版本及 Google 的最新披露，在 App Store Connect 中准确申报广告、标识符、使用数据、诊断信息及追踪状态，并确保 Privacy Manifest 与本政策一致。
+当前版本会在 UMP 更新和所需的同意表单完成后、初始化 Mobile Ads 和请求横幅广告前，通过 App Tracking Transparency 请求追踪授权。用户拒绝或系统限制追踪时，日历功能仍可正常使用；在 UMP 允许请求广告时，Google Mobile Ads 仍可能请求不包含 IDFA 的广告。最终公开政策和 App Store Connect 必须根据提交版本准确申报广告、设备标识符、使用数据、诊断信息及追踪状态，并与 ATT、Privacy Manifest 和用户选择保持一致。
 
 参考：[Google Mobile Ads SDK 的 App Store 数据披露说明](https://developers.google.com/admob/ios/privacy/data-disclosure?hl=zh-CN) 与 [iOS 隐私策略 / ATT 说明](https://developers.google.com/admob/ios/privacy/strategies)。
 
@@ -77,9 +77,9 @@ The current version includes a Widget Extension. The app and widget use an App G
 
 The current version integrates Google Mobile Ads. According to Google's iOS App Store data-disclosure guidance, the SDK may process IP addresses (which may estimate general location), crash logs, performance data, device identifiers, advertising data, and advertising or product interaction data. The actual data depends on the SDK, ads, region, consent, and optional features in the submitted build.
 
-TimeNest does not currently implement its own analytics, account system, or backend upload, and it has no user-facing remove-ads purchase or restore flow. At each launch, Google User Messaging Platform updates consent information. The app initializes and requests ads only when UMP reports that ads may be requested, and it disables ad personalization. Depending on the user's choices and regional rules, Google may serve non-personalized ads, limited ads, or no ads.
+TimeNest does not currently implement its own analytics, account system, or backend upload, and it has no user-facing remove-ads purchase or restore flow. At each launch, Google User Messaging Platform updates consent information. The app continues the advertising flow only when UMP reports that ads may be requested, and it disables ad personalization. Depending on the user's choices and regional rules, Google may serve non-personalized ads, limited ads, or no ads.
 
-The current version does not call App Tracking Transparency, show an ATT prompt, or include `NSUserTrackingUsageDescription`. The advertising SDK may still process the data categories described above without an ATT prompt. The final App Store Connect declarations must therefore accurately cover advertising, identifiers, usage data, diagnostics, and tracking status for the submitted build, and remain consistent with its Privacy Manifest and this policy.
+After the UMP update and any required consent form complete, the current version requests App Tracking Transparency authorization before initializing Mobile Ads or requesting a banner. If the user denies tracking or the system restricts it, calendar functionality remains available; when UMP permits ad requests, Google Mobile Ads may still request ads without IDFA. The final published policy and App Store Connect declarations must accurately cover advertising, device identifiers, usage data, diagnostics, and tracking for the submitted build and remain consistent with ATT, the Privacy Manifest, and the user's choices.
 
 References: [Google Mobile Ads SDK App Store data disclosure](https://developers.google.com/admob/ios/privacy/data-disclosure) and [iOS privacy / ATT strategies](https://developers.google.com/admob/ios/privacy/strategies).
 

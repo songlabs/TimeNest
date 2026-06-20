@@ -16,7 +16,9 @@
 - The app and Widget share a calendar snapshot through the App Group on the same device. This is local App-to-Widget data sharing, not cloud synchronization or a backend upload.
 - When a user enables, tests, or refreshes a holiday subscription, the app sends an HTTPS request to the public ICS provider selected by the user. That provider may receive network information such as an IP address and request metadata under its own policy.
 - Google Mobile Ads and Google UMP are integrated. The first release requires ads. Debug uses official test identifiers, while Release requires approved production identifiers and fails its build validation when they are missing or invalid.
-- Ads are gated by UMP `canRequestAds`, ad personalization is disabled, and the app does not request ATT.
+- Ads remain gated by UMP `canRequestAds`. After the UMP update and any required consent form complete, the app requests ATT when the status is not determined, then starts Mobile Ads. Publisher Privacy Treatment disables ad personalization.
+- If ATT is denied or restricted, the app remains usable and may continue requesting ads without IDFA when UMP permits ad requests. Banner loading is separately gated until the ATT decision completes.
+- The embedded Google Mobile Ads 13.5.0 privacy manifest declares linked coarse location, advertising data, product interaction, and Device ID. It marks Device ID as used for tracking. The Google UMP 3.1.0 privacy manifest also declares coarse location, performance data, and product interaction for app functionality.
 - The app currently has no in-app purchase or user-facing remove-ads flow.
 - Settings exposes the published Privacy Policy URL through the system URL-opening flow.
 
@@ -33,7 +35,7 @@ Do not answer the overall "Data Not Collected" question until the advertising an
 
 ### Candidate Data Types Requiring Final Ad Review
 
-The Google Mobile Ads SDK may require disclosure of data types such as identifiers, usage data, diagnostics, coarse location inferred from IP address, or advertising data. This list is not a final declaration.
+The embedded SDK privacy manifests and Google's current disclosure guidance identify data types including Device ID, coarse location, advertising data, product interaction, crash data, performance data, and other diagnostic data. This remains a candidate list until it is checked against the exact production configuration and archive privacy report.
 
 - **TODO:** Confirm every collected data type present in the submitted build.
 - **TODO:** For each type, confirm whether it is linked to the user.
@@ -43,17 +45,17 @@ The Google Mobile Ads SDK may require disclosure of data types such as identifie
 
 ### Tracking and ATT
 
-- The current repository does not request ATT authorization and does not contain `NSUserTrackingUsageDescription`.
-- **TODO:** Decide whether the final production advertising configuration accesses IDFA or otherwise constitutes tracking under Apple's definition.
-- **TODO:** If tracking is used, implement and validate the required ATT flow in a separate explicitly scoped change before submission, then update the privacy policy, Privacy Manifest, and App Store answers.
-- **TODO:** If tracking is not used, verify that the production ad request configuration, SDK behavior, privacy policy, Privacy Manifest, and App Store answers consistently reflect that decision.
+- The app includes `NSUserTrackingUsageDescription` in Simplified Chinese, Japanese, English, and Korean and calls ATT only after the UMP consent flow completes, before Mobile Ads starts or a banner request is sent.
+- The ATT result does not gate access to calendar functionality. A denied or restricted result still allows non-IDFA ad requests when UMP `canRequestAds` is true.
+- **TODO:** Complete App Store Connect Tracking and App Privacy answers for the exact submitted SDK/configuration. If Device ID is declared as used for tracking, the Tracking answer, privacy policy, archive privacy report, and ATT implementation must remain consistent.
+- **TODO:** Review the final archive's aggregated privacy manifest, including whether `NSPrivacyTracking` and actual tracking domains require an app-level declaration. Do not add guessed domains.
 
 ## Final Manual Verification
 
 - [ ] Compare the exact archived build's privacy report and embedded SDK privacy manifests with this draft.
 - [ ] Confirm the production Google Mobile Ads App ID, banner unit ID, request configuration, and optional SDK features.
 - [ ] Confirm the exact Release build has `TIMENEST_ADS_ENABLED=YES` and its processed `Info.plist` contains the production App ID.
-- [ ] Confirm ATT and regional consent decisions.
+- [ ] Verify the localized ATT prompt and authorized/denied/restricted paths on physical devices after the UMP flow.
 - [ ] Complete the App Store Connect App Privacy questionnaire manually using its current wording.
 - [ ] Confirm Settings > Support > Privacy Policy opens https://songlabs.github.io/timenest/privacy.html in the exact release candidate.
 - [ ] Confirm the submitted answers match the published privacy policy.

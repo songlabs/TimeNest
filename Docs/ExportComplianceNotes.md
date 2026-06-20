@@ -5,7 +5,7 @@
 ## Current Technical Inventory
 
 - TimeNest uses standard HTTPS networking to access public ICS holiday providers selected by the user.
-- The app may include and use the Google Mobile Ads SDK in the submitted build, depending on the final production advertising configuration.
+- The first release includes and uses the Google Mobile Ads SDK for banner advertising.
 - The current TimeNest source does not implement custom or proprietary encryption algorithms or cryptographic features.
 - The current app has no account system, developer-operated cloud synchronization, TimeNest-owned backend upload, or private encrypted communication protocol.
 - Local App Group sharing between TimeNest and its Widget is on-device file sharing, not a private network protocol.

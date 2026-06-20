@@ -52,7 +52,7 @@ The checked-in Xcode project and `Project.swift` define the same three build set
 - `TIMENEST_ADMOB_APP_ID`: Google's test App ID in Debug; replace `REQUIRED_PRODUCTION_ADMOB_APP_ID` in the Release configuration with the approved production App ID.
 - `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's test Banner Unit ID in Debug; replace `REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID` in the Release configuration with the approved production Banner Unit ID.
 
-`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. `Scripts/validate_admob_release_config.sh` rejects a Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when replacing the two Release values.
+`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. The Release values are explicit replacement/override points for the approved production IDs. `Scripts/validate_admob_release_config.sh` rejects a Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when replacing the two Release values.
 
 ## Unit Tests
 
@@ -121,7 +121,7 @@ Calendar events, shifts, work records, settings, and holiday choices are stored 
 - Display settings and holiday-subscription choices are stored locally in app preferences.
 - Downloaded holiday data is cached on the device.
 - Holiday synchronization sends HTTPS requests to the public ICS provider selected in Settings.
-- Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true`; ad personalization is disabled through Publisher Privacy Treatment, and no ATT prompt is requested.
+- Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true` and the ATT decision completes. Ad personalization is disabled through Publisher Privacy Treatment; denying ATT keeps the calendar usable and permits non-IDFA ad requests when UMP allows ads.
 - The app has no account sign-in or cloud synchronization in the current implementation.
 
 Uninstalling the app removes its local container under normal iOS behavior. Existing SwiftData entities and decoding compatibility must be treated as user-data migration code and should not be removed as ordinary cleanup.
@@ -141,6 +141,7 @@ Before submission, confirm:
 - Replace both Release identifier placeholders with the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads.
 - Keep remove-ads claims out of version 1.0 metadata; no purchase or restore flow currently exists.
 - Configure and verify the required consent messages and privacy-options behavior in the AdMob console.
+- Verify the four localized ATT purpose strings and authorized/denied paths on physical devices.
 - Validate the Privacy Manifest, App Privacy answers, privacy-policy URL, and Google Mobile Ads disclosures together.
 - Verify Bundle ID, signing, version/build numbers, icons, screenshots, metadata, support URL, and privacy-policy URL.
 - Verify fresh install and upgrade install behavior, especially SwiftData compatibility.

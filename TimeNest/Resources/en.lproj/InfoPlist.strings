@@ -1,2 +1,3 @@
 "CFBundleDisplayName" = "TimeNest";
 "CFBundleName" = "TimeNest";
+"NSUserTrackingUsageDescription" = "We use the device identifier to deliver and measure advertising.";

@@ -64,7 +64,7 @@
 - [ ] Confirm production candidates do not use Google's test App ID or banner unit ID. TestFlight-only validation must follow the team's approved AdMob test-device policy.
 - [ ] Confirm no banner request occurs before UMP reports `canRequestAds == true`; deny or interrupt consent and verify the fixed banner area does not jump.
 - [ ] Confirm required UMP consent forms appear at the intended time and Help exposes the privacy-options action only when UMP requires it.
-- [ ] Confirm no ATT prompt appears and that Publisher Privacy Treatment/non-personalized handling matches the approved non-ATT configuration and disclosures.
+- [ ] On a fresh install, confirm the localized ATT prompt appears only after UMP completes and before the first banner request. Verify both allowed and denied paths; denied must keep the app usable and request ads without IDFA when UMP permits.
 - [ ] Confirm no remove-ads purchase or state is shown or promised; the current implementation has no user-facing remove-ads flow.
 
 ## 9. Lifecycle, Offline, and Stability

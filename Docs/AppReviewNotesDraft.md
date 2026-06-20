@@ -14,13 +14,13 @@ Public-holiday subscriptions may download ICS data over HTTPS from the public so
 
 The Widget, if included in the submitted build, reads a local calendar snapshot shared by the app through the App Group on the same device. This App Group data sharing is not cloud synchronization.
 
-Google Mobile Ads is integrated, and banner ads may be used depending on the final production configuration. The current first release does not include an in-app purchase or remove-ads flow.
+Google Mobile Ads is integrated, and the first release displays banner ads after the required consent flow permits ad requests. The current first release does not include an in-app purchase or remove-ads flow.
 
 ## Required Pre-Submission TODO
 
 - [ ] **Developer Program:** Confirm enrollment is Active before submission. This does not change the app behavior described above.
-- [ ] **Advertising:** Replace the conditional advertising paragraph with the exact final behavior of the submitted build. Confirm approved production AdMob identifiers or an intentional ads-disabled configuration; do not submit a build using Google's test identifiers as production identifiers.
-- [ ] **ATT:** Confirm whether the final advertising configuration requires ATT and ensure the review notes, permission flow, Privacy Manifest, privacy policy, and App Privacy answers agree.
+- [ ] **Advertising:** Configure the approved production AdMob App and Banner Unit IDs and confirm banner behavior on the exact submitted build; do not submit a build using placeholders or Google's test identifiers.
+- [ ] **ATT:** Confirm the localized ATT prompt appears after UMP and before advertising on a fresh install, and ensure the review notes, Privacy Manifest, privacy policy, and App Privacy/Tracking answers agree.
 - [ ] **Widget:** Confirm the Widget Extension is included and functional in the submitted build; otherwise remove the Widget paragraph.
 - [ ] **Review path:** Recheck the named controls and menus on the exact submitted build so the reviewer instructions remain accurate.
 
@@ -31,4 +31,4 @@ Google Mobile Ads is integrated, and banner ads may be used depending on the fin
 - User-created calendar, shift, and work-record data is local-first.
 - Public-holiday subscriptions contact a selected external public ICS provider.
 - The release has no in-app purchase or remove-ads flow.
-- Final Google Mobile Ads and ATT statements remain manual release decisions.
+- Production Google Mobile Ads identifiers and the final ATT/App Privacy decision remain manual release gates.

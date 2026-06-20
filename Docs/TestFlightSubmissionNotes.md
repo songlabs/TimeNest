@@ -17,16 +17,17 @@ Please test the following areas:
 7. Add the TimeNest Widget and check that schedule, shift, holiday, date, and language changes refresh within normal WidgetKit timing. Tap supported Widget content and confirm TimeNest opens to the expected date.
 8. Switch among Japanese, Simplified Chinese, English, Korean, and System language modes. Check key screens for untranslated keys, unexpected mixed language, or clipped text.
 9. Test both light and dark appearance, including calendar views, editors, sheets, settings, statistics, Widget content, and any banner area.
-10. If banner ads are enabled in this TestFlight build, check the final ad location, layout stability, loading/failure behavior, and return from background. Follow the approved AdMob test-device policy.
+10. Check the banner-ad location, layout stability, loading/failure behavior, and return from background. Follow the approved AdMob test-device policy.
+11. On a fresh install, verify UMP completes before the localized ATT prompt. Test both Allow and Ask App Not to Track paths; calendar features must remain available, and denied ad requests must not use IDFA.
 
 Important flows include fresh-install startup, local data persistence after force-quit and relaunch, offline access to existing schedules, all-day event display, holiday refresh failure handling, Widget refresh, and repeated calendar/language/appearance switching.
 
 Known limitations and pending release items:
 
 - There is no account system, developer-operated cloud sync, team sharing, or cross-device data synchronization in this release.
-- Public-holiday refresh and ad loading, when ads are enabled, require network access; existing local calendar data should remain usable without network access.
+- Public-holiday refresh and ad loading require network access; existing local calendar data should remain usable without network access.
 - The current first release has no in-app purchase or remove-ads flow.
-- Final production advertising behavior, ATT requirements, App Privacy answers, export-compliance answers, App Store screenshots, and physical-device TestFlight sign-off remain release checks until explicitly completed.
+- Final production advertising identifiers, App Privacy/Tracking answers, export-compliance answers, App Store screenshots, and physical-device ATT/TestFlight sign-off remain release checks until explicitly completed.
 - Apple Developer Program activation must be confirmed before App Store submission.
 
 Feedback contact: https://songlabs.github.io/timenest/support.html
@@ -34,7 +35,7 @@ Feedback contact: https://songlabs.github.io/timenest/support.html
 ## Internal Submission TODO
 
 - [ ] Confirm the uploaded build's app version/build number and supported Widget configurations.
-- [ ] Replace the conditional banner-ad instruction with the exact uploaded-build behavior.
-- [ ] Keep the ATT, App Privacy, and export-compliance wording aligned with the final advertising configuration and archive.
+- [ ] Confirm the uploaded build uses approved AdMob test-device handling and does not use production traffic for development testing.
+- [ ] Keep the ATT implementation, App Privacy/Tracking answers, public privacy policy, Privacy Manifest, and export-compliance wording aligned with the final advertising configuration and archive.
 - [ ] Complete fresh-install and physical-device TestFlight verification; do not mark it complete based only on this draft.
 - [ ] Capture App Store screenshots separately from the exact release candidate after Developer Program access and local launch are available.

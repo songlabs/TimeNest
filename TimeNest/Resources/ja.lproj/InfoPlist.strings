@@ -1,2 +1,3 @@
 "CFBundleDisplayName" = "TimeNest";
 "CFBundleName" = "TimeNest";
+"NSUserTrackingUsageDescription" = "広告の配信と効果測定のために、デバイス識別子を使用します。";

@@ -2,7 +2,7 @@
 
 > Release-preparation checklist only. It does not guarantee App Review approval. Confirm manual items in Apple Developer, App Store Connect, Xcode Organizer, and the exact submitted build.
 
-## Repository Audit Snapshot (2026-06-20)
+## Repository Audit Snapshot (2026-06-21)
 
 - [x] App target, test target, and Widget Extension are present; project shared schemes are `TimeNest` and `TimeNestWidgetExtension`, and the workspace also contains `TimeNest-Workspace`.
 - [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.widget`.
@@ -10,13 +10,13 @@
 - [x] Widget deep links use the registered `timenest` URL scheme.
 - [x] App and Widget versions currently match at `1.0 (1)`.
 - [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
-- [x] `ja`, `zh-Hans`, `en`, and `ko` each contain 314 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match.
+- [x] `ja`, `zh-Hans`, `en`, and `ko` each contain 314 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match and include `NSUserTrackingUsageDescription`.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
 - [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
 - [x] Debug uses Google's official test IDs. Release is an ad-enabled target and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
 - [ ] Replace `REQUIRED_PRODUCTION_ADMOB_APP_ID` and `REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID` in both Release build-setting sources with the approved production IDs.
 - [x] Google UMP now updates consent once per launch and gates Mobile Ads initialization and banner loading on `canRequestAds`. Publisher Privacy Treatment disables ad personalization.
-- [x] The current policy does not request ATT and therefore does not add `NSUserTrackingUsageDescription`.
+- [x] ATT is requested after the UMP consent flow and before Mobile Ads initialization/banner loading. `NSUserTrackingUsageDescription` is localized in all four supported languages.
 
 ## 1. Developer Program and App Store Connect
 
@@ -54,8 +54,8 @@
 - [x] Prepare `Docs/AppPrivacyAnswersDraft.md` covering local storage, Widget App Group sharing, public ICS requests, Google Mobile Ads uncertainty, and ATT decision points.
 - [ ] Submission gate: complete App Store Connect App Privacy answers using the submitted Google Mobile Ads SDK/configuration and the app's public ICS requests, local notifications, local storage, and Widget App Group behavior.
 - [ ] Review the archive privacy report and all SDK privacy manifests. Confirm the app-level `PrivacyInfo.xcprivacy` and App Store answers remain accurate for the submitted build.
-- [x] Current code does not call ATT and disables ad personalization before Mobile Ads initialization. If the policy changes to tracking/personalized ads, implement ATT separately before submission.
-- [ ] Confirm the submitted production configuration, App Privacy answers, privacy policy, and archive privacy report all reflect the current non-ATT behavior.
+- [x] Current code requests ATT after UMP completes and before Mobile Ads initialization. Authorized, denied, and restricted outcomes all preserve app access; denied/restricted outcomes may continue without IDFA when UMP permits ads.
+- [ ] Confirm the submitted production configuration, App Privacy Tracking answer, public privacy policy, archive privacy report, and any required tracking-domain declaration all match the ATT-enabled behavior.
 - [x] Google UMP consent flow is centralized in the Ads layer. Help shows a localized privacy-options action only when UMP reports that an entry point is required.
 - [ ] Configure the intended GDPR/US-state privacy messages in the AdMob console for the production App ID and verify them on physical devices in applicable regions.
 - [x] `Info.plist` includes the `SKAdNetworkItems` list from Google's iOS quick-start guidance checked on 2026-06-20.
@@ -64,12 +64,13 @@
 - [ ] Reconfirm that the current app has no user-facing remove-ads purchase flow; do not advertise one.
 - [x] Record Google Mobile Ads 13.5.0 and Google User Messaging Platform 3.1.0 notices in `Docs/ThirdPartyNotices.md`.
 - [x] Expose the two wrapper attributions and Apache-2.0 license type through Settings > Third-party Licenses.
-- [ ] On a physical device, verify fresh-install UMP consent, returning-user consent, required privacy-options presentation, denied/no-consent layout stability, and production banner loading.
+- [ ] On physical devices, verify fresh-install UMP consent followed by localized ATT, ATT authorized/denied/restricted behavior, returning-user consent, required privacy-options presentation, denied/no-consent layout stability, and production banner loading.
 
 ## 5. URLs, Metadata, and Screenshots
 
 - [x] Record the public Support URL in release documents: https://songlabs.github.io/timenest/support.html
 - [ ] Confirm both public URLs remain reachable without authentication and accurately describe the submitted build.
+- [ ] Update the published privacy policy so the advertising disclosure is final rather than conditional and clearly covers third-party data retention/deletion and how users can withdraw consent or reopen required privacy options.
 - [x] Replace the URL placeholders in `Docs/AppStoreMetadataDraft.md` with the public Privacy Policy and Support URLs.
 - [ ] Paste and recheck the final localized metadata against the exact submitted build and App Store Connect field limits.
 - [ ] Confirm metadata claims match the submitted build and do not describe login, cloud sync, sharing, analytics, or remove-ads features as implemented.

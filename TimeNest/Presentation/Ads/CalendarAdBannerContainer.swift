@@ -9,10 +9,10 @@ struct CalendarAdBannerContainer: View {
                 Spacer(minLength: 0)
 
                 Group {
-                    if consentManager.canRequestAds {
+                    if consentManager.canLoadAds {
                         AdMobBannerView(
                             adUnitID: AdConfiguration.bannerAdUnitID,
-                            canRequestAds: consentManager.canRequestAds
+                            canLoadAds: consentManager.canLoadAds
                         )
                     } else {
                         Color.clear
