@@ -145,6 +145,8 @@ Release-preparation documents:
 - [TestFlight checklist](Docs/TestFlightChecklist.md)
 - [Privacy policy draft](Docs/PrivacyPolicyDraft.md)
 - [App Store metadata draft](Docs/AppStoreMetadataDraft.md)
+- [App Review notes draft](Docs/AppReviewNotesDraft.md)
+- [TestFlight submission notes](Docs/TestFlightSubmissionNotes.md)
 - [App Privacy answers draft](Docs/AppPrivacyAnswersDraft.md)
 - [Export compliance notes](Docs/ExportComplianceNotes.md)
 - [Screenshot plan](Docs/ScreenshotPlan.md)

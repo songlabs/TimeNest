@@ -16,7 +16,7 @@
 - The app and Widget share a calendar snapshot through the App Group on the same device. This is local App-to-Widget data sharing, not cloud synchronization or a backend upload.
 - When a user enables, tests, or refreshes a holiday subscription, the app sends an HTTPS request to the public ICS provider selected by the user. That provider may receive network information such as an IP address and request metadata under its own policy.
 - Google Mobile Ads is integrated and currently enabled in the repository. The checked-in identifiers are test identifiers and are not the final production advertising configuration.
-- The app currently has no user-facing remove-ads purchase flow.
+- The app currently has no in-app purchase or user-facing remove-ads flow.
 
 ## App Store Connect Answering Draft
 

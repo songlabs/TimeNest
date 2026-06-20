@@ -4,8 +4,10 @@
 
 ## 1. Internal Test Setup
 
+- [ ] Confirm the paid Apple Developer Program enrollment has changed from Pending to Active before attempting distribution steps that require active membership.
 - [ ] Upload the Release archive and wait for App Store Connect processing to complete.
 - [ ] Add the build to the intended internal testing group and complete the current export-compliance questions using the final archive and `Docs/ExportComplianceNotes.md` as a reference.
+- [ ] Paste and recheck `Docs/TestFlightSubmissionNotes.md` against the exact uploaded build, including its Widget, advertising, ATT, and known-limitations wording.
 - [ ] Record the tester, device, iOS version, TimeNest version/build, install type, language, and network state.
 - [ ] Install from TestFlight on at least one physical device; include one fresh install and, when an older build exists, one upgrade install.
 - [ ] Launch from the Home Screen and confirm startup completes without a crash or mandatory network connection.

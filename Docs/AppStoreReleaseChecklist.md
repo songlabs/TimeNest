@@ -21,7 +21,9 @@
 - [ ] Confirm the paid Apple Developer Program enrollment has changed from Pending to Active. While pending, do not submit a duplicate enrollment, pay again, or change Apple ID.
 - [ ] Confirm the App Store Connect app record uses the intended primary language and Bundle ID.
 - [ ] Fill app name, subtitle, description, keywords, promotional text, release notes, categories, age rating, pricing, and availability for each supported locale.
-- [ ] Fill review contact information and accurate review notes; no demo login is required because the current app has no account system.
+- [x] Prepare Japanese-primary and `zh-Hans` / `en` / `ko` copy candidates in `Docs/AppStoreMetadataDraft.md`.
+- [x] Prepare the copy candidate and manual configuration TODOs in `Docs/AppReviewNotesDraft.md`.
+- [ ] Fill review contact information and accurate review notes from the exact submitted build; no demo login is required because the current app has no account system.
 - [ ] Confirm all required App Store agreements, tax, and banking items that apply to the account.
 
 ## 2. Bundle, Version, Signing, and Build
@@ -61,6 +63,7 @@
 - [x] Record the public Support URL in release documents: https://songlabs.github.io/timenest/support.html
 - [ ] Confirm both public URLs remain reachable without authentication and accurately describe the submitted build.
 - [x] Replace the URL placeholders in `Docs/AppStoreMetadataDraft.md` with the public Privacy Policy and Support URLs.
+- [ ] Paste and recheck the final localized metadata against the exact submitted build and App Store Connect field limits.
 - [ ] Confirm metadata claims match the submitted build and do not describe login, cloud sync, sharing, analytics, or remove-ads features as implemented.
 - [x] Prepare the six-shot capture outline in `Docs/ScreenshotPlan.md`.
 - [ ] Prepare required iPhone screenshot sizes for each App Store locale selected in App Store Connect.
