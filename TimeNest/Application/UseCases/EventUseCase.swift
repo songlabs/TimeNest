@@ -70,32 +70,21 @@ class EventUseCase {
         let events = try await repository.events(in: range)
         let calendar = Calendar(identifier: .gregorian)
 
-        return events.map { event in
+        return events.flatMap { event -> [EventOccurrence] in
             let isWorkClockEvent = event.workClockKind != nil
 
-            let occurrenceDate = isWorkClockEvent
-                ? (event.workInfo?.workDate ?? event.startDate)
-                : event.startDate
+            if isWorkClockEvent {
+                let occurrenceDate = event.workInfo?.workDate ?? event.startDate
+                return [makeOccurrence(event: event, occurrenceDate: occurrenceDate)]
+            }
 
-            return EventOccurrence(
-                id: "\(event.id)-\(event.startDate)",
-                eventID: event.id,
-                occurrenceDate: DateOnly(from: occurrenceDate) ?? DateOnly(year: 2026, month: 1, day: 1),
-                startDate: event.startDate,
-                endDate: event.endDate,
-                isAllDay: event.isAllDay,
-                title: event.title,
-                note: event.note,
-                categoryID: event.categoryID,
-                reminderOffsetMinutes: event.reminderOffsetMinutes,
-                notificationID: event.notificationID,
-                shiftTemplateID: event.shiftTemplateID,
-                workInfo: event.workInfo
-            )
+            return coveredDates(for: event, in: range, calendar: calendar).map { occurrenceDate in
+                makeOccurrence(event: event, occurrenceDate: occurrenceDate)
+            }
         }
         .sorted { lhs, rhs in
-            let leftDay = calendar.startOfDay(for: lhs.workDate)
-            let rightDay = calendar.startOfDay(for: rhs.workDate)
+            let leftDay = lhs.isWorkClockEvent ? calendar.startOfDay(for: lhs.workDate) : lhs.occurrenceDate.toDate()
+            let rightDay = rhs.isWorkClockEvent ? calendar.startOfDay(for: rhs.workDate) : rhs.occurrenceDate.toDate()
             if leftDay != rightDay { return leftDay < rightDay }
             let leftSessionTime = lhs.isWorkClockEvent ? sessionSortTime(for: lhs) : lhs.startDate
             let rightSessionTime = rhs.isWorkClockEvent ? sessionSortTime(for: rhs) : rhs.startDate
@@ -103,6 +92,47 @@ class EventUseCase {
             if lhs.isClockInEvent != rhs.isClockInEvent { return lhs.isClockInEvent }
             return lhs.actualWorkClockDate < rhs.actualWorkClockDate
         }
+    }
+
+    private func makeOccurrence(event: CalendarEvent, occurrenceDate: Date) -> EventOccurrence {
+        let dateOnly = DateOnly(from: occurrenceDate) ?? DateOnly(year: 2026, month: 1, day: 1)
+        return EventOccurrence(
+            id: "\(event.id)-\(dateOnly.id)",
+            eventID: event.id,
+            occurrenceDate: dateOnly,
+            startDate: event.startDate,
+            endDate: event.endDate,
+            isAllDay: event.isAllDay,
+            title: event.title,
+            note: event.note,
+            categoryID: event.categoryID,
+            reminderOffsetMinutes: event.reminderOffsetMinutes,
+            notificationID: event.notificationID,
+            shiftTemplateID: event.shiftTemplateID,
+            workInfo: event.workInfo
+        )
+    }
+
+    private func coveredDates(for event: CalendarEvent, in range: DateInterval, calendar: Calendar) -> [Date] {
+        guard event.endDate > event.startDate else {
+            guard event.startDate >= range.start, event.startDate < range.end else { return [] }
+            return [calendar.startOfDay(for: event.startDate)]
+        }
+
+        let coveredStart = max(event.startDate, range.start)
+        let coveredEnd = min(event.endDate, range.end)
+        guard coveredEnd > coveredStart else { return [] }
+
+        var dates: [Date] = []
+        var date = calendar.startOfDay(for: coveredStart)
+        while date < coveredEnd {
+            dates.append(date)
+            guard let nextDate = calendar.date(byAdding: .day, value: 1, to: date), nextDate > date else {
+                break
+            }
+            date = nextDate
+        }
+        return dates
     }
 
     private func sessionSortTime(for occurrence: EventOccurrence) -> Date {

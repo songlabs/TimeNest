@@ -48,11 +48,14 @@ class CalendarDisplayUseCase {
         let firstWeekday = calendar.component(.weekday, from: firstDayOfMonth)
         let weekStartOffset = weekStartOffset(for: firstWeekday, weekStartPolicy: setting.weekStartPolicy)
 
-        // 获取当月的事件
+        let totalCells = Int(ceil(Double(weekStartOffset + daysInMonth) / 7.0)) * 7
+        let gridStartDate = calendar.date(byAdding: .day, value: -weekStartOffset, to: firstDayOfMonth) ?? firstDayOfMonth
+        let gridEndDate = calendar.date(byAdding: .day, value: totalCells, to: gridStartDate) ?? gridStartDate
+
+        // 按实际月历网格取事件，确保相邻月份日期和跨月周完整。
         let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? firstDayOfMonth
-        let monthEnd = calendar.date(byAdding: .month, value: 1, to: monthStart) ?? monthStart
-        let monthInterval = DateInterval(start: monthStart, end: monthEnd)
-        let occurrences = try await eventUseCase.occurrences(in: monthInterval)
+        let gridInterval = DateInterval(start: gridStartDate, end: gridEndDate)
+        let occurrences = try await eventUseCase.occurrences(in: gridInterval)
         let occurrencesByDate = Dictionary(grouping: occurrences, by: { $0.occurrenceDate.id })
 
         let firstDate = DateOnly(from: monthStart) ?? DateOnly(year: year, month: month, day: 1)
@@ -68,9 +71,6 @@ class CalendarDisplayUseCase {
 
         let today = Date()
         let todayOnly = DateOnly(from: today)
-
-        let totalCells = Int(ceil(Double(weekStartOffset + daysInMonth) / 7.0)) * 7
-        let gridStartDate = calendar.date(byAdding: .day, value: -weekStartOffset, to: firstDayOfMonth) ?? firstDayOfMonth
 
         for dayOffset in 0..<totalCells {
             let date = calendar.date(byAdding: .day, value: dayOffset, to: gridStartDate) ?? gridStartDate

@@ -35,6 +35,7 @@ actor SwiftDataEventRepository: EventRepository {
                     let isWorkClockEvent = event.workClockKind != nil
                     let workDate = isWorkClockEvent ? event.workInfo?.workDate : nil
                     return (event.startDate < range.end && event.endDate > range.start)
+                        || (event.startDate >= range.start && event.startDate < range.end)
                         || (workDate.map { $0 >= range.start && $0 < range.end } ?? false)
                 }
         } catch {

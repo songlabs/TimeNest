@@ -1,15 +1,35 @@
 import Foundation
 
 struct EventEditorDateNormalizer {
-    static func normalizedDates(startDate: Date, endDate: Date, isAllDay: Bool) -> (start: Date, end: Date) {
+    static func persistenceDates(startDate: Date, inclusiveEndDate: Date, isAllDay: Bool) -> (start: Date, end: Date) {
         let calendar = Calendar(identifier: .gregorian)
         if isAllDay {
             let start = calendar.startOfDay(for: startDate)
-            let endDay = calendar.startOfDay(for: endDate)
-            let end = calendar.date(byAdding: .day, value: 1, to: endDay) ?? endDay
+            let selectedEndDay = calendar.startOfDay(for: inclusiveEndDate)
+            let safeEndDay = max(selectedEndDay, start)
+            let end = calendar.date(byAdding: .day, value: 1, to: safeEndDay) ?? safeEndDay
             return (start, end)
         }
-        return (startDate, endDate)
+        return (startDate, inclusiveEndDate)
+    }
+
+    static func editorDates(startDate: Date, exclusiveEndDate: Date, isAllDay: Bool) -> (start: Date, end: Date) {
+        guard isAllDay else {
+            return (startDate, exclusiveEndDate)
+        }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let start = calendar.startOfDay(for: startDate)
+        let endBoundary = calendar.startOfDay(for: exclusiveEndDate)
+        let inclusiveEnd: Date
+
+        if exclusiveEndDate > endBoundary {
+            inclusiveEnd = endBoundary
+        } else {
+            inclusiveEnd = calendar.date(byAdding: .day, value: -1, to: endBoundary) ?? start
+        }
+
+        return (start, max(inclusiveEnd, start))
     }
 
     static func normalizedForAllDayChange(allDay: Bool, startDate: Date, endDate: Date) -> (startDate: Date, endDate: Date) {
@@ -18,10 +38,10 @@ struct EventEditorDateNormalizer {
         var normalizedEndDate = endDate
 
         if allDay {
-            normalizedStartDate = calendar.startOfDay(for: normalizedStartDate)
-            if normalizedEndDate < normalizedStartDate {
-                normalizedEndDate = normalizedStartDate
-            }
+            let startDay = calendar.startOfDay(for: normalizedStartDate)
+            let endDay = calendar.startOfDay(for: normalizedEndDate)
+            normalizedStartDate = startDay
+            normalizedEndDate = max(endDay, startDay)
         } else {
             let startDay = calendar.startOfDay(for: normalizedStartDate)
             if normalizedStartDate == startDay {

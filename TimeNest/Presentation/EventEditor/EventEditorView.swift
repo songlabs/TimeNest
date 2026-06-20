@@ -499,11 +499,16 @@ struct EventEditorView: View {
                 defaultWorkDate: defaultStartDate
             )
         case .edit(_, let initialTitle, let initialNote, let initialStartDate, let initialEndDate, let initialIsAllDay, let initialReminderOffsetMinutes, let initialWorkInfo, let initialShiftTemplateID):
+            let editorDates = EventEditorDateNormalizer.editorDates(
+                startDate: initialStartDate,
+                exclusiveEndDate: initialEndDate,
+                isAllDay: initialIsAllDay
+            )
             return (
                 title: initialTitle,
                 note: initialNote,
-                startDate: initialStartDate,
-                endDate: initialEndDate,
+                startDate: editorDates.start,
+                endDate: editorDates.end,
                 isAllDay: initialIsAllDay,
                 reminderOffsetMinutes: initialReminderOffsetMinutes,
                 workInfo: initialWorkInfo,
@@ -703,7 +708,7 @@ struct EventEditorView: View {
             return (workClockSaveDates(for: workInDate), info)
         }
 
-        return (normalizedDates(), currentWorkInfo(
+        return ((startDate, endDate), currentWorkInfo(
             workInTime: workInDate,
             workOutTime: workOutDate,
             workDate: workDate,
@@ -764,7 +769,11 @@ struct EventEditorView: View {
     }
 
     private func normalizedDates() -> (start: Date, end: Date) {
-        EventEditorDateNormalizer.normalizedDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+        EventEditorDateNormalizer.persistenceDates(
+            startDate: startDate,
+            inclusiveEndDate: endDate,
+            isAllDay: isAllDay
+        )
     }
 
     private func workClockSaveDates(for clockDate: Date) -> (start: Date, end: Date) {
@@ -1244,8 +1253,9 @@ private struct EventDateTimePickerPanel: View {
                                         second: timeComponent.second ?? 0,
                                         of: tempDate) ?? tempDate
             startDate = newDate
-            // 如果修改后 endDate <= startDate，自动修正 endDate
-            if endDate <= startDate {
+            if isAllDay, endDate < startDate {
+                endDate = startDate
+            } else if !isAllDay, endDate <= startDate {
                 endDate = calendar.date(byAdding: .hour, value: 1, to: startDate) ?? startDate
             }
             
@@ -1271,8 +1281,9 @@ private struct EventDateTimePickerPanel: View {
                                         second: timeComponent.second ?? 0,
                                         of: tempDate) ?? tempDate
             endDate = newDate
-            // 如果修改后 endDate <= startDate，自动修正 startDate
-            if endDate <= startDate {
+            if isAllDay, endDate < startDate {
+                startDate = endDate
+            } else if !isAllDay, endDate <= startDate {
                 startDate = calendar.date(byAdding: .hour, value: -1, to: endDate) ?? endDate
             }
             

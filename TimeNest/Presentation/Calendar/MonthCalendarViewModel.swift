@@ -704,25 +704,17 @@ class MonthCalendarViewModel: ObservableObject {
         if WorkClockTitleMatcher.isClockOutTitle(title), let workOutTime = workInfo.workOutTime {
             return workClockEventDates(for: workOutTime)
         }
-        return normalizedEventDates(startDate: startDate, endDate: endDate, isAllDay: isAllDay)
+        return EventEditorDateNormalizer.persistenceDates(
+            startDate: startDate,
+            inclusiveEndDate: endDate,
+            isAllDay: isAllDay
+        )
     }
 
     private func workClockEventDates(for clockDate: Date) -> (start: Date, end: Date) {
         (clockDate, CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false))
     }
 
-    private func normalizedEventDates(startDate: Date, endDate: Date, isAllDay: Bool) -> (start: Date, end: Date) {
-        let calendar = Calendar(identifier: .gregorian)
-        if isAllDay {
-            let start = calendar.startOfDay(for: startDate)
-            let selectedEndDay = calendar.startOfDay(for: endDate)
-            let safeEndDay = max(selectedEndDay, start)
-            let end = calendar.date(byAdding: .day, value: 1, to: safeEndDay) ?? safeEndDay
-            return (start, end)
-        }
-        return (startDate, endDate)
-    }
-    
     // MARK: - 周视图/日视图支持
     
     /// 选择某一天，如果从周视图点击则切换到日视图

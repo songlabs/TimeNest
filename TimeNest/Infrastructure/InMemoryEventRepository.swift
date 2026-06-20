@@ -22,6 +22,7 @@ actor InMemoryEventRepository: EventRepository {
             let isWorkClockEvent = $0.workClockKind != nil
             let workDate = isWorkClockEvent ? $0.workInfo?.workDate : nil
             return ($0.startDate < range.end && $0.endDate > range.start)
+                || ($0.startDate >= range.start && $0.startDate < range.end)
                 || (workDate.map { $0 >= range.start && $0 < range.end } ?? false)
         }.sorted { $0.startDate < $1.startDate }
     }
