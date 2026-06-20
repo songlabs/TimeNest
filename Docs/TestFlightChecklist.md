@@ -5,7 +5,7 @@
 ## 1. Internal Test Setup
 
 - [ ] Upload the Release archive and wait for App Store Connect processing to complete.
-- [ ] Add the build to the intended internal testing group and complete any required export-compliance information.
+- [ ] Add the build to the intended internal testing group and complete the current export-compliance questions using the final archive and `Docs/ExportComplianceNotes.md` as a reference.
 - [ ] Record the tester, device, iOS version, TimeNest version/build, install type, language, and network state.
 - [ ] Install from TestFlight on at least one physical device; include one fresh install and, when an older build exists, one upgrade install.
 - [ ] Launch from the Home Screen and confirm startup completes without a crash or mandatory network connection.
@@ -74,5 +74,8 @@
 ## 10. Final Internal-Test Sign-off
 
 - [ ] No release-blocking crash, startup failure, data-loss issue, unreadable screen, broken Widget, or privacy-flow mismatch remains.
-- [ ] App Store metadata, screenshots, support URL, privacy-policy URL, version/build, ad configuration, and App Privacy answers match this exact build.
+- [ ] Confirm https://songlabs.github.io/timenest/privacy.html and https://songlabs.github.io/timenest/support.html remain publicly reachable and match this exact build.
+- [ ] Review the final App Store screenshots against `Docs/ScreenshotPlan.md`; confirm they contain no test ads, personal data, debug content, or unimplemented feature claims.
+- [ ] Complete the App Privacy declaration from `Docs/AppPrivacyAnswersDraft.md` only after the production ad configuration and ATT decision are final.
+- [ ] Confirm export-compliance answers, App Store metadata, screenshots, version/build, ad configuration, and App Privacy answers match this exact build.
 - [ ] Internal tester name, date, result, and known non-blocking issues are recorded for the release decision.

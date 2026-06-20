@@ -139,7 +139,12 @@ Before submission, confirm:
 
 Release-preparation documents:
 
+- [Public privacy policy](https://songlabs.github.io/timenest/privacy.html)
+- [Public support page](https://songlabs.github.io/timenest/support.html)
 - [App Store release checklist](Docs/AppStoreReleaseChecklist.md)
 - [TestFlight checklist](Docs/TestFlightChecklist.md)
 - [Privacy policy draft](Docs/PrivacyPolicyDraft.md)
 - [App Store metadata draft](Docs/AppStoreMetadataDraft.md)
+- [App Privacy answers draft](Docs/AppPrivacyAnswersDraft.md)
+- [Export compliance notes](Docs/ExportComplianceNotes.md)
+- [Screenshot plan](Docs/ScreenshotPlan.md)

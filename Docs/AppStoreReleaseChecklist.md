@@ -44,8 +44,9 @@
 
 ## 4. Privacy, Permissions, Ads, and ATT
 
-- [ ] Publish the final privacy policy based on `Docs/PrivacyPolicyDraft.md`; replace the effective date and contact placeholder.
-- [ ] Enter a public Privacy Policy URL that is reachable without authentication.
+- [x] Record the public Privacy Policy URL in release documents: https://songlabs.github.io/timenest/privacy.html
+- [ ] Confirm the published privacy policy matches the submitted build, including its effective date, support contact, and final advertising disclosure.
+- [x] Prepare `Docs/AppPrivacyAnswersDraft.md` covering local storage, Widget App Group sharing, public ICS requests, Google Mobile Ads uncertainty, and ATT decision points.
 - [ ] Complete App Store App Privacy answers using the submitted Google Mobile Ads SDK/configuration and the app's public ICS requests, local notifications, local storage, and Widget App Group behavior.
 - [ ] Review the archive privacy report and all SDK privacy manifests. Confirm the app-level `PrivacyInfo.xcprivacy` and App Store answers remain accurate for the submitted build.
 - [ ] Decide whether production ads access IDFA or otherwise meet Apple's tracking definition. If ATT is required, add the authorization flow and localized purpose text in a separate, explicitly scoped change before loading ads.
@@ -57,15 +58,23 @@
 
 ## 5. URLs, Metadata, and Screenshots
 
-- [ ] Publish a public Support URL with contact information and basic help for local data, reminders, holiday sync, language settings, Widget behavior, and ads.
-- [ ] Replace every `TODO` URL in `Docs/AppStoreMetadataDraft.md`; do not submit placeholder URLs.
+- [x] Record the public Support URL in release documents: https://songlabs.github.io/timenest/support.html
+- [ ] Confirm both public URLs remain reachable without authentication and accurately describe the submitted build.
+- [x] Replace the URL placeholders in `Docs/AppStoreMetadataDraft.md` with the public Privacy Policy and Support URLs.
 - [ ] Confirm metadata claims match the submitted build and do not describe login, cloud sync, sharing, analytics, or remove-ads features as implemented.
+- [x] Prepare the six-shot capture outline in `Docs/ScreenshotPlan.md`.
 - [ ] Prepare required iPhone screenshot sizes for each App Store locale selected in App Store Connect.
 - [ ] Capture: month view, week view, day view, event create/edit, holiday subscriptions, shift input/work statistics, and language/settings.
 - [ ] Add a Widget screenshot only if it is part of the release messaging and accurately reflects the submitted Widget.
 - [ ] Exclude test ads, placeholder URLs, debug text, simulator chrome, personal schedule data, and unimplemented features from screenshots.
 
-## 6. Device and TestFlight Gate
+## 6. Export Compliance
+
+- [x] Prepare the current technical inventory and manual-answer notes in `Docs/ExportComplianceNotes.md` without changing InfoPlist.
+- [ ] Review the exact final archive and answer App Store Connect's current export-compliance questions manually.
+- [ ] Confirm whether an exemption or supporting documentation applies to standard HTTPS and embedded third-party SDK behavior; do not guess or change `ITSAppUsesNonExemptEncryption` without that review.
+
+## 7. Device and TestFlight Gate
 
 - [ ] Install the release candidate on a physical device and confirm launch, foreground/background return, and local data persistence.
 - [ ] Confirm notification permission allow/deny behavior when saving an event with a reminder.

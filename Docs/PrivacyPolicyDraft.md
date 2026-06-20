@@ -1,6 +1,9 @@
 # TimeNest Privacy Policy Draft / 隐私政策草案
 
-> Draft only. This document is a product and engineering draft for App Store preparation and is not legal advice or a legal guarantee. Replace placeholders and have the final policy reviewed before publication.
+> Draft only. This document is a product and engineering draft for App Store preparation and is not legal advice or a legal guarantee. Confirm the effective date and final advertising disclosure against the submitted build.
+
+- Published Privacy Policy URL: https://songlabs.github.io/timenest/privacy.html
+- Support URL: https://songlabs.github.io/timenest/support.html
 
 ## 中文草案
 
@@ -40,7 +43,7 @@ TimeNest 当前没有自行实现独立的分析、账号或后端上传功能�
 
 ### 7. 联系方式
 
-如对隐私政策或数据处理有疑问，请联系开发者：`support@example.com`
+如对隐私政策或数据处理有疑问，请通过 [TimeNest 支持页面](https://songlabs.github.io/timenest/support.html) 联系开发者。
 
 ## English Draft
 
@@ -80,4 +83,4 @@ Users can delete schedules inside the app or uninstall the app to remove locally
 
 ### 7. Contact
 
-For questions about this privacy policy or data handling, contact the developer at: `support@example.com`
+For questions about this privacy policy or data handling, contact the developer through the [TimeNest support page](https://songlabs.github.io/timenest/support.html).
