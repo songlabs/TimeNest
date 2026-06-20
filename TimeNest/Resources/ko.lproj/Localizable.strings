@@ -360,3 +360,24 @@
 "help.privacy.account.answer" = "TimeNest를 사용하는 데 계정 등록은 필요하지 않습니다.";
 "help.privacy.delete_app.question" = "App을 삭제한 경우의 데이터";
 "help.privacy.delete_app.answer" = "App을 삭제하면 기기에 저장된 TimeNest 데이터도 삭제됩니다.";
+
+/* Widgets */
+"widget.calendar.title" = "캘린더";
+"widget.calendar.description" = "이번 달 캘린더를 표시합니다.";
+"widget.monthSchedule.title" = "이번 달 일정";
+"widget.monthSchedule.description" = "이번 달의 날짜별 요약 일정을 표시합니다.";
+"widget.twoMonths.title" = "이번 달과 다음 달";
+"widget.twoMonths.description" = "두 달을 나란히 표시합니다.";
+"widget.weekSchedule.title" = "이번 주 일정";
+"widget.weekSchedule.description" = "이번 주 근무, 공휴일 및 일정을 표시합니다.";
+"widget.upcoming.title" = "다가오는 일정과 캘린더";
+"widget.upcoming.description" = "다가오는 일정과 이번 달 캘린더를 표시합니다.";
+"widget.accessory.title" = "오늘 요약";
+"widget.accessory.description" = "잠금 화면, 스탠바이 및 Apple Watch에 오늘 요약을 표시합니다.";
+"widget.noEventsToday" = "오늘 일정 없음";
+"widget.nextEvent" = "다음 일정";
+"widget.allDay" = "하루 종일";
+"widget.today" = "오늘";
+"widget.tomorrow" = "내일";
+"widget.shift" = "근무";
+"widget.holiday" = "공휴일";

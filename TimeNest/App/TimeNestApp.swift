@@ -16,6 +16,7 @@ struct TimeNestApp: App {
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let holidayUseCase: HolidayUseCase
     private let localizationUseCase: CalendarLocalizationUseCase
+    private let widgetSnapshotCoordinator: WidgetSnapshotCoordinator
 
     init() {
         Self.configureAdsIfNeeded()
@@ -43,21 +44,38 @@ struct TimeNestApp: App {
         let reminderRepository = SwiftDataReminderRepository(modelContainer: modelContainer)
         self.eventRepository = eventRepository
         self.reminderRepository = reminderRepository
-        self.eventUseCase = EventUseCase(
+        let eventUseCase = EventUseCase(
             repository: eventRepository,
             notificationScheduler: notificationScheduler
         )
-        self.reminderUseCase = ReminderUseCase(
+        self.eventUseCase = eventUseCase
+        let reminderUseCase = ReminderUseCase(
             reminderRepository: reminderRepository,
             reminderScheduler: reminderScheduler
         )
-        self.holidayUseCase = HolidayUseCase(holidayProvider: holidayProvider)
-        self.localizationUseCase = CalendarLocalizationUseCase()
-        self.calendarDisplayUseCase = CalendarDisplayUseCase(
+        self.reminderUseCase = reminderUseCase
+        let holidayUseCase = HolidayUseCase(holidayProvider: holidayProvider)
+        self.holidayUseCase = holidayUseCase
+        let localizationUseCase = CalendarLocalizationUseCase()
+        self.localizationUseCase = localizationUseCase
+        let calendarDisplayUseCase = CalendarDisplayUseCase(
             holidayUseCase: holidayUseCase,
             localizationUseCase: localizationUseCase,
             eventUseCase: eventUseCase
         )
+        self.calendarDisplayUseCase = calendarDisplayUseCase
+        let snapshotBuilder = WidgetSnapshotBuilder(
+            calendarDisplayUseCase: calendarDisplayUseCase,
+            eventUseCase: eventUseCase,
+            holidayUseCase: holidayUseCase
+        )
+        let snapshotCoordinator = WidgetSnapshotCoordinator(builder: snapshotBuilder)
+        self.widgetSnapshotCoordinator = snapshotCoordinator
+        eventUseCase.onEventsChanged = {
+            Task { @MainActor in
+                snapshotCoordinator.scheduleRefresh()
+            }
+        }
     }
 
     private static func configureAdsIfNeeded() {
@@ -73,6 +91,9 @@ struct TimeNestApp: App {
             )
             .environmentObject(LocalizationManager.shared)
             .modelContainer(modelContainer)
+            .task {
+                await widgetSnapshotCoordinator.refresh()
+            }
         }
     }
 }

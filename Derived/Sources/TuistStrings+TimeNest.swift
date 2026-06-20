@@ -217,6 +217,236 @@ public enum TimeNestStrings: Sendable {
       }
     }
 
+    public enum Help: Sendable {
+      /// Contact Us
+      public static let contact = TimeNestStrings.tr("Localizable", "help.contact")
+      /// Copy Email Address
+      public static let copyEmail = TimeNestStrings.tr("Localizable", "help.copy_email")
+      /// Frequently Asked Questions
+      public static let frequentlyAskedQuestions = TimeNestStrings.tr("Localizable", "help.frequently_asked_questions")
+      /// Help
+      public static let title = TimeNestStrings.tr("Localizable", "help.title")
+
+      public enum Ads: Sendable {
+
+        public enum About: Sendable {
+          /// TimeNest may display ads to support the operation of the app.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.ads.about.answer")
+          /// About ads
+          public static let question = TimeNestStrings.tr("Localizable", "help.ads.about.question")
+        }
+
+        public enum Restore: Sendable {
+          /// If a restore option appears in Settings, use the same Apple Account used for the original purchase.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.ads.restore.answer")
+          /// Restoring a previous ad removal
+          public static let question = TimeNestStrings.tr("Localizable", "help.ads.restore.question")
+        }
+
+        public enum RestoreFailed: Sendable {
+          /// If restarting the app does not help, contact us using Contact Us.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.ads.restore_failed.answer")
+          /// What if restore does not work?
+          public static let question = TimeNestStrings.tr("Localizable", "help.ads.restore_failed.question")
+        }
+      }
+
+      public enum Category: Sendable {
+        /// Ads and Restore
+        public static let ads = TimeNestStrings.tr("Localizable", "help.category.ads")
+        /// Adding and Editing Events
+        public static let events = TimeNestStrings.tr("Localizable", "help.category.events")
+        /// Holidays and Days Off
+        public static let holidays = TimeNestStrings.tr("Localizable", "help.category.holidays")
+        /// Data and Privacy
+        public static let privacy = TimeNestStrings.tr("Localizable", "help.category.privacy")
+        /// Shifts and Work Records
+        public static let shifts = TimeNestStrings.tr("Localizable", "help.category.shifts")
+        /// Month, Week, and Day Views
+        public static let views = TimeNestStrings.tr("Localizable", "help.category.views")
+      }
+
+      public enum Contact: Sendable {
+        /// \n\n---\nApp version: %@\nBuild number: %@\niOS version: %@\nLanguage: %@
+        public static func emailBody(_ p1: Any, _ p2: Any, _ p3: Any, _ p4: Any) -> String {
+          return TimeNestStrings.tr("Localizable", "help.contact.email_body",String(describing: p1), String(describing: p2), String(describing: p3), String(describing: p4))
+        }
+        /// TimeNest Support Request
+        public static let emailSubject = TimeNestStrings.tr("Localizable", "help.contact.email_subject")
+      }
+
+      public enum Events: Sendable {
+
+        public enum Add: Sendable {
+          /// Tap the add button at the bottom right of the calendar, enter the details, and save.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.events.add.answer")
+          /// How do I add an event?
+          public static let question = TimeNestStrings.tr("Localizable", "help.events.add.question")
+        }
+
+        public enum AllDay: Sendable {
+          /// It is shown for the whole day without a specific start or end time.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.events.all_day.answer")
+          /// What is an all-day event?
+          public static let question = TimeNestStrings.tr("Localizable", "help.events.all_day.question")
+        }
+
+        public enum EditDelete: Sendable {
+          /// Open the day's event details, tap an event to edit it, or use the delete button.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.events.edit_delete.answer")
+          /// How do I edit or delete an event?
+          public static let question = TimeNestStrings.tr("Localizable", "help.events.edit_delete.question")
+        }
+      }
+
+      public enum Holidays: Sendable {
+
+        public enum Language: Sendable {
+          /// Holiday names are shown in the language associated with the selected region.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.holidays.language.answer")
+          /// What language are holiday names shown in?
+          public static let question = TimeNestStrings.tr("Localizable", "help.holidays.language.question")
+        }
+
+        public enum Missing: Sendable {
+          /// Check the region's subscription status and refresh it on the holiday settings screen.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.holidays.missing.answer")
+          /// What if holidays do not appear?
+          public static let question = TimeNestStrings.tr("Localizable", "help.holidays.missing.question")
+        }
+
+        public enum Show: Sendable {
+          /// Enable the region you want to display under Holidays in Settings.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.holidays.show.answer")
+          /// How do I show holidays?
+          public static let question = TimeNestStrings.tr("Localizable", "help.holidays.show.question")
+        }
+      }
+
+      public enum MailUnavailable: Sendable {
+        /// Mail could not be opened. Copy %@ and contact us manually.
+        public static func message(_ p1: Any) -> String {
+          return TimeNestStrings.tr("Localizable", "help.mail_unavailable.message",String(describing: p1))
+        }
+        /// Unable to Open Mail
+        public static let title = TimeNestStrings.tr("Localizable", "help.mail_unavailable.title")
+      }
+
+      public enum Privacy: Sendable {
+
+        public enum Account: Sendable {
+          /// You do not need to register an account to use TimeNest.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.privacy.account.answer")
+          /// Do I need an account?
+          public static let question = TimeNestStrings.tr("Localizable", "help.privacy.account.question")
+        }
+
+        public enum DeleteApp: Sendable {
+          /// Deleting the app also deletes TimeNest data stored on the device.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.privacy.delete_app.answer")
+          /// What happens to data if I delete the app?
+          public static let question = TimeNestStrings.tr("Localizable", "help.privacy.delete_app.question")
+        }
+
+        public enum Storage: Sendable {
+          /// Data such as events and shifts is stored on this device.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.privacy.storage.answer")
+          /// Where is my data stored?
+          public static let question = TimeNestStrings.tr("Localizable", "help.privacy.storage.question")
+        }
+      }
+
+      public enum Shifts: Sendable {
+
+        public enum Add: Sendable {
+          /// Open Shift Input from the menu at the top of the calendar, select a date, and tap a shift button. The shift will appear in the month, week, and day views.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.add.answer")
+          /// How do I add a shift?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.add.question")
+        }
+
+        public enum ChangeTime: Sendable {
+          /// Under Customize Shift Times in Settings, you can change the name, start time, end time, and color for day, night, and custom shifts. The changes apply to shifts created afterward.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.change_time.answer")
+          /// How do I customize shift times?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.change_time.question")
+        }
+
+        public enum Difference: Sendable {
+          /// A shift is a planned work schedule, such as a day or night shift. Work records contain actual clock-in and clock-out times, breaks, hourly rates, and transport costs used for work statistics.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.difference.answer")
+          /// What is the difference between shifts and work records?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.difference.question")
+        }
+
+        public enum Multiple: Sendable {
+          /// Only one shift is kept for each day. Selecting another shift replaces the existing shift for that day, but does not delete regular events or clock-in and clock-out records.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.multiple.answer")
+          /// Can I add multiple shifts on the same day?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.multiple.question")
+        }
+
+        public enum Overnight: Sendable {
+          /// For overnight work such as a night shift, the clock-out time can be recorded on the following day. Statistics use the actual time from clock-in to the next-day clock-out, minus break time.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.overnight.answer")
+          /// How is an overnight clock-out handled?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.overnight.question")
+        }
+
+        public enum Record: Sendable {
+          /// When adding or editing an event, you can enter clock-in and clock-out times, break time, hourly rate, and transport cost. After saving, this information is included in work statistics.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.record.answer")
+          /// How do I record clock-in and clock-out times?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.record.question")
+        }
+
+        public enum Replace: Sendable {
+          /// Open Shift Input again, select the same date, and tap the new shift to replace it. Cancel only deletes the shift on the selected date and does not affect other events.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.replace.answer")
+          /// How do I change the shift for a day?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.replace.question")
+        }
+
+        public enum Statistics: Sendable {
+          /// Work statistics use recorded clock-in and clock-out times, break time, hourly rate, and transport cost. The basic rules are: work time = clock-out - clock-in - break; pay = work time × hourly rate; total = pay + transport cost.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.statistics.answer")
+          /// How are work statistics calculated?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.statistics.question")
+        }
+
+        public enum StatisticsMissing: Sendable {
+          /// Check that clock-in and clock-out records were saved within the selected period and that required information such as the hourly rate was entered. A shift alone does not create pay statistics.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.statistics_missing.answer")
+          /// Why are no statistics shown?
+          public static let question = TimeNestStrings.tr("Localizable", "help.shifts.statistics_missing.question")
+        }
+      }
+
+      public enum Views: Sendable {
+
+        public enum Move: Sendable {
+          /// Use the previous and next buttons at the top, or swipe the calendar left or right.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.views.move.answer")
+          /// How do I move between months or weeks?
+          public static let question = TimeNestStrings.tr("Localizable", "help.views.move.question")
+        }
+
+        public enum Switch: Sendable {
+          /// Select Month, Week, or Day at the bottom of the calendar.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.views.switch.answer")
+          /// How do I switch views?
+          public static let question = TimeNestStrings.tr("Localizable", "help.views.switch.question")
+        }
+
+        public enum Today: Sendable {
+          /// Tap Today at the bottom of the calendar.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.views.today.answer")
+          /// How do I return to today?
+          public static let question = TimeNestStrings.tr("Localizable", "help.views.today.question")
+        }
+      }
+    }
+
     public enum HolidayRegion: Sendable {
       /// You can select up to 2 holiday regions.
       public static let maxLimit = TimeNestStrings.tr("Localizable", "holiday_region.max_limit")
@@ -227,6 +457,10 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum HolidaySource: Sendable {
+      /// Default
+      public static let `default` = TimeNestStrings.tr("Localizable", "holiday_source.default")
+      /// The default URL is provided by Office Holidays (officeholidays.com)
+      public static let defaultUrlProvider = TimeNestStrings.tr("Localizable", "holiday_source.default_url_provider")
       /// Please enable this subscription first
       public static let enableFirst = TimeNestStrings.tr("Localizable", "holiday_source.enable_first")
       /// Error
@@ -239,7 +473,7 @@ public enum TimeNestStrings: Sendable {
       public static let officeHolidaysCleanDescription = TimeNestStrings.tr("Localizable", "holiday_source.office_holidays_clean_description")
       /// Provided by Office Holidays (officeholidays.com)
       public static let officeHolidaysDescription = TimeNestStrings.tr("Localizable", "holiday_source.office_holidays_description")
-      /// Recommended Sources
+      /// Recommended Subscription Source
       public static let recommendedSection = TimeNestStrings.tr("Localizable", "holiday_source.recommended_section")
       /// Successfully parsed %d events
       public static func testSuccess(_ p1: Int) -> String {
@@ -247,13 +481,13 @@ public enum TimeNestStrings: Sendable {
       }
       /// Sync Test Successful
       public static let testSuccessTitle = TimeNestStrings.tr("Localizable", "holiday_source.test_success_title")
-      /// Test Sync
+      /// Test
       public static let testSync = TimeNestStrings.tr("Localizable", "holiday_source.test_sync")
       /// This subscription source is provided by a third party. Accuracy and availability depend on the provider.
       public static let thirdPartyNotice = TimeNestStrings.tr("Localizable", "holiday_source.third_party_notice")
       /// Please enter a valid HTTPS URL
       public static let urlFooter = TimeNestStrings.tr("Localizable", "holiday_source.url_footer")
-      /// ICS URL
+      /// Subscription URL
       public static let urlHeader = TimeNestStrings.tr("Localizable", "holiday_source.url_header")
       /// Use
       public static let useRecommendedSourceConfirm = TimeNestStrings.tr("Localizable", "holiday_source.use_recommended_source_confirm")
@@ -318,7 +552,7 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum Ics: Sendable {
-    
+
       public enum Error: Sendable {
         /// ICS data is empty.
         public static let emptyResponse = TimeNestStrings.tr("Localizable", "ics.error.empty_response")
@@ -352,7 +586,7 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum IcsParse: Sendable {
-    
+
       public enum Error: Sendable {
         /// ICS content is empty
         public static let emptyContent = TimeNestStrings.tr("Localizable", "ics_parse.error.empty_content")
@@ -450,6 +684,8 @@ public enum TimeNestStrings: Sendable {
       public static let language = TimeNestStrings.tr("Localizable", "settings.language")
       /// Notification
       public static let notification = TimeNestStrings.tr("Localizable", "settings.notification")
+      /// Support
+      public static let support = TimeNestStrings.tr("Localizable", "settings.support")
       /// Theme
       public static let theme = TimeNestStrings.tr("Localizable", "settings.theme")
       /// Settings
@@ -535,6 +771,11 @@ public enum TimeNestStrings: Sendable {
       public static let system = TimeNestStrings.tr("Localizable", "theme.system")
     }
 
+    public enum Validation: Sendable {
+      /// Please enter a title
+      public static let titleRequired = TimeNestStrings.tr("Localizable", "validation.title_required")
+    }
+
     public enum ViewMode: Sendable {
       /// Day
       public static let day = TimeNestStrings.tr("Localizable", "view_mode.day")
@@ -553,6 +794,65 @@ public enum TimeNestStrings: Sendable {
       public static let sunday = TimeNestStrings.tr("Localizable", "week_start.sunday")
       /// System Default
       public static let system = TimeNestStrings.tr("Localizable", "week_start.system")
+    }
+
+    public enum Widget: Sendable {
+      /// All day
+      public static let allDay = TimeNestStrings.tr("Localizable", "widget.allDay")
+      /// Holiday
+      public static let holiday = TimeNestStrings.tr("Localizable", "widget.holiday")
+      /// Next
+      public static let nextEvent = TimeNestStrings.tr("Localizable", "widget.nextEvent")
+      /// No events today
+      public static let noEventsToday = TimeNestStrings.tr("Localizable", "widget.noEventsToday")
+      /// Shift
+      public static let shift = TimeNestStrings.tr("Localizable", "widget.shift")
+      /// Today
+      public static let today = TimeNestStrings.tr("Localizable", "widget.today")
+      /// Tomorrow
+      public static let tomorrow = TimeNestStrings.tr("Localizable", "widget.tomorrow")
+
+      public enum Accessory: Sendable {
+        /// Shows today's summary on the Lock Screen, StandBy, and Apple Watch.
+        public static let description = TimeNestStrings.tr("Localizable", "widget.accessory.description")
+        /// Today Summary
+        public static let title = TimeNestStrings.tr("Localizable", "widget.accessory.title")
+      }
+
+      public enum Calendar: Sendable {
+        /// Shows the current month.
+        public static let description = TimeNestStrings.tr("Localizable", "widget.calendar.description")
+        /// Calendar
+        public static let title = TimeNestStrings.tr("Localizable", "widget.calendar.title")
+      }
+
+      public enum MonthSchedule: Sendable {
+        /// Shows a short schedule for each day this month.
+        public static let description = TimeNestStrings.tr("Localizable", "widget.monthSchedule.description")
+        /// This Month
+        public static let title = TimeNestStrings.tr("Localizable", "widget.monthSchedule.title")
+      }
+
+      public enum TwoMonths: Sendable {
+        /// Shows two months side by side.
+        public static let description = TimeNestStrings.tr("Localizable", "widget.twoMonths.description")
+        /// This and Next Month
+        public static let title = TimeNestStrings.tr("Localizable", "widget.twoMonths.title")
+      }
+
+      public enum Upcoming: Sendable {
+        /// Shows upcoming events with the current month.
+        public static let description = TimeNestStrings.tr("Localizable", "widget.upcoming.description")
+        /// Upcoming and Calendar
+        public static let title = TimeNestStrings.tr("Localizable", "widget.upcoming.title")
+      }
+
+      public enum WeekSchedule: Sendable {
+        /// Shows this week's shifts, holidays, and events.
+        public static let description = TimeNestStrings.tr("Localizable", "widget.weekSchedule.description")
+        /// This Week
+        public static let title = TimeNestStrings.tr("Localizable", "widget.weekSchedule.title")
+      }
     }
 
     public enum Work: Sendable {

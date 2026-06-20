@@ -79,6 +79,12 @@ struct MonthCalendarView: View {
                 await viewModel.reloadMonth()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .widgetCalendarDateRequested)) { notification in
+            guard let date = notification.object as? Date else { return }
+            Task {
+                await viewModel.openCalendar(on: date)
+            }
+        }
         .sheet(isPresented: $viewModel.showingEventEditor) {
             EventEditorView(
                 isPresented: $viewModel.showingEventEditor,

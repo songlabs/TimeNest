@@ -217,6 +217,15 @@ class MonthCalendarViewModel: ObservableObject {
         await reloadMonth()
     }
 
+    func openCalendar(on date: Date) async {
+        selectedDate = date
+        displayMode = .month
+        showingDayDetail = false
+        showingEventEditor = false
+        await reloadMonth()
+        selectedDayCell = findCell(for: date)
+    }
+
     func goToMonth(year: Int, month: Int) async {
         let calendar = Calendar(identifier: .gregorian)
         var components = DateComponents()

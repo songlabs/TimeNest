@@ -19,5 +19,9 @@ struct ContentView: View {
             eventUseCase: eventUseCase
         )
         .environmentObject(localization)
+        .onOpenURL { url in
+            guard let date = TimeNestWidgetDeepLink.date(from: url) else { return }
+            NotificationCenter.default.post(name: .widgetCalendarDateRequested, object: date)
+        }
     }
 }

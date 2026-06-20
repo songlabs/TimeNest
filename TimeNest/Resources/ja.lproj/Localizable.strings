@@ -360,3 +360,24 @@
 "help.privacy.account.answer" = "TimeNest の利用にアカウント登録は必要ありません。";
 "help.privacy.delete_app.question" = "App を削除した場合のデータについて";
 "help.privacy.delete_app.answer" = "App を削除すると、端末内に保存された TimeNest のデータも削除されます。";
+
+/* Widgets */
+"widget.calendar.title" = "カレンダー";
+"widget.calendar.description" = "今月のカレンダーを表示します。";
+"widget.monthSchedule.title" = "今月の予定";
+"widget.monthSchedule.description" = "今月の日ごとの予定を表示します。";
+"widget.twoMonths.title" = "今月と来月";
+"widget.twoMonths.description" = "2か月分のカレンダーを並べて表示します。";
+"widget.weekSchedule.title" = "今週の予定";
+"widget.weekSchedule.description" = "今週のシフト、祝日、予定を表示します。";
+"widget.upcoming.title" = "今後の予定とカレンダー";
+"widget.upcoming.description" = "今後の予定と今月のカレンダーを表示します。";
+"widget.accessory.title" = "今日の概要";
+"widget.accessory.description" = "ロック画面、スタンバイ、Apple Watch に今日の概要を表示します。";
+"widget.noEventsToday" = "今日の予定なし";
+"widget.nextEvent" = "次の予定";
+"widget.allDay" = "終日";
+"widget.today" = "今日";
+"widget.tomorrow" = "明日";
+"widget.shift" = "シフト";
+"widget.holiday" = "祝日";

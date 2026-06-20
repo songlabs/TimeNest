@@ -360,3 +360,24 @@
 "help.privacy.account.answer" = "使用 TimeNest 无需注册账号。";
 "help.privacy.delete_app.question" = "删除 App 后数据会怎样？";
 "help.privacy.delete_app.answer" = "删除 App 后，保存在设备内的 TimeNest 数据也会被删除。";
+
+/* Widgets */
+"widget.calendar.title" = "日历";
+"widget.calendar.description" = "显示当前月份。";
+"widget.monthSchedule.title" = "本月日程";
+"widget.monthSchedule.description" = "显示本月每天的简要日程。";
+"widget.twoMonths.title" = "本月和下月";
+"widget.twoMonths.description" = "并排显示两个月份。";
+"widget.weekSchedule.title" = "本周日程";
+"widget.weekSchedule.description" = "显示本周班次、节假日和日程。";
+"widget.upcoming.title" = "近期日程与日历";
+"widget.upcoming.description" = "显示近期日程和当前月日历。";
+"widget.accessory.title" = "今日摘要";
+"widget.accessory.description" = "在锁定屏幕、待机显示和手表上显示今日摘要。";
+"widget.noEventsToday" = "今天没有日程";
+"widget.nextEvent" = "下一项";
+"widget.allDay" = "全天";
+"widget.today" = "今天";
+"widget.tomorrow" = "明天";
+"widget.shift" = "班次";
+"widget.holiday" = "节假日";

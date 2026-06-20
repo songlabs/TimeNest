@@ -17,6 +17,7 @@ enum EventUseCaseError: Error, LocalizedError {
 class EventUseCase {
     private let repository: EventRepository
     private let notificationScheduler: LocalNotificationScheduling?
+    var onEventsChanged: (() -> Void)?
 
     init(
         repository: EventRepository,
@@ -31,6 +32,7 @@ class EventUseCase {
         var eventToSave = event
         eventToSave.notificationID = await scheduledNotificationID(for: eventToSave)
         try await repository.create(eventToSave)
+        onEventsChanged?()
     }
 
     func updateEvent(_ event: CalendarEvent) async throws {
@@ -45,6 +47,7 @@ class EventUseCase {
         var eventToSave = event
         eventToSave.notificationID = await scheduledNotificationID(for: eventToSave)
         try await repository.update(eventToSave)
+        onEventsChanged?()
     }
 
     func deleteEvent(id: UUID) async throws {
@@ -52,6 +55,7 @@ class EventUseCase {
             notificationScheduler?.cancelNotification(id: notificationID)
         }
         try await repository.delete(id: id)
+        onEventsChanged?()
     }
 
     func events(in range: DateInterval) async throws -> [CalendarEvent] {

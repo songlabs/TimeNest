@@ -360,3 +360,24 @@
 "help.privacy.account.answer" = "You do not need to register an account to use TimeNest.";
 "help.privacy.delete_app.question" = "What happens to data if I delete the app?";
 "help.privacy.delete_app.answer" = "Deleting the app also deletes TimeNest data stored on the device.";
+
+/* Widgets */
+"widget.calendar.title" = "Calendar";
+"widget.calendar.description" = "Shows the current month.";
+"widget.monthSchedule.title" = "This Month";
+"widget.monthSchedule.description" = "Shows a short schedule for each day this month.";
+"widget.twoMonths.title" = "This and Next Month";
+"widget.twoMonths.description" = "Shows two months side by side.";
+"widget.weekSchedule.title" = "This Week";
+"widget.weekSchedule.description" = "Shows this week's shifts, holidays, and events.";
+"widget.upcoming.title" = "Upcoming and Calendar";
+"widget.upcoming.description" = "Shows upcoming events with the current month.";
+"widget.accessory.title" = "Today Summary";
+"widget.accessory.description" = "Shows today's summary on the Lock Screen, StandBy, and Apple Watch.";
+"widget.noEventsToday" = "No events today";
+"widget.nextEvent" = "Next";
+"widget.allDay" = "All day";
+"widget.today" = "Today";
+"widget.tomorrow" = "Tomorrow";
+"widget.shift" = "Shift";
+"widget.holiday" = "Holiday";

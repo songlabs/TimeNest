@@ -23,7 +23,8 @@ let project = Project(
                 "TimeNest/Resources/Assets.xcassets"
             ],
             dependencies: [
-                .package(product: "GoogleMobileAds")
+                .package(product: "GoogleMobileAds"),
+                .target(name: "TimeNestWidgetExtension")
             ],
             settings: Settings.settings(
                 base: [
@@ -34,8 +35,42 @@ let project = Project(
                     "SKIP_INSTALL": "NO",
                     "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
                     "GENERATE_INFOPLIST_FILE": "NO",
+                    "CODE_SIGN_ENTITLEMENTS": "TimeNest/TimeNest.entitlements",
                     "CODE_SIGN_STYLE": "Automatic",
-                    "DEVELOPMENT_TEAM": "S5NA4Y24ZD",
+                    "DEVELOPMENT_TEAM": "JCABFH9F66",
+                    "TARGETED_DEVICE_FAMILY": "1,2"
+                ]
+            )
+        ),
+        .target(
+            name: "TimeNestWidgetExtension",
+            destinations: .iOS,
+            product: .appExtension,
+            bundleId: "com.song.TimeNest.widget",
+            deploymentTargets: .iOS("17.0"),
+            infoPlist: .extendingDefault(with: [
+                "NSExtension": [
+                    "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
+                ]
+            ]),
+            sources: [
+                "TimeNestWidgetExtension/**",
+                "TimeNest/Shared/Widgets/**"
+            ],
+            resources: [
+                "TimeNest/Resources/{zh-Hans,ja,en,ko}.lproj/Localizable.strings"
+            ],
+            settings: Settings.settings(
+                base: [
+                    "APPLICATION_EXTENSION_API_ONLY": "YES",
+                    "CODE_SIGN_ENTITLEMENTS": "TimeNestWidgetExtension/TimeNestWidgetExtension.entitlements",
+                    "CODE_SIGN_STYLE": "Automatic",
+                    "CURRENT_PROJECT_VERSION": "1",
+                    "DEVELOPMENT_TEAM": "JCABFH9F66",
+                    "GENERATE_INFOPLIST_FILE": "YES",
+                    "MARKETING_VERSION": "1.0",
+                    "PRODUCT_BUNDLE_IDENTIFIER": "com.song.TimeNest.widget",
+                    "SKIP_INSTALL": "YES",
                     "TARGETED_DEVICE_FAMILY": "1,2"
                 ]
             )

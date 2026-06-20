@@ -152,6 +152,21 @@ enum LocalizedString: String {
 
     case calendarAddEvent = "calendar.add_event"
     case calendarMoreEventsCount = "calendar.more_events_count"
+
+    // MARK: - Widgets
+
+    case widgetCalendarTitle = "widget.calendar.title"
+    case widgetMonthScheduleTitle = "widget.monthSchedule.title"
+    case widgetTwoMonthsTitle = "widget.twoMonths.title"
+    case widgetWeekScheduleTitle = "widget.weekSchedule.title"
+    case widgetUpcomingTitle = "widget.upcoming.title"
+    case widgetNoEventsToday = "widget.noEventsToday"
+    case widgetNextEvent = "widget.nextEvent"
+    case widgetAllDay = "widget.allDay"
+    case widgetToday = "widget.today"
+    case widgetTomorrow = "widget.tomorrow"
+    case widgetShift = "widget.shift"
+    case widgetHoliday = "widget.holiday"
     case eventNotFound = "event.not_found"
 
     // MARK: - Shift Input
