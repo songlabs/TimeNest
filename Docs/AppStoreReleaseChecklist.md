@@ -5,8 +5,8 @@
 ## Repository Audit Snapshot (2026-06-21)
 
 - [x] App target, test target, and Widget Extension are present; project shared schemes are `TimeNest` and `TimeNestWidgetExtension`, and the workspace also contains `TimeNest-Workspace`.
-- [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.widget`.
-- [x] App and Widget entitlements use the same App Group: `group.com.song.TimeNest`.
+- [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.TimeNestWidgetExtension`.
+- [x] App and Widget entitlements use the same App Group: `group.com.songlabs.timenest`.
 - [x] Widget deep links use the registered `timenest` URL scheme.
 - [x] App and Widget versions currently match at `1.0 (1)`.
 - [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
@@ -30,8 +30,8 @@
 
 ## 2. Bundle, Version, Signing, and Build
 
-- [ ] Confirm `com.song.TimeNest` and `com.song.TimeNest.widget` exist under the active Developer Program team.
-- [ ] Confirm the App Group `group.com.song.TimeNest` is enabled for both identifiers and provisioning profiles.
+- [ ] Confirm `com.song.TimeNest` and `com.song.TimeNest.TimeNestWidgetExtension` exist under the active Developer Program team.
+- [ ] Confirm the App Group `group.com.songlabs.timenest` is enabled for both identifiers and provisioning profiles.
 - [ ] Keep the existing app, Widget, target, and scheme names unchanged.
 - [ ] Confirm the release version and increment the build number for every uploaded build; keep App and Widget versions aligned.
 - [ ] Confirm Automatic Signing or distribution provisioning is valid for the intended App Store team.

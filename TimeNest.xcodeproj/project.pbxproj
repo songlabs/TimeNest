@@ -742,7 +742,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = DA4619F14F2739EC8403D233 /* Build configuration list for PBXNativeTarget "TimeNest" */;
 			buildPhases = (
-				4F4E9B7B31A2C8D400AD0001 /* Validate Release AdMob Configuration */,
+				7F93116949A163A3034A49F3 /* Validate Release AdMob Configuration */,
 				EC46D8C8D467866AC40EB52B /* Sources */,
 				0DABFEB3E5E667218B46D59B /* Resources */,
 				33ED2341F6826CD2336E5478 /* Embed Foundation Extensions */,
@@ -872,7 +872,7 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		4F4E9B7B31A2C8D400AD0001 /* Validate Release AdMob Configuration */ = {
+		7F93116949A163A3034A49F3 /* Validate Release AdMob Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -889,8 +889,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "sh \"$SRCROOT/Scripts/validate_admob_release_config.sh\"\n";
-			showEnvVarsInLog = 0;
+			shellScript = "sh \"$SRCROOT/Scripts/validate_admob_release_config.sh\"";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1138,7 +1137,7 @@
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNest.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNest.TimeNestWidgetExtension;
 				PRODUCT_NAME = TimeNestWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1178,7 +1177,7 @@
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNest.widget;
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNest.TimeNestWidgetExtension;
 				PRODUCT_NAME = TimeNestWidgetExtension;
 				SDKROOT = iphoneos;
 				SKIP_INSTALL = YES;
@@ -1210,9 +1209,6 @@
 					"@executable_path/Frameworks",
 				);
 				MACH_O_TYPE = mh_execute;
-				TIMENEST_ADMOB_APP_ID = REQUIRED_PRODUCTION_ADMOB_APP_ID;
-				TIMENEST_ADMOB_BANNER_UNIT_ID = REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID;
-				TIMENEST_ADS_ENABLED = YES;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
@@ -1229,6 +1225,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TIMENEST_ADMOB_APP_ID = REQUIRED_PRODUCTION_ADMOB_APP_ID;
+				TIMENEST_ADMOB_BANNER_UNIT_ID = REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID;
+				TIMENEST_ADS_ENABLED = YES;
 			};
 			name = Release;
 		};
@@ -1250,9 +1249,6 @@
 					"@executable_path/Frameworks",
 				);
 				MACH_O_TYPE = mh_execute;
-				TIMENEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~1458002511";
-				TIMENEST_ADMOB_BANNER_UNIT_ID = "ca-app-pub-3940256099942544/2435281174";
-				TIMENEST_ADS_ENABLED = YES;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
@@ -1273,6 +1269,9 @@
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				TIMENEST_ADMOB_APP_ID = "ca-app-pub-3940256099942544~1458002511";
+				TIMENEST_ADMOB_BANNER_UNIT_ID = "ca-app-pub-3940256099942544/2435281174";
+				TIMENEST_ADS_ENABLED = YES;
 			};
 			name = Debug;
 		};

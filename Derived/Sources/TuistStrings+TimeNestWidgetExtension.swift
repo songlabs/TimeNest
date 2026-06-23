@@ -223,29 +223,15 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public enum Ads: Sendable {
 
       public enum About: Sendable {
-        /// TimeNest may display ads to support the operation of the app.
+        /// TimeNest may display ads to support the operation of the app. The current version does not offer an ad-removal purchase.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.about.answer")
         /// About ads
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.about.question")
       }
-
-      public enum Restore: Sendable {
-        /// If a restore option appears in Settings, use the same Apple Account used for the original purchase.
-        public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.restore.answer")
-        /// Restoring a previous ad removal
-        public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.restore.question")
-      }
-
-      public enum RestoreFailed: Sendable {
-        /// If restarting the app does not help, contact us using Contact Us.
-        public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.restore_failed.answer")
-        /// What if restore does not work?
-        public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.restore_failed.question")
-      }
     }
 
     public enum Category: Sendable {
-      /// Ads and Restore
+      /// Ads
       public static let ads = TimeNestWidgetExtensionStrings.tr("Localizable", "help.category.ads")
       /// Adding and Editing Events
       public static let events = TimeNestWidgetExtensionStrings.tr("Localizable", "help.category.events")
@@ -339,6 +325,17 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.delete_app.answer")
         /// What happens to data if I delete the app?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.delete_app.question")
+      }
+
+      public enum Options: Sendable {
+        /// Manage Ad Privacy Options
+        public static let action = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.options.action")
+        /// Review or change the advertising privacy choices for this device.
+        public static let description = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.options.description")
+        /// Please try again later.
+        public static let errorMessage = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.options.error_message")
+        /// Privacy Options Unavailable
+        public static let errorTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.options.error_title")
       }
 
       public enum Storage: Sendable {
@@ -762,6 +759,25 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let light = TimeNestWidgetExtensionStrings.tr("Localizable", "theme.light")
     /// System Default
     public static let system = TimeNestWidgetExtensionStrings.tr("Localizable", "theme.system")
+  }
+
+  public enum ThirdPartyLicenses: Sendable {
+    /// Apache-2.0
+    public static let apache2 = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.apache_2")
+    /// TimeNest uses the following third-party components. Full notices remain available in the project's ThirdPartyNotices document.
+    public static let description = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.description")
+    /// Copyright 2021 Google LLC
+    public static let googleCopyright = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.google_copyright")
+    /// Google Mobile Ads Swift Package Manager wrapper
+    public static let googleMobileAds = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.google_mobile_ads")
+    /// License
+    public static let licenseType = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.license_type")
+    /// View Source Repository
+    public static let repository = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.repository")
+    /// Third-party Licenses
+    public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.title")
+    /// Google User Messaging Platform Swift Package Manager wrapper
+    public static let userMessagingPlatform = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.user_messaging_platform")
   }
 
   public enum Validation: Sendable {

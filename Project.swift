@@ -72,7 +72,7 @@ let project = Project(
             name: "TimeNestWidgetExtension",
             destinations: .iOS,
             product: .appExtension,
-            bundleId: "com.song.TimeNest.widget",
+            bundleId: "com.song.TimeNest.TimeNestWidgetExtension",
             deploymentTargets: .iOS("17.0"),
             infoPlist: .extendingDefault(with: [
                 "NSExtension": [
@@ -95,7 +95,7 @@ let project = Project(
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "GENERATE_INFOPLIST_FILE": "YES",
                     "MARKETING_VERSION": "1.0",
-                    "PRODUCT_BUNDLE_IDENTIFIER": "com.song.TimeNest.widget",
+                    "PRODUCT_BUNDLE_IDENTIFIER": "com.song.TimeNest.TimeNestWidgetExtension",
                     "SKIP_INSTALL": "YES",
                     "TARGETED_DEVICE_FAMILY": "1,2"
                 ]

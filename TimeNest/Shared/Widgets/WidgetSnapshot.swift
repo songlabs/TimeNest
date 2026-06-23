@@ -75,7 +75,7 @@ struct WidgetSnapshot: Codable, Hashable {
 }
 
 enum WidgetSnapshotStore {
-    static let appGroupIdentifier = "group.com.song.TimeNest"
+    static let appGroupIdentifier = "group.com.songlabs.timenest"
     static let fileName = "widget-snapshot.json"
 
     static func save(_ snapshot: WidgetSnapshot) throws {
