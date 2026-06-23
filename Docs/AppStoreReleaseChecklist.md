@@ -13,8 +13,8 @@
 - [x] `ja`, `zh-Hans`, `en`, and `ko` each contain 314 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match and include `NSUserTrackingUsageDescription`.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
 - [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
-- [x] Debug uses Google's official test IDs. Release is an ad-enabled target and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
-- [ ] Replace `REQUIRED_PRODUCTION_ADMOB_APP_ID` and `REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID` in both Release build-setting sources with the approved production IDs.
+- [x] Debug and simulator builds use Google's official test IDs. Release device/archive builds are ad-enabled and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
+- [x] Both Release build-setting sources use the approved production AdMob App ID and Banner Unit ID.
 - [x] Google UMP now updates consent once per launch and gates Mobile Ads initialization and banner loading on `canRequestAds`. Publisher Privacy Treatment disables ad personalization.
 - [x] ATT is requested after the UMP consent flow and before Mobile Ads initialization/banner loading. `NSUserTrackingUsageDescription` is localized in all four supported languages.
 
@@ -60,7 +60,7 @@
 - [ ] Configure the intended GDPR/US-state privacy messages in the AdMob console for the production App ID and verify them on physical devices in applicable regions.
 - [x] `Info.plist` includes the `SKAdNetworkItems` list from Google's iOS quick-start guidance checked on 2026-06-20.
 - [ ] Confirm `TIMENEST_ADS_ENABLED=YES`, `TIMENEST_ADMOB_APP_ID` is the production App ID, and `TIMENEST_ADMOB_BANNER_UNIT_ID` is the production Banner Unit ID in the exact archive build settings.
-- [ ] Confirm the Release validation script succeeds and the processed archive `Info.plist` contains the production `GADApplicationIdentifier`, never Google's test App ID or a placeholder.
+- [ ] Confirm the Release device/archive validation script succeeds and the processed archive `Info.plist` contains the production `GADApplicationIdentifier`, never Google's test App ID or a placeholder.
 - [ ] Reconfirm that the current app has no user-facing remove-ads purchase flow; do not advertise one.
 - [x] Record Google Mobile Ads 13.5.0 and Google User Messaging Platform 3.1.0 notices in `Docs/ThirdPartyNotices.md`.
 - [x] Expose the two wrapper attributions and Apache-2.0 license type through Settings > Third-party Licenses.

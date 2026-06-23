@@ -10,17 +10,17 @@ struct AdMobBannerView: UIViewRepresentable {
         Coordinator()
     }
 
-    func makeUIView(context: Context) -> BannerView {
-        let bannerView = BannerView(adSize: AdSizeBanner)
-        return bannerView
+    func makeUIView(context: Context) -> BannerHostView {
+        BannerHostView()
     }
 
-    func updateUIView(_ bannerView: BannerView, context: Context) {
+    func updateUIView(_ hostView: BannerHostView, context: Context) {
         guard canLoadAds else { return }
         guard let rootViewController = UIApplication.shared.timeNestRootViewController else {
             return
         }
 
+        let bannerView = hostView.bannerView
         bannerView.rootViewController = rootViewController
         bannerView.adUnitID = adUnitID
 
@@ -41,6 +41,36 @@ struct AdMobBannerView: UIViewRepresentable {
         func markLoading(adUnitID: String) {
             loadedAdUnitID = adUnitID
         }
+    }
+}
+
+final class BannerHostView: UIView {
+    let bannerView = BannerView(adSize: AdSizeBanner)
+
+    private let bannerWidth = AdConfiguration.bannerWidth
+    private let bannerHeight = AdConfiguration.bannerHeight
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        backgroundColor = .clear
+        clipsToBounds = true
+        bannerView.backgroundColor = .clear
+        bannerView.clipsToBounds = false
+        bannerView.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(bannerView)
+
+        NSLayoutConstraint.activate([
+            bannerView.centerXAnchor.constraint(equalTo: centerXAnchor),
+            bannerView.centerYAnchor.constraint(equalTo: centerYAnchor),
+            bannerView.widthAnchor.constraint(equalToConstant: bannerWidth),
+            bannerView.heightAnchor.constraint(equalToConstant: bannerHeight)
+        ])
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
     }
 }
 

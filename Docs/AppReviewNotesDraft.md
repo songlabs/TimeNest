@@ -19,7 +19,7 @@ Google Mobile Ads is integrated, and the first release displays banner ads after
 ## Required Pre-Submission TODO
 
 - [ ] **Developer Program:** Confirm enrollment is Active before submission. This does not change the app behavior described above.
-- [ ] **Advertising:** Configure the approved production AdMob App and Banner Unit IDs and confirm banner behavior on the exact submitted build; do not submit a build using placeholders or Google's test identifiers.
+- [ ] **Advertising:** Production AdMob App and Banner Unit IDs are configured; confirm banner behavior on the exact submitted build and do not submit a build using placeholders or Google's test identifiers.
 - [ ] **ATT:** Confirm the localized ATT prompt appears after UMP and before advertising on a fresh install, and ensure the review notes, Privacy Manifest, privacy policy, and App Privacy/Tracking answers agree.
 - [ ] **Widget:** Confirm the Widget Extension is included and functional in the submitted build; otherwise remove the Widget paragraph.
 - [ ] **Review path:** Recheck the named controls and menus on the exact submitted build so the reviewer instructions remain accurate.
@@ -31,4 +31,4 @@ Google Mobile Ads is integrated, and the first release displays banner ads after
 - User-created calendar, shift, and work-record data is local-first.
 - Public-holiday subscriptions contact a selected external public ICS provider.
 - The release has no in-app purchase or remove-ads flow.
-- Production Google Mobile Ads identifiers and the final ATT/App Privacy decision remain manual release gates.
+- Production Google Mobile Ads identifiers are configured; the final ATT/App Privacy decision and exact-build verification remain manual release gates.

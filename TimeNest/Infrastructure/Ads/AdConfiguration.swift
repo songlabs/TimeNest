@@ -10,7 +10,7 @@ enum AdConfiguration {
     private static let testBannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
 
     static let isEnabled: Bool = {
-#if DEBUG
+#if DEBUG || targetEnvironment(simulator)
         return true
 #else
         precondition(configuredAdsEnabled, "Release builds must enable advertising.")
@@ -30,7 +30,7 @@ enum AdConfiguration {
     }()
 
     static let bannerAdUnitID: String = {
-#if DEBUG
+#if DEBUG || targetEnvironment(simulator)
         return testBannerAdUnitID
 #else
         return infoString(for: "TimeNestAdMobBannerUnitID")

@@ -89,6 +89,5 @@ struct CalendarBottomToolbarView: View {
         }
         .background(ShiftCalendarColors.backgroundColor)
         .frame(height: ShiftCalendarLayout.footerToolbarHeight)
-        .ignoresSafeArea(edges: .bottom)
     }
 }

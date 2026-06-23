@@ -5,26 +5,18 @@ struct CalendarAdBannerContainer: View {
 
     var body: some View {
         if AdConfiguration.isEnabled {
-            HStack(spacing: 0) {
-                Spacer(minLength: 0)
-
-                Group {
-                    if consentManager.canLoadAds {
-                        AdMobBannerView(
-                            adUnitID: AdConfiguration.bannerAdUnitID,
-                            canLoadAds: consentManager.canLoadAds
-                        )
-                    } else {
-                        Color.clear
-                    }
+            Group {
+                if consentManager.canLoadAds {
+                    AdMobBannerView(
+                        adUnitID: AdConfiguration.bannerAdUnitID,
+                        canLoadAds: consentManager.canLoadAds
+                    )
+                } else {
+                    Color.clear
                 }
-                .frame(width: AdConfiguration.bannerWidth, height: AdConfiguration.bannerHeight)
-
-                Spacer(minLength: 0)
             }
-            .frame(height: AdConfiguration.bannerHeight)
             .frame(maxWidth: .infinity)
-            .clipped()
+            .frame(height: AdConfiguration.bannerHeight)
         }
     }
 }

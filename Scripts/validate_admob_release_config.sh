@@ -6,6 +6,12 @@ if [ "${CONFIGURATION:-}" != "Release" ]; then
     exit 0
 fi
 
+case "${PLATFORM_NAME:-}${EFFECTIVE_PLATFORM_NAME:-}${SDK_NAME:-}" in
+    *iphonesimulator*)
+        exit 0
+        ;;
+esac
+
 fail() {
     echo "error: $1" >&2
     exit 1

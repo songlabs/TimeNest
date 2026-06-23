@@ -59,9 +59,10 @@ let project = Project(
                     .release(
                         name: "Release",
                         settings: [
-                            // Replace or override these build settings with the approved production IDs.
-                            "TIMENEST_ADMOB_APP_ID": "REQUIRED_PRODUCTION_ADMOB_APP_ID",
-                            "TIMENEST_ADMOB_BANNER_UNIT_ID": "REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID",
+                            "TIMENEST_ADMOB_APP_ID": "ca-app-pub-7907716708037277~6985657856",
+                            "TIMENEST_ADMOB_BANNER_UNIT_ID": "ca-app-pub-7907716708037277/8542282103",
+                            "TIMENEST_ADMOB_APP_ID[sdk=iphonesimulator*]": "ca-app-pub-3940256099942544~1458002511",
+                            "TIMENEST_ADMOB_BANNER_UNIT_ID[sdk=iphonesimulator*]": "ca-app-pub-3940256099942544/2435281174",
                             "TIMENEST_ADS_ENABLED": "YES"
                         ]
                     )

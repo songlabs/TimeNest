@@ -64,15 +64,7 @@ struct MonthCalendarView: View {
                     .layoutPriority(1)
                     .simultaneousGesture(calendarSwipeGesture)
 
-                if viewModel.isShiftInputMode && viewModel.displayMode == .month {
-                    VStack(spacing: 0) {
-                        CalendarAdBannerContainer()
-                        shiftInputPanel
-                    }
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else {
-                    calendarBottomSection
-                }
+                calendarBottomArea
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
@@ -349,11 +341,48 @@ struct MonthCalendarView: View {
         .background(ShiftCalendarColors.backgroundColor)
     }
 
+    @ViewBuilder
+    private var calendarBottomArea: some View {
+        if viewModel.isShiftInputMode && viewModel.displayMode == .month {
+            shiftInputBottomSection
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        } else {
+            calendarBottomSection
+        }
+    }
+
     private var calendarBottomSection: some View {
         VStack(spacing: 0) {
-            CalendarAdBannerContainer()
+            calendarAdBannerArea
             calendarBottomToolbar
+                .frame(height: ShiftCalendarLayout.footerToolbarHeight)
         }
+        .frame(height: calendarBottomSectionHeight)
+        .background(ShiftCalendarColors.backgroundColor)
+    }
+
+    private var shiftInputBottomSection: some View {
+        VStack(spacing: 0) {
+            calendarAdBannerArea
+            shiftInputPanel
+        }
+        .background(ShiftCalendarColors.backgroundColor)
+    }
+
+    @ViewBuilder
+    private var calendarAdBannerArea: some View {
+        if AdConfiguration.isEnabled {
+            CalendarAdBannerContainer()
+                .frame(height: AdConfiguration.bannerHeight)
+        }
+    }
+
+    private var calendarAdHeight: CGFloat {
+        AdConfiguration.isEnabled ? AdConfiguration.bannerHeight : 0
+    }
+
+    private var calendarBottomSectionHeight: CGFloat {
+        calendarAdHeight + ShiftCalendarLayout.footerToolbarHeight
     }
 
     private func isDayCellSelected(_ cell: CalendarDayCell) -> Bool {

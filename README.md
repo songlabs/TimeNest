@@ -49,10 +49,10 @@ Replace the destination with an installed simulator when necessary. Signing, Bun
 The checked-in Xcode project and `Project.swift` define the same three build settings:
 
 - `TIMENEST_ADS_ENABLED`: `YES` for both Debug and Release. The first release must include ads.
-- `TIMENEST_ADMOB_APP_ID`: Google's test App ID in Debug; replace `REQUIRED_PRODUCTION_ADMOB_APP_ID` in the Release configuration with the approved production App ID.
-- `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's test Banner Unit ID in Debug; replace `REQUIRED_PRODUCTION_ADMOB_BANNER_UNIT_ID` in the Release configuration with the approved production Banner Unit ID.
+- `TIMENEST_ADMOB_APP_ID`: Google's test App ID in Debug and simulator builds; Release device/archive builds use `ca-app-pub-7907716708037277~6985657856`.
+- `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's test Banner Unit ID in Debug and simulator builds; Release device/archive builds use `ca-app-pub-7907716708037277/8542282103`.
 
-`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. The Release values are explicit replacement/override points for the approved production IDs. `Scripts/validate_admob_release_config.sh` rejects a Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when replacing the two Release values.
+`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. Release device/archive values are the approved production IDs, while simulator overrides keep development builds on Google's official test IDs. `Scripts/validate_admob_release_config.sh` rejects a production Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when changing the two production values.
 
 ## Unit Tests
 
@@ -138,7 +138,7 @@ Uninstalling the app removes its local container under normal iOS behavior. Exis
 
 Before submission, confirm:
 
-- Replace both Release identifier placeholders with the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads.
+- Confirm both Release device/archive identifiers use the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads.
 - Keep remove-ads claims out of version 1.0 metadata; no purchase or restore flow currently exists.
 - Configure and verify the required consent messages and privacy-options behavior in the AdMob console.
 - Verify the four localized ATT purpose strings and authorized/denied paths on physical devices.
