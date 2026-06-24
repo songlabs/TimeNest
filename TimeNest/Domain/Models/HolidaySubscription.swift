@@ -17,6 +17,17 @@ struct HolidaySubscription: Identifiable, Codable, Hashable {
     var lastUpdatedAt: Date?
     var syncStatus: SyncStatus
     var errorMessage: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case region
+        case displayNameKey
+        case urlString
+        case isEnabled
+        case lastUpdatedAt
+        case syncStatus
+        case errorMessage
+    }
     
     init(
         id: UUID = UUID(),
@@ -36,6 +47,20 @@ struct HolidaySubscription: Identifiable, Codable, Hashable {
         self.lastUpdatedAt = lastUpdatedAt
         self.syncStatus = syncStatus
         self.errorMessage = errorMessage
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let decodedRegion = try container.decode(HolidayRegion.self, forKey: .region)
+
+        self.id = try container.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        self.region = decodedRegion
+        self.displayNameKey = try container.decodeIfPresent(String.self, forKey: .displayNameKey) ?? decodedRegion.localizedKey
+        self.urlString = try container.decodeIfPresent(String.self, forKey: .urlString) ?? ""
+        self.isEnabled = try container.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? false
+        self.lastUpdatedAt = try container.decodeIfPresent(Date.self, forKey: .lastUpdatedAt)
+        self.syncStatus = try container.decodeIfPresent(SyncStatus.self, forKey: .syncStatus) ?? .neverSynced
+        self.errorMessage = try container.decodeIfPresent(String.self, forKey: .errorMessage)
     }
 }
 
@@ -76,6 +101,11 @@ enum DefaultICSSources {
         ICSSourceConfig(
             region: .korea,
             urlString: ""
+        ),
+        // 台湾节假日（繁体中文）- Office Holidays
+        ICSSourceConfig(
+            region: .taiwan,
+            urlString: "https://www.officeholidays.com/ics/taiwan"
         )
     ]
     

@@ -644,6 +644,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let japan = TimeNestWidgetExtensionStrings.tr("Localizable", "region.japan")
     /// Korea
     public static let korea = TimeNestWidgetExtensionStrings.tr("Localizable", "region.korea")
+    /// Taiwan
+    public static let taiwan = TimeNestWidgetExtensionStrings.tr("Localizable", "region.taiwan")
     /// United States
     public static let unitedStates = TimeNestWidgetExtensionStrings.tr("Localizable", "region.united_states")
   }

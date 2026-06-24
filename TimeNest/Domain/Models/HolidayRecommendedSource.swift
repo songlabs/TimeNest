@@ -65,6 +65,15 @@ enum HolidayRecommendedSources {
         descriptionKey: "holiday_source.office_holidays_description"
     )
 
+    /// 台湾节假日（Office Holidays 正常版本）
+    static let officeHolidaysTaiwan = HolidayRecommendedSource(
+        id: "office_holidays_taiwan",
+        providerName: "Office Holidays",
+        region: .taiwan,
+        urlString: "https://www.officeholidays.com/ics/taiwan",
+        descriptionKey: "holiday_source.office_holidays_description"
+    )
+
     // MARK: - Office Holidays 源（clean 版本，作为 fallback）
 
     /// 日本节假日（Office Holidays clean 版本）
@@ -94,6 +103,15 @@ enum HolidayRecommendedSources {
         descriptionKey: "holiday_source.office_holidays_clean_description"
     )
 
+    /// 台湾节假日（Office Holidays clean 版本）
+    static let officeHolidaysTaiwanClean = HolidayRecommendedSource(
+        id: "office_holidays_taiwan_clean",
+        providerName: "Office Holidays (Clean)",
+        region: .taiwan,
+        urlString: "https://www.officeholidays.com/ics-clean/taiwan",
+        descriptionKey: "holiday_source.office_holidays_clean_description"
+    )
+
     // MARK: - 获取推荐源
 
     /// 获取指定地区的推荐源列表
@@ -109,6 +127,8 @@ enum HolidayRecommendedSources {
             return [officeHolidaysKorea]
         case .unitedStates:
             return [officeHolidaysUSA]
+        case .taiwan:
+            return [officeHolidaysTaiwan]
         }
     }
 
@@ -121,7 +141,9 @@ enum HolidayRecommendedSources {
             officeHolidaysChinaClean,
             officeHolidaysKorea,
             officeHolidaysKoreaClean,
-            officeHolidaysUSA
+            officeHolidaysUSA,
+            officeHolidaysTaiwan,
+            officeHolidaysTaiwanClean
         ]
     }
 

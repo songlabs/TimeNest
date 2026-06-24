@@ -58,6 +58,11 @@ struct HolidayNameLocalizer {
             ]
         case .unitedStates:
             prefixesToCheck = ["US:", "US : ", "US: ", "USA:", "USA : ", "USA: ", "United States:", "United States: ", "美国:", "美国：", "US: "]
+        case .taiwan:
+            prefixesToCheck = [
+                "Taiwan:", "Taiwan : ", "Taiwan: ",
+                "台灣:", "台灣：", "台湾:", "台湾：", "TW:", "TW: "
+            ]
         }
 
         var cleaned = name
@@ -302,6 +307,39 @@ struct HolidayNameLocalizer {
         return buildMappings(mappings)
     }
 
+    // MARK: - Taiwan Holiday Mappings
+
+    private func buildTaiwanMappings() -> [String: String] {
+        let mappings: [(String, String)] = [
+            ("republic day", "開國紀念日"),
+            ("new years holiday", "元旦假期"),
+            ("new year holiday", "元旦假期"),
+            ("day before lunar new years eve", "小年夜"),
+            ("day before lunar new year's eve", "小年夜"),
+            ("lunar new years eve", "除夕"),
+            ("lunar new year's eve", "除夕"),
+            ("lunar new year", "春節"),
+            ("lunar new year holiday", "春節假期"),
+            ("peace memorial day", "和平紀念日"),
+            ("peace memorial day (in lieu)", "和平紀念日補假"),
+            ("childrens day", "兒童節"),
+            ("childrens day (in lieu)", "兒童節補假"),
+            ("tomb sweeping day", "清明節"),
+            ("tomb sweeping day (in lieu)", "清明節補假"),
+            ("labor day", "勞動節"),
+            ("labour day", "勞動節"),
+            ("dragon boat festival", "端午節"),
+            ("mid autumn festival", "中秋節"),
+            ("teachers day", "教師節"),
+            ("national day", "國慶日"),
+            ("national day (in lieu)", "國慶日補假"),
+            ("retrocession day, battle of guningtou", "台灣光復節、古寧頭戰役紀念日"),
+            ("retrocession day, battle of guningtou (in lieu)", "台灣光復節、古寧頭戰役紀念日補假"),
+            ("constitution day", "行憲紀念日")
+        ]
+        return buildMappings(mappings)
+    }
+
     private func buildMappings(_ mappings: [(String, String)]) -> [String: String] {
         mappings.reduce(into: [:]) { result, mapping in
             let normalizedKey = normalizeName(mapping.0)
@@ -320,7 +358,8 @@ struct HolidayNameLocalizer {
             .japan: localizer.buildJapanMappings(),
             .china: localizer.buildChinaMappings(),
             .korea: localizer.buildKoreaMappings(),
-            .unitedStates: localizer.buildUSAMappings()
+            .unitedStates: localizer.buildUSAMappings(),
+            .taiwan: localizer.buildTaiwanMappings()
         ]
     }()
 }

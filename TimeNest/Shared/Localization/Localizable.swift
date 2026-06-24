@@ -37,6 +37,7 @@ enum LocalizedString: String {
     case regionChina = "region.china"
     case regionKorea = "region.korea"
     case regionUnitedStates = "region.united_states"
+    case regionTaiwan = "region.taiwan"
 
     // MARK: - Week Start
 

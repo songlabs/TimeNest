@@ -5,6 +5,7 @@ enum HolidayRegion: String, Codable, Hashable, CaseIterable, Identifiable {
     case china
     case korea
     case unitedStates
+    case taiwan = "TW"
     
     var id: String { rawValue }
     
@@ -14,6 +15,7 @@ enum HolidayRegion: String, Codable, Hashable, CaseIterable, Identifiable {
         case .china: return "region.china"
         case .korea: return "region.korea"
         case .unitedStates: return "region.united_states"
+        case .taiwan: return "region.taiwan"
         }
     }
 }

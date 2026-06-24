@@ -32,6 +32,11 @@ struct LocalizedText: Codable, Hashable {
             self.ja = displayName
             self.ko = displayName
             self.enUS = displayName
+        case .taiwan:
+            self.zhHans = displayName
+            self.ja = displayName
+            self.ko = displayName
+            self.enUS = displayName
         }
     }
 
@@ -48,6 +53,8 @@ struct LocalizedText: Codable, Hashable {
             return ko
         case .unitedStates:
             return enUS
+        case .taiwan:
+            return zhHans
         }
     }
 

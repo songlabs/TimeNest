@@ -5,6 +5,7 @@ import Combine
 enum SubscriptionManagerError: Error, LocalizedError {
     case maxLimitExceeded
     case invalidURL
+    case invalidSubscriptionURL(region: HolidayRegion, rawURL: String)
     case downloadFailed(Error)
     case parseFailed(Error)
     case syncInProgress
@@ -14,6 +15,8 @@ enum SubscriptionManagerError: Error, LocalizedError {
         case .maxLimitExceeded:
             return LocalizationManager.shared.localized(.holidaySubscriptionErrorMaxLimitExceeded)
         case .invalidURL:
+            return LocalizationManager.shared.localized(.holidaySubscriptionErrorInvalidURL)
+        case .invalidSubscriptionURL:
             return LocalizationManager.shared.localized(.holidaySubscriptionErrorInvalidURL)
         case .downloadFailed(let error):
             return String(
@@ -182,7 +185,7 @@ class HolidaySubscriptionManager: ObservableObject {
 
     /// 恢复默认 URL
     func resetToDefaultURL(for region: HolidayRegion) {
-        let defaultURL = DefaultICSSources.defaultURL(for: region)
+        let defaultURL = recommendedURLString(for: region) ?? DefaultICSSources.defaultURL(for: region)
         updateSubscriptionByRegion(region) {
             $0.urlString = defaultURL
             $0.syncStatus = .neverSynced
@@ -238,8 +241,12 @@ class HolidaySubscriptionManager: ObservableObject {
     /// 同步单个订阅并返回事件数量
     private func syncSingleWithResult(subscription: HolidaySubscription) async throws -> Int {
         do {
-            guard let url = URL(string: subscription.urlString) else {
-                throw SubscriptionManagerError.invalidURL
+            let syncURLString = try resolvedURLString(for: subscription)
+            guard let url = validHTTPSURL(from: syncURLString) else {
+                throw SubscriptionManagerError.invalidSubscriptionURL(
+                    region: subscription.region,
+                    rawURL: subscription.urlString
+                )
             }
 
             let host = url.host ?? ""
@@ -251,7 +258,7 @@ class HolidaySubscriptionManager: ObservableObject {
 
             // 解析 ICS
             let events = try await Task.detached { [parseService] in
-                try parseService.parse(data: data, region: subscription.region, sourceURL: subscription.urlString)
+                try parseService.parse(data: data, region: subscription.region, sourceURL: syncURLString)
             }.value
 
             // 只有至少一个有效事件时才允许覆盖最后一次成功缓存。
@@ -360,6 +367,8 @@ class HolidaySubscriptionManager: ObservableObject {
             }
         }
 
+        normalizeMissingDefaultURLs()
+
         saveSubscriptions()
     }
 
@@ -367,7 +376,7 @@ class HolidaySubscriptionManager: ObservableObject {
         HolidaySubscription(
             region: region,
             displayNameKey: DefaultICSSources.displayNameKey(for: region),
-            urlString: DefaultICSSources.defaultURL(for: region),
+            urlString: recommendedURLString(for: region) ?? DefaultICSSources.defaultURL(for: region),
             isEnabled: region == .japan,  // 默认启用日本
             syncStatus: .neverSynced
         )
@@ -378,6 +387,70 @@ class HolidaySubscriptionManager: ObservableObject {
            let json = String(data: data, encoding: .utf8) {
             userDefaults.set(json, forKey: Keys.subscriptionsKey)
         }
+    }
+
+    private func resolvedURLString(for subscription: HolidaySubscription) throws -> String {
+        if let urlString = validHTTPSURLString(from: subscription.urlString) {
+            return urlString
+        }
+
+        if isMissingURL(subscription.urlString),
+           let fallbackURLString = recommendedURLString(for: subscription.region) {
+            updateSubscription(subscription.id) {
+                $0.urlString = fallbackURLString
+                $0.syncStatus = .neverSynced
+                $0.lastUpdatedAt = nil
+                $0.errorMessage = nil
+            }
+            return fallbackURLString
+        }
+
+        throw SubscriptionManagerError.invalidSubscriptionURL(
+            region: subscription.region,
+            rawURL: subscription.urlString
+        )
+    }
+
+    private func normalizeMissingDefaultURLs() {
+        for index in subscriptions.indices {
+            let region = subscriptions[index].region
+            guard isMissingURL(subscriptions[index].urlString),
+                  let fallbackURLString = recommendedURLString(for: region) else {
+                continue
+            }
+
+            subscriptions[index].urlString = fallbackURLString
+            subscriptions[index].syncStatus = .neverSynced
+            subscriptions[index].lastUpdatedAt = nil
+            subscriptions[index].errorMessage = nil
+        }
+    }
+
+    private func isMissingURL(_ urlString: String) -> Bool {
+        urlString.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private func recommendedURLString(for region: HolidayRegion) -> String? {
+        validHTTPSURLString(from: HolidayRecommendedSources.preferredURL(for: region) ?? "")
+    }
+
+    private func validHTTPSURLString(from urlString: String) -> String? {
+        let trimmedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard validHTTPSURL(from: trimmedURL) != nil else {
+            return nil
+        }
+        return trimmedURL
+    }
+
+    private func validHTTPSURL(from urlString: String) -> URL? {
+        guard let url = URL(string: urlString),
+              let scheme = url.scheme,
+              scheme.lowercased() == "https",
+              let host = url.host,
+              !host.isEmpty else {
+            return nil
+        }
+        return url
     }
 
     private func updateSubscription(_ id: UUID, update: (inout HolidaySubscription) -> Void) {

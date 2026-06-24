@@ -31,6 +31,7 @@
 "region.china" = "China";
 "region.korea" = "Korea";
 "region.united_states" = "United States";
+"region.taiwan" = "Taiwan";
 
 /* Week Start */
 "week_start.system" = "System Default";
