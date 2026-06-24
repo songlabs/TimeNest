@@ -239,7 +239,8 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
+    @discardableResult
+    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws -> EventNotificationScheduleResult {
         let adjustedWorkInfo = try await adjustedWorkInfoForSave(title: title, startDate: startDate, workInfo: workInfo)
         let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: adjustedWorkInfo)
         let now = Date()
@@ -263,15 +264,17 @@ class MonthCalendarViewModel: ObservableObject {
             workInfo: adjustedWorkInfo
         )
 
+        let notificationResult: EventNotificationScheduleResult
         if let kind = workClockKind(for: title) {
-            try await upsertWorkClockEvent(event, kind: kind)
+            notificationResult = try await upsertWorkClockEvent(event, kind: kind)
             if let sessionId = adjustedWorkInfo.workSessionId {
                 try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
             }
         } else {
-            try await eventUseCase.createEvent(event)
+            notificationResult = try await eventUseCase.createEvent(event)
         }
         await reloadMonth()
+        return notificationResult
     }
 
     func enterShiftInputMode() {
@@ -479,7 +482,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
 
-    private func upsertWorkClockEvent(_ event: CalendarEvent, kind: WorkClockKind) async throws {
+    private func upsertWorkClockEvent(_ event: CalendarEvent, kind: WorkClockKind) async throws -> EventNotificationScheduleResult {
         let sessionId = event.workInfo?.workSessionId
         let sameKindEvents: [CalendarEvent]
         if let sessionId {
@@ -491,8 +494,7 @@ class MonthCalendarViewModel: ObservableObject {
         }
 
         guard let existingEvent = sameKindEvents.first else {
-            try await eventUseCase.createEvent(event)
-            return
+            return try await eventUseCase.createEvent(event)
         }
 
         let now = Date()
@@ -514,11 +516,12 @@ class MonthCalendarViewModel: ObservableObject {
             shiftTemplateID: event.shiftTemplateID,
             workInfo: event.workInfo
         )
-        try await eventUseCase.updateEvent(updatedEvent)
+        let notificationResult = try await eventUseCase.updateEvent(updatedEvent)
 
         for duplicate in sameKindEvents.dropFirst() {
             try await eventUseCase.deleteEvent(id: duplicate.id)
         }
+        return notificationResult
     }
     private func syncSharedWorkValues(for sessionId: UUID, workDate: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?) async throws {
         let sameSessionWorkEvents = try await workEventsAround(workDate: workDate)
@@ -600,7 +603,8 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws {
+    @discardableResult
+    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws -> EventNotificationScheduleResult {
         do {
             let adjustedWorkInfo = try await adjustedWorkInfoForSave(title: title, startDate: startDate, workInfo: workInfo)
             let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: adjustedWorkInfo)
@@ -626,13 +630,14 @@ class MonthCalendarViewModel: ObservableObject {
                 workInfo: adjustedWorkInfo
             )
 
-            try await eventUseCase.updateEvent(updatedEvent)
+            let notificationResult = try await eventUseCase.updateEvent(updatedEvent)
             if workClockKind(for: title) != nil {
                 if let sessionId = adjustedWorkInfo.workSessionId {
                     try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
                 }
             }
             await reloadMonth()
+            return notificationResult
         } catch {
             errorMessage = error.localizedDescription
             throw error

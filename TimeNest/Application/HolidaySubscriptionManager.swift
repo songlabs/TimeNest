@@ -318,9 +318,6 @@ class HolidaySubscriptionManager: ObservableObject {
                     try await syncSingle(subscription: subscription)
                 } catch {
                     // 静默失败，继续使用缓存
-                    #if DEBUG
-                    print("Auto sync failed for \(region.rawValue): \(error)")
-                    #endif
                 }
             }
         }

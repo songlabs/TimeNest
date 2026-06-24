@@ -2,7 +2,7 @@
 
 > Release-preparation checklist only. It does not guarantee App Review approval. Confirm manual items in Apple Developer, App Store Connect, Xcode Organizer, and the exact submitted build.
 
-## Repository Audit Snapshot (2026-06-21)
+## Repository Audit Snapshot (2026-06-23)
 
 - [x] App target, test target, and Widget Extension are present; project shared schemes are `TimeNest` and `TimeNestWidgetExtension`, and the workspace also contains `TimeNest-Workspace`.
 - [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.TimeNestWidgetExtension`.
@@ -20,7 +20,7 @@
 
 ## 1. Developer Program and App Store Connect
 
-- [ ] Confirm the paid Apple Developer Program enrollment has changed from Pending to Active. While pending, do not submit a duplicate enrollment, pay again, or change Apple ID.
+- [ ] Confirm the paid Apple Developer Program membership, agreements, tax, and banking status are active before submission.
 - [ ] Confirm the App Store Connect app record uses the intended primary language and Bundle ID.
 - [ ] Fill app name, subtitle, description, keywords, promotional text, release notes, categories, age rating, pricing, and availability for each supported locale.
 - [x] Prepare Japanese-primary and `zh-Hans` / `en` / `ko` copy candidates in `Docs/AppStoreMetadataDraft.md`.
@@ -58,7 +58,7 @@
 - [ ] Confirm the submitted production configuration, App Privacy Tracking answer, public privacy policy, archive privacy report, and any required tracking-domain declaration all match the ATT-enabled behavior.
 - [x] Google UMP consent flow is centralized in the Ads layer. Help shows a localized privacy-options action only when UMP reports that an entry point is required.
 - [ ] Configure the intended GDPR/US-state privacy messages in the AdMob console for the production App ID and verify them on physical devices in applicable regions.
-- [x] `Info.plist` includes the `SKAdNetworkItems` list from Google's iOS quick-start guidance checked on 2026-06-20.
+- [x] `Info.plist` includes the `SKAdNetworkItems` list from Google's iOS guidance checked on 2026-06-23.
 - [ ] Confirm `TIMENEST_ADS_ENABLED=YES`, `TIMENEST_ADMOB_APP_ID` is the production App ID, and `TIMENEST_ADMOB_BANNER_UNIT_ID` is the production Banner Unit ID in the exact archive build settings.
 - [ ] Confirm the Release device/archive validation script succeeds and the processed archive `Info.plist` contains the production `GADApplicationIdentifier`, never Google's test App ID or a placeholder.
 - [ ] Reconfirm that the current app has no user-facing remove-ads purchase flow; do not advertise one.

@@ -4,7 +4,7 @@
 
 ## 1. Internal Test Setup
 
-- [ ] Confirm the paid Apple Developer Program enrollment has changed from Pending to Active before attempting distribution steps that require active membership.
+- [ ] Confirm the paid Apple Developer Program membership, agreements, tax, and banking status are active before attempting distribution steps.
 - [ ] Upload the Release archive and wait for App Store Connect processing to complete.
 - [ ] Add the build to the intended internal testing group and complete the current export-compliance questions using the final archive and `Docs/ExportComplianceNotes.md` as a reference.
 - [ ] Paste and recheck `Docs/TestFlightSubmissionNotes.md` against the exact uploaded build, including its Widget, advertising, ATT, and known-limitations wording.

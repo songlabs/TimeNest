@@ -27,15 +27,19 @@ class EventUseCase {
         self.notificationScheduler = notificationScheduler
     }
 
-    func createEvent(_ event: CalendarEvent) async throws {
+    @discardableResult
+    func createEvent(_ event: CalendarEvent) async throws -> EventNotificationScheduleResult {
         try validate(event)
         var eventToSave = event
-        eventToSave.notificationID = await scheduledNotificationID(for: eventToSave)
+        let notificationResult = await scheduleNotification(for: eventToSave)
+        eventToSave.notificationID = notificationResult.notificationID
         try await repository.create(eventToSave)
         onEventsChanged?()
+        return notificationResult
     }
 
-    func updateEvent(_ event: CalendarEvent) async throws {
+    @discardableResult
+    func updateEvent(_ event: CalendarEvent) async throws -> EventNotificationScheduleResult {
         try validate(event)
         guard let oldEvent = try await repository.event(id: event.id) else {
             throw EventUseCaseError.eventNotFound
@@ -45,9 +49,11 @@ class EventUseCase {
         }
 
         var eventToSave = event
-        eventToSave.notificationID = await scheduledNotificationID(for: eventToSave)
+        let notificationResult = await scheduleNotification(for: eventToSave)
+        eventToSave.notificationID = notificationResult.notificationID
         try await repository.update(eventToSave)
         onEventsChanged?()
+        return notificationResult
     }
 
     func deleteEvent(id: UUID) async throws {
@@ -148,15 +154,11 @@ class EventUseCase {
         }
     }
 
-    private func scheduledNotificationID(for event: CalendarEvent) async -> String? {
+    private func scheduleNotification(for event: CalendarEvent) async -> EventNotificationScheduleResult {
         guard event.reminderOffsetMinutes != nil else {
-            return nil
+            return .noReminder
         }
 
-        do {
-            return try await notificationScheduler?.scheduleEventNotification(event: event)
-        } catch {
-            return nil
-        }
+        return await notificationScheduler?.scheduleEventNotificationResult(event: event) ?? .failed
     }
 }

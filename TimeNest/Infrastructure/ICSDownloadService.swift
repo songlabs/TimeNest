@@ -149,18 +149,11 @@ class ICSDownloadService: ICSDownloading {
         request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
         request.setValue("no-cache", forHTTPHeaderField: "Pragma")
 
-        // DEBUG 日志：请求信息
-
         let (data, response) = try await session.data(for: request)
 
         guard let httpResponse = response as? HTTPURLResponse else {
-            #if DEBUG
-            print("[EnhancedICS] 无效的响应类型：\(type(of: response))")
-            #endif
             throw EnhancedICSError.emptyResponse
         }
-
-        // DEBUG 日志：响应信息
 
         return (data, httpResponse)
     }
@@ -178,10 +171,6 @@ class ICSDownloadService: ICSDownloading {
 
             // 检查 HTTP 状态码
             guard (200...299).contains(httpResponse.statusCode) else {
-                #if DEBUG
-                print("[EnhancedICS] HTTP 错误：\(httpResponse.statusCode)")
-                #endif
-
                 // 对 HTTP 500 增加 Office Holidays fallback
                 if httpResponse.statusCode == 500 && isOfficeHolidaysURL(url) {
                     let fallbackURL = appendNoCacheQuery(to: url)
@@ -190,13 +179,8 @@ class ICSDownloadService: ICSDownloading {
                     let (retryData, retryHTTPResponse) = try await fetchICS(from: fallbackURL, timeout: timeout)
 
                     guard (200...299).contains(retryHTTPResponse.statusCode) else {
-                        #if DEBUG
-                        print("[EnhancedICS] fallback 后仍然 HTTP 错误：\(retryHTTPResponse.statusCode)")
-                        #endif
                         throw EnhancedICSError.invalidHTTPStatus(retryHTTPResponse.statusCode)
                     }
-
-                    // DEBUG 日志：fallback 成功
 
                     return retryData
                 }
@@ -206,23 +190,14 @@ class ICSDownloadService: ICSDownloading {
 
             // 检查文件大小
             if data.count > maxFileSize {
-                #if DEBUG
-                print("[EnhancedICS] 文件过大：\(data.count) bytes")
-                #endif
                 throw EnhancedICSError.tooLarge(size: data.count, limit: maxFileSize)
             }
 
             return data
 
         } catch let error as URLError {
-            #if DEBUG
-            print("[EnhancedICS] URLError: \(error.code) - \(error.localizedDescription)")
-            #endif
             throw EnhancedICSError.networkError(error)
         } catch {
-            #if DEBUG
-            print("[EnhancedICS] 未知错误：\(error)")
-            #endif
             throw EnhancedICSError.networkError(error)
         }
     }

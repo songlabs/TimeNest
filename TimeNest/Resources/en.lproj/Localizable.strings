@@ -54,6 +54,13 @@
 "notification.time" = "Notification Time";
 "notification.daily_schedule_check" = "Check today’s schedule";
 "notification.event_starting_soon" = "Event starting soon";
+"notification.permission_denied.title" = "Notifications Are Off";
+"notification.permission_denied.message" = "TimeNest needs notification permission to send event reminders. Turn on notifications in iOS Settings.";
+"notification.open_settings" = "Open Settings";
+"notification.reminder_time_past.title" = "Reminder Time Has Passed";
+"notification.reminder_time_past.message" = "The event was saved, but the reminder time has already passed, so no notification was set.";
+"notification.schedule_failed.title" = "Reminder Setup Failed";
+"notification.schedule_failed.message" = "The event was saved, but the reminder setup failed.";
 
 /* Reminder Options */
 "reminder.none" = "None";

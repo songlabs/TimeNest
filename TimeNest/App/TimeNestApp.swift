@@ -98,6 +98,9 @@ struct TimeNestApp: App {
             .environmentObject(LocalizationManager.shared)
             .modelContainer(modelContainer)
             .task {
+                await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
+            }
+            .task {
                 AdConsentManager.shared.requestConsentInfoIfNeeded()
                 await widgetSnapshotCoordinator.refresh()
             }

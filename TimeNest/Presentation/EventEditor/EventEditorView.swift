@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Local Styles
 
@@ -134,6 +135,36 @@ private struct WorkClockConfirmation: Identifiable {
     }
 }
 
+private enum NotificationSaveAlert: Identifiable {
+    case denied
+    case triggerDateInPast
+    case failed
+
+    init?(result: EventNotificationScheduleResult) {
+        switch result {
+        case .denied:
+            self = .denied
+        case .triggerDateInPast:
+            self = .triggerDateInPast
+        case .failed:
+            self = .failed
+        case .scheduled, .noReminder:
+            return nil
+        }
+    }
+
+    var id: String {
+        switch self {
+        case .denied:
+            return "denied"
+        case .triggerDateInPast:
+            return "triggerDateInPast"
+        case .failed:
+            return "failed"
+        }
+    }
+}
+
 enum EventEditorMode {
     case create(initialDate: Date)
     case edit(
@@ -151,10 +182,11 @@ enum EventEditorMode {
 
 struct EventEditorView: View {
     @Environment(\.localization) private var localization
+    @Environment(\.openURL) private var openURL
     @Binding var isPresented: Bool
     let mode: EventEditorMode
     let existingEvents: [EventOccurrence]
-    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
+    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
 
     @State private var title: String
     @State private var note: String
@@ -179,6 +211,7 @@ struct EventEditorView: View {
     @State private var showingRestTimePicker: Bool = false // 休息时间选择器
     @State private var editingWorkTime: WorkTimeEditTarget?
     @State private var pendingWorkClockConfirmation: WorkClockConfirmation?
+    @State private var pendingNotificationSaveAlert: NotificationSaveAlert?
     @State private var workSessionId: UUID
     @FocusState private var focusedField: EditorFocusedField?
 
@@ -188,7 +221,7 @@ struct EventEditorView: View {
         isPresented: Binding<Bool>,
         mode: EventEditorMode,
         existingEvents: [EventOccurrence] = [],
-        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> Void
+        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
     ) {
         _isPresented = isPresented
         self.mode = mode
@@ -351,6 +384,9 @@ struct EventEditorView: View {
                     },
                     secondaryButton: .cancel(Text(localization.localized(.editorWorkOverwriteCancelButton)))
                 )
+            }
+            .alert(item: $pendingNotificationSaveAlert) { alert in
+                notificationSaveAlert(for: alert)
             }
         }
         .presentationDetents([.custom(EventEditorCompactDetent.self)])
@@ -670,13 +706,55 @@ struct EventEditorView: View {
         do {
             let saveContext = normalizedSaveContext()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, saveContext.dates.start, saveContext.dates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, saveContext.workInfo)
-            isPresented = false
+            let notificationResult = try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, saveContext.dates.start, saveContext.dates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, saveContext.workInfo)
+            saving = false
+            if let alert = NotificationSaveAlert(result: notificationResult) {
+                pendingNotificationSaveAlert = alert
+            } else {
+                isPresented = false
+            }
         } catch {
             errorMessage = error.localizedDescription
+            saving = false
         }
+    }
 
-        saving = false
+    private func notificationSaveAlert(for alert: NotificationSaveAlert) -> Alert {
+        switch alert {
+        case .denied:
+            return Alert(
+                title: Text(localization.localized(.notificationPermissionDeniedTitle)),
+                message: Text(localization.localized(.notificationPermissionDeniedMessage)),
+                primaryButton: .default(Text(localization.localized(.notificationOpenSettings))) {
+                    openNotificationSettings()
+                    isPresented = false
+                },
+                secondaryButton: .cancel(Text(localization.localized(.cancel))) {
+                    isPresented = false
+                }
+            )
+        case .triggerDateInPast:
+            return Alert(
+                title: Text(localization.localized(.notificationReminderTimePastTitle)),
+                message: Text(localization.localized(.notificationReminderTimePastMessage)),
+                dismissButton: .default(Text(localization.localized(.ok))) {
+                    isPresented = false
+                }
+            )
+        case .failed:
+            return Alert(
+                title: Text(localization.localized(.notificationScheduleFailedTitle)),
+                message: Text(localization.localized(.notificationScheduleFailedMessage)),
+                dismissButton: .default(Text(localization.localized(.ok))) {
+                    isPresented = false
+                }
+            )
+        }
+    }
+
+    private func openNotificationSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(url) { _ in }
     }
 
     private func normalizedSaveContext() -> (dates: (start: Date, end: Date), workInfo: WorkInfo) {

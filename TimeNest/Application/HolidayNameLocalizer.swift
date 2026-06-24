@@ -185,9 +185,6 @@ struct HolidayNameLocalizer {
                         continue
                     }
                     // 冲突：同 key 映射到不同节日
-                    #if DEBUG
-                    print("[HolidayNameLocalizer] Conflicting alias: \"\(normalizedKey)\", existing=\"\(existing)\", new=\"\(holiday.canonicalName)\"")
-                    #endif
                     continue
                 }
                 dict[normalizedKey] = holiday.canonicalName

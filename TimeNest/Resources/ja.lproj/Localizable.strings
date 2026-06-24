@@ -54,6 +54,13 @@
 "notification.time" = "通知時間";
 "notification.daily_schedule_check" = "今日の予定を確認しましょう";
 "notification.event_starting_soon" = "予定がまもなく始まります";
+"notification.permission_denied.title" = "通知がオフです";
+"notification.permission_denied.message" = "TimeNest が予定の通知を送信するには通知の許可が必要です。iOSの設定で通知をオンにしてください。";
+"notification.open_settings" = "設定を開く";
+"notification.reminder_time_past.title" = "通知時刻を過ぎています";
+"notification.reminder_time_past.message" = "予定は保存されましたが、通知時刻を過ぎているため通知は設定されませんでした。";
+"notification.schedule_failed.title" = "通知の設定に失敗しました";
+"notification.schedule_failed.message" = "予定は保存されましたが、通知の設定に失敗しました。";
 
 /* Reminder Options */
 "reminder.none" = "なし";

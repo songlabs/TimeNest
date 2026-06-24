@@ -31,9 +31,7 @@ final class WidgetSnapshotCoordinator {
             try WidgetSnapshotStore.save(snapshot)
             Self.widgetKinds.forEach { WidgetCenter.shared.reloadTimelines(ofKind: $0) }
         } catch {
-#if DEBUG
-            print("[WidgetSnapshotCoordinator] Snapshot refresh failed: \(error)")
-#endif
+            // Widget snapshots are best-effort; the app must remain usable if refresh fails.
         }
     }
 

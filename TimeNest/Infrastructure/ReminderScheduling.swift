@@ -7,11 +7,55 @@ protocol ReminderScheduling {
 }
 
 protocol LocalNotificationScheduling {
+    func requestAuthorizationOnFirstLaunchIfNeeded() async
     func requestAuthorizationIfNeeded() async -> Bool
     func scheduleEventNotification(event: CalendarEvent) async throws -> String?
+    func scheduleEventNotificationResult(event: CalendarEvent) async -> EventNotificationScheduleResult
     func cancelNotification(id: String)
     func scheduleDailyScheduleCheck(hour: Int, minute: Int) async
     func cancelDailyScheduleCheck()
+}
+
+enum EventNotificationScheduleResult: Equatable {
+    case scheduled(String)
+    case noReminder
+    case triggerDateInPast
+    case denied
+    case failed
+
+    var notificationID: String? {
+        if case .scheduled(let id) = self {
+            return id
+        }
+        return nil
+    }
+}
+
+private enum LocalNotificationAuthorizationResult: Equatable {
+    case authorized
+    case denied
+    case failed
+}
+
+extension LocalNotificationScheduling {
+    func requestAuthorizationOnFirstLaunchIfNeeded() async {
+        _ = await requestAuthorizationIfNeeded()
+    }
+
+    func scheduleEventNotificationResult(event: CalendarEvent) async -> EventNotificationScheduleResult {
+        guard event.reminderOffsetMinutes != nil else {
+            return .noReminder
+        }
+
+        do {
+            if let notificationID = try await scheduleEventNotification(event: event) {
+                return .scheduled(notificationID)
+            }
+            return .failed
+        } catch {
+            return .failed
+        }
+    }
 }
 
 final class LocalNotificationService: LocalNotificationScheduling {
@@ -28,38 +72,66 @@ final class LocalNotificationService: LocalNotificationScheduling {
         self.calendar = calendar
     }
 
-    func requestAuthorizationIfNeeded() async -> Bool {
+    func requestAuthorizationOnFirstLaunchIfNeeded() async {
         let settings = await center.notificationSettings()
-        switch settings.authorizationStatus {
-        case .authorized, .provisional, .ephemeral:
-            return true
-        case .denied:
-            return false
-        case .notDetermined:
-            do {
-                return try await center.requestAuthorization(options: [.alert, .sound, .badge])
-            } catch {
-                return false
-            }
-        @unknown default:
-            return false
+        guard settings.authorizationStatus == .notDetermined else {
+            return
+        }
+
+        do {
+            _ = try await center.requestAuthorization(options: [.alert, .sound, .badge])
+        } catch {
+            return
         }
     }
 
+    func requestAuthorizationIfNeeded() async -> Bool {
+        return await authorizationResultRequestingIfNeeded() == .authorized
+    }
+
     func scheduleEventNotification(event: CalendarEvent) async throws -> String? {
+        return await scheduleEventNotificationResult(event: event).notificationID
+    }
+
+    func scheduleEventNotificationResult(event: CalendarEvent) async -> EventNotificationScheduleResult {
         guard let reminderOffsetMinutes = event.reminderOffsetMinutes else {
-            return nil
+            return .noReminder
         }
 
         let triggerDate = event.startDate.addingTimeInterval(TimeInterval(-reminderOffsetMinutes * 60))
         guard triggerDate > Date() else {
-            return nil
+            return .triggerDateInPast
         }
 
-        guard await requestAuthorizationIfNeeded() else {
-            return nil
+        switch await authorizationResultRequestingIfNeeded() {
+        case .authorized:
+            return await addEventNotification(event: event, triggerDate: triggerDate)
+        case .denied:
+            return .denied
+        case .failed:
+            return .failed
         }
+    }
 
+    private func authorizationResultRequestingIfNeeded() async -> LocalNotificationAuthorizationResult {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return .authorized
+        case .denied:
+            return .denied
+        case .notDetermined:
+            do {
+                return try await center.requestAuthorization(options: [.alert, .sound, .badge]) ? .authorized : .denied
+            } catch {
+                return .failed
+            }
+        @unknown default:
+            return .failed
+        }
+    }
+
+    private func addEventNotification(event: CalendarEvent, triggerDate: Date) async -> EventNotificationScheduleResult {
         let notificationID = event.notificationID ?? UUID().uuidString
         let content = UNMutableNotificationContent()
         content.title = event.title
@@ -69,8 +141,12 @@ final class LocalNotificationService: LocalNotificationScheduling {
         let components = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: triggerDate)
         let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
         let request = UNNotificationRequest(identifier: notificationID, content: content, trigger: trigger)
-        try await center.add(request)
-        return notificationID
+        do {
+            try await center.add(request)
+            return .scheduled(notificationID)
+        } catch {
+            return .failed
+        }
     }
 
     func cancelNotification(id: String) {

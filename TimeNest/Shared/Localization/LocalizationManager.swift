@@ -101,23 +101,12 @@ final class LocalizationManager: ObservableObject {
     private func bundle(for languageCode: String) -> Bundle {
         let name = bundleName(for: languageCode)
 
-#if DEBUG
-        print("[LocalizationManager] selectedLanguageCode = \(languageCode)")
-        print("[LocalizationManager] bundleName = \(name)")
-#endif
-
         if let path = Bundle.main.path(forResource: name, ofType: "lproj") {
-#if DEBUG
-            print("[LocalizationManager] bundlePath exists = \(FileManager.default.fileExists(atPath: path))")
-#endif
             if let bundle = Bundle(path: path) {
                 return bundle
             }
         }
 
-#if DEBUG
-        print("[LocalizationManager] ⚠️ Missing bundle: \(name).lproj, falling back to main bundle")
-#endif
         return Bundle.main
     }
 

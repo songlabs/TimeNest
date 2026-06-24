@@ -54,6 +54,13 @@
 "notification.time" = "通知时间";
 "notification.daily_schedule_check" = "请确认今天的日程";
 "notification.event_starting_soon" = "日程即将开始";
+"notification.permission_denied.title" = "通知权限已关闭";
+"notification.permission_denied.message" = "TimeNest 需要通知权限才能发送予定提醒。请在 iOS 设置中打开通知。";
+"notification.open_settings" = "打开设置";
+"notification.reminder_time_past.title" = "提醒时间已过";
+"notification.reminder_time_past.message" = "予定已保存，但提醒时间已过，未设置通知。";
+"notification.schedule_failed.title" = "提醒设置失败";
+"notification.schedule_failed.message" = "予定已保存，但提醒设置失败。";
 
 /* Reminder Options */
 "reminder.none" = "无";

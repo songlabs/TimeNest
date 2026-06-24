@@ -54,6 +54,13 @@
 "notification.time" = "알림 시간";
 "notification.daily_schedule_check" = "오늘 일정을 확인하세요";
 "notification.event_starting_soon" = "일정이 곧 시작됩니다";
+"notification.permission_denied.title" = "알림이 꺼져 있습니다";
+"notification.permission_denied.message" = "TimeNest가 일정 알림을 보내려면 알림 권한이 필요합니다. iOS 설정에서 알림을 켜 주세요.";
+"notification.open_settings" = "설정 열기";
+"notification.reminder_time_past.title" = "알림 시간이 지났습니다";
+"notification.reminder_time_past.message" = "일정은 저장되었지만 알림 시간이 이미 지나 알림을 설정하지 않았습니다.";
+"notification.schedule_failed.title" = "알림 설정 실패";
+"notification.schedule_failed.message" = "일정은 저장되었지만 알림 설정에 실패했습니다.";
 
 /* Reminder Options */
 "reminder.none" = "없음";

@@ -264,9 +264,6 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
                 _ = await syncAll()
             }
         } catch {
-            #if DEBUG
-            print("Toggle subscription failed: \(error)")
-            #endif
         }
     }
     

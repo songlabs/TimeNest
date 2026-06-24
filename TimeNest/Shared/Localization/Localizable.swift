@@ -145,6 +145,13 @@ enum LocalizedString: String {
     case notificationTime = "notification.time"
     case notificationEventStartingSoon = "notification.event_starting_soon"
     case notificationDailyScheduleCheck = "notification.daily_schedule_check"
+    case notificationPermissionDeniedTitle = "notification.permission_denied.title"
+    case notificationPermissionDeniedMessage = "notification.permission_denied.message"
+    case notificationOpenSettings = "notification.open_settings"
+    case notificationReminderTimePastTitle = "notification.reminder_time_past.title"
+    case notificationReminderTimePastMessage = "notification.reminder_time_past.message"
+    case notificationScheduleFailedTitle = "notification.schedule_failed.title"
+    case notificationScheduleFailedMessage = "notification.schedule_failed.message"
 
     // MARK: - Reminder Options
 
