@@ -584,6 +584,17 @@ class MonthCalendarViewModel: ObservableObject {
             let existingEvent = try await eventUseCase.event(id: id)
             let now = Date()
 
+            // 班次覆盖保护：如果本次保存的是班次事件，检查目标日期是否已有其他班次
+            let finalShiftTemplateID = shiftTemplateID ?? existingEvent?.shiftTemplateID
+            let shiftEventToReplace: CalendarEvent?
+            if shiftTemplateID != nil {
+                let existingShift = try await existingAnyShiftEvent(on: saveDates.start)
+                // 只保留查到的班次与当前更新事件不是同一个的情况
+                shiftEventToReplace = existingShift?.id != id ? existingShift : nil
+            } else {
+                shiftEventToReplace = nil
+            }
+
             let updatedEvent = CalendarEvent(
                 id: id,
                 title: title,
@@ -599,11 +610,17 @@ class MonthCalendarViewModel: ObservableObject {
                 importSource: existingEvent?.importSource,
                 createdAt: existingEvent?.createdAt ?? now,
                 updatedAt: now,
-                shiftTemplateID: shiftTemplateID ?? existingEvent?.shiftTemplateID,
+                shiftTemplateID: finalShiftTemplateID,
                 workInfo: adjustedWorkInfo
             )
 
             let notificationResult = try await eventUseCase.updateEvent(updatedEvent)
+
+            // 更新成功后，再删除被覆盖的旧班次
+            if let shiftEventToReplace {
+                try await eventUseCase.deleteEvent(id: shiftEventToReplace.id)
+            }
+
             if workClockKind(for: title) != nil {
                 if let sessionId = adjustedWorkInfo.workSessionId {
                     try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
