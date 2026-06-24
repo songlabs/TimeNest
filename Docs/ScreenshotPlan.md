@@ -68,5 +68,5 @@
 
 - [ ] Confirm App Store Connect screenshot dimensions and locale coverage.
 - [ ] Prepare the Japanese primary set from the final release candidate.
-- [ ] Prepare approved `zh-Hans`, `en`, and `ko` variants where those product pages will be localized.
+- [ ] Prepare approved `zh-Hans`, `zh-Hant`, `en`, and `ko` variants where those product pages will be localized.
 - [ ] Review every image for personal data, test ads, debug content, clipping, and unimplemented feature claims.

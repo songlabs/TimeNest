@@ -14,7 +14,7 @@ final class HolidayNameLocalizerTests: XCTestCase {
 
     func testAccessAllRegionMappingsDoesNotCrash() {
         // 测试访问所有地区的 localizedMappings 不崩溃
-        let regions: [HolidayRegion] = [.japan, .china, .korea, .unitedStates]
+        let regions: [HolidayRegion] = [.japan, .china, .korea, .unitedStates, .taiwan]
         
         for region in regions {
             // 这个访问应该不崩溃
@@ -445,6 +445,23 @@ final class HolidayNameLocalizerTests: XCTestCase {
         XCTAssertEqual(
             localizer.localizedDisplayName(for: "US Indigenous People's Day (Regional Holiday)", in: .unitedStates),
             "Indigenous People's Day"
+        )
+    }
+
+    // MARK: - Taiwan Holiday Tests
+
+    func testTaiwanHolidayNamesUseTraditionalChinese() {
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "Taiwan: National Day", in: .taiwan),
+            "國慶日"
+        )
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "Lunar New Year's Eve", in: .taiwan),
+            "除夕"
+        )
+        XCTAssertEqual(
+            localizer.localizedDisplayName(for: "Tomb Sweeping Day (in lieu)", in: .taiwan),
+            "清明節補假"
         )
     }
 
@@ -1269,14 +1286,21 @@ final class HolidayNameLocalizerTests: XCTestCase {
                 date: DateOnly(year: 2026, month: 1, day: 1),
                 name: "USA: New Year's Day",
                 sourceURL: "https://example.com/usa.ics"
+            ),
+            HolidayEvent(
+                id: "tw-national-day",
+                region: .taiwan,
+                date: DateOnly(year: 2026, month: 10, day: 10),
+                name: "Taiwan: National Day",
+                sourceURL: "https://example.com/taiwan.ics"
             )
         ])
         let useCase = HolidayUseCase(cacheRepository: cacheRepository)
 
         let holidays = try await useCase.holidays(
-            regions: [.japan, .china, .korea, .unitedStates],
+            regions: [.japan, .china, .korea, .unitedStates, .taiwan],
             from: DateOnly(year: 2026, month: 1, day: 1),
-            to: DateOnly(year: 2026, month: 2, day: 17)
+            to: DateOnly(year: 2026, month: 10, day: 10)
         )
         let namesByRegion = Dictionary(
             uniqueKeysWithValues: holidays.map { holiday in
@@ -1288,6 +1312,7 @@ final class HolidayNameLocalizerTests: XCTestCase {
         XCTAssertEqual(namesByRegion[.china], "春节")
         XCTAssertEqual(namesByRegion[.korea], "신정")
         XCTAssertEqual(namesByRegion[.unitedStates], "New Year's Day")
+        XCTAssertEqual(namesByRegion[.taiwan], "國慶日")
     }
 
     func testRecommendedHolidaySourceURLsAreHTTPSAndRegionScoped() {
@@ -1422,6 +1447,65 @@ final class HolidayNameLocalizerTests: XCTestCase {
         let weekDates = viewModel.weekCells.map(\.date)
         XCTAssertEqual(weekDates.count, 7)
         XCTAssertTrue(weekDates.contains(DateOnly(year: 2026, month: 6, day: 10)))
+    }
+
+    @MainActor
+    func testShiftInputReplacesExplicitShiftEvenWhenWorkInfoExists() async throws {
+        let calendar = gregorianCalendar(timeZone: TimeZone(secondsFromGMT: 0)!)
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(repository: repository)
+        let viewModel = MonthCalendarViewModel(
+            calendarDisplayUseCase: CalendarDisplayUseCase(
+                holidayUseCase: HolidayUseCase(cacheRepository: InMemoryHolidayEventCacheRepository()),
+                localizationUseCase: CalendarLocalizationUseCase(),
+                eventUseCase: eventUseCase
+            ),
+            eventUseCase: eventUseCase
+        )
+        let shiftDay = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10)))
+        let existingStart = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 8, minute: 30)))
+        let existingEnd = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 17, minute: 30)))
+        let existingID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+
+        try await eventUseCase.createEvent(CalendarEvent(
+            id: existingID,
+            title: "Day Shift",
+            note: nil,
+            startDate: existingStart,
+            endDate: existingEnd,
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: existingStart,
+            updatedAt: existingStart,
+            shiftTemplateID: .day,
+            workInfo: WorkInfo(workDate: shiftDay, workSessionId: UUID())
+        ))
+
+        let nightTemplate = ShiftTimeTemplate(
+            id: .night,
+            nameKey: .shiftNight,
+            displayName: "Night Shift",
+            note: "",
+            colorHex: "#5C6BC0",
+            startTime: "17:00",
+            endTime: "09:00",
+            enabled: true
+        )
+
+        let didSave = await viewModel.createShiftEvent(on: shiftDay, template: nightTemplate)
+        let storedEvents = try await eventUseCase.events(in: DateInterval(
+            start: shiftDay,
+            end: try XCTUnwrap(calendar.date(byAdding: .day, value: 2, to: shiftDay))
+        ))
+
+        XCTAssertTrue(didSave)
+        XCTAssertEqual(storedEvents.count, 1)
+        XCTAssertEqual(storedEvents.first?.id, existingID)
+        XCTAssertEqual(storedEvents.first?.title, "Night Shift")
+        XCTAssertEqual(storedEvents.first?.shiftTemplateID, .night)
     }
 
     @MainActor

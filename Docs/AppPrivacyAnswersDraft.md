@@ -45,7 +45,7 @@ The embedded SDK privacy manifests and Google's current disclosure guidance iden
 
 ### Tracking and ATT
 
-- The app includes `NSUserTrackingUsageDescription` in Simplified Chinese, Japanese, English, and Korean and calls ATT only after the UMP consent flow completes, before Mobile Ads starts or a banner request is sent.
+- The app includes `NSUserTrackingUsageDescription` in Japanese, Simplified Chinese, Traditional Chinese, English, and Korean and calls ATT only after the UMP consent flow completes, before Mobile Ads starts or a banner request is sent.
 - The ATT result does not gate access to calendar functionality. A denied or restricted result still allows non-IDFA ad requests when UMP `canRequestAds` is true.
 - **TODO:** Complete App Store Connect Tracking and App Privacy answers for the exact submitted SDK/configuration. If Device ID is declared as used for tracking, the Tracking answer, privacy policy, archive privacy report, and ATT implementation must remain consistent.
 - **TODO:** Review the final archive's aggregated privacy manifest, including whether `NSPrivacyTracking` and actual tracking domains require an app-level declaration. Do not add guessed domains.

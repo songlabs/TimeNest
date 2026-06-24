@@ -33,12 +33,13 @@ enum WidgetL10n {
         let languageName: String
         switch snapshot.languageCode {
         case "zhHans": languageName = "zh-Hans"
+        case "zh-Hant": languageName = "zh-Hant"
         case "ja": languageName = "ja"
         case "ko": languageName = "ko"
         case "enUS": languageName = "en"
         default:
             let systemCode = Locale.current.language.languageCode?.identifier ?? "en"
-            languageName = systemCode == "zh" ? "zh-Hans" : systemCode
+            languageName = systemCode == "zh" ? systemChineseBundleName() : systemCode
         }
 
         guard let path = Bundle.main.path(forResource: languageName, ofType: "lproj"),
@@ -51,11 +52,19 @@ enum WidgetL10n {
     static func locale(for snapshot: WidgetSnapshot) -> Locale {
         switch snapshot.languageCode {
         case "zhHans": return Locale(identifier: "zh_Hans_CN")
+        case "zh-Hant": return Locale(identifier: "zh_Hant_TW")
         case "ja": return Locale(identifier: "ja_JP")
         case "ko": return Locale(identifier: "ko_KR")
         case "enUS": return Locale(identifier: "en_US")
         default: return .current
         }
+    }
+
+    private static func systemChineseBundleName() -> String {
+        let identifier = Locale.current.identifier.lowercased()
+        return identifier.contains("hant") || identifier.contains("_tw") || identifier.contains("_hk") || identifier.contains("_mo")
+            ? "zh-Hant"
+            : "zh-Hans"
     }
 }
 

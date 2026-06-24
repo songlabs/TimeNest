@@ -432,9 +432,7 @@ class MonthCalendarViewModel: ObservableObject {
 
         return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
             .filter { event in
-                // 排除：出勤/退勤、普通日程（无 shiftTemplateID 且不是班次标题）
-                guard event.workInfo == nil,
-                      !WorkClockTitleMatcher.isClockInTitle(event.title),
+                guard !WorkClockTitleMatcher.isClockInTitle(event.title),
                       !WorkClockTitleMatcher.isClockOutTitle(event.title),
                       calendar.isDate(event.startDate, inSameDayAs: dayStart) else {
                     return false
@@ -445,6 +443,11 @@ class MonthCalendarViewModel: ObservableObject {
                 // 2. 或标题与某个班次模板的 displayName 匹配（兼容旧数据）
                 if event.shiftTemplateID != nil {
                     return true
+                }
+
+                // 仅对旧版标题识别路径要求没有 workInfo，避免普通日程或工作记录被误判为班次。
+                guard event.workInfo == nil else {
+                    return false
                 }
 
                 return allTemplates.contains { $0.displayName == event.title }

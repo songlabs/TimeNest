@@ -15,7 +15,7 @@ Please test the following areas:
 5. Add work records, including clock-in, clock-out, and break information, then review work statistics for a selected date range.
 6. Enable and refresh a supported public-holiday subscription. Confirm downloaded holidays display correctly, and verify that an unavailable or invalid ICS source does not affect existing local schedules.
 7. Add the TimeNest Widget and check that schedule, shift, holiday, date, and language changes refresh within normal WidgetKit timing. Tap supported Widget content and confirm TimeNest opens to the expected date.
-8. Switch among Japanese, Simplified Chinese, English, Korean, and System language modes. Check key screens for untranslated keys, unexpected mixed language, or clipped text.
+8. Switch among Japanese, Simplified Chinese, Traditional Chinese, English, Korean, and System language modes. Check key screens for untranslated keys, unexpected mixed language, or clipped text.
 9. Test both light and dark appearance, including calendar views, editors, sheets, settings, statistics, Widget content, and any banner area.
 10. Check the banner-ad location, layout stability, loading/failure behavior, and return from background. Follow the approved AdMob test-device policy.
 11. On a fresh install, verify UMP completes before the localized ATT prompt. Test both Allow and Ask App Not to Track paths; calendar features must remain available, and denied ad requests must not use IDFA.

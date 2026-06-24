@@ -9,8 +9,8 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 - Shift templates, shift entry, same-day shift replacement, and shift deletion.
 - Clock-in, clock-out, rest time, transport fee, and hourly-rate records.
 - Work statistics for a selected date range.
-- Public-holiday subscriptions and ICS synchronization for Japan, China, Korea, and the United States.
-- Japanese, Simplified Chinese, English, and Korean UI resources, plus a system-language mode.
+- Public-holiday subscriptions and ICS synchronization for Japan, China, Taiwan, Korea, and the United States.
+- Japanese, Simplified Chinese, Traditional Chinese, English, and Korean UI resources, plus a system-language mode.
 - Light, dark, and system appearance settings.
 - A calendar banner-ad container backed by Google Mobile Ads.
 
@@ -86,26 +86,27 @@ TimeNest.xcodeproj/     Checked-in Xcode project used by the shared scheme
 
 ## Localization
 
-UI strings are maintained in all four `Localizable.strings` files:
+UI strings are maintained in all five `Localizable.strings` files:
 
 - `TimeNest/Resources/ja.lproj/Localizable.strings`
 - `TimeNest/Resources/zh-Hans.lproj/Localizable.strings`
+- `TimeNest/Resources/zh-Hant.lproj/Localizable.strings`
 - `TimeNest/Resources/en.lproj/Localizable.strings`
 - `TimeNest/Resources/ko.lproj/Localizable.strings`
 
 When adding or changing UI text:
 
 1. Reuse an existing `LocalizedString` key when it has the same meaning.
-2. Add every new key to `Localizable.swift` and all four language files in the same change.
+2. Add every new key to `Localizable.swift` and all five language files in the same change.
 3. Resolve app UI text through `LocalizationManager` so the in-app language selection is respected.
 4. Do not translate user-entered event titles or customized shift names.
-5. Keep holiday display names region-native: Japanese holidays in Japanese, Chinese holidays in Chinese, Korean holidays in Korean, and US holidays in English.
+5. Keep holiday display names region-native: Japanese holidays in Japanese, mainland China holidays in Simplified Chinese, Taiwan holidays in Traditional Chinese, Korean holidays in Korean, and US holidays in English.
 
-The localization parity tests require the `ja`, `zh-Hans`, `en`, and `ko` files to contain the same unique key set, and require every `LocalizedString` enum case to exist in the resources. Date, month, and weekday text should use `LocalizationManager` so the in-app language and week-start setting remain consistent.
+The localization parity tests require the `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` files to contain the same unique key set, and require every `LocalizedString` enum case to exist in the resources. Date, month, and weekday text should use `LocalizationManager` so the in-app language and week-start setting remain consistent.
 
 ## Holiday Subscriptions
 
-- The app provides sources for Japan, China, Korea, and the United States, with at most two subscriptions enabled at once.
+- The app provides sources for Japan, China, Taiwan, Korea, and the United States, with at most two subscriptions enabled at once.
 - Settings supports enabling or disabling a region, manual refresh, recommended or custom HTTPS source URLs, restoring the default URL, and testing whether the current URL downloads and parses as ICS.
 - Enabled subscriptions are cached locally. Settings may attempt a background refresh when cached subscription data is stale; refresh failure must not turn calendar display into a network-only path.
 - `ICSParsingService` preserves provider data, while `HolidayNameLocalizer` maps known aliases to the holiday region's native display name.
@@ -132,7 +133,7 @@ Uninstalling the app removes its local container under normal iOS behavior. Exis
 - Keep shift events separate from clock-in/clock-out work records. Preserve the one-shift-per-day rule, work-session pairing, overnight clock-out handling, rest time, transport fee, hourly rate, and statistics calculations.
 - Avoid `DateFormatter`, repeated filtering/sorting, or holiday lookups inside SwiftUI rendering loops. Prefer `LocalizationManager`'s formatter cache and pre-group data at the use-case or view-model boundary.
 - Keep `Project.swift` and the checked-in Xcode project aligned when adding or removing source files. Do not change Bundle ID, signing, targets, schemes, assets, or package dependencies as part of routine cleanup.
-- Before merging calendar or settings changes, run the full unit-test command and a simulator build, verify all four localization key sets, and inspect month/week/day, event editing, holiday subscription, shift settings, and work statistics references.
+- Before merging calendar or settings changes, run the full unit-test command and a simulator build, verify all five localization key sets, and inspect month/week/day, event editing, holiday subscription, shift settings, and work statistics references.
 
 ## App Store Release Checklist
 
@@ -141,12 +142,12 @@ Before submission, confirm:
 - Confirm both Release device/archive identifiers use the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads.
 - Keep remove-ads claims out of version 1.0 metadata; no purchase or restore flow currently exists.
 - Configure and verify the required consent messages and privacy-options behavior in the AdMob console.
-- Verify the four localized ATT purpose strings and authorized/denied paths on physical devices.
+- Verify the five localized ATT purpose strings and authorized/denied paths on physical devices.
 - Validate the Privacy Manifest, App Privacy answers, privacy-policy URL, and Google Mobile Ads disclosures together.
 - Verify Bundle ID, signing, version/build numbers, icons, screenshots, metadata, support URL, and privacy-policy URL.
 - Verify fresh install and upgrade install behavior, especially SwiftData compatibility.
 - Verify month/week/day navigation, event editing, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
-- Verify all four app languages, system-language mode, week-start settings, and light/dark appearance.
+- Verify all five app languages, system-language mode, week-start settings, and light/dark appearance.
 - Verify offline behavior and invalid or unavailable ICS sources.
 
 Release-preparation documents:

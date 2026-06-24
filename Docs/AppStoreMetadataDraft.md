@@ -7,7 +7,7 @@
 - App Name: TimeNest
 - Version: 1.0
 - Primary Language: Japanese (`ja`)
-- Supported Languages: `ja` / `zh-Hans` / `en` / `ko`
+- Supported Languages: `ja` / `zh-Hans` / `zh-Hant` / `en` / `ko`
 - Primary Category recommendation: Productivity
 - Secondary Category recommendation: Utilities
 - Support URL: https://songlabs.github.io/timenest/support.html
@@ -18,9 +18,10 @@
 ## Submission Guardrails
 
 - Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; Widget support; five UI languages; and local-first storage.
-- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, assistant-style recommendations, in-app purchases, or a remove-ads flow. They are not part of version 1.0.
+- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, automated recommendations, in-app purchases, or a remove-ads flow. They are not part of version 1.0.
 - Do not describe TimeNest as ad-free. Version 1.0 integrates Google Mobile Ads and is configured to display banner ads after the required consent flow permits ad requests.
 - **TODO:** Reconfirm banner behavior and Widget inclusion against the exact submitted build.
+- **TODO:** Draft and review Traditional Chinese (`zh-Hant`) App Store metadata before enabling that App Store Connect product-page locale.
 
 ## Japanese (`ja`) - Primary
 
@@ -42,7 +43,7 @@ TimeNest は、予定、シフト、勤務記録をひとつにまとめて管�
 
 月表示、週表示、日表示を切り替えながら予定を確認し、通常の予定と終日の予定を追加・編集・削除できます。シフトの登録、出退勤や休憩時間などの勤務記録、期間を指定した勤務統計にも対応しています。
 
-公開 HTTPS ICS を利用した日本、中国、韓国、米国の祝日購読に対応。日本語、簡体字中国語、英語、韓国語から表示言語を選択できます。ユーザーが作成した予定、シフト、勤務記録は基本的に端末内に保存され、ウィジェットでも端末内のカレンダー情報を確認できます。
+公開 HTTPS ICS を利用した日本、中国、台湾、韓国、米国の祝日購読に対応。日本語、簡体字中国語、繁体字中国語、英語、韓国語から表示言語を選択できます。ユーザーが作成した予定、シフト、勤務記録は基本的に端末内に保存され、ウィジェットでも端末内のカレンダー情報を確認できます。
 
 主な機能:
 - 月・週・日のカレンダー表示
@@ -50,9 +51,9 @@ TimeNest は、予定、シフト、勤務記録をひとつにまとめて管�
 - シフトの登録と管理
 - 出退勤、休憩時間などの勤務記録
 - 期間を指定した勤務統計
-- 日本、中国、韓国、米国の祝日購読
+- 日本、中国、台湾、韓国、米国の祝日購読
 - カレンダー情報を確認できるウィジェット
-- 日本語、簡体字中国語、英語、韓国語の表示
+- 日本語、簡体字中国語、繁体字中国語、英語、韓国語の表示
 - ユーザー作成データのローカル優先保存
 
 ### Keywords
@@ -79,7 +80,7 @@ TimeNest 是一款本地优先的日历 App，可集中管理日程、班次与�
 
 你可以在月、周、日视图之间切换，新增、编辑和删除普通日程或全天日程；还可以录入班次，记录上下班与休息时间，并按所选日期范围查看工作统计。
 
-TimeNest 支持通过公开 HTTPS ICS 来源订阅日本、中国、韩国和美国的节假日，并提供日语、简体中文、英语和韩语界面。用户创建的日程、班次和工作记录默认保存在设备本地，也可通过小组件查看设备上的日历信息。
+TimeNest 支持通过公开 HTTPS ICS 来源订阅日本、中国大陆、台湾、韩国和美国的节假日，并提供日语、简体中文、繁体中文、英语和韩语界面。用户创建的日程、班次和工作记录默认保存在设备本地，也可通过小组件查看设备上的日历信息。
 
 主要功能：
 - 月、周、日日历视图
@@ -87,9 +88,9 @@ TimeNest 支持通过公开 HTTPS ICS 来源订阅日本、中国、韩国和美
 - 班次录入与管理
 - 上下班、休息时间等工作记录
 - 指定日期范围的工作统计
-- 日本、中国、韩国和美国节假日订阅
+- 日本、中国大陆、台湾、韩国和美国节假日订阅
 - 日历小组件
-- 日语、简体中文、英语和韩语界面
+- 日语、简体中文、繁体中文、英语和韩语界面
 - 用户创建数据优先保存在本地
 
 ### Keywords
@@ -116,7 +117,7 @@ TimeNest is a local-first calendar app that brings schedules, shifts, and work r
 
 Switch between month, week, and day views. Create, edit, and delete timed or all-day events, manage shifts, record clock-in, clock-out, and break details, and review work statistics for a selected date range.
 
-Subscribe to supported public HTTPS ICS holiday sources for Japan, China, Korea, and the United States. Use TimeNest in Japanese, Simplified Chinese, English, or Korean. User-created schedules, shifts, and work records are stored on the device by default, and the Widget can display calendar information shared locally by the app.
+Subscribe to supported public HTTPS ICS holiday sources for Japan, mainland China, Taiwan, Korea, and the United States. Use TimeNest in Japanese, Simplified Chinese, Traditional Chinese, English, or Korean. User-created schedules, shifts, and work records are stored on the device by default, and the Widget can display calendar information shared locally by the app.
 
 Key features:
 - Month, week, and day calendar views
@@ -124,9 +125,9 @@ Key features:
 - Shift entry and management
 - Clock-in, clock-out, break, and other work records
 - Work statistics for a selected date range
-- Public-holiday subscriptions for Japan, China, Korea, and the United States
+- Public-holiday subscriptions for Japan, mainland China, Taiwan, Korea, and the United States
 - Calendar Widget
-- Japanese, Simplified Chinese, English, and Korean UI
+- Japanese, Simplified Chinese, Traditional Chinese, English, and Korean UI
 - Local-first storage for user-created data
 
 ### Keywords
@@ -153,7 +154,7 @@ TimeNest는 일정, 교대 근무와 근무 기록을 한곳에서 관리할 수
 
 월/주/일 보기를 전환하면서 일반 일정과 종일 일정을 추가, 편집, 삭제할 수 있습니다. 교대 근무를 입력하고 출퇴근 및 휴게 시간을 기록하며, 선택한 기간의 근무 통계를 확인할 수 있습니다.
 
-공개 HTTPS ICS를 이용해 일본, 중국, 한국, 미국의 공휴일을 구독할 수 있습니다. 일본어, 중국어 간체, 영어, 한국어 UI를 지원합니다. 사용자가 만든 일정, 교대 근무와 근무 기록은 기본적으로 기기에 저장되며, 위젯에서 앱이 로컬로 공유한 캘린더 정보를 확인할 수 있습니다.
+공개 HTTPS ICS를 이용해 일본, 중국 본토, 대만, 한국, 미국의 공휴일을 구독할 수 있습니다. 일본어, 중국어 간체, 중국어 번체, 영어, 한국어 UI를 지원합니다. 사용자가 만든 일정, 교대 근무와 근무 기록은 기본적으로 기기에 저장되며, 위젯에서 앱이 로컬로 공유한 캘린더 정보를 확인할 수 있습니다.
 
 주요 기능:
 - 월/주/일 캘린더 보기
@@ -161,9 +162,9 @@ TimeNest는 일정, 교대 근무와 근무 기록을 한곳에서 관리할 수
 - 교대 근무 입력 및 관리
 - 출퇴근, 휴게 시간 등의 근무 기록
 - 선택한 기간의 근무 통계
-- 일본, 중국, 한국, 미국 공휴일 구독
+- 일본, 중국 본토, 대만, 한국, 미국 공휴일 구독
 - 캘린더 위젯
-- 일본어, 중국어 간체, 영어, 한국어 UI
+- 일본어, 중국어 간체, 중국어 번체, 영어, 한국어 UI
 - 사용자 생성 데이터의 로컬 우선 저장
 
 ### Keywords

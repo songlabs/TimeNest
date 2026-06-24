@@ -16,7 +16,7 @@
 - [x] Debug and simulator builds use Google's official test IDs. Release device/archive builds are ad-enabled and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
 - [x] Both Release build-setting sources use the approved production AdMob App ID and Banner Unit ID.
 - [x] Google UMP now updates consent once per launch and gates Mobile Ads initialization and banner loading on `canRequestAds`. Publisher Privacy Treatment disables ad personalization.
-- [x] ATT is requested after the UMP consent flow and before Mobile Ads initialization/banner loading. `NSUserTrackingUsageDescription` is localized in all four supported languages.
+- [x] ATT is requested after the UMP consent flow and before Mobile Ads initialization/banner loading. `NSUserTrackingUsageDescription` is localized in all five supported languages.
 
 ## 1. Developer Program and App Store Connect
 
@@ -24,6 +24,7 @@
 - [ ] Confirm the App Store Connect app record uses the intended primary language and Bundle ID.
 - [ ] Fill app name, subtitle, description, keywords, promotional text, release notes, categories, age rating, pricing, and availability for each supported locale.
 - [x] Prepare Japanese-primary and `zh-Hans` / `en` / `ko` copy candidates in `Docs/AppStoreMetadataDraft.md`.
+- [ ] Draft and review `zh-Hant` App Store metadata before enabling that App Store Connect product-page locale.
 - [x] Prepare the copy candidate and manual configuration TODOs in `Docs/AppReviewNotesDraft.md`.
 - [ ] Fill review contact information and accurate review notes from the exact submitted build; no demo login is required because the current app has no account system.
 - [ ] Confirm all required App Store agreements, tax, and banking items that apply to the account.
@@ -42,8 +43,8 @@
 
 - [ ] Visually inspect the 1024x1024 marketing icon: no transparency, unintended padding, debug badge, or obsolete artwork.
 - [ ] Confirm App Store Connect displays the expected icon after build processing.
-- [ ] Recheck `ja`, `zh-Hans`, `en`, and `ko` key parity after any release-candidate change.
-- [ ] Verify all four languages plus System mode on device; confirm no raw localization keys or clipped release-critical text.
+- [ ] Recheck `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` key parity after any release-candidate change.
+- [ ] Verify all five languages plus System mode on device; confirm no raw localization keys or clipped release-critical text.
 - [ ] Keep user-entered event and custom shift names unchanged, and keep holiday names region-native.
 
 ## 4. Privacy, Permissions, Ads, and ATT
