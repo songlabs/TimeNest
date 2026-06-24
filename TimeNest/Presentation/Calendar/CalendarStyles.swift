@@ -40,7 +40,7 @@ struct ShiftCalendarColors {
     static let shiftStart = Color(red: 0.2, green: 0.65, blue: 0.95) // 水蓝色 - 入り
     static let shiftMorning = Color(red: 0.35, green: 0.75, blue: 0.92) // 浅蓝色 - 明け
     static let shiftDayOff = Color(red: 0.98, green: 0.35, blue: 0.38) // 珊瑚红 - 休み
-    static let shiftAfternoon = Color(red: 0.6, green: 0.35, blue: 0.88) // 紫色 - 午後
+    static let shiftAfternoon = Color(red: 0.6, green: 0.35, blue: 0.88) // 紫色班次
     static let shiftHalfRest = Color(red: 1.0, green: 0.55, blue: 0.72) // 粉色 - 半休
 }
 

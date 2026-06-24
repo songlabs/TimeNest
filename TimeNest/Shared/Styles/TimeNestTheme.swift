@@ -296,15 +296,69 @@ struct FloatingDatePickerPanel: View {
                 .datePickerStyle(.graphical)
             }
         case .time:
-            DatePicker(
-                "",
-                selection: $selection,
-                displayedComponents: [.hourAndMinute]
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .frame(height: 150)
+            HourMinute24Picker(selection: $selection)
         }
+    }
+}
+
+struct HourMinute24Picker: View {
+    @Binding var selection: Date
+
+    private let calendar = Calendar(identifier: .gregorian)
+    private let hours = Array(0...23)
+    private let minutes = Array(0...59)
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Picker("", selection: hourBinding) {
+                ForEach(hours, id: \.self) { hour in
+                    Text(String(format: "%02d", hour))
+                        .font(.body.monospacedDigit())
+                        .tag(hour)
+                }
+            }
+            .pickerStyle(.wheel)
+            .labelsHidden()
+            .frame(width: 96)
+            .clipped()
+
+            Picker("", selection: minuteBinding) {
+                ForEach(minutes, id: \.self) { minute in
+                    Text(String(format: "%02d", minute))
+                        .font(.body.monospacedDigit())
+                        .tag(minute)
+                }
+            }
+            .pickerStyle(.wheel)
+            .labelsHidden()
+            .frame(width: 96)
+            .clipped()
+        }
+        .frame(height: 150)
+    }
+
+    private var hourBinding: Binding<Int> {
+        Binding(
+            get: { calendar.component(.hour, from: selection) },
+            set: { selection = replacingTime(hour: $0, minute: nil) }
+        )
+    }
+
+    private var minuteBinding: Binding<Int> {
+        Binding(
+            get: { calendar.component(.minute, from: selection) },
+            set: { selection = replacingTime(hour: nil, minute: $0) }
+        )
+    }
+
+    private func replacingTime(hour: Int?, minute: Int?) -> Date {
+        var components = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second, .nanosecond],
+            from: selection
+        )
+        components.hour = hour ?? components.hour ?? 0
+        components.minute = minute ?? components.minute ?? 0
+        return calendar.date(from: components) ?? selection
     }
 }
 

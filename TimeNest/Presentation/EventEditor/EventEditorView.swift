@@ -1293,14 +1293,7 @@ private struct EventDateTimePickerPanel: View {
             )
             .datePickerStyle(.graphical)
         } else {
-            DatePicker(
-                "",
-                selection: $tempDate,
-                displayedComponents: [.hourAndMinute]
-            )
-            .datePickerStyle(.wheel)
-            .labelsHidden()
-            .frame(height: 150)
+            HourMinute24Picker(selection: $tempDate)
         }
     }
 

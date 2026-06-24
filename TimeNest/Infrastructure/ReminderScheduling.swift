@@ -189,10 +189,6 @@ final class LocalNotificationService: LocalNotificationScheduling {
             return LocalizationManager.shared.localized(.notificationEventStartingSoon)
         }
 
-        let formatter = DateFormatter()
-        formatter.locale = LocalizationManager.shared.currentLocale
-        formatter.dateStyle = .none
-        formatter.timeStyle = .short
-        return formatter.string(from: event.startDate)
+        return LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: event.startDate)
     }
 }
