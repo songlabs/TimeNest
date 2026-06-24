@@ -608,6 +608,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let system = TimeNestWidgetExtensionStrings.tr("Localizable", "language.system")
     /// 简体中文
     public static let zhHans = TimeNestWidgetExtensionStrings.tr("Localizable", "language.zh_hans")
+    /// 繁體中文
+    public static let zhHant = TimeNestWidgetExtensionStrings.tr("Localizable", "language.zh_hant")
   }
 
   public enum Notification: Sendable {

@@ -1,0 +1,400 @@
+/* Localizable strings for Traditional Chinese */
+
+/* Tab Titles */
+"tab.calendar" = "行事曆";
+"tab.list_calendar" = "列表";
+"tab.shift_input" = "班次輸入";
+"tab.shift_share" = "班次分享";
+
+/* Placeholder */
+"placeholder.coming_soon" = "即將推出";
+
+/* Settings */
+"settings.title" = "設定";
+"settings.language" = "語言";
+"settings.notification" = "通知";
+"settings.theme" = "主題";
+"settings.about" = "App 資訊";
+"settings.holiday_region" = "節假日";
+"settings.week_start" = "一週開始";
+
+/* Language Options */
+"language.system" = "系統預設";
+"language.zh_hans" = "簡體中文";
+"language.zh_hant" = "繁體中文";
+"language.ja" = "日本語";
+"language.ko" = "한국어";
+"language.en_us" = "English";
+
+/* Holiday Region */
+"region.japan" = "日本";
+"region.china" = "中國";
+"region.korea" = "韓國";
+"region.united_states" = "美國";
+
+/* Week Start */
+"week_start.system" = "系統預設";
+"week_start.sunday" = "週日";
+"week_start.monday" = "週一";
+"week_start.saturday" = "週六";
+
+/* Theme */
+"theme.light" = "淺色";
+"theme.dark" = "深色";
+"theme.system" = "系統預設";
+
+/* About */
+"about.version" = "版本";
+"about.developer" = "開發者";
+"about.developer_name" = "TimeNest 團隊";
+"about.privacy" = "隱私權政策";
+"about.terms" = "使用條款";
+
+/* Notification */
+"notification.enabled" = "啟用通知";
+"notification.time" = "通知時間";
+"notification.daily_schedule_check" = "請確認今天的行程";
+"notification.event_starting_soon" = "行程即將開始";
+"notification.permission_denied.title" = "通知權限已關閉";
+"notification.permission_denied.message" = "TimeNest 需要通知權限才能傳送行程提醒。請在 iOS 設定中開啟通知。";
+"notification.open_settings" = "開啟設定";
+"notification.reminder_time_past.title" = "提醒時間已過";
+"notification.reminder_time_past.message" = "行程已儲存，但提醒時間已過，未設定通知。";
+"notification.schedule_failed.title" = "提醒設定失敗";
+"notification.schedule_failed.message" = "行程已儲存，但提醒設定失敗。";
+
+/* Reminder Options */
+"reminder.none" = "無";
+"reminder.at_start" = "開始時";
+"reminder.five_minutes_before" = "5 分鐘前";
+"reminder.ten_minutes_before" = "10 分鐘前";
+"reminder.fifteen_minutes_before" = "15 分鐘前";
+"reminder.thirty_minutes_before" = "30 分鐘前";
+"reminder.one_hour_before" = "1 小時前";
+"reminder.one_day_before" = "1 天前";
+
+/* Calendar */
+"calendar.more_events_count" = "+%d";
+"calendar.add_event" = "新增行程";
+
+"event.not_found" = "找不到行程。";
+
+/* Shift Input */
+"shift_input.title" = "班次輸入";
+"shift_input.empty" = "沒有啟用的班次";
+
+/* Event Marker */
+"event_marker.day_off" = "休息";
+"event_marker.memo" = "備忘";
+"event_marker.transport" = "接送";
+"event_marker.health" = "健康";
+"event_marker.event" = "行程";
+
+/* View Mode */
+"view_mode.month" = "月";
+"view_mode.week" = "週";
+"view_mode.day" = "日";
+
+/* Common */
+"common.not_implemented" = "未實作";
+"common.save" = "儲存";
+"common.cancel" = "取消";
+"common.ok" = "確定";
+"common.ad_placeholder" = "AD / 廣告位";
+"common.detail" = "詳細";
+"common.done" = "完成";
+"common.reset" = "恢復預設";
+"common.today" = "今天";
+"common.more_menu" = "更多選單";
+"validation.title_required" = "請輸入標題";
+
+/* Year Month Picker */
+"picker.select_year_month" = "選擇年月";
+"picker.year_label" = "年";
+"picker.month_label" = "月";
+
+/* Event Editor */
+"editor.note" = "備註";
+"editor.title" = "標題";
+"editor.basic_info" = "基本資訊";
+"editor.date" = "日期";
+"editor.time" = "時間";
+"editor.all_day" = "全天";
+"editor.error" = "錯誤";
+"editor.save" = "儲存";
+"editor.cancel" = "取消";
+"editor.new_event" = "新增行程";
+"editor.edit_event" = "編輯行程";
+"editor.start" = "開始";
+"editor.end" = "結束";
+"editor.reminder" = "提醒";
+"editor.invalid_date_range" = "結束時間必須晚於開始時間。";
+"editor.workIn" = "上班";
+"editor.workOut" = "下班";
+"editor.restTime" = "休息時間";
+"editor.transportFee" = "交通費";
+"editor.hourlyRate" = "時薪";
+"editor.currencyUnit" = "元";
+
+/* Day Detail */
+"day_detail.title" = "行程";
+"day_detail.no_events" = "暫無行程";
+"day_detail.add_event" = "新增行程";
+
+/* Holiday Region Selection */
+"holiday_region.selection_title" = "選擇節假日";
+"holiday_region.max_limit" = "節假日最多可選擇 2 個";
+"holiday_region.min_limit" = "至少需要選擇 1 個節假日";
+
+/* Holiday Subscription */
+"holiday_subscription.settings_title" = "節假日訂閱";
+"holiday_subscription.list_header" = "訂閱的地區";
+"holiday_subscription.source_settings" = "訂閱來源設定";
+"holiday_subscription.refresh" = "手動重新整理";
+"holiday_subscription.max_limit_note" = "最多可啟用 2 個訂閱";
+"holiday_subscription.none" = "未啟用";
+"holiday_subscription.no_subscriptions" = "沒有訂閱";
+"holiday_subscription.no_subscriptions_description" = "請新增訂閱來源";
+"holiday_subscription.synced" = "已同步";
+"holiday_subscription.sync_failed" = "同步失敗";
+"holiday_subscription.not_synced" = "未同步";
+"holiday_subscription.sync_error" = "同步錯誤";
+"holiday_subscription.no_url" = "未設定";
+
+/* Holiday Source Settings */
+"holiday_source.url_header" = "訂閱來源 URL";
+"holiday_source.url_footer" = "請輸入有效的 HTTPS URL";
+"holiday_source.default" = "預設值";
+"holiday_source.default_url_provider" = "預設值 URL 由 Office Holidays (officeholidays.com) 提供";
+"holiday_source.test_sync" = "測試";
+"holiday_source.error" = "錯誤";
+"holiday_source.enable_first" = "請先啟用此訂閱";
+"holiday_source.no_events" = "下載的 ICS 中沒有事件";
+"holiday_source.test_success" = "成功解析 %d 個事件";
+"holiday_source.test_success_title" = "同步測試成功";
+
+/* Holiday Recommended Sources */
+"holiday_source.recommended_section" = "推薦訂閱來源";
+"holiday_source.no_recommended_sources" = "暫無推薦來源";
+"holiday_source.third_party_notice" = "此訂閱來源由第三方提供，準確性和可用性取決於提供者。";
+"holiday_source.use_recommended_source_title" = "使用此推薦來源？";
+"holiday_source.use_recommended_source_message" = "此訂閱來源由第三方提供，準確性和可用性取決於提供者。";
+"holiday_source.use_recommended_source_confirm" = "使用";
+"holiday_source.office_holidays_description" = "由 Office Holidays (officeholidays.com) 提供";
+"holiday_source.office_holidays_clean_description" = "由 Office Holidays (Clean) (officeholidays.com) 提供";
+
+/* Holiday Subscription Errors */
+"holiday_subscription.source_not_found" = "找不到訂閱來源";
+
+/* Holiday Subscription Manager Errors */
+"holiday_subscription.error.max_limit_exceeded" = "最多只能啟用 2 個訂閱";
+"holiday_subscription.error.invalid_url" = "無效的 URL";
+"holiday_subscription.error.download_failed" = "下載失敗：%@";
+"holiday_subscription.error.parse_failed" = "解析失敗：%@";
+"holiday_subscription.error.sync_in_progress" = "同步正在進行中";
+
+/* Holiday Subscription Sync Alert */
+"holiday_subscription.sync_success_title" = "同步成功";
+"holiday_subscription.sync_success_message" = "已成功重新整理節假日訂閱。";
+"holiday_subscription.sync_failed_title" = "同步失敗";
+
+/* File Sharing */
+"file_sharing.title" = "資料分享";
+"file_sharing.export" = "匯出時間表";
+"file_sharing.export_header" = "匯出";
+"file_sharing.export_footer" = "將目前時間表匯出為 .timenest 檔案";
+"file_sharing.export_title" = "TimeNest 時間表";
+"file_sharing.import" = "匯入時間表";
+"file_sharing.import_header" = "匯入";
+"file_sharing.import_footer" = "從 .timenest 檔案匯入行程";
+"file_sharing.import_result" = "匯入結果";
+"file_sharing.imported_count" = "成功匯入";
+"file_sharing.skipped_count" = "略過/失敗";
+"file_sharing.info" = "匯出的檔案可以透過 AirDrop、LINE、電子郵件等方式分享給其他裝置。匯入時會將行程加入現有列表，不會覆蓋既有行程。";
+
+/* File Sharing Errors */
+"file_sharing.error.decode_failed" = "檔案解析失敗";
+"file_sharing.error.import_failed" = "行程匯入失敗";
+"file_sharing.error.no_events" = "檔案中沒有可匯入的行程";
+"file_sharing.error.partial_import_failed" = "部分行程匯入失敗";
+"file_sharing.error.file_not_found" = "找不到檔案";
+"file_sharing.error.invalid_data" = "檔案格式無效";
+"file_sharing.error.schema_version_mismatch" = "不支援的檔案版本";
+"file_sharing.error.serialization_failed" = "匯出檔案格式化失敗";
+"file_sharing.error.write_failed" = "檔案寫入失敗";
+"file_sharing.error.parse_failed" = "解析失敗";
+
+/* ICS Errors */
+"ics.error.invalid_url" = "URL 不正確。";
+"ics.error.unsupported_scheme" = "請輸入 HTTPS 或 HTTP URL。";
+"ics.error.network" = "ICS 取得失敗：%@";
+"ics.error.invalid_http_status" = "ICS 取得失敗。HTTP 狀態：%d";
+"ics.error.empty_response" = "ICS 資料為空。";
+"ics.error.invalid_encoding" = "無法讀取 ICS 資料編碼。";
+"ics.error.invalid_content" = "取得的資料不是有效的 iCalendar 格式。";
+"ics.error.no_events" = "下載的 ICS 中沒有節假日資料，請嘗試其他 URL。";
+"ics.error.parse_failed" = "ICS 解析失敗：%@";
+"ics.error.too_large" = "ICS 檔案過大（%d bytes > %d bytes）";
+"ics_parse.error.invalid_format" = "無效的 ICS 格式";
+"ics_parse.error.empty_content" = "ICS 內容為空";
+"ics_parse.error.parse_failed" = "第 %d 行解析失敗：%@";
+"ics_parse.error.invalid_date" = "無效的日期格式：%@";
+"ics_parse.error.missing_required_field" = "缺少必填欄位：%@";
+
+/* App Errors */
+"app_error.persistence" = "持久化操作失敗";
+"app_error.validation" = "驗證失敗";
+"app_error.permission_denied" = "權限遭拒";
+"app_error.notification" = "通知操作失敗";
+"app_error.holiday_data" = "節假日資料取得失敗";
+"app_error.unknown" = "未知錯誤";
+
+/* Shift Time */
+"shift_time.settings_title" = "自訂班次時間";
+"shift.common" = "常用班次";
+"shift.day" = "白班";
+"shift.night" = "夜班";
+"shift.start" = "開始";
+"shift.day_start" = "白班開始時間";
+"shift.day_end" = "白班結束時間";
+"shift.night_start" = "夜班開始時間";
+"shift.night_end" = "夜班結束時間";
+"shift.end" = "結束";
+"shift.enabled" = "啟用";
+"shift.disabled" = "未啟用";
+"shift_time.start_time" = "開始時間";
+"shift_time.end_time" = "結束時間";
+"shift_time.edit_footer" = "設定開始和結束時間。若是跨夜班次，結束時間可以早於開始時間。";
+"shift_time.display_name" = "顯示名稱";
+"shift_time.note" = "備註";
+"shift_time.color" = "顏色";
+"shift_time.add_button" = "新增班次";
+"shift_time.new_shift_name" = "新班次";
+"shift_time.edit_shift_title" = "編輯班次";
+"shift_time.delete_button" = "刪除";
+
+/* Work Statistics */
+"work_statistics.title" = "打工統計";
+"work_statistics" = "統計";
+"work_statistics.start_date_month" = "開始日期";
+"work_statistics.end_date_month" = "結束日期";
+"work_statistics.column_date" = "日期";
+"work_statistics.column_time" = "時間";
+"work_statistics.column_amount" = "金額";
+"work_statistics.column_total" = "總計";
+"work_statistics.total_hours" = "合計時間";
+"work_statistics.total_amount" = "合計金額";
+"work_statistics.loading" = "載入中...";
+"work_statistics.empty_title" = "暫無統計資料";
+"work_statistics.empty_message" = "請調整篩選條件後點擊統計按鈕";
+
+/* Work Info overwrite confirmation */
+"editor.work_in_overwrite_title" = "是否覆蓋已有上班資料？";
+"editor.work_in_overwrite_message" = "這一天已經存在上班資料。是否用目前時間覆蓋？";
+"editor.work_out_overwrite_title" = "是否覆蓋已有下班資料？";
+"editor.work_out_overwrite_message" = "這一天已經存在下班資料。是否用目前時間覆蓋？";
+"editor.work_overwrite_button" = "覆蓋";
+"editor.work_overwrite_cancel_button" = "取消";
+"work.nextDayPrefix" = "次日";
+
+/* Help */
+"settings.support" = "支援";
+"help.title" = "說明";
+"help.contact" = "聯絡我們";
+"help.frequently_asked_questions" = "常見問題";
+"help.contact.email_subject" = "TimeNest 諮詢";
+"help.contact.email_body" = "\n\n---\nApp 版本：%@\n建置版本：%@\niOS 版本：%@\n語言：%@";
+"help.mail_unavailable.title" = "無法開啟郵件";
+"help.mail_unavailable.message" = "無法開啟郵件 App。請複製 %@ 並手動聯絡我們。";
+"help.copy_email" = "複製電子郵件地址";
+
+"help.category.events" = "新增與編輯行程";
+"help.category.views" = "月、週、日視圖";
+"help.category.holidays" = "節假日與休息日";
+"help.category.shifts" = "班次與工作記錄";
+"help.category.ads" = "廣告";
+"help.category.privacy" = "資料與隱私";
+
+"help.events.add.question" = "如何新增行程？";
+"help.events.add.answer" = "點擊行事曆右下角的新增按鈕，填寫內容後儲存。";
+"help.events.all_day.question" = "什麼是全天行程？";
+"help.events.all_day.answer" = "不指定開始和結束時間，並作為一整天的行程顯示。";
+"help.events.edit_delete.question" = "如何編輯或刪除行程？";
+"help.events.edit_delete.answer" = "從日期中開啟行程詳情，點擊行程進行編輯，或使用刪除按鈕。";
+
+"help.views.switch.question" = "如何切換視圖？";
+"help.views.switch.answer" = "在行事曆底部的「月、週、日」中選擇視圖。";
+"help.views.today.question" = "如何返回今天？";
+"help.views.today.answer" = "點擊行事曆底部的「今天」。";
+"help.views.move.question" = "如何切換月份或週？";
+"help.views.move.answer" = "使用頂部的前後按鈕，或在行事曆上左右滑動。";
+
+"help.holidays.show.question" = "如何顯示節假日？";
+"help.holidays.show.answer" = "在設定的「節假日」中啟用要顯示的地區。";
+"help.holidays.missing.question" = "沒有顯示節假日怎麼辦？";
+"help.holidays.missing.answer" = "請確認地區的訂閱狀態，並在節假日設定頁面中重新整理。";
+"help.holidays.language.question" = "關於節假日名稱的語言";
+"help.holidays.language.answer" = "節假日名稱會使用所選地區對應的語言顯示。";
+
+"help.shifts.add.question" = "如何新增班次？";
+"help.shifts.add.answer" = "從行事曆頂部選單開啟「班次輸入」，選擇日期後點擊班次按鈕即可新增。新增後會顯示在月、週、日視圖中。";
+"help.shifts.multiple.question" = "一天可以新增多個班次嗎？";
+"help.shifts.multiple.answer" = "同一天只能保留一個班次。已經有班次時，再選擇其他班次會覆蓋當天原有班次，但不會刪除一般行程、上班記錄或下班記錄。";
+"help.shifts.replace.question" = "如何修改當天班次？";
+"help.shifts.replace.answer" = "再次進入「班次輸入」，選擇同一天並點擊新的班次即可替換。取消按鈕只用於刪除目前日期的班次，不會影響其他行程。";
+"help.shifts.change_time.question" = "如何自訂班次時間？";
+"help.shifts.change_time.answer" = "在設定的「自訂班次時間」中，可以修改白班、夜班和自訂班次的名稱、開始時間、結束時間與顏色。修改後會用於之後建立的班次。";
+"help.shifts.difference.question" = "班次和工作記錄有什麼差異？";
+"help.shifts.difference.answer" = "班次表示預定的工作安排，例如白班或夜班。工作記錄表示實際的上班、下班、休息時間、時薪和交通費，用於工作統計。";
+"help.shifts.record.question" = "如何記錄上班和下班？";
+"help.shifts.record.answer" = "在新增或編輯行程時，可以輸入上班時間、下班時間、休息時間、時薪和交通費。儲存後，這些資訊會作為工作記錄參與統計。";
+"help.shifts.overnight.question" = "隔天下班如何處理？";
+"help.shifts.overnight.answer" = "夜班等跨日工作時，下班時間可以記錄為次日。統計時會按從上班到次日下班的實際時間計算，並扣除休息時間。";
+"help.shifts.statistics.question" = "工作統計如何計算？";
+"help.shifts.statistics.answer" = "工作統計會根據已記錄的上班時間、下班時間、休息時間、時薪和交通費計算。基本規則是：工作時間 = 下班時間 - 上班時間 - 休息時間；薪資 = 工作時間 × 時薪；合計 = 薪資 + 交通費。";
+"help.shifts.statistics_missing.question" = "為什麼統計結果沒有顯示？";
+"help.shifts.statistics_missing.answer" = "請確認目標期間內已經儲存了上班和下班記錄，並且時薪等必要資訊已輸入。只有班次本身不會自動產生薪資統計。";
+
+"help.ads.about.question" = "關於廣告";
+"help.ads.about.answer" = "為了支援 TimeNest 的營運，App 中可能會顯示廣告。目前版本不提供購買去廣告功能。";
+
+"help.privacy.storage.question" = "資料儲存在哪裡？";
+"help.privacy.storage.answer" = "行程和班次等資料會儲存在此裝置中。";
+"help.privacy.account.question" = "需要帳號嗎？";
+"help.privacy.account.answer" = "使用 TimeNest 不需要註冊帳號。";
+"help.privacy.delete_app.question" = "刪除 App 後資料會怎樣？";
+"help.privacy.delete_app.answer" = "刪除 App 後，儲存在裝置內的 TimeNest 資料也會被刪除。";
+"help.privacy.options.action" = "管理廣告隱私選項";
+"help.privacy.options.description" = "查看或修改此裝置上的廣告隱私選擇。";
+"help.privacy.options.error_title" = "無法開啟隱私選項";
+"help.privacy.options.error_message" = "請稍後再試。";
+
+"third_party_licenses.title" = "第三方授權";
+"third_party_licenses.description" = "TimeNest 使用以下第三方元件。完整聲明保留在專案的 ThirdPartyNotices 文件中。";
+"third_party_licenses.license_type" = "授權";
+"third_party_licenses.repository" = "查看原始碼倉庫";
+"third_party_licenses.google_mobile_ads" = "Google Mobile Ads Swift Package Manager wrapper";
+"third_party_licenses.user_messaging_platform" = "Google User Messaging Platform Swift Package Manager wrapper";
+"third_party_licenses.apache_2" = "Apache-2.0";
+"third_party_licenses.google_copyright" = "Copyright 2021 Google LLC";
+
+/* Widgets */
+"widget.calendar.title" = "行事曆";
+"widget.calendar.description" = "顯示目前月份。";
+"widget.monthSchedule.title" = "本月行程";
+"widget.monthSchedule.description" = "顯示本月每天的簡要行程。";
+"widget.twoMonths.title" = "本月和下月";
+"widget.twoMonths.description" = "並排顯示兩個月份。";
+"widget.weekSchedule.title" = "本週行程";
+"widget.weekSchedule.description" = "顯示本週班次、節假日和行程。";
+"widget.upcoming.title" = "近期行程與行事曆";
+"widget.upcoming.description" = "顯示近期行程和目前月行事曆。";
+"widget.accessory.title" = "今日摘要";
+"widget.accessory.description" = "在鎖定畫面、待機顯示和手錶上顯示今日摘要。";
+"widget.noEventsToday" = "今天沒有行程";
+"widget.nextEvent" = "下一項";
+"widget.allDay" = "全天";
+"widget.today" = "今天";
+"widget.tomorrow" = "明天";
+"widget.shift" = "班次";
+"widget.holiday" = "節假日";

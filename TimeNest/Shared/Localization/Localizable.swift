@@ -26,6 +26,7 @@ enum LocalizedString: String {
 
     case languageSystem = "language.system"
     case languageSimplifiedChinese = "language.zh_hans"
+    case languageTraditionalChinese = "language.zh_hant"
     case languageJapanese = "language.ja"
     case languageKorean = "language.ko"
     case languageEnglish = "language.en_us"

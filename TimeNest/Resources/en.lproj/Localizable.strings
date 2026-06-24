@@ -21,6 +21,7 @@
 /* Language Options */
 "language.system" = "System Default";
 "language.zh_hans" = "简体中文";
+"language.zh_hant" = "繁體中文";
 "language.ja" = "日本語";
 "language.ko" = "한국어";
 "language.en_us" = "English";

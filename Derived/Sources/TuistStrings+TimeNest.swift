@@ -617,6 +617,8 @@ public enum TimeNestStrings: Sendable {
       public static let system = TimeNestStrings.tr("Localizable", "language.system")
       /// 简体中文
       public static let zhHans = TimeNestStrings.tr("Localizable", "language.zh_hans")
+      /// 繁體中文
+      public static let zhHant = TimeNestStrings.tr("Localizable", "language.zh_hant")
     }
 
     public enum Notification: Sendable {

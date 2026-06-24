@@ -62,6 +62,7 @@ struct SettingsView: View {
                         options: [
                             SettingsPickerOption(title: localization.localized(.languageSystem), tag: "system"),
                             SettingsPickerOption(title: localization.localized(.languageSimplifiedChinese), tag: "zhHans"),
+                            SettingsPickerOption(title: localization.localized(.languageTraditionalChinese), tag: "zh-Hant"),
                             SettingsPickerOption(title: localization.localized(.languageJapanese), tag: "ja"),
                             SettingsPickerOption(title: localization.localized(.languageKorean), tag: "ko"),
                             SettingsPickerOption(title: localization.localized(.languageEnglish), tag: "enUS")

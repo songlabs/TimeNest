@@ -454,7 +454,7 @@ extension ShiftCalendarColors {
     }
 
     private static func weekdaySymbols(at sundayBasedIndex: Int) -> Set<String> {
-        let languages: [DisplayLanguage] = [.zhHans, .ja, .ko, .enUS, .system]
+        let languages: [DisplayLanguage] = [.zhHans, .zhHant, .ja, .ko, .enUS, .system]
         return Set(languages.flatMap { language in
             let shortSymbols = LocalizationManager.shared.shortWeekdaySymbols(language: language, weekStartPolicy: .sunday)
             let fullSymbols = LocalizationManager.shared.fullWeekdaySymbols(language: language, weekStartPolicy: .sunday)

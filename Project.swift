@@ -85,7 +85,7 @@ let project = Project(
                 "TimeNest/Shared/Widgets/**"
             ],
             resources: [
-                "TimeNest/Resources/{zh-Hans,ja,en,ko}.lproj/Localizable.strings"
+                "TimeNest/Resources/{zh-Hans,zh-Hant,ja,en,ko}.lproj/Localizable.strings"
             ],
             settings: Settings.settings(
                 base: [

@@ -80,19 +80,33 @@ final class LocalizationManager: ObservableObject {
             return "ja"
         case "zhHans":
             return "zh-Hans"
+        case "zh-Hant":
+            return "zh-Hant"
         case "enUS":
             return "en"
         case "ko":
             return "ko"
         case "system":
-            let languageCode = Locale.current.language.languageCode?.identifier ?? "en"
-            if languageCode == "zh" {
-                return "zh-Hans"
-            }
-            return languageCode
+            return systemBundleName()
         default:
             return languageCode
         }
+    }
+
+    private func systemBundleName() -> String {
+        let languageCode = Locale.current.language.languageCode?.identifier ?? "en"
+        if languageCode == "zh" {
+            return usesTraditionalChinese(Locale.current) ? "zh-Hant" : "zh-Hans"
+        }
+        return languageCode
+    }
+
+    private func usesTraditionalChinese(_ locale: Locale) -> Bool {
+        let identifier = locale.identifier.lowercased()
+        return identifier.contains("hant")
+            || identifier.contains("_tw")
+            || identifier.contains("_hk")
+            || identifier.contains("_mo")
     }
 
     /// 根据语言代码获取对应的 Bundle
@@ -119,6 +133,8 @@ final class LocalizationManager: ObservableObject {
             return .current
         case .zhHans:
             return Locale(identifier: "zh_Hans_CN")
+        case .zhHant:
+            return Locale(identifier: "zh_Hant_TW")
         case .ja:
             return Locale(identifier: "ja_JP")
         case .ko:
@@ -217,7 +233,7 @@ final class LocalizationManager: ObservableObject {
     /// - Returns: 本地化后的月份标题
     func monthTitle(year: Int, month: Int, language: DisplayLanguage) -> String {
         switch effectiveCalendarLanguage(for: language) {
-        case .zhHans:
+        case .zhHans, .zhHant:
             return "\(year)年\(month)月"
         case .ja:
             return "\(year)年\(month)月"
@@ -249,7 +265,7 @@ final class LocalizationManager: ObservableObject {
         let weekdayText = shortWeekdaySymbol(for: date, language: currentLanguage)
 
         switch effectiveCalendarLanguage(for: currentLanguage) {
-        case .zhHans, .ja:
+        case .zhHans, .zhHant, .ja:
             return "\(year)年\(month)月\(day)日（\(weekdayText)）"
         case .ko:
             return "\(year)년 \(month)월 \(day)일 (\(weekdayText))"
@@ -275,7 +291,7 @@ final class LocalizationManager: ObservableObject {
     /// - Returns: 本地化后的月份名称
     func monthName(for month: Int, language: DisplayLanguage) -> String {
         switch effectiveCalendarLanguage(for: language) {
-        case .zhHans, .ja:
+        case .zhHans, .zhHant, .ja:
             return "\(month)月"
         case .ko:
             return "\(month)월"
@@ -312,7 +328,7 @@ final class LocalizationManager: ObservableObject {
         let weekdaySymbol = shortWeekdaySymbol(for: date, language: language)
 
         switch effectiveCalendarLanguage(for: language) {
-        case .zhHans, .ja:
+        case .zhHans, .zhHant, .ja:
             return "\(month)/\(day)（\(weekdaySymbol)）"
         case .ko:
             return "\(month)월 \(day)일 (\(weekdaySymbol))"
@@ -348,7 +364,7 @@ final class LocalizationManager: ObservableObject {
             let languageCode = Locale.current.language.languageCode?.identifier ?? "en"
             switch languageCode {
             case "zh":
-                return .zhHans
+                return usesTraditionalChinese(Locale.current) ? .zhHant : .zhHans
             case "ja":
                 return .ja
             case "ko":
@@ -365,7 +381,7 @@ final class LocalizationManager: ObservableObject {
 
     private func shouldUseVeryShortWeekdaySymbols(for language: DisplayLanguage) -> Bool {
         switch effectiveCalendarLanguage(for: language) {
-        case .zhHans:
+        case .zhHans, .zhHant:
             return true
         case .system, .ja, .ko, .enUS:
             return false

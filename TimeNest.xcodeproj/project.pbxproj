@@ -299,6 +299,7 @@
 		FBCEC70F2B3E77FD47089A18 /* ReminderStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStatus.swift; sourceTree = "<group>"; };
 		FCCB9B14D63BBB681C058FEA /* CalendarHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarHeaderView.swift; sourceTree = "<group>"; };
 		FD1AB696AB99496E6CA73548 /* AdMobBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobBannerView.swift; sourceTree = "<group>"; };
+		FDC36B599AA82939C34B993F /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		FF57316C5D15E12E25C46D3D /* InMemoryReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryReminderRepository.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -826,6 +827,7 @@
 				ja,
 				ko,
 				"zh-Hans",
+				"zh-Hant",
 			);
 			mainGroup = 3E07FB5761A2775BE17A7FF3;
 			packageReferences = (
@@ -1055,6 +1057,7 @@
 				5C542F8ABD886FDBF6BE6E30 /* ja */,
 				BF164A3A542847D9266063B7 /* ko */,
 				7C4251982C80EB3BB5CEEF79 /* zh-Hans */,
+				FDC36B599AA82939C34B993F /* zh-Hant */,
 			);
 			name = Localizable.strings;
 			sourceTree = "<group>";

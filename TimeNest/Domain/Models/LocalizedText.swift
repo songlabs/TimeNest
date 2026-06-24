@@ -57,6 +57,8 @@ struct LocalizedText: Codable, Hashable {
             return zhHans
         case .zhHans:
             return zhHans
+        case .zhHant:
+            return zhHans
         case .ja:
             return ja
         case .ko:
