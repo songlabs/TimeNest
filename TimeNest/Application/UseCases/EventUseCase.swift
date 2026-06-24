@@ -84,6 +84,12 @@ class EventUseCase {
                 return [makeOccurrence(event: event, occurrenceDate: occurrenceDate)]
             }
 
+            // 班次事件只生成一个 occurrence，使用 startDate 的日期
+            if event.shiftTemplateID != nil {
+                let occurrenceDate = calendar.startOfDay(for: event.startDate)
+                return [makeOccurrence(event: event, occurrenceDate: occurrenceDate)]
+            }
+
             return coveredDates(for: event, in: range, calendar: calendar).map { occurrenceDate in
                 makeOccurrence(event: event, occurrenceDate: occurrenceDate)
             }
