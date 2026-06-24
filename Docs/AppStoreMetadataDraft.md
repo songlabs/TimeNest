@@ -17,8 +17,8 @@
 
 ## Submission Guardrails
 
-- Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; Widget support; four UI languages; and local-first storage.
-- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, AI, in-app purchases, or a remove-ads flow. They are not part of version 1.0.
+- Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; Widget support; five UI languages; and local-first storage.
+- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, assistant-style recommendations, in-app purchases, or a remove-ads flow. They are not part of version 1.0.
 - Do not describe TimeNest as ad-free. Version 1.0 integrates Google Mobile Ads and is configured to display banner ads after the required consent flow permits ad requests.
 - **TODO:** Reconfirm banner behavior and Widget inclusion against the exact submitted build.
 

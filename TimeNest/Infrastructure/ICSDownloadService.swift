@@ -113,7 +113,6 @@ class ICSDownloadService: ICSDownloading {
             throw EnhancedICSError.noEvents
         }
 
-        // DEBUG: body 级别日志
     }
 
     /// 检查是否为 Office Holidays URL

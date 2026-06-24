@@ -72,7 +72,7 @@ struct WidgetMonthGridView: View {
     }
 
     private func headerColor(at index: Int) -> Color {
-        guard let firstDay = month.days.first, month.days.count >= 7 else { return .secondary }
+        guard month.days.count >= 7 else { return .secondary }
         return WidgetStyle.weekdayColor(month.days[index].weekday)
     }
 }

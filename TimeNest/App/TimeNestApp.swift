@@ -8,7 +8,7 @@ struct TimeNestApp: App {
     private let modelContainer: ModelContainer
     private let eventRepository: EventRepository
     private let reminderRepository: ReminderRepository
-    private let reminderScheduler: ReminderScheduling = MockReminderScheduler()
+    private let reminderScheduler: ReminderScheduling = NoopReminderScheduler()
     private let holidayProvider: HolidayProviding = BundleHolidayProvider()
     private let notificationScheduler: LocalNotificationScheduling = LocalNotificationService()
 

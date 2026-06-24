@@ -22,7 +22,6 @@
 		13E79476E0BB4CF697FB635B /* ExternalCalendarImporting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C98100FA71A91F736E6AF2A /* ExternalCalendarImporting.swift */; };
 		17FAC0999A8B042A0368B9F5 /* ReminderTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BFFD56050E1512F5607B0CE /* ReminderTemplate.swift */; };
 		1C361F9D6B021DF0E9677D5C /* WidgetSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2A4A6D16469A4E399934511 /* WidgetSupport.swift */; };
-		1CF36EFDAD51EA5F17C8D63E /* WeatherProviding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93533B240DB94378B39CB486 /* WeatherProviding.swift */; };
 		1D387706340E1269D7657A49 /* HolidayNameLocalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2402FC9F05631D686365D6EE /* HolidayNameLocalizer.swift */; };
 		1DE97C99308A4D7C3FE1738B /* InMemoryEventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = D506BFDB5D4E6C2C4B100221 /* InMemoryEventRepository.swift */; };
 		213AF874F3964CEB0CAE9B05 /* HolidaySourceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F719FA6BB1CF0D06E842DAA /* HolidaySourceSettingsView.swift */; };
@@ -108,14 +107,13 @@
 		DE6CB8DC70D489E1A1C12957 /* EventOccurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13D7D01D8B0BE74AB549A4 /* EventOccurrence.swift */; };
 		DF4E022EDA878C2B86680F04 /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C109F88ABA8B7460D5381E89 /* LocalizationManager.swift */; };
 		E0195D25135AD75438254F40 /* SettingsAndStatisticsLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 699CA3294F4766305E8F0475 /* SettingsAndStatisticsLogicTests.swift */; };
-		E3F5D37201B9CC7AC2B20A1E /* MockWeatherProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EC1E527E978E1282C8B12DD /* MockWeatherProvider.swift */; };
 		E49E6EB29A391ECB00088F4D /* CalendarStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2B79C74CDC902B76AD477B0 /* CalendarStyles.swift */; };
 		EABE3524AFD0F00FFBBF2228 /* CalendarAdBannerContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = EFCF5B32C23FA036EF957A1F /* CalendarAdBannerContainer.swift */; };
 		EACD70DA0475843CFE1EFC26 /* TuistStrings+TimeNest.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD60AC012AFD4FB0D80E74A4 /* TuistStrings+TimeNest.swift */; };
 		ED55F5AA8BA20313B0D4A40D /* ReminderStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2112727B74951811FF87468E /* ReminderStep.swift */; };
 		F070011046E45E3F7915ACCD /* ShiftTimeTemplateID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */; };
 		F6926445027ACF53819DE6D7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D916BD562FD27692278BE08C /* SettingsView.swift */; };
-		F74CA824A6ACBB372519EDCD /* MockReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80CB77277B26A74D98EF25C3 /* MockReminderScheduler.swift */; };
+		F74CA824A6ACBB372519EDCD /* NoopReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80CB77277B26A74D98EF25C3 /* NoopReminderScheduler.swift */; };
 		F8DA7139680EDB332AE1B2E6 /* SwiftDataReminderEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B26128BDCDE6FD0907625F /* SwiftDataReminderEntity.swift */; };
 		FB7C124BB79025D299359E52 /* TuistStrings+TimeNestWidgetExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628806BD83D5701C69BE9FE7 /* TuistStrings+TimeNestWidgetExtension.swift */; };
 /* End PBXBuildFile section */
@@ -229,7 +227,6 @@
 		698213AABC972D7419FB4E0E /* TimeNestApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestApp.swift; sourceTree = "<group>"; };
 		699CA3294F4766305E8F0475 /* SettingsAndStatisticsLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsAndStatisticsLogicTests.swift; sourceTree = "<group>"; };
 		6BFFD56050E1512F5607B0CE /* ReminderTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderTemplate.swift; sourceTree = "<group>"; };
-		6EC1E527E978E1282C8B12DD /* MockWeatherProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockWeatherProvider.swift; sourceTree = "<group>"; };
 		74DD9EB269476F6F4BF47DEB /* HolidayProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayProviding.swift; sourceTree = "<group>"; };
 		7B40494292AA8D28240524F2 /* WeekCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekCalendarView.swift; sourceTree = "<group>"; };
 		7C13D7D01D8B0BE74AB549A4 /* EventOccurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventOccurrence.swift; sourceTree = "<group>"; };
@@ -237,7 +234,7 @@
 		7C4251982C80EB3BB5CEEF79 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		7ECE250FA345A1F3AD59B44C /* HolidayEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayEvent.swift; sourceTree = "<group>"; };
 		7F0E80203EF1356D852C7E9F /* DayCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayCalendarView.swift; sourceTree = "<group>"; };
-		80CB77277B26A74D98EF25C3 /* MockReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockReminderScheduler.swift; sourceTree = "<group>"; };
+		80CB77277B26A74D98EF25C3 /* NoopReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoopReminderScheduler.swift; sourceTree = "<group>"; };
 		859200B953D65910745C1393 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		86D32FB2CE7ACD239BD9C9FC /* TimeNestTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestTheme.swift; sourceTree = "<group>"; };
 		8766BACE67A7E6BF321F82A9 /* MonthCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarViewModel.swift; sourceTree = "<group>"; };
@@ -245,7 +242,6 @@
 		8FBC4D499458C56E0E57EEFB /* TimeNestWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestWidgetBundle.swift; sourceTree = "<group>"; };
 		906DCCE7EA6A1C66D6D3B2E0 /* WorkStatisticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkStatisticsViewModel.swift; sourceTree = "<group>"; };
 		929ABE66D20FB8733BAE61C3 /* ReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRepository.swift; sourceTree = "<group>"; };
-		93533B240DB94378B39CB486 /* WeatherProviding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherProviding.swift; sourceTree = "<group>"; };
 		93A6B84A5B4D2D14C5C53257 /* SwiftDataReminderMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataReminderMapper.swift; sourceTree = "<group>"; };
 		97E3A9728F3DA57418BB27CD /* RecurrenceRule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecurrenceRule.swift; sourceTree = "<group>"; };
 		9AD8EA6A72E89D0CF8F82BDA /* HolidayUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayUseCase.swift; sourceTree = "<group>"; };
@@ -299,6 +295,7 @@
 		FBCEC70F2B3E77FD47089A18 /* ReminderStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStatus.swift; sourceTree = "<group>"; };
 		FCCB9B14D63BBB681C058FEA /* CalendarHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarHeaderView.swift; sourceTree = "<group>"; };
 		FD1AB696AB99496E6CA73548 /* AdMobBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobBannerView.swift; sourceTree = "<group>"; };
+		FDC36B599AA82939C34B993E /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		FDC36B599AA82939C34B993F /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		FF57316C5D15E12E25C46D3D /* InMemoryReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryReminderRepository.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -582,11 +579,9 @@
 				0063E05B7A32EFB216D87281 /* ICSParsingService.swift */,
 				D506BFDB5D4E6C2C4B100221 /* InMemoryEventRepository.swift */,
 				FF57316C5D15E12E25C46D3D /* InMemoryReminderRepository.swift */,
-				80CB77277B26A74D98EF25C3 /* MockReminderScheduler.swift */,
-				6EC1E527E978E1282C8B12DD /* MockWeatherProvider.swift */,
+				80CB77277B26A74D98EF25C3 /* NoopReminderScheduler.swift */,
 				929ABE66D20FB8733BAE61C3 /* ReminderRepository.swift */,
 				3189AE518B84EB9C17417160 /* ReminderScheduling.swift */,
-				93533B240DB94378B39CB486 /* WeatherProviding.swift */,
 			);
 			path = Infrastructure;
 			sourceTree = "<group>";
@@ -976,8 +971,7 @@
 				97CB10665E539980B5A08533 /* ICSParsingService.swift in Sources */,
 				1DE97C99308A4D7C3FE1738B /* InMemoryEventRepository.swift in Sources */,
 				B89B1698AB583D10078BFFEB /* InMemoryReminderRepository.swift in Sources */,
-				F74CA824A6ACBB372519EDCD /* MockReminderScheduler.swift in Sources */,
-				E3F5D37201B9CC7AC2B20A1E /* MockWeatherProvider.swift in Sources */,
+				F74CA824A6ACBB372519EDCD /* NoopReminderScheduler.swift in Sources */,
 				63269FA47CA3D0AFBB22F285 /* SwiftDataCalendarEventEntity.swift in Sources */,
 				8D11BD6CB5FCB905B4D59B23 /* SwiftDataEventMapper.swift in Sources */,
 				A4C08451CAC6D6B86F2900C9 /* SwiftDataEventRepository.swift in Sources */,
@@ -987,7 +981,6 @@
 				78F6C1A81FF9FB2A50EED384 /* SwiftDataRepositoryLogger.swift in Sources */,
 				81F909FCB7CE48C8146A7408 /* ReminderRepository.swift in Sources */,
 				2E6816AB0A09DC4A5E7070D7 /* ReminderScheduling.swift in Sources */,
-				1CF36EFDAD51EA5F17C8D63E /* WeatherProviding.swift in Sources */,
 				B7E387A03518C78B9B665340 /* AdMobBannerView.swift in Sources */,
 				EABE3524AFD0F00FFBBF2228 /* CalendarAdBannerContainer.swift in Sources */,
 				D06F1FBB9D827B9F1F8AFBFC /* CalendarBottomToolbarView.swift in Sources */,
@@ -1046,6 +1039,7 @@
 				859200B953D65910745C1393 /* ja */,
 				6014366204119534448DB749 /* ko */,
 				E2F78125BB977C2726B0497C /* zh-Hans */,
+				FDC36B599AA82939C34B993E /* zh-Hant */,
 			);
 			name = InfoPlist.strings;
 			sourceTree = "<group>";

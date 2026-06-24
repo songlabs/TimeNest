@@ -22,7 +22,6 @@ struct HolidaySourceEditView: View {
     @State private var errorMessage = ""
     @State private var showingSyncTestSuccess = false
     @State private var syncTestSuccessMessage = ""
-    @State private var initLogged = false
     @State private var didHideTabBar = false
     @FocusState private var isURLFieldFocused: Bool
 
@@ -43,22 +42,6 @@ struct HolidaySourceEditView: View {
             title: localization.localized(.holidaySourceURLHeader),
             closeAction: { dismiss() }
         )
-    }
-
-    // MARK: - DEBUG Logging on Init
-
-    private func logInit() {
-    }
-
-    // MARK: - DEBUG Logging Helpers
-
-    private func logSaveTapped() {
-    }
-
-    private func logSaveSuccess(_ url: String) {
-    }
-
-    private func logTestSyncTapped() {
     }
 
     var body: some View {
@@ -328,8 +311,6 @@ struct HolidaySourceEditView: View {
     }
 
     private func saveURL() {
-        logSaveTapped()
-
         let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
 
         Task {
@@ -371,8 +352,6 @@ struct HolidaySourceEditView: View {
 
                 // 7. 成功后自动同步
                 _ = await subscriptionManager.syncAllEnabled()
-
-                logSaveSuccess(savedURL)
 
                 await MainActor.run {
                     dismiss()
@@ -430,8 +409,6 @@ struct HolidaySourceEditView: View {
     }
 
     private func testSync() async {
-        logTestSyncTapped()
-
         // 使用输入框中的 URL 进行测试，而不是已保存的 URL
         let testURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !testURLString.isEmpty else {

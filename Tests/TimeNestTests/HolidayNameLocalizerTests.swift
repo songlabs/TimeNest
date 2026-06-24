@@ -1240,6 +1240,56 @@ final class HolidayNameLocalizerTests: XCTestCase {
         XCTAssertTrue(holidays.isEmpty)
     }
 
+    func testHolidayNamesDisplayInRegionLanguageRegardlessOfAppLanguage() async throws {
+        let cacheRepository = InMemoryHolidayEventCacheRepository(events: [
+            HolidayEvent(
+                id: "jp-new-year",
+                region: .japan,
+                date: DateOnly(year: 2026, month: 1, day: 1),
+                name: "Japan: New Year's Day",
+                sourceURL: "https://example.com/japan.ics"
+            ),
+            HolidayEvent(
+                id: "cn-spring-festival",
+                region: .china,
+                date: DateOnly(year: 2026, month: 2, day: 17),
+                name: "China: Spring Festival",
+                sourceURL: "https://example.com/china.ics"
+            ),
+            HolidayEvent(
+                id: "kr-new-year",
+                region: .korea,
+                date: DateOnly(year: 2026, month: 1, day: 1),
+                name: "South Korea: New Year's Day",
+                sourceURL: "https://example.com/korea.ics"
+            ),
+            HolidayEvent(
+                id: "us-new-year",
+                region: .unitedStates,
+                date: DateOnly(year: 2026, month: 1, day: 1),
+                name: "USA: New Year's Day",
+                sourceURL: "https://example.com/usa.ics"
+            )
+        ])
+        let useCase = HolidayUseCase(cacheRepository: cacheRepository)
+
+        let holidays = try await useCase.holidays(
+            regions: [.japan, .china, .korea, .unitedStates],
+            from: DateOnly(year: 2026, month: 1, day: 1),
+            to: DateOnly(year: 2026, month: 2, day: 17)
+        )
+        let namesByRegion = Dictionary(
+            uniqueKeysWithValues: holidays.map { holiday in
+                (holiday.region, holiday.localizedNames.displayName(for: holiday.region))
+            }
+        )
+
+        XCTAssertEqual(namesByRegion[.japan], "元日")
+        XCTAssertEqual(namesByRegion[.china], "春节")
+        XCTAssertEqual(namesByRegion[.korea], "신정")
+        XCTAssertEqual(namesByRegion[.unitedStates], "New Year's Day")
+    }
+
     func testRecommendedHolidaySourceURLsAreHTTPSAndRegionScoped() {
         for region in HolidayRegion.allCases {
             let sources = HolidayRecommendedSources.sources(for: region)
@@ -1374,6 +1424,59 @@ final class HolidayNameLocalizerTests: XCTestCase {
         XCTAssertTrue(weekDates.contains(DateOnly(year: 2026, month: 6, day: 10)))
     }
 
+    @MainActor
+    func testWidgetSnapshotBuilderCreatesBasicSnapshotFromInMemoryData() async throws {
+        let calendar = gregorianCalendar(timeZone: TimeZone(secondsFromGMT: 0)!)
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 8)))
+        let eventStart = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 9)))
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(repository: repository)
+        let cacheRepository = InMemoryHolidayEventCacheRepository()
+        let managerSuite = "WidgetSnapshotBuilderTests"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: managerSuite))
+        defaults.removePersistentDomain(forName: managerSuite)
+        let holidaySubscriptionManager = HolidaySubscriptionManager(
+            cacheRepository: cacheRepository,
+            userDefaults: defaults
+        )
+        let holidayUseCase = HolidayUseCase(cacheRepository: cacheRepository)
+        let calendarDisplayUseCase = CalendarDisplayUseCase(
+            holidayUseCase: holidayUseCase,
+            localizationUseCase: CalendarLocalizationUseCase(),
+            eventUseCase: eventUseCase
+        )
+        let builder = WidgetSnapshotBuilder(
+            calendarDisplayUseCase: calendarDisplayUseCase,
+            eventUseCase: eventUseCase,
+            holidayUseCase: holidayUseCase,
+            holidaySubscriptionManager: holidaySubscriptionManager
+        )
+
+        try await eventUseCase.createEvent(CalendarEvent(
+            id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
+            title: "Widget Event",
+            note: nil,
+            startDate: eventStart,
+            endDate: calendar.date(byAdding: .hour, value: 1, to: eventStart),
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: now,
+            updatedAt: now
+        ))
+
+        let snapshot = try await builder.build(now: now)
+
+        XCTAssertEqual(snapshot.months.count, 2)
+        XCTAssertEqual(snapshot.months.first?.year, 2026)
+        XCTAssertEqual(snapshot.months.first?.month, 6)
+        XCTAssertTrue(snapshot.todayEvents.contains { $0.title == "Widget Event" })
+        XCTAssertTrue(snapshot.upcomingEvents.contains { $0.title == "Widget Event" })
+        defaults.removePersistentDomain(forName: managerSuite)
+    }
+
     private func makeCalendarDisplayUseCase() -> CalendarDisplayUseCase {
         CalendarDisplayUseCase(
             holidayUseCase: HolidayUseCase(cacheRepository: InMemoryHolidayEventCacheRepository()),
@@ -1440,13 +1543,17 @@ private final class RecordingHolidayProvider: HolidayProviding {
 final class LocalizationResourceParityTests: XCTestCase {
     func testLocalizableStringsKeysAreCompleteAndUniqueAcrossLanguages() throws {
         let resourceRoot = try sourceURL(for: "TimeNest/Resources")
-        let languageFolders = ["ja.lproj", "zh-Hans.lproj", "en.lproj", "ko.lproj"]
+        let languageFolders = ["ja.lproj", "zh-Hans.lproj", "zh-Hant.lproj", "en.lproj", "ko.lproj"]
         var keySets: [String: Set<String>] = [:]
 
         for folder in languageFolders {
             let fileURL = resourceRoot.appendingPathComponent(folder).appendingPathComponent("Localizable.strings")
             let keys = try localizationKeys(in: fileURL)
+            let emptyValues = try localizationEntries(in: fileURL)
+                .filter { $0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .map(\.key)
             XCTAssertEqual(keys.count, Set(keys).count, "\(folder) should not contain duplicate keys")
+            XCTAssertTrue(emptyValues.isEmpty, "\(folder) should not contain empty localized values: \(emptyValues)")
             keySets[folder] = Set(keys)
         }
 
@@ -1467,10 +1574,35 @@ final class LocalizationResourceParityTests: XCTestCase {
         XCTAssertTrue(enumKeys.isSubset(of: resourceKeys), "Localizable.swift keys should exist in Localizable.strings")
     }
 
+    func testInfoPlistStringsAreCompleteAcrossLanguages() throws {
+        let resourceRoot = try sourceURL(for: "TimeNest/Resources")
+        let languageFolders = ["ja.lproj", "zh-Hans.lproj", "zh-Hant.lproj", "en.lproj", "ko.lproj"]
+        var keySets: [String: Set<String>] = [:]
+
+        for folder in languageFolders {
+            let fileURL = resourceRoot.appendingPathComponent(folder).appendingPathComponent("InfoPlist.strings")
+            let entries = try localizationEntries(in: fileURL)
+            let keys = entries.map(\.key)
+            let emptyValues = entries
+                .filter { $0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+                .map(\.key)
+
+            XCTAssertEqual(keys.count, Set(keys).count, "\(folder) InfoPlist.strings should not contain duplicate keys")
+            XCTAssertTrue(emptyValues.isEmpty, "\(folder) InfoPlist.strings should not contain empty values: \(emptyValues)")
+            keySets[folder] = Set(keys)
+        }
+
+        let expectedKeys = try XCTUnwrap(keySets["en.lproj"])
+        for folder in languageFolders {
+            XCTAssertEqual(keySets[folder], expectedKeys, "\(folder) InfoPlist.strings should match en.lproj keys")
+        }
+    }
+
     func testDisplayLanguageCodesMapToExpectedLocales() {
         let cases: [(String, DisplayLanguage, String)] = [
             ("ja", .ja, "ja_JP"),
             ("zhHans", .zhHans, "zh_CN"),
+            ("zh-Hant", .zhHant, "zh_TW"),
             ("enUS", .enUS, "en_US"),
             ("ko", .ko, "ko_KR"),
             ("system", .system, Locale.current.identifier)
@@ -1486,6 +1618,36 @@ final class LocalizationResourceParityTests: XCTestCase {
         }
     }
 
+    func testAdMobBuildSettingsKeepDebugReleaseAndSimulatorIDsSeparated() throws {
+        let projectSwift = try String(contentsOf: sourceURL(for: "Project.swift"), encoding: .utf8)
+        let projectFile = try String(contentsOf: sourceURL(for: "TimeNest.xcodeproj/project.pbxproj"), encoding: .utf8)
+        let validationScript = try String(
+            contentsOf: sourceURL(for: "Scripts/validate_admob_release_config.sh"),
+            encoding: .utf8
+        )
+        let testAppID = "ca-app-pub-3940256099942544~1458002511"
+        let testBannerID = "ca-app-pub-3940256099942544/2435281174"
+        let productionAppID = "ca-app-pub-7907716708037277~6985657856"
+        let productionBannerID = "ca-app-pub-7907716708037277/8542282103"
+
+        XCTAssertTrue(projectSwift.contains("\"TIMENEST_ADMOB_APP_ID\": \"\(testAppID)\""))
+        XCTAssertTrue(projectSwift.contains("\"TIMENEST_ADMOB_BANNER_UNIT_ID\": \"\(testBannerID)\""))
+        XCTAssertTrue(projectSwift.contains("\"TIMENEST_ADMOB_APP_ID\": \"\(productionAppID)\""))
+        XCTAssertTrue(projectSwift.contains("\"TIMENEST_ADMOB_BANNER_UNIT_ID\": \"\(productionBannerID)\""))
+        XCTAssertTrue(projectSwift.contains("\"TIMENEST_ADMOB_APP_ID[sdk=iphonesimulator*]\": \"\(testAppID)\""))
+        XCTAssertTrue(projectSwift.contains("\"TIMENEST_ADMOB_BANNER_UNIT_ID[sdk=iphonesimulator*]\": \"\(testBannerID)\""))
+
+        XCTAssertTrue(projectFile.contains("TIMENEST_ADMOB_APP_ID = \"\(productionAppID)\";"))
+        XCTAssertTrue(projectFile.contains("TIMENEST_ADMOB_BANNER_UNIT_ID = \"\(productionBannerID)\";"))
+        XCTAssertTrue(projectFile.contains("\"TIMENEST_ADMOB_APP_ID[sdk=iphonesimulator*]\" = \"\(testAppID)\";"))
+        XCTAssertTrue(projectFile.contains("\"TIMENEST_ADMOB_BANNER_UNIT_ID[sdk=iphonesimulator*]\" = \"\(testBannerID)\";"))
+        XCTAssertTrue(projectFile.contains("TIMENEST_ADMOB_APP_ID = \"\(testAppID)\";"))
+        XCTAssertTrue(projectFile.contains("TIMENEST_ADMOB_BANNER_UNIT_ID = \"\(testBannerID)\";"))
+
+        XCTAssertTrue(validationScript.contains("Release cannot use Google's test AdMob App ID."))
+        XCTAssertTrue(validationScript.contains("Release cannot use Google's test AdMob Banner Unit ID."))
+    }
+
     private func sourceURL(for relativePath: String) throws -> URL {
         var url = URL(fileURLWithPath: #filePath)
         while url.path != "/" {
@@ -1499,8 +1661,22 @@ final class LocalizationResourceParityTests: XCTestCase {
     }
 
     private func localizationKeys(in fileURL: URL) throws -> [String] {
+        try localizationEntries(in: fileURL).map(\.key)
+    }
+
+    private func localizationEntries(in fileURL: URL) throws -> [(key: String, value: String)] {
         let text = try String(contentsOf: fileURL, encoding: .utf8)
-        return matches(in: text, pattern: #"(?m)^\s*\"([^\"]+)\"\s*="#)
+        guard let regex = try? NSRegularExpression(pattern: #"(?m)^\s*\"([^\"]+)\"\s*=\s*\"((?:\\.|[^\"])*)\"\s*;"#) else {
+            return []
+        }
+        let range = NSRange(text.startIndex..<text.endIndex, in: text)
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard let keyRange = Range(match.range(at: 1), in: text),
+                  let valueRange = Range(match.range(at: 2), in: text) else {
+                return nil
+            }
+            return (String(text[keyRange]), String(text[valueRange]))
+        }
     }
 
     private func matches(in text: String, pattern: String) -> [String] {

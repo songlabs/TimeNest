@@ -64,8 +64,6 @@ class ICSParseService: ICSParsing {
         // 2. Unfold lines (RFC5545: lines starting with space/tab are continuation)
         let unfoldedLines = unfoldICSLines(text: trimmedContent)
 
-        // DEBUG: body 级别日志
-
         var events: [HolidayEvent] = []
         var inVEvent = false
         var currentEventLines: [String] = []
@@ -92,8 +90,6 @@ class ICSParseService: ICSParsing {
             }
         }
 
-        // 4. DEBUG logs
-
         guard !events.isEmpty else {
             throw EnhancedICSError.noEvents
         }
@@ -117,42 +113,6 @@ class ICSParseService: ICSParsing {
         }
 
         return result
-    }
-
-    /// 处理 ICS 行折叠
-    private func handleLineFold(lines: [String], startIndex: inout Int, currentLine: String) -> String {
-        var result = currentLine
-
-        // 检查后续行是否有行折叠（以空格或制表符开头）
-        var nextIndex = startIndex + 1
-        while nextIndex < lines.count {
-            let nextLine = lines[nextIndex]
-            if nextLine.hasPrefix(" ") || nextLine.hasPrefix("\t") {
-                result += String(nextLine.dropFirst())
-                startIndex = nextIndex
-                nextIndex += 1
-            } else {
-                break
-            }
-        }
-
-        return result
-    }
-
-    /// 解析 VEVENT 属性（旧方法，保留用于兼容）
-    private func parseVEventProperty(line: String, into dict: inout [String: String]) {
-        // 处理带参数的属性：DTSTART;VALUE=DATE:20260101
-        let components = line.split(separator: ":", maxSplits: 1)
-        guard components.count == 2 else { return }
-
-        let keyPart = String(components[0])
-        let value = String(components[1])
-
-        // 提取属性名（去掉参数部分）
-        let key = keyPart.split(separator: ";").first.map(String.init) ?? keyPart
-
-        // 存储值
-        dict[key] = (dict[key] ?? "") + value
     }
 
     /// 解析 VEVENT 属性（新方法，支持完整 RFC5545 格式）

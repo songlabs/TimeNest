@@ -422,38 +422,13 @@ class MonthCalendarViewModel: ObservableObject {
         return (start, end)
     }
 
-    private func existingGeneratedShiftEvent(on date: Date, template: ShiftTimeTemplate) async throws -> CalendarEvent? {
-        let calendar = Calendar(identifier: .gregorian)
-        let dayStart = calendar.startOfDay(for: date)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
-
-        return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
-            .filter { event in
-                guard event.workInfo == nil,
-                      !WorkClockTitleMatcher.isClockInTitle(event.title),
-                      !WorkClockTitleMatcher.isClockOutTitle(event.title),
-                      calendar.isDate(event.startDate, inSameDayAs: dayStart) else {
-                    return false
-                }
-
-                if event.shiftTemplateID == template.id {
-                    return true
-                }
-
-                return event.shiftTemplateID == nil
-                    && (event.title == template.displayName
-                        || ShiftTimeTemplate.isKnownDefaultDisplayName(event.title, for: template.id))
-            }
-            .sorted { $0.createdAt < $1.createdAt }
-            .first
-    }
-
     /// 查找当天是否已有任意班次（不限模板 ID）
     /// 用于实现「同一天只能存在一个班次」的规则
     private func existingAnyShiftEvent(on date: Date) async throws -> CalendarEvent? {
         let calendar = Calendar(identifier: .gregorian)
         let dayStart = calendar.startOfDay(for: date)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
+        let allTemplates = ShiftTimeTemplate.all()
 
         return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
             .filter { event in
@@ -472,8 +447,6 @@ class MonthCalendarViewModel: ObservableObject {
                     return true
                 }
 
-                // 检查标题是否与任意班次模板的 displayName 匹配
-                let allTemplates = ShiftTimeTemplate.all()
                 return allTemplates.contains { $0.displayName == event.title }
                     || ShiftTimeTemplate.isKnownDefaultDisplayName(event.title)
             }

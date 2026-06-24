@@ -293,9 +293,11 @@ END:VCALENDAR
 """
 
         let region = HolidayRegion.japan
-        let events = try parseService.parse(content: icsContent, region: region, sourceURL: "https://example.com/ics")
-
-        XCTAssertEqual(events.count, 0, "空 VEVENT 应该被忽略")
+        XCTAssertThrowsError(try parseService.parse(content: icsContent, region: region, sourceURL: "https://example.com/ics")) { error in
+            guard case EnhancedICSError.noEvents = error else {
+                return XCTFail("Expected noEvents, got \(error)")
+            }
+        }
     }
 
     /// 测试缺少 SUMMARY 的 VEVENT
@@ -310,9 +312,11 @@ END:VCALENDAR
 """
 
         let region = HolidayRegion.japan
-        let events = try parseService.parse(content: icsContent, region: region, sourceURL: "https://example.com/ics")
-
-        XCTAssertEqual(events.count, 0, "缺少 SUMMARY 的 VEVENT 应该被忽略")
+        XCTAssertThrowsError(try parseService.parse(content: icsContent, region: region, sourceURL: "https://example.com/ics")) { error in
+            guard case EnhancedICSError.noEvents = error else {
+                return XCTFail("Expected noEvents, got \(error)")
+            }
+        }
     }
 
     /// 测试缺少 DTSTART 的 VEVENT
@@ -327,9 +331,11 @@ END:VCALENDAR
 """
 
         let region = HolidayRegion.japan
-        let events = try parseService.parse(content: icsContent, region: region, sourceURL: "https://example.com/ics")
-
-        XCTAssertEqual(events.count, 0, "缺少 DTSTART 的 VEVENT 应该被忽略")
+        XCTAssertThrowsError(try parseService.parse(content: icsContent, region: region, sourceURL: "https://example.com/ics")) { error in
+            guard case EnhancedICSError.noEvents = error else {
+                return XCTFail("Expected noEvents, got \(error)")
+            }
+        }
     }
 
     // MARK: - Unfold Lines Helper Tests

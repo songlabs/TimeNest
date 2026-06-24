@@ -113,7 +113,7 @@ final class EventEditorDateNormalizerTests: XCTestCase {
         let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 15, minute: 30)))
         let end = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 12, hour: 8)))
 
-        let normalized = EventEditorDateNormalizer.normalizedDates(startDate: start, endDate: end, isAllDay: true)
+        let normalized = EventEditorDateNormalizer.persistenceDates(startDate: start, inclusiveEndDate: end, isAllDay: true)
 
         XCTAssertEqual(normalized.start, calendar.startOfDay(for: start))
         XCTAssertEqual(normalized.end, calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: end)))
@@ -124,7 +124,7 @@ final class EventEditorDateNormalizerTests: XCTestCase {
         let start = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 9)))
         let end = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 18)))
 
-        let normalized = EventEditorDateNormalizer.normalizedDates(startDate: start, endDate: end, isAllDay: false)
+        let normalized = EventEditorDateNormalizer.persistenceDates(startDate: start, inclusiveEndDate: end, isAllDay: false)
 
         XCTAssertEqual(normalized.start, start)
         XCTAssertEqual(normalized.end, end)
