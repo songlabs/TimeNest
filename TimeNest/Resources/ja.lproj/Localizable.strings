@@ -299,13 +299,6 @@
 "work_statistics.empty_title" = "統計データがありません";
 "work_statistics.empty_message" = "条件を調整して統計ボタンをタップしてください";
 
-/* Work Info overwrite confirmation */
-"editor.work_in_overwrite_title" = "出勤データを上書きしますか？";
-"editor.work_in_overwrite_message" = "この日の出勤データはすでに存在します。現在の時刻で上書きしますか？";
-"editor.work_out_overwrite_title" = "退勤データを上書きしますか？";
-"editor.work_out_overwrite_message" = "この日の退勤データはすでに存在します。現在の時刻で上書きしますか？";
-"editor.work_overwrite_button" = "上書き";
-"editor.work_overwrite_cancel_button" = "キャンセル";
 "work.nextDayPrefix" = "翌日";
 
 /* Help */

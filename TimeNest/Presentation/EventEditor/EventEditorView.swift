@@ -100,30 +100,6 @@ private enum EditorFocusedField: Hashable {
 }
 
 
-private struct WorkClockConfirmation: Identifiable {
-    let kind: WorkClockKind
-
-    var id: WorkClockKind { kind }
-
-    var titleKey: LocalizedString {
-        switch kind {
-        case .clockIn:
-            return .editorWorkInOverwriteTitle
-        case .clockOut:
-            return .editorWorkOutOverwriteTitle
-        }
-    }
-
-    var messageKey: LocalizedString {
-        switch kind {
-        case .clockIn:
-            return .editorWorkInOverwriteMessage
-        case .clockOut:
-            return .editorWorkOutOverwriteMessage
-        }
-    }
-}
-
 private enum NotificationSaveAlert: Identifiable {
     case denied
     case triggerDateInPast
@@ -201,7 +177,6 @@ struct EventEditorView: View {
     @State private var hourlyRate: String = "" // 时给
     @State private var showingRestTimePicker: Bool = false // 休息时间选择器
     @State private var editingWorkTime: WorkTimeEditTarget?
-    @State private var pendingWorkClockConfirmation: WorkClockConfirmation?
     @State private var pendingNotificationSaveAlert: NotificationSaveAlert?
     @State private var workSessionId: UUID
     @State private var workRecordEvents: [EventOccurrence]
@@ -376,16 +351,6 @@ struct EventEditorView: View {
                 if isPresented {
                     focusedField = nil
                 }
-            }
-            .alert(item: $pendingWorkClockConfirmation) { confirmation in
-                Alert(
-                    title: Text(localization.localized(confirmation.titleKey)),
-                    message: Text(localization.localized(confirmation.messageKey)),
-                    primaryButton: .default(Text(localization.localized(.editorWorkOverwriteButton))) {
-                        applyWorkClockSelection(confirmation.kind)
-                    },
-                    secondaryButton: .cancel(Text(localization.localized(.editorWorkOverwriteCancelButton)))
-                )
             }
             .alert(item: $pendingNotificationSaveAlert) { alert in
                 notificationSaveAlert(for: alert)
@@ -668,35 +633,6 @@ struct EventEditorView: View {
         }
     }
 
-
-    private func handleWorkClockTap(_ kind: WorkClockKind) {
-        focusedField = nil
-
-        if hasExistingWorkClockEvent(kind) {
-            pendingWorkClockConfirmation = WorkClockConfirmation(kind: kind)
-        } else {
-            applyWorkClockSelection(kind)
-        }
-    }
-
-    private func applyWorkClockSelection(_ kind: WorkClockKind) {
-        applySharedWorkValuesForNewEventIfNeeded(date: startDate, resetWhenMissing: false, preserveExistingValues: true)
-
-        switch kind {
-        case .clockIn:
-            title = localization.localized(.editorWorkIn)
-        case .clockOut:
-            title = localization.localized(.editorWorkOut)
-        }
-        focusedField = nil
-    }
-
-    private func hasExistingWorkClockEvent(_ kind: WorkClockKind) -> Bool {
-        existingEvents.contains { event in
-            guard event.eventID != editingEventID else { return false }
-            return event.workInfo?.workSessionId == workSessionId && event.matchesWorkClockKind(kind)
-        }
-    }
 
     private var editingEventID: UUID? {
         EventEditorView.editingEventID(for: mode)

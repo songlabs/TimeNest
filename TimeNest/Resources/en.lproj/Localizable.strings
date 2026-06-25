@@ -299,13 +299,6 @@
 "work_statistics.empty_title" = "No statistics yet";
 "work_statistics.empty_message" = "Adjust the filters and tap the statistics button";
 
-/* Work Info overwrite confirmation */
-"editor.work_in_overwrite_title" = "Overwrite clock-in data?";
-"editor.work_in_overwrite_message" = "Clock-in data already exists for this day. Overwrite it with the current time?";
-"editor.work_out_overwrite_title" = "Overwrite clock-out data?";
-"editor.work_out_overwrite_message" = "Clock-out data already exists for this day. Overwrite it with the current time?";
-"editor.work_overwrite_button" = "Overwrite";
-"editor.work_overwrite_cancel_button" = "Cancel";
 "work.nextDayPrefix" = "Next day";
 
 /* Help */

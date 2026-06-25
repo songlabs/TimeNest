@@ -299,13 +299,6 @@
 "work_statistics.empty_title" = "暫無統計資料";
 "work_statistics.empty_message" = "請調整篩選條件後點擊統計按鈕";
 
-/* Work Info overwrite confirmation */
-"editor.work_in_overwrite_title" = "是否覆蓋已有上班資料？";
-"editor.work_in_overwrite_message" = "這一天已經存在上班資料。是否用目前時間覆蓋？";
-"editor.work_out_overwrite_title" = "是否覆蓋已有下班資料？";
-"editor.work_out_overwrite_message" = "這一天已經存在下班資料。是否用目前時間覆蓋？";
-"editor.work_overwrite_button" = "覆蓋";
-"editor.work_overwrite_cancel_button" = "取消";
 "work.nextDayPrefix" = "次日";
 
 /* Help */

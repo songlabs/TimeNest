@@ -299,13 +299,6 @@
 "work_statistics.empty_title" = "暂无统计数据";
 "work_statistics.empty_message" = "请调整筛选条件后点击统计按钮";
 
-/* Work Info overwrite confirmation */
-"editor.work_in_overwrite_title" = "是否覆盖已有上班数据？";
-"editor.work_in_overwrite_message" = "这一天已经存在上班数据。是否用当前时间覆盖？";
-"editor.work_out_overwrite_title" = "是否覆盖已有下班数据？";
-"editor.work_out_overwrite_message" = "这一天已经存在下班数据。是否用当前时间覆盖？";
-"editor.work_overwrite_button" = "覆盖";
-"editor.work_overwrite_cancel_button" = "取消";
 "work.nextDayPrefix" = "次日";
 
 /* Help */

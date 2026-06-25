@@ -1,6 +1,6 @@
 # TimeNest Third-Party Notices
 
-This inventory is based on both checked-in `Package.resolved` files as of 2026-06-23. They resolve the same two Google Swift Package Manager wrapper repositories. Recheck this document whenever package versions change.
+This inventory is based on both checked-in `Package.resolved` files as of 2026-06-25. They resolve the same two Google Swift Package Manager wrapper repositories. Recheck this document whenever package versions change.
 
 ## Google Mobile Ads
 
