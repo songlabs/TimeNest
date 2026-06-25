@@ -663,6 +663,10 @@ class MonthCalendarViewModel: ObservableObject {
 
         let clockInTime = try await clockInTime(on: workDay, sessionId: adjusted.workSessionId)
         let baseOut = date(on: workDay, matchingTimeOf: workOutTime)
+        guard adjusted.isWorkOutTimeSet else {
+            adjusted.workOutTime = baseOut
+            return adjusted
+        }
         if let clockInTime, isTime(baseOut, earlierThan: clockInTime) {
             adjusted.workOutTime = calendar.date(byAdding: .day, value: 1, to: baseOut) ?? baseOut
         } else {

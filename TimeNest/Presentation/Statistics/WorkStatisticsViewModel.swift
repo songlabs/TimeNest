@@ -131,6 +131,7 @@ class WorkStatisticsViewModel: ObservableObject {
 
         for event in events {
             guard let kind = workClockKind(for: event) else { continue }
+            guard kind != .clockOut || event.isWorkOutTimeSet else { continue }
             let workDay = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
 
             if let sessionId = event.workInfo?.workSessionId {

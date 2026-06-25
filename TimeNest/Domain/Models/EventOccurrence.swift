@@ -55,6 +55,10 @@ extension EventOccurrence {
         return startDate
     }
 
+    var isWorkOutTimeSet: Bool {
+        workInfo?.isWorkOutTimeSet ?? false
+    }
+
     func matchesWorkClockKind(_ kind: WorkClockKind) -> Bool {
         switch kind {
         case .clockIn:
@@ -93,6 +97,10 @@ extension CalendarEvent {
             return workInfo?.workOutTime ?? startDate
         }
         return startDate
+    }
+
+    var isWorkOutTimeSet: Bool {
+        workInfo?.isWorkOutTimeSet ?? false
     }
 }
 

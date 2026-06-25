@@ -262,7 +262,11 @@ enum CalendarTimelineEventMetrics {
     }
 
     static func timedEvents(in events: [EventOccurrence]) -> [EventOccurrence] {
-        events.filter { !$0.isAllDay }.sorted { $0.startDate < $1.startDate }
+        events
+            .filter { event in
+                !event.isAllDay && (!event.isClockOutEvent || event.isWorkOutTimeSet)
+            }
+            .sorted { $0.startDate < $1.startDate }
     }
 
     static func allDayEventCount(in events: [EventOccurrence]) -> Int {
@@ -343,6 +347,9 @@ enum CalendarTimelineEventMetrics {
             return formatTime(event.workInfo?.workInTime ?? event.startDate)
         }
         if event.isClockOutEvent {
+            guard event.isWorkOutTimeSet else {
+                return LocalizationManager.shared.localized(.workRecordMissingClockOut)
+            }
             return formatTime(event.workInfo?.workOutTime ?? event.startDate)
         }
         return "\(formatTime(event.startDate)) - \(formatTime(event.endDate))"

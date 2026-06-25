@@ -1061,6 +1061,7 @@ struct WorkRecordEditorInitialSession: Identifiable, Hashable {
     let transportFee: Int?
     let hourlyRate: Int?
     let workSessionId: UUID?
+    let isWorkOutTimeSet: Bool
 
     var id: String {
         if let workSessionId {
@@ -1096,6 +1097,7 @@ struct WorkRecordEditorView: View {
     @State private var transportFee: String
     @State private var hourlyRate: String
     @State private var workSessionId: UUID
+    @State private var isWorkOutTimeSet: Bool
     @State private var workTitle: String = ""
     @State private var showingWorkDatePicker: Bool = false
     @State private var showingRestTimePicker: Bool = false
@@ -1128,6 +1130,7 @@ struct WorkRecordEditorView: View {
         _transportFee = State(initialValue: initialValues.transportFee.map(String.init) ?? "")
         _hourlyRate = State(initialValue: initialValues.hourlyRate.map(String.init) ?? "")
         _workSessionId = State(initialValue: initialValues.workSessionId)
+        _isWorkOutTimeSet = State(initialValue: initialValues.isWorkOutTimeSet)
     }
 
     var body: some View {
@@ -1322,6 +1325,7 @@ struct WorkRecordEditorView: View {
             workInDate = selection
         case .workOut:
             workOutDate = selection
+            isWorkOutTimeSet = true
         }
     }
 
@@ -1340,7 +1344,12 @@ struct WorkRecordEditorView: View {
         do {
             let normalizedDate = Calendar.current.startOfDay(for: workDate)
             let normalizedIn = WorkRecordEditorView.date(on: normalizedDate, matchingTimeOf: workInDate)
-            let normalizedOut = normalizedClockOutDate(selectedClockOutDate: workOutDate, clockInDate: normalizedIn, workDay: normalizedDate)
+            let normalizedOut = normalizedClockOutDate(
+                selectedClockOutDate: workOutDate,
+                clockInDate: normalizedIn,
+                workDay: normalizedDate,
+                isWorkOutTimeSet: isWorkOutTimeSet
+            )
             let recordTitle = normalizedRecordTitle()
             let clockInWorkInfo = WorkInfo(
                 workInTime: normalizedIn,
@@ -1349,7 +1358,8 @@ struct WorkRecordEditorView: View {
                 workDate: normalizedDate,
                 transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
                 hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines)),
-                workSessionId: workSessionId
+                workSessionId: workSessionId,
+                isWorkOutTimeSet: isWorkOutTimeSet
             )
             let clockOutWorkInfo = WorkInfo(
                 workInTime: nil,
@@ -1358,7 +1368,8 @@ struct WorkRecordEditorView: View {
                 workDate: normalizedDate,
                 transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
                 hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines)),
-                workSessionId: workSessionId
+                workSessionId: workSessionId,
+                isWorkOutTimeSet: isWorkOutTimeSet
             )
 
             try await saveClock(kind: .clockIn, title: recordTitle, workInfo: clockInWorkInfo)
@@ -1405,10 +1416,10 @@ struct WorkRecordEditorView: View {
         return nil
     }
 
-    private func normalizedClockOutDate(selectedClockOutDate: Date, clockInDate: Date, workDay: Date) -> Date {
+    private func normalizedClockOutDate(selectedClockOutDate: Date, clockInDate: Date, workDay: Date, isWorkOutTimeSet: Bool) -> Date {
         let calendar = Calendar.current
         var normalized = WorkRecordEditorView.date(on: workDay, matchingTimeOf: selectedClockOutDate)
-        if normalized <= clockInDate {
+        if isWorkOutTimeSet && normalized <= clockInDate {
             normalized = calendar.date(byAdding: .day, value: 1, to: normalized) ?? normalized
         }
         return normalized
@@ -1423,12 +1434,12 @@ struct WorkRecordEditorView: View {
         LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
     }
 
-    private static func initialValues(for mode: WorkRecordEditorMode) -> (title: String, workDate: Date, workInTime: Date, workOutTime: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?, workSessionId: UUID) {
+    private static func initialValues(for mode: WorkRecordEditorMode) -> (title: String, workDate: Date, workInTime: Date, workOutTime: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?, workSessionId: UUID, isWorkOutTimeSet: Bool) {
         switch mode {
         case .create(let initialDate):
             let workDate = Calendar.current.startOfDay(for: initialDate)
             let workInTime = makeDefaultWorkInDate(selectedDate: workDate)
-            let workOutTime = Calendar.current.date(byAdding: .hour, value: 1, to: workInTime) ?? workInTime
+            let workOutTime = workDate
             return (
                 title: LocalizationManager.shared.localized(.workRecordDefaultTitle),
                 workDate: workDate,
@@ -1437,12 +1448,17 @@ struct WorkRecordEditorView: View {
                 restHours: 0.0,
                 transportFee: nil,
                 hourlyRate: nil,
-                workSessionId: WorkInfo.makeNewWorkSessionId()
+                workSessionId: WorkInfo.makeNewWorkSessionId(),
+                isWorkOutTimeSet: false
             )
         case .edit(let session):
             let workDate = Calendar.current.startOfDay(for: session.workDate)
             let fallbackInTime = session.workInTime ?? makeDefaultWorkInDate(selectedDate: workDate)
-            let fallbackOutTime = session.workOutTime ?? Calendar.current.date(byAdding: .hour, value: 1, to: fallbackInTime) ?? fallbackInTime
+            let fallbackOutTime = editWorkOutTime(
+                for: session,
+                workDate: workDate,
+                fallbackInTime: fallbackInTime
+            )
             return (
                 title: session.title,
                 workDate: workDate,
@@ -1451,9 +1467,20 @@ struct WorkRecordEditorView: View {
                 restHours: session.restHours,
                 transportFee: session.transportFee,
                 hourlyRate: session.hourlyRate,
-                workSessionId: session.workSessionId ?? WorkInfo.makeNewWorkSessionId()
+                workSessionId: session.workSessionId ?? WorkInfo.makeNewWorkSessionId(),
+                isWorkOutTimeSet: session.isWorkOutTimeSet
             )
         }
+    }
+
+    private static func editWorkOutTime(for session: WorkRecordEditorInitialSession, workDate: Date, fallbackInTime: Date) -> Date {
+        if session.isWorkOutTimeSet {
+            return session.workOutTime ?? workDate
+        }
+        if session.workInTime != nil || session.workOutTime != nil {
+            return makeDefaultWorkInDate(selectedDate: workDate)
+        }
+        return session.workOutTime ?? Calendar.current.date(byAdding: .hour, value: 1, to: fallbackInTime) ?? fallbackInTime
     }
 
     private static func makeDefaultWorkInDate(selectedDate: Date, now: Date = Date()) -> Date {
@@ -1530,7 +1557,7 @@ private struct WorkRecordSummaryRowView: View {
     }
 
     private var clockOutText: String {
-        guard let clockOut = session.clockOut else {
+        guard let clockOut = session.clockOut, clockOut.isWorkOutTimeSet else {
             return LocalizationManager.shared.localized(.workRecordMissingClockOut)
         }
         let clockOutTime = effectiveClockOutTime(clockOut)

@@ -368,7 +368,8 @@ struct WorkRecordDisplaySession: Identifiable {
             restHours: sourceWorkInfo?.restHours ?? 1.0,
             transportFee: sourceWorkInfo?.transportFee,
             hourlyRate: sourceWorkInfo?.hourlyRate,
-            workSessionId: workSessionId ?? clockIn?.workInfo?.workSessionId ?? clockOut?.workInfo?.workSessionId
+            workSessionId: workSessionId ?? clockIn?.workInfo?.workSessionId ?? clockOut?.workInfo?.workSessionId,
+            isWorkOutTimeSet: clockOut?.isWorkOutTimeSet ?? false
         )
     }
 
@@ -507,7 +508,7 @@ private struct WorkRecordSessionRowView: View {
     }
 
     private var clockOutText: String {
-        guard let clockOut = session.clockOut else {
+        guard let clockOut = session.clockOut, clockOut.isWorkOutTimeSet else {
             return LocalizationManager.shared.localized(.workRecordMissingClockOut)
         }
         let clockOutTime = effectiveClockOutTime(clockOut)
@@ -587,6 +588,9 @@ struct EventRowView: View {
             return formatTime(event.workInfo?.workInTime ?? event.startDate) ?? ""
         }
         if event.isClockOutEvent {
+            guard event.isWorkOutTimeSet else {
+                return LocalizationManager.shared.localized(.workRecordMissingClockOut)
+            }
             let clockOutTime = event.workInfo?.workOutTime ?? event.startDate
             let time = formatTime(clockOutTime) ?? ""
             if isNextDayClockOut(clockOutTime, event: event) {

@@ -8,8 +8,9 @@ struct WorkInfo: Codable, Hashable {
     var transportFee: Int?
     var hourlyRate: Int?
     var workSessionId: UUID?
+    var isWorkOutTimeSet: Bool
 
-    init(workInTime: Date? = nil, workOutTime: Date? = nil, restHours: Double = 1.0, workDate: Date? = nil, transportFee: Int? = nil, hourlyRate: Int? = nil, workSessionId: UUID? = nil) {
+    init(workInTime: Date? = nil, workOutTime: Date? = nil, restHours: Double = 1.0, workDate: Date? = nil, transportFee: Int? = nil, hourlyRate: Int? = nil, workSessionId: UUID? = nil, isWorkOutTimeSet: Bool? = nil) {
         self.workInTime = workInTime
         self.workOutTime = workOutTime
         self.restHours = restHours
@@ -17,6 +18,39 @@ struct WorkInfo: Codable, Hashable {
         self.transportFee = transportFee
         self.hourlyRate = hourlyRate
         self.workSessionId = workSessionId
+        self.isWorkOutTimeSet = isWorkOutTimeSet ?? (workOutTime != nil)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case workInTime
+        case workOutTime
+        case restHours
+        case workDate
+        case transportFee
+        case hourlyRate
+        case workSessionId
+        case isWorkOutTimeSet
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        workInTime = try container.decodeIfPresent(Date.self, forKey: .workInTime)
+        workOutTime = try container.decodeIfPresent(Date.self, forKey: .workOutTime)
+        restHours = try container.decodeIfPresent(Double.self, forKey: .restHours) ?? 1.0
+        workDate = try container.decodeIfPresent(Date.self, forKey: .workDate)
+        transportFee = try container.decodeIfPresent(Int.self, forKey: .transportFee)
+        hourlyRate = try container.decodeIfPresent(Int.self, forKey: .hourlyRate)
+        workSessionId = try container.decodeIfPresent(UUID.self, forKey: .workSessionId)
+        isWorkOutTimeSet = try container.decodeIfPresent(Bool.self, forKey: .isWorkOutTimeSet)
+            ?? WorkInfo.legacyIsWorkOutTimeSet(for: workOutTime)
+    }
+
+    static func legacyIsWorkOutTimeSet(for workOutTime: Date?) -> Bool {
+        guard let workOutTime else { return false }
+        let components = Calendar.current.dateComponents([.hour, .minute, .second], from: workOutTime)
+        return (components.hour ?? 0) != 0
+            || (components.minute ?? 0) != 0
+            || (components.second ?? 0) != 0
     }
 
     static func makeNewWorkSessionId() -> UUID {

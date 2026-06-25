@@ -31,6 +31,7 @@ final class SwiftDataCalendarEventEntity {
     var transportFee: Int?
     var hourlyRate: Int?
     var workSessionID: UUID?
+    var isWorkOutTimeSet: Bool?
 
     init(
         id: UUID,

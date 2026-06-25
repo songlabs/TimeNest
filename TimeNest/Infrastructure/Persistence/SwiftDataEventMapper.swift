@@ -59,6 +59,7 @@ enum SwiftDataEventMapper {
         entity.transportFee = event.workInfo?.transportFee
         entity.hourlyRate = event.workInfo?.hourlyRate
         entity.workSessionID = event.workInfo?.workSessionId
+        entity.isWorkOutTimeSet = event.workInfo?.isWorkOutTimeSet
     }
 
     static func makeDomainModel(from entity: SwiftDataCalendarEventEntity) -> CalendarEvent {
@@ -123,7 +124,8 @@ enum SwiftDataEventMapper {
             workDate: entity.workDate,
             transportFee: entity.transportFee,
             hourlyRate: entity.hourlyRate,
-            workSessionId: entity.workSessionID
+            workSessionId: entity.workSessionID,
+            isWorkOutTimeSet: entity.isWorkOutTimeSet ?? WorkInfo.legacyIsWorkOutTimeSet(for: entity.workOutTime)
         )
     }
 }
