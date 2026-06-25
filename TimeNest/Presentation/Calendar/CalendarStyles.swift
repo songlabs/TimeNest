@@ -252,6 +252,11 @@ enum CalendarTimelineLayout {
     static let endHour = 24
     static let defaultVisibleHour = 9
     static let hourHeight: CGFloat = 64
+
+    static func nonNegativeDimension(_ value: CGFloat) -> CGFloat {
+        guard value.isFinite, value > 0 else { return 0 }
+        return value
+    }
 }
 
 enum CalendarTimelineEventMetrics {

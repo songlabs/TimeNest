@@ -256,10 +256,11 @@ struct MonthCalendarView: View {
                 let minimumDateCellHeight = isShiftInputMode
                     ? ShiftCalendarLayout.shiftInputDayCellMinHeight
                     : ShiftCalendarLayout.dayCellMinHeight
+                let availableDateHeight = CalendarTimelineLayout.nonNegativeDimension(geometry.size.height - weekdayRowHeight)
+                let containerWidth = CalendarTimelineLayout.nonNegativeDimension(geometry.size.width)
 
                 // 星期行固定高度 + 当前月份实际需要的日期行
-                let dateCellHeight = max(minimumDateCellHeight, (geometry.size.height - weekdayRowHeight) / CGFloat(dateRowCount))
-                let containerWidth = geometry.size.width
+                let dateCellHeight = max(minimumDateCellHeight, availableDateHeight / CGFloat(dateRowCount))
                 let cellWidth = containerWidth / 7.0
                 let gridHeight = weekdayRowHeight + dateCellHeight * CGFloat(dateRowCount)
 

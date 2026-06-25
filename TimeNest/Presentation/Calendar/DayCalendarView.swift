@@ -10,6 +10,8 @@ struct DayCalendarView: View {
     var body: some View {
         GeometryReader { geometry in
             let allDayEvents = CalendarTimelineEventMetrics.allDayEvents(in: cell?.events ?? [])
+            let contentWidth = CalendarTimelineLayout.nonNegativeDimension(geometry.size.width - timeLabelWidth)
+            let timeAxisHeight = CalendarTimelineLayout.nonNegativeDimension(geometry.size.height)
 
             VStack(spacing: 0) {
                 if !allDayEvents.isEmpty {
@@ -22,8 +24,8 @@ struct DayCalendarView: View {
                 DayTimeAxisView(
                     cell: cell,
                     timeLabelWidth: timeLabelWidth,
-                    contentWidth: geometry.size.width - timeLabelWidth,
-                    timeAxisHeight: geometry.size.height
+                    contentWidth: contentWidth,
+                    timeAxisHeight: timeAxisHeight
                 )
             }
         }

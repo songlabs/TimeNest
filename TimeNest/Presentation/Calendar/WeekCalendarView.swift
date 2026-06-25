@@ -25,8 +25,10 @@ struct WeekCalendarView: View {
     var body: some View {
         GeometryReader { geometry in
             let displayCellCount = max(cells.count, 1)
-            let columnWidth = (geometry.size.width - timeLabelWidth) / CGFloat(displayCellCount)
+            let availableWidth = CalendarTimelineLayout.nonNegativeDimension(geometry.size.width - timeLabelWidth)
+            let columnWidth = availableWidth / CGFloat(displayCellCount)
             let allDayRowHeight = calculatedAllDayRowHeight
+            let timeAxisHeight = CalendarTimelineLayout.nonNegativeDimension(geometry.size.height - dateHeaderHeight - allDayRowHeight)
 
             VStack(spacing: 0) {
                 WeekDateHeaderView(
@@ -55,7 +57,7 @@ struct WeekCalendarView: View {
                     columnWidth: columnWidth,
                     selectedDate: selectedDate
                 )
-                .frame(height: max(0, geometry.size.height - dateHeaderHeight - allDayRowHeight))
+                .frame(height: timeAxisHeight)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -257,8 +259,9 @@ struct WeekTimeAxisView: View {
     private var contentHeight: CGFloat { CGFloat(endHour - startHour) * hourHeight }
 
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             let contentWidth = columnWidth * CGFloat(cells.count)
+            let axisWidth = CalendarTimelineLayout.nonNegativeDimension(timeLabelWidth + contentWidth)
 
             ScrollViewReader { proxy in
                 ScrollView(.vertical, showsIndicators: true) {
@@ -294,7 +297,7 @@ struct WeekTimeAxisView: View {
                             )
                         }
                     }
-                    .frame(width: geometry.size.width, height: contentHeight, alignment: .topLeading)
+                    .frame(width: axisWidth, height: contentHeight, alignment: .topLeading)
                 }
                 .onAppear {
                     proxy.scrollTo(hourID(defaultVisibleHour), anchor: .top)
