@@ -132,10 +132,19 @@
 "editor.invalid_date_range" = "終了時刻は開始時刻より後にしてください。";
 "editor.workIn" = "出勤";
 "editor.workOut" = "退勤";
+"work_clock.short_in" = "出";
+"work_clock.short_out" = "退";
 "editor.restTime" = "休息時間";
 "editor.transportFee" = "交通費";
 "editor.hourlyRate" = "時給";
 "editor.currencyUnit" = "円";
+"work_record.add" = "勤務記録を新規作成";
+"work_record.edit" = "勤務記録を編集";
+"work_record.default_title" = "アルバイト";
+"work_record.section_title" = "勤務記録";
+"work_record.empty" = "勤務記録はありません";
+"work_record.missing_clock_in" = "未出勤";
+"work_record.missing_clock_out" = "未退勤";
 
 /* Day Detail */
 "day_detail.title" = "予定";

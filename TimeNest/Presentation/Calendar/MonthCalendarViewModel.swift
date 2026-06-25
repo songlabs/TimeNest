@@ -8,7 +8,6 @@ class MonthCalendarViewModel: ObservableObject {
     @Published private(set) var grid: MonthGrid?
     @Published private(set) var isLoading: Bool = false
     @Published private(set) var errorMessage: String?
-    @Published var showingEventEditor: Bool = false
     @Published var selectedDayCell: CalendarDayCell?
     @Published var showingDayDetail: Bool = false
     @Published var isShiftInputMode: Bool = false
@@ -24,11 +23,6 @@ class MonthCalendarViewModel: ObservableObject {
         generateWeekCells(for: selectedDate)
     }
     
-    // 日视图的日期单元格
-    var selectedDateEvents: [EventOccurrence] {
-        dayCell?.events ?? []
-    }
-
     var dayCell: CalendarDayCell? {
         guard let grid = grid else { return nil }
         let calendar = Calendar(identifier: .gregorian)
@@ -221,7 +215,6 @@ class MonthCalendarViewModel: ObservableObject {
         selectedDate = date
         displayMode = .month
         showingDayDetail = false
-        showingEventEditor = false
         await reloadMonth()
         selectedDayCell = findCell(for: date)
     }
@@ -265,7 +258,7 @@ class MonthCalendarViewModel: ObservableObject {
         )
 
         let notificationResult: EventNotificationScheduleResult
-        if let kind = workClockKind(for: title) {
+        if let kind = workClockKind(title: title, workInfo: adjustedWorkInfo) {
             notificationResult = try await upsertWorkClockEvent(event, kind: kind)
             if let sessionId = adjustedWorkInfo.workSessionId {
                 try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
@@ -282,7 +275,6 @@ class MonthCalendarViewModel: ObservableObject {
         isShiftInputMode = true
         shiftInputTargetDate = selectedDate
         showingDayDetail = false
-        showingEventEditor = false
         selectedShiftTemplate = nil
     }
 
@@ -463,7 +455,7 @@ class MonthCalendarViewModel: ObservableObject {
         let sameKindEvents: [CalendarEvent]
         if let sessionId {
             sameKindEvents = try await workEventsAround(workDate: event.workInfo?.workDate ?? event.startDate)
-                .filter { $0.workInfo?.workSessionId == sessionId && workClockKind(for: $0.title) == kind }
+                .filter { $0.workInfo?.workSessionId == sessionId && $0.workClockKind == kind }
                 .sorted { $0.createdAt < $1.createdAt }
         } else {
             sameKindEvents = []
@@ -537,7 +529,7 @@ class MonthCalendarViewModel: ObservableObject {
         let dayStart = calendar.startOfDay(for: date)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart) ?? dayStart
         return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
-            .filter { workClockKind(for: $0.title) != nil }
+            .filter { $0.workClockKind != nil }
     }
 
     private func workEventsAround(workDate: Date) async throws -> [CalendarEvent] {
@@ -545,12 +537,16 @@ class MonthCalendarViewModel: ObservableObject {
         let dayStart = calendar.startOfDay(for: workDate)
         let dayEnd = calendar.date(byAdding: .day, value: 2, to: dayStart) ?? dayStart
         return try await eventUseCase.events(in: DateInterval(start: dayStart, end: dayEnd))
-            .filter { workClockKind(for: $0.title) != nil }
+            .filter { $0.workClockKind != nil }
     }
 
 
     private func workClockKind(for title: String) -> WorkClockKind? {
         WorkClockTitleMatcher.kind(for: title)
+    }
+
+    private func workClockKind(title: String, workInfo: WorkInfo) -> WorkClockKind? {
+        WorkClockTitleMatcher.kind(for: title) ?? WorkClockTitleMatcher.kind(for: workInfo)
     }
 
     func selectDay(_ cell: CalendarDayCell) {
@@ -562,6 +558,13 @@ class MonthCalendarViewModel: ObservableObject {
             return
         }
 
+        showingDayDetail = true
+    }
+
+    func openSelectedDateDetail() async {
+        let targetDate = selectedDate
+        await ensureDataLoadedForDate(targetDate)
+        selectedDayCell = findCell(for: targetDate) ?? createPlaceholderCell(for: targetDate)
         showingDayDetail = true
     }
 
@@ -624,7 +627,7 @@ class MonthCalendarViewModel: ObservableObject {
                 try await eventUseCase.deleteEvent(id: shiftEventToReplace.id)
             }
 
-            if workClockKind(for: title) != nil {
+            if workClockKind(title: title, workInfo: adjustedWorkInfo) != nil {
                 if let sessionId = adjustedWorkInfo.workSessionId {
                     try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
                 }
@@ -638,7 +641,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     private func adjustedWorkInfoForSave(title: String, startDate: Date, workInfo: WorkInfo) async throws -> WorkInfo {
-        guard workClockKind(for: title) != nil else {
+        guard let kind = workClockKind(title: title, workInfo: workInfo) else {
             return workInfo
         }
 
@@ -650,11 +653,11 @@ class MonthCalendarViewModel: ObservableObject {
         let workDay = calendar.startOfDay(for: workInfo.workDate ?? startDate)
         adjusted.workDate = workDay
 
-        if WorkClockTitleMatcher.isClockInTitle(title), let workInTime = workInfo.workInTime {
+        if kind == .clockIn, let workInTime = workInfo.workInTime {
             adjusted.workInTime = date(on: workDay, matchingTimeOf: workInTime)
         }
 
-        guard WorkClockTitleMatcher.isClockOutTitle(title), let workOutTime = workInfo.workOutTime else {
+        guard kind == .clockOut, let workOutTime = workInfo.workOutTime else {
             return adjusted
         }
 
@@ -670,7 +673,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     private func clockInTime(on workDay: Date, sessionId: UUID?) async throws -> Date? {
         try await sameDayWorkEvents(for: workDay)
-            .filter { WorkClockTitleMatcher.isClockInTitle($0.title) }
+            .filter { $0.isClockInEvent }
             .filter { event in
                 guard let sessionId else { return event.workInfo?.workSessionId == nil }
                 return event.workInfo?.workSessionId == sessionId || event.workInfo?.workSessionId == nil
@@ -696,10 +699,10 @@ class MonthCalendarViewModel: ObservableObject {
 
 
     private func eventDatesForSave(title: String, startDate: Date, endDate: Date, isAllDay: Bool, workInfo: WorkInfo) -> (start: Date, end: Date) {
-        if WorkClockTitleMatcher.isClockInTitle(title), let workInTime = workInfo.workInTime {
+        if workClockKind(title: title, workInfo: workInfo) == .clockIn, let workInTime = workInfo.workInTime {
             return workClockEventDates(for: workInTime)
         }
-        if WorkClockTitleMatcher.isClockOutTitle(title), let workOutTime = workInfo.workOutTime {
+        if workClockKind(title: title, workInfo: workInfo) == .clockOut, let workOutTime = workInfo.workOutTime {
             return workClockEventDates(for: workOutTime)
         }
         return EventEditorDateNormalizer.persistenceDates(

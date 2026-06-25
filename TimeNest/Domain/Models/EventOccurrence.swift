@@ -23,7 +23,10 @@ enum WorkClockKind: Hashable {
 
 extension EventOccurrence {
     var workClockKind: WorkClockKind? {
-        WorkClockTitleMatcher.kind(for: title)
+        if let kind = WorkClockTitleMatcher.kind(for: workInfo) {
+            return kind
+        }
+        return WorkClockTitleMatcher.kind(for: title)
     }
 
     var isClockInEvent: Bool {
@@ -64,7 +67,10 @@ extension EventOccurrence {
 
 extension CalendarEvent {
     var workClockKind: WorkClockKind? {
-        WorkClockTitleMatcher.kind(for: title)
+        if let kind = WorkClockTitleMatcher.kind(for: workInfo) {
+            return kind
+        }
+        return WorkClockTitleMatcher.kind(for: title)
     }
 
     var isClockInEvent: Bool {
@@ -100,6 +106,17 @@ enum WorkClockTitleMatcher {
             return .clockIn
         }
         if clockOutTitles.contains(normalizedTitle) {
+            return .clockOut
+        }
+        return nil
+    }
+
+    static func kind(for workInfo: WorkInfo?) -> WorkClockKind? {
+        guard let workInfo else { return nil }
+        if workInfo.workInTime != nil, workInfo.workOutTime == nil {
+            return .clockIn
+        }
+        if workInfo.workOutTime != nil, workInfo.workInTime == nil {
             return .clockOut
         }
         return nil

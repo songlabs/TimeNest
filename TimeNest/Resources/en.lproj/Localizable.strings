@@ -132,10 +132,19 @@
 "editor.invalid_date_range" = "End time must be after start time.";
 "editor.workIn" = "Clock In";
 "editor.workOut" = "Clock Out";
+"work_clock.short_in" = "In";
+"work_clock.short_out" = "Out";
 "editor.restTime" = "Break Time";
 "editor.transportFee" = "Transport Fee";
 "editor.hourlyRate" = "Hourly Rate";
 "editor.currencyUnit" = "Yuan";
+"work_record.add" = "New Work Record";
+"work_record.edit" = "Edit Work Record";
+"work_record.default_title" = "Work";
+"work_record.section_title" = "Work Records";
+"work_record.empty" = "No work records";
+"work_record.missing_clock_in" = "No clock-in";
+"work_record.missing_clock_out" = "No clock-out";
 
 /* Day Detail */
 "day_detail.title" = "Events";

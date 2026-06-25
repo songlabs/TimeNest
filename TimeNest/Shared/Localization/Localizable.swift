@@ -170,6 +170,8 @@ enum LocalizedString: String {
 
     case calendarAddEvent = "calendar.add_event"
     case calendarMoreEventsCount = "calendar.more_events_count"
+    case workClockShortIn = "work_clock.short_in"
+    case workClockShortOut = "work_clock.short_out"
 
     // MARK: - Widgets
 
@@ -311,6 +313,13 @@ enum LocalizedString: String {
     case editorHourlyRate = "editor.hourlyRate"
     case editorCurrencyUnit = "editor.currencyUnit"
     case workNextDayPrefix = "work.nextDayPrefix"
+    case workRecordAdd = "work_record.add"
+    case workRecordEdit = "work_record.edit"
+    case workRecordDefaultTitle = "work_record.default_title"
+    case workRecordSectionTitle = "work_record.section_title"
+    case workRecordEmpty = "work_record.empty"
+    case workRecordMissingClockIn = "work_record.missing_clock_in"
+    case workRecordMissingClockOut = "work_record.missing_clock_out"
 
     // MARK: - Shift Time
 

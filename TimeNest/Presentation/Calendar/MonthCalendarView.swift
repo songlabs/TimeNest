@@ -84,25 +84,6 @@ struct MonthCalendarView: View {
                 await viewModel.openCalendar(on: date)
             }
         }
-        .sheet(isPresented: $viewModel.showingEventEditor) {
-            EventEditorView(
-                isPresented: $viewModel.showingEventEditor,
-                mode: .create(initialDate: viewModel.selectedDate),
-                existingEvents: viewModel.selectedDateEvents,
-                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await viewModel.createEvent(
-                        title: title,
-                        note: note,
-                        startDate: startDate,
-                        endDate: endDate,
-                        isAllDay: isAllDay,
-                        reminderOffsetMinutes: reminderOffsetMinutes,
-                        shiftTemplateID: shiftTemplateID,
-                        workInfo: workInfo
-                    )
-                }
-            )
-        }
         .sheet(isPresented: $showingSettings, onDismiss: {
             // 无论通过关闭按钮还是下拉手势关闭，都刷新 shiftTemplates
             viewModel.refreshShiftTemplates()
@@ -399,7 +380,9 @@ struct MonthCalendarView: View {
             selectedViewMode: $viewModel.displayMode,
             onTodayTapped: handleTodayTapped,
             onAddEventTapped: {
-                viewModel.showingEventEditor = true
+                Task {
+                    await viewModel.openSelectedDateDetail()
+                }
             },
             onModeChanged: handleModeChanged
         )
@@ -796,21 +779,25 @@ struct DayCellView: View {
     }
 
     private enum EventLabelRow {
-        case workClock(clockIn: EventOccurrence?, clockOut: EventOccurrence?)
+        case workClock(clockIn: EventOccurrence?, clockInCount: Int, clockOut: EventOccurrence?, clockOutCount: Int)
         case event(EventOccurrence)
     }
 
     private var eventLabelRows: [EventLabelRow] {
         var clockIn: EventOccurrence?
+        var clockInCount = 0
         var clockOut: EventOccurrence?
+        var clockOutCount = 0
         var shiftRows: [EventLabelRow] = []
         var normalRows: [EventLabelRow] = []
 
         for event in cell.events {
             if event.isClockInEvent {
+                clockInCount += 1
                 if clockIn == nil { clockIn = event }
             }
             if event.isClockOutEvent {
+                clockOutCount += 1
                 if clockOut == nil { clockOut = event }
             }
             if event.isWorkClockEvent {
@@ -823,8 +810,8 @@ struct DayCellView: View {
             }
         }
 
-        let workClockRows: [EventLabelRow] = (clockIn != nil || clockOut != nil)
-            ? [.workClock(clockIn: clockIn, clockOut: clockOut)]
+        let workClockRows: [EventLabelRow] = (clockInCount > 0 || clockOutCount > 0)
+            ? [.workClock(clockIn: clockIn, clockInCount: clockInCount, clockOut: clockOut, clockOutCount: clockOutCount)]
             : []
 
         return shiftRows + workClockRows + normalRows
@@ -833,8 +820,13 @@ struct DayCellView: View {
     @ViewBuilder
     private func eventLabelRowView(_ row: EventLabelRow) -> some View {
         switch row {
-        case .workClock(let clockIn, let clockOut):
-            workClockLabelView(clockIn: clockIn, clockOut: clockOut)
+        case .workClock(let clockIn, let clockInCount, let clockOut, let clockOutCount):
+            workClockLabelView(
+                clockIn: clockIn,
+                clockInCount: clockInCount,
+                clockOut: clockOut,
+                clockOutCount: clockOutCount
+            )
         case .event(let event):
             eventLabelView(for: event)
         }
@@ -859,16 +851,21 @@ struct DayCellView: View {
     }
 
     @ViewBuilder
-    private func workClockLabelView(clockIn: EventOccurrence?, clockOut: EventOccurrence?) -> some View {
+    private func workClockLabelView(
+        clockIn: EventOccurrence?,
+        clockInCount: Int,
+        clockOut: EventOccurrence?,
+        clockOutCount: Int
+    ) -> some View {
         HStack(spacing: 0) {
-            Text(clockIn.map { eventLabel(for: $0) } ?? "")
+            Text(workClockSummaryLabel(kind: .clockIn, count: clockInCount))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .truncationMode(.tail)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(1)
 
-            Text(clockOut.map { eventLabel(for: $0) } ?? "")
+            Text(workClockSummaryLabel(kind: .clockOut, count: clockOutCount))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .truncationMode(.tail)
@@ -882,6 +879,18 @@ struct DayCellView: View {
         .frame(maxWidth: .infinity)
         .background(workClockLabelBackgroundColor(clockIn: clockIn, clockOut: clockOut))
         .cornerRadius(3)
+    }
+
+    private func workClockSummaryLabel(kind: WorkClockKind, count: Int) -> String {
+        guard count > 0 else { return "" }
+        let label: String
+        switch kind {
+        case .clockIn:
+            label = localization.localized(.workClockShortIn)
+        case .clockOut:
+            label = localization.localized(.workClockShortOut)
+        }
+        return count > 1 ? "\(label)\(count)" : label
     }
 
     private func eventLabel(for event: EventOccurrence) -> String {

@@ -132,10 +132,19 @@
 "editor.invalid_date_range" = "结束时间必须晚于开始时间。";
 "editor.workIn" = "上班";
 "editor.workOut" = "下班";
+"work_clock.short_in" = "上";
+"work_clock.short_out" = "下";
 "editor.restTime" = "休息时间";
 "editor.transportFee" = "交通费";
 "editor.hourlyRate" = "时给";
 "editor.currencyUnit" = "元";
+"work_record.add" = "新增打工记录";
+"work_record.edit" = "编辑打工记录";
+"work_record.default_title" = "打工";
+"work_record.section_title" = "打工记录";
+"work_record.empty" = "暂无打工记录";
+"work_record.missing_clock_in" = "未上班";
+"work_record.missing_clock_out" = "未下班";
 
 /* Day Detail */
 "day_detail.title" = "日程";
