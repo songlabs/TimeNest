@@ -126,6 +126,7 @@
 "editor.cancel" = "Cancel";
 "editor.new_event" = "New Event";
 "editor.edit_event" = "Edit Event";
+"event.default_title" = "Event";
 "editor.start" = "Start";
 "editor.end" = "End";
 "editor.reminder" = "Reminder";

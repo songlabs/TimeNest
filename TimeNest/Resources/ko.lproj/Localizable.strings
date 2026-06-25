@@ -126,6 +126,7 @@
 "editor.cancel" = "취소";
 "editor.new_event" = "새 일정";
 "editor.edit_event" = "일정 편집";
+"event.default_title" = "일정";
 "editor.start" = "시작";
 "editor.end" = "종료";
 "editor.reminder" = "알림";
@@ -140,7 +141,7 @@
 "editor.currencyUnit" = "위안";
 "work_record.add" = "알바 기록 새로 만들기";
 "work_record.edit" = "알바 기록 편집";
-"work_record.default_title" = "알바";
+"work_record.default_title" = "근무";
 "work_record.section_title" = "알바 기록";
 "work_record.empty" = "알바 기록 없음";
 "work_record.missing_clock_in" = "출근 없음";

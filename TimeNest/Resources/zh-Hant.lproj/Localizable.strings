@@ -126,6 +126,7 @@
 "editor.cancel" = "取消";
 "editor.new_event" = "新增行程";
 "editor.edit_event" = "編輯行程";
+"event.default_title" = "行程";
 "editor.start" = "開始";
 "editor.end" = "結束";
 "editor.reminder" = "提醒";

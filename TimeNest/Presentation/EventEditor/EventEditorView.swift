@@ -71,8 +71,6 @@ private enum EventEditorStyle {
     static let contentBottomPadding: CGFloat = 12
     static let headerBottomPadding: CGFloat = 12
     static let workInfoVerticalPadding: CGFloat = 12
-    static let sheetCompactHeight: CGFloat = 600
-    static let sheetMaximumHeightRatio: CGFloat = 0.82
     static let rowHeight: CGFloat = 48
     static let controlHeight: CGFloat = 36
     static let compactControlHeight: CGFloat = 30
@@ -93,15 +91,6 @@ private enum EventEditorStyle {
 
     /// 顶部按钮圆角
     static let headerButtonCornerRadius: CGFloat = 24
-}
-
-private struct EventEditorCompactDetent: CustomPresentationDetent {
-    static func height(in context: Context) -> CGFloat? {
-        min(
-            EventEditorStyle.sheetCompactHeight,
-            context.maxDetentValue * EventEditorStyle.sheetMaximumHeightRatio
-        )
-    }
 }
 
 private enum EditorFocusedField: Hashable {
@@ -336,16 +325,13 @@ struct EventEditorView: View {
                                     workInDate: $workInDate,
                                     workOutDate: $workOutDate,
                                     editingWorkTime: $editingWorkTime,
-                                    eventTitle: $title,
                                     focusedField: $focusedField,
                                     workInTitle: localization.localized(.editorWorkIn),
                                     workOutTitle: localization.localized(.editorWorkOut),
                                     restTimeTitle: localization.localized(.editorRestTime),
                                     transportFeeTitle: localization.localized(.editorTransportFee),
                                     hourlyRateTitle: localization.localized(.editorHourlyRate),
-                                    currencyUnit: localization.localized(.editorCurrencyUnit),
-                                    onWorkInTap: { handleWorkClockTap(.clockIn) },
-                                    onWorkOutTap: { handleWorkClockTap(.clockOut) }
+                                    currencyUnit: localization.localized(.editorCurrencyUnit)
                                 )
                             }
 
@@ -436,7 +422,7 @@ struct EventEditorView: View {
                 )
             }
         }
-        .presentationDetents([.custom(EventEditorCompactDetent.self)])
+        .presentationDetents([.fraction(0.6), .large])
     }
 
     private var shouldShowWorkRecordsSection: Bool {
@@ -636,7 +622,7 @@ struct EventEditorView: View {
     }
 
     private var canSave: Bool {
-        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && validationMessage == nil
+        validationMessage == nil
     }
 
     private var validationMessage: String? {
@@ -652,7 +638,7 @@ struct EventEditorView: View {
         case .create(let initialDate):
             let defaultStartDate = makeDefaultEventStartDate(selectedDate: initialDate)
             return (
-                title: "",
+                title: LocalizationManager.shared.localized(.eventDefaultTitle),
                 note: nil,
                 startDate: defaultStartDate,
                 endDate: makeDefaultEventEndDate(startDate: defaultStartDate),
@@ -844,7 +830,7 @@ struct EventEditorView: View {
         do {
             let saveContext = normalizedSaveContext()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            let notificationResult = try await onSave(title, trimmedNote.isEmpty ? nil : trimmedNote, saveContext.dates.start, saveContext.dates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, saveContext.workInfo)
+            let notificationResult = try await onSave(normalizedEventTitle(), trimmedNote.isEmpty ? nil : trimmedNote, saveContext.dates.start, saveContext.dates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, saveContext.workInfo)
             saving = false
             if let alert = NotificationSaveAlert(result: notificationResult) {
                 pendingNotificationSaveAlert = alert
@@ -855,6 +841,17 @@ struct EventEditorView: View {
             errorMessage = error.localizedDescription
             saving = false
         }
+    }
+
+    private func normalizedEventTitle() -> String {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedTitle.isEmpty {
+            return trimmedTitle
+        }
+        if isEditingWorkClock {
+            return localization.localized(.workRecordDefaultTitle)
+        }
+        return localization.localized(.eventDefaultTitle)
     }
 
     private func notificationSaveAlert(for alert: NotificationSaveAlert) -> Alert {
@@ -1172,16 +1169,13 @@ struct WorkRecordEditorView: View {
                                 workInDate: $workInDate,
                                 workOutDate: $workOutDate,
                                 editingWorkTime: $editingWorkTime,
-                                eventTitle: $workTitle,
                                 focusedField: $focusedField,
                                 workInTitle: localization.localized(.editorWorkIn),
                                 workOutTitle: localization.localized(.editorWorkOut),
                                 restTimeTitle: localization.localized(.editorRestTime),
                                 transportFeeTitle: localization.localized(.editorTransportFee),
                                 hourlyRateTitle: localization.localized(.editorHourlyRate),
-                                currencyUnit: localization.localized(.editorCurrencyUnit),
-                                onWorkInTap: { handleWorkTimeButtonTap(.workIn) },
-                                onWorkOutTap: { handleWorkTimeButtonTap(.workOut) }
+                                currencyUnit: localization.localized(.editorCurrencyUnit)
                             )
 
                             if let errorMessage {
@@ -1217,7 +1211,7 @@ struct WorkRecordEditorView: View {
                 }
             }
         }
-        .presentationDetents([.custom(EventEditorCompactDetent.self)])
+        .presentationDetents([.fraction(0.6), .large])
     }
 
     private var editorTitle: String {
@@ -1331,24 +1325,6 @@ struct WorkRecordEditorView: View {
         }
     }
 
-    private func handleWorkTimeButtonTap(_ target: WorkTimeEditTarget) {
-        focusedField = nil
-        switch target {
-        case .workIn:
-            applyAutomaticWorkTitle(localization.localized(.editorWorkIn))
-        case .workOut:
-            applyAutomaticWorkTitle(localization.localized(.editorWorkOut))
-        }
-    }
-
-    private func applyAutomaticWorkTitle(_ newTitle: String) {
-        let trimmedTitle = workTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let defaultTitle = localization.localized(.workRecordDefaultTitle)
-        if trimmedTitle.isEmpty || trimmedTitle == defaultTitle || WorkClockTitleMatcher.kind(for: trimmedTitle) != nil {
-            workTitle = newTitle
-        }
-    }
-
     private func setWorkDate(_ selection: Date) {
         let normalizedDate = Calendar.current.startOfDay(for: selection)
         workDate = normalizedDate
@@ -1454,7 +1430,7 @@ struct WorkRecordEditorView: View {
             let workInTime = makeDefaultWorkInDate(selectedDate: workDate)
             let workOutTime = Calendar.current.date(byAdding: .hour, value: 1, to: workInTime) ?? workInTime
             return (
-                title: "",
+                title: LocalizationManager.shared.localized(.workRecordDefaultTitle),
                 workDate: workDate,
                 workInTime: workInTime,
                 workOutTime: workOutTime,
@@ -2136,7 +2112,6 @@ private struct WorkInfoSection: View {
     @Binding var workInDate: Date
     @Binding var workOutDate: Date
     @Binding var editingWorkTime: WorkTimeEditTarget?
-    @Binding var eventTitle: String
     var focusedField: FocusState<EditorFocusedField?>.Binding
 
     let workInTitle: String
@@ -2145,16 +2120,13 @@ private struct WorkInfoSection: View {
     let transportFeeTitle: String
     let hourlyRateTitle: String
     let currencyUnit: String
-    let onWorkInTap: () -> Void
-    let onWorkOutTap: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
             HStack(spacing: EventEditorStyle.workColumnSpacing) {
                 workColumn(title: workInTitle) {
-                    onWorkInTap()
-                } content: {
                     Button {
+                        focusedField.wrappedValue = nil
                         editingWorkTime = .workIn
                     } label: {
                         workInfoTimeValuePillLabel(formatWorkTime(workInDate))
@@ -2165,6 +2137,7 @@ private struct WorkInfoSection: View {
 
                 workColumn(title: restTimeTitle) {
                     Button {
+                        focusedField.wrappedValue = nil
                         showingRestTimePicker = true
                     } label: {
                         workInfoTimeValuePillLabel(formatRestTime(restTime))
@@ -2174,9 +2147,8 @@ private struct WorkInfoSection: View {
                 }
 
                 workColumn(title: workOutTitle) {
-                    onWorkOutTap()
-                } content: {
                     Button {
+                        focusedField.wrappedValue = nil
                         editingWorkTime = .workOut
                     } label: {
                         workInfoTimeValuePillLabel(formatWorkTime(workOutDate))
@@ -2196,18 +2168,6 @@ private struct WorkInfoSection: View {
         .padding(.horizontal, EventEditorStyle.cardPadding)
         .padding(.vertical, EventEditorStyle.workInfoVerticalPadding)
         .cardContainer()
-    }
-
-    private func workColumn<Content: View>(title: String, action: @escaping () -> Void, @ViewBuilder content: () -> Content) -> some View {
-        VStack(spacing: 8) {
-            Button(action: action) {
-                Text(title)
-                    .font(EventEditorStyle.workActionButtonFont)
-            }
-            .buttonStyle(ShiftToggleActiveButtonStyle(width: EventEditorStyle.shiftActionButtonWidth, height: EventEditorStyle.shiftActionButtonHeight, cornerRadius: EventEditorStyle.shiftActionButtonCornerRadius, font: EventEditorStyle.workActionButtonFont))
-            content()
-        }
-        .frame(maxWidth: .infinity)
     }
 
     private func workColumn<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {

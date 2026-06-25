@@ -126,6 +126,7 @@
 "editor.cancel" = "取消";
 "editor.new_event" = "新建日程";
 "editor.edit_event" = "编辑日程";
+"event.default_title" = "行程";
 "editor.start" = "开始";
 "editor.end" = "结束";
 "editor.reminder" = "提醒";

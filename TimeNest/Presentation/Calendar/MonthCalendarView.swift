@@ -779,28 +779,18 @@ struct DayCellView: View {
     }
 
     private enum EventLabelRow {
-        case workClock(clockIn: EventOccurrence?, clockInCount: Int, clockOut: EventOccurrence?, clockOutCount: Int)
+        case workRecord(WorkRecordDisplaySession)
         case event(EventOccurrence)
     }
 
     private var eventLabelRows: [EventLabelRow] {
-        var clockIn: EventOccurrence?
-        var clockInCount = 0
-        var clockOut: EventOccurrence?
-        var clockOutCount = 0
+        var workClockEvents: [EventOccurrence] = []
         var shiftRows: [EventLabelRow] = []
         var normalRows: [EventLabelRow] = []
 
         for event in cell.events {
-            if event.isClockInEvent {
-                clockInCount += 1
-                if clockIn == nil { clockIn = event }
-            }
-            if event.isClockOutEvent {
-                clockOutCount += 1
-                if clockOut == nil { clockOut = event }
-            }
             if event.isWorkClockEvent {
+                workClockEvents.append(event)
                 continue
             }
             if event.shiftTemplateID != nil {
@@ -810,23 +800,18 @@ struct DayCellView: View {
             }
         }
 
-        let workClockRows: [EventLabelRow] = (clockInCount > 0 || clockOutCount > 0)
-            ? [.workClock(clockIn: clockIn, clockInCount: clockInCount, clockOut: clockOut, clockOutCount: clockOutCount)]
-            : []
+        let workRecordRows = WorkRecordDisplaySession
+            .make(from: workClockEvents, selectedDate: cell.date.toDate())
+            .map(EventLabelRow.workRecord)
 
-        return shiftRows + workClockRows + normalRows
+        return shiftRows + workRecordRows + normalRows
     }
 
     @ViewBuilder
     private func eventLabelRowView(_ row: EventLabelRow) -> some View {
         switch row {
-        case .workClock(let clockIn, let clockInCount, let clockOut, let clockOutCount):
-            workClockLabelView(
-                clockIn: clockIn,
-                clockInCount: clockInCount,
-                clockOut: clockOut,
-                clockOutCount: clockOutCount
-            )
+        case .workRecord(let session):
+            workRecordLabelView(for: session)
         case .event(let event):
             eventLabelView(for: event)
         }
@@ -851,46 +836,17 @@ struct DayCellView: View {
     }
 
     @ViewBuilder
-    private func workClockLabelView(
-        clockIn: EventOccurrence?,
-        clockInCount: Int,
-        clockOut: EventOccurrence?,
-        clockOutCount: Int
-    ) -> some View {
-        HStack(spacing: 0) {
-            Text(workClockSummaryLabel(kind: .clockIn, count: clockInCount))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .layoutPriority(1)
-
-            Text(workClockSummaryLabel(kind: .clockOut, count: clockOutCount))
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .truncationMode(.tail)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .layoutPriority(1)
-        }
-        .font(.system(size: 10, weight: .medium))
-        .foregroundColor(ShiftCalendarColors.primaryBlueDark)
-        .padding(.horizontal, 4)
-        .padding(.vertical, 2)
-        .frame(maxWidth: .infinity)
-        .background(workClockLabelBackgroundColor(clockIn: clockIn, clockOut: clockOut))
-        .cornerRadius(3)
-    }
-
-    private func workClockSummaryLabel(kind: WorkClockKind, count: Int) -> String {
-        guard count > 0 else { return "" }
-        let label: String
-        switch kind {
-        case .clockIn:
-            label = localization.localized(.workClockShortIn)
-        case .clockOut:
-            label = localization.localized(.workClockShortOut)
-        }
-        return count > 1 ? "\(label)\(count)" : label
+    private func workRecordLabelView(for session: WorkRecordDisplaySession) -> some View {
+        Text(session.displayTitle(defaultTitle: localization.localized(.workRecordDefaultTitle)))
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(ShiftCalendarColors.primaryBlueDark)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 2)
+            .frame(maxWidth: .infinity)
+            .background(workRecordLabelBackgroundColor(for: session))
+            .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
     }
 
     private func eventLabel(for event: EventOccurrence) -> String {
@@ -923,11 +879,11 @@ struct DayCellView: View {
         return ShiftDisplayColors.calendarLabelBorderColor(for: shiftTemplateID.color)
     }
 
-    private func workClockLabelBackgroundColor(clockIn: EventOccurrence?, clockOut: EventOccurrence?) -> Color {
-        if let clockIn {
+    private func workRecordLabelBackgroundColor(for session: WorkRecordDisplaySession) -> Color {
+        if let clockIn = session.clockIn {
             return eventLabelBackgroundColor(for: clockIn)
         }
-        if let clockOut {
+        if let clockOut = session.clockOut {
             return eventLabelBackgroundColor(for: clockOut)
         }
         return ShiftCalendarColors.primaryBlue.opacity(0.12)

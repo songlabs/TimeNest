@@ -126,6 +126,7 @@
 "editor.cancel" = "キャンセル";
 "editor.new_event" = "新規予定";
 "editor.edit_event" = "予定を編集";
+"event.default_title" = "予定";
 "editor.start" = "開始";
 "editor.end" = "終了";
 "editor.reminder" = "通知";
@@ -140,7 +141,7 @@
 "editor.currencyUnit" = "円";
 "work_record.add" = "勤務記録を新規作成";
 "work_record.edit" = "勤務記録を編集";
-"work_record.default_title" = "アルバイト";
+"work_record.default_title" = "バイト";
 "work_record.section_title" = "勤務記録";
 "work_record.empty" = "勤務記録はありません";
 "work_record.missing_clock_in" = "未出勤";

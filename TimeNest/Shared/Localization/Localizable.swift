@@ -300,6 +300,7 @@ enum LocalizedString: String {
     case editorCancel = "editor.cancel"
     case editorNewEvent = "editor.new_event"
     case editorEditEvent = "editor.edit_event"
+    case eventDefaultTitle = "event.default_title"
     case editorWorkIn = "editor.workIn"
     case editorWorkOut = "editor.workOut"
     case editorWorkInOverwriteTitle = "editor.work_in_overwrite_title"
