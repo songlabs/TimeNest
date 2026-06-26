@@ -76,6 +76,7 @@ let project = Project(
             bundleId: "com.song.TimeNest.TimeNestWidgetExtension",
             deploymentTargets: .iOS("17.0"),
             infoPlist: .extendingDefault(with: [
+                "CFBundleDisplayName": "TimeNest",
                 "NSExtension": [
                     "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
                 ]
