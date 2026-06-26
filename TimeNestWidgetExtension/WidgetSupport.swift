@@ -81,6 +81,68 @@ enum WidgetStyle {
     }
 }
 
+enum WidgetLayout {
+    static let mediumPadding = EdgeInsets(top: 15, leading: 16, bottom: 13, trailing: 16)
+    static let smallPadding = EdgeInsets(top: 10, leading: 10, bottom: 10, trailing: 10)
+    static let largePadding = EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
+    static let mediumTitleSpacing: CGFloat = 5
+    static let largeTitleSpacing: CGFloat = 8
+    static let mediumWidgetTitleFontSize: CGFloat = 15
+    static let compactMonthTitleFontSize: CGFloat = 14
+    static let upcomingColumnSpacing: CGFloat = 12
+    static let mediumUpcomingEventLimit = 2
+    static let defaultUpcomingEventLimit = 3
+    static let upcomingCalendarMediumWidth: CGFloat = 148
+
+    static func contentPadding(for family: WidgetFamily) -> EdgeInsets {
+        switch family {
+        case .systemSmall:
+            return smallPadding
+        case .systemMedium:
+            return mediumPadding
+        default:
+            return largePadding
+        }
+    }
+
+    static func titleSpacing(for family: WidgetFamily) -> CGFloat {
+        family == .systemLarge ? largeTitleSpacing : mediumTitleSpacing
+    }
+
+    static func titleFont(for family: WidgetFamily) -> Font {
+        family == .systemLarge ? .headline.weight(.bold) : .system(size: mediumWidgetTitleFontSize, weight: .bold)
+    }
+
+    static func monthHeaderFont(compact: Bool) -> Font {
+        compact ? .system(size: compactMonthTitleFontSize, weight: .bold) : .headline.weight(.bold)
+    }
+
+    enum MonthGrid {
+        static let columnSpacing: CGFloat = 1
+        static let weekdayGridSpacing: CGFloat = 2
+        static let compactRowSpacing: CGFloat = 1
+        static let regularRowSpacing: CGFloat = 2
+        static let compactWeekdayHeight: CGFloat = 10
+        static let regularWeekdayHeight: CGFloat = 12
+        static let compactWeekdayFontSize: CGFloat = 8
+        static let regularWeekdayFontSize: CGFloat = 10
+        static let compactDayFontSize: CGFloat = 10
+        static let regularDayFontSize: CGFloat = 12
+        static let compactEventDayFontSize: CGFloat = 9
+        static let compactTodaySize: CGFloat = 17
+        static let regularTodaySize: CGFloat = 22
+        static let compactEventTodaySize: CGFloat = 15
+        static let compactDotSize: CGFloat = 2.5
+        static let regularDotSize: CGFloat = 3.5
+        static let compactDotTrackHeight: CGFloat = 3
+        static let regularDotTrackHeight: CGFloat = 4
+        static let compactEventTagHeight: CGFloat = 10
+        static let regularEventTagHeight: CGFloat = 14
+        static let compactEventTagFontSize: CGFloat = 7
+        static let regularEventTagFontSize: CGFloat = 8
+    }
+}
+
 extension Color {
     init(widgetHex value: String) {
         let hex = value.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
@@ -124,19 +186,30 @@ extension WidgetSnapshot {
 
 struct WidgetEventTag: View {
     let event: WidgetSnapshotEvent
+    var compact = false
+    var height: CGFloat? = nil
+
+    private var resolvedHeight: CGFloat {
+        height ?? (compact ? WidgetLayout.MonthGrid.compactEventTagHeight : WidgetLayout.MonthGrid.regularEventTagHeight)
+    }
+
+    private var fontSize: CGFloat {
+        compact ? WidgetLayout.MonthGrid.compactEventTagFontSize : WidgetLayout.MonthGrid.regularEventTagFontSize
+    }
 
     var body: some View {
-        HStack(spacing: 3) {
+        HStack(spacing: compact ? 2 : 3) {
             Capsule()
                 .fill(Color(widgetHex: event.colorHex))
-                .frame(width: 3)
+                .frame(width: compact ? 2.5 : 3, height: max(4, resolvedHeight - 4))
             Text(event.title)
-                .font(.system(size: 8, weight: .medium))
+                .font(.system(size: fontSize, weight: .medium))
                 .lineLimit(1)
+                .minimumScaleFactor(0.82)
         }
-        .padding(.vertical, 2)
-        .padding(.horizontal, 3)
+        .padding(.horizontal, compact ? 2 : 3)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: resolvedHeight)
         .background(Color(widgetHex: event.colorHex).opacity(0.14), in: RoundedRectangle(cornerRadius: 3))
     }
 }

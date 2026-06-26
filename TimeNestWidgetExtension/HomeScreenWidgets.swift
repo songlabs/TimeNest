@@ -22,16 +22,16 @@ private struct MonthWidgetView: View {
 
     var body: some View {
         if let month = entry.snapshot.displayedMonth(at: entry.date) {
-            VStack(spacing: family == .systemSmall ? 4 : 8) {
-                WidgetMonthHeader(title: month.title)
+            VStack(spacing: WidgetLayout.titleSpacing(for: family)) {
+                WidgetMonthHeader(title: month.title, compact: family != .systemLarge)
                 WidgetMonthGridView(
                     snapshot: entry.snapshot,
                     month: month,
                     referenceDate: entry.date,
-                    compact: family == .systemSmall
+                    compact: family != .systemLarge
                 )
             }
-            .padding(family == .systemSmall ? 10 : 14)
+            .padding(WidgetLayout.contentPadding(for: family))
             .widgetURL(TimeNestWidgetDeepLink.url(for: entry.date))
         }
     }
@@ -58,8 +58,8 @@ private struct MonthScheduleWidgetView: View {
 
     var body: some View {
         if let month = entry.snapshot.displayedMonth(at: entry.date) {
-            VStack(spacing: 7) {
-                WidgetMonthHeader(title: month.title)
+            VStack(spacing: WidgetLayout.titleSpacing(for: family)) {
+                WidgetMonthHeader(title: month.title, compact: family == .systemMedium)
                 WidgetMonthGridView(
                     snapshot: entry.snapshot,
                     month: month,
@@ -68,7 +68,7 @@ private struct MonthScheduleWidgetView: View {
                     compact: family == .systemMedium
                 )
             }
-            .padding(12)
+            .padding(WidgetLayout.contentPadding(for: family))
             .widgetURL(TimeNestWidgetDeepLink.url(for: entry.date))
         }
     }
@@ -206,36 +206,42 @@ struct TimeNestUpcomingWidget: Widget {
 }
 
 private struct UpcomingWidgetView: View {
+    @Environment(\.widgetFamily) private var family
     let entry: TimeNestWidgetEntry
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: WidgetLayout.upcomingColumnSpacing) {
             VStack(alignment: .leading, spacing: 7) {
                 Text(WidgetL10n.text("widget.upcoming.title", snapshot: entry.snapshot))
-                    .font(.headline.weight(.bold))
+                    .font(WidgetLayout.titleFont(for: family))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.85)
 
                 if entry.snapshot.upcomingEvents.isEmpty {
                     Text(WidgetL10n.text("widget.noEventsToday", snapshot: entry.snapshot))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 } else {
-                    ForEach(Array(entry.snapshot.upcomingEvents.prefix(3))) { event in
+                    ForEach(Array(entry.snapshot.upcomingEvents.prefix(upcomingEventLimit))) { event in
                         Link(destination: TimeNestWidgetDeepLink.url(for: event.date)!) {
                             HStack(alignment: .top, spacing: 6) {
                                 Capsule()
                                     .fill(Color(widgetHex: event.colorHex))
                                     .frame(width: 3)
-                                VStack(alignment: .leading, spacing: 1) {
+                                VStack(alignment: .leading, spacing: 2) {
                                     Text(entry.snapshot.relativeDateText(for: event.date, relativeTo: entry.date))
                                         .font(.caption2.weight(.semibold))
+                                        .lineLimit(1)
                                     Text(eventTime(event))
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
+                                        .lineLimit(1)
                                     Text(event.title)
                                         .font(.caption.weight(.medium))
                                         .lineLimit(1)
+                                        .minimumScaleFactor(0.85)
                                 }
+                                .layoutPriority(1)
                             }
                         }
                         .buttonStyle(.plain)
@@ -252,10 +258,15 @@ private struct UpcomingWidgetView: View {
                     referenceDate: entry.date,
                     compact: true
                 )
-                .frame(maxWidth: .infinity)
+                .frame(width: family == .systemMedium ? WidgetLayout.upcomingCalendarMediumWidth : nil)
+                .frame(maxWidth: family == .systemMedium ? nil : .infinity)
             }
         }
-        .padding(12)
+        .padding(WidgetLayout.contentPadding(for: family))
+    }
+
+    private var upcomingEventLimit: Int {
+        family == .systemMedium ? WidgetLayout.mediumUpcomingEventLimit : WidgetLayout.defaultUpcomingEventLimit
     }
 
     private func eventTime(_ event: WidgetSnapshotEvent) -> String {
