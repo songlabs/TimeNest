@@ -151,4 +151,9 @@ enum HolidayRecommendedSources {
     static func preferredURL(for region: HolidayRegion) -> String? {
         sources(for: region).first?.urlString
     }
+
+    /// 获取指定地区的 clean fallback URL。
+    static func cleanFallbackURL(for region: HolidayRegion) -> String? {
+        allSources.first { $0.region == region && $0.isCleanVersion }?.urlString
+    }
 }

@@ -386,17 +386,12 @@ struct HolidaySourceEditView: View {
         } catch EnhancedICSError.invalidHTTPStatus(let statusCode) where statusCode == 500 {
             // HTTP 500 时尝试 fallback 到 clean URL
 
-            // 获取对应地区的 clean URL
-            let cleanSources = HolidayRecommendedSources.sources(for: region)
-            guard let cleanSource = cleanSources.first(where: { $0.isCleanVersion }) else {
+            guard isOfficeHolidaysURL(url),
+                  let cleanURLString = HolidayRecommendedSources.cleanFallbackURL(for: region),
+                  let cleanURL = URL(string: cleanURLString) else {
                 // 没有 clean URL，直接抛出错误
                 throw EnhancedICSError.invalidHTTPStatus(statusCode)
             }
-
-            guard let cleanURL = URL(string: cleanSource.urlString) else {
-                throw EnhancedICSError.invalidURL
-            }
-
 
             let data = try await downloadService.download(from: cleanURL, region: regionName, host: host)
             
@@ -406,6 +401,11 @@ struct HolidaySourceEditView: View {
             
             return (data, cleanURL.absoluteString)
         }
+    }
+
+    private func isOfficeHolidaysURL(_ url: URL) -> Bool {
+        guard let host = url.host?.lowercased() else { return false }
+        return host == "www.officeholidays.com" || host == "officeholidays.com"
     }
 
     private func testSync() async {
