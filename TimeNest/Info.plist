@@ -33,6 +33,8 @@
 	<string>1</string>
 	<key>GADApplicationIdentifier</key>
 	<string>$(TIMENEST_ADMOB_APP_ID)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>We use the device identifier to deliver and measure advertising.</string>
 	<key>TimeNestAdsEnabled</key>
