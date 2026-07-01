@@ -11,7 +11,9 @@ struct SettingsView: View {
     @State private var showVersionInfo: Bool = false
     @State private var showingHelp = false
     @State private var showingThirdPartyLicenses = false
+    @State private var purchaseAlertMessage: String?
     @StateObject private var subscriptionManager: HolidaySubscriptionManager
+    @ObservedObject private var purchaseManager = RemoveAdsPurchaseManager.shared
 
     private let onClose: (() -> Void)?
 
@@ -115,6 +117,35 @@ struct SettingsView: View {
                 }
 
                 SettingsCard {
+                    if purchaseManager.isAdsRemoved {
+                        SettingsValueRow(
+                            title: localization.localized(.adsRemove),
+                            value: localization.localized(.adsRemoved)
+                        )
+                    } else {
+                        SettingsActionRow(
+                            title: localization.localized(.adsRemove),
+                            systemImage: "rectangle.slash"
+                        ) {
+                            Task {
+                                await purchaseRemoveAds()
+                            }
+                        }
+                    }
+
+                    SettingsDivider()
+
+                    SettingsActionRow(
+                        title: localization.localized(.adsRestorePurchases),
+                        systemImage: "arrow.clockwise"
+                    ) {
+                        Task {
+                            await restorePurchases()
+                        }
+                    }
+                }
+
+                SettingsCard {
                     SettingsCardTitle(localization.localized(.settingsSupport))
                     SettingsDivider()
 
@@ -175,6 +206,25 @@ struct SettingsView: View {
             ThirdPartyLicensesView()
                 .environmentObject(localization)
         }
+        .alert(
+            purchaseAlertMessage ?? "",
+            isPresented: Binding(
+                get: { purchaseAlertMessage != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        purchaseAlertMessage = nil
+                    }
+                }
+            )
+        ) {
+            Button(localization.localized(.ok), role: .cancel) {
+                purchaseAlertMessage = nil
+            }
+        }
+        .task {
+            await purchaseManager.loadProductIfNeeded()
+            await purchaseManager.refreshPurchasedState()
+        }
     }
 
     private var enabledSubscriptionsDisplayText: String {
@@ -200,6 +250,30 @@ struct SettingsView: View {
     private func openPrivacyPolicy() {
         guard let url = Self.privacyPolicyURL else { return }
         openURL(url) { _ in }
+    }
+
+    private func purchaseRemoveAds() async {
+        let outcome = await purchaseManager.purchaseRemoveAds()
+        switch outcome {
+        case .completed:
+            purchaseAlertMessage = localization.localized(.adsPurchaseCompleted)
+        case .failed:
+            purchaseAlertMessage = localization.localized(.adsPurchaseFailed)
+        case .restored, .cancelled, .pending:
+            break
+        }
+    }
+
+    private func restorePurchases() async {
+        let outcome = await purchaseManager.restorePurchases()
+        switch outcome {
+        case .restored, .completed:
+            purchaseAlertMessage = localization.localized(.adsRestoreCompleted)
+        case .failed:
+            purchaseAlertMessage = localization.localized(.adsPurchaseFailed)
+        case .cancelled, .pending:
+            break
+        }
     }
 }
 

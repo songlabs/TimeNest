@@ -43,6 +43,12 @@
 "theme.light" = "라이트";
 "theme.dark" = "다크";
 "theme.system" = "시스템 기본";
+"ads.remove" = "광고 제거";
+"ads.removed" = "광고 제거됨";
+"ads.restore_purchases" = "구입 복원";
+"ads.purchase_completed" = "구입이 완료되었습니다";
+"ads.restore_completed" = "구입이 복원되었습니다";
+"ads.purchase_failed" = "구입에 실패했습니다";
 
 /* About */
 "about.version" = "버전";
@@ -360,7 +366,7 @@
 "help.shifts.statistics_missing.answer" = "선택한 기간에 출근과 퇴근 기록이 저장되어 있고 시급 등 필요한 정보가 입력되어 있는지 확인하세요. 근무 일정만으로는 급여 통계가 자동 생성되지 않습니다.";
 
 "help.ads.about.question" = "광고 안내";
-"help.ads.about.answer" = "TimeNest 운영을 지원하기 위해 App에 광고가 표시될 수 있습니다. 현재 버전에는 광고 제거 구매 기능이 없습니다.";
+"help.ads.about.answer" = "TimeNest 운영을 지원하기 위해 App에 광고가 표시될 수 있습니다. 설정에서 일회성 구입으로 광고를 제거할 수 있습니다.";
 
 "help.privacy.storage.question" = "데이터는 어디에 저장되나요?";
 "help.privacy.storage.answer" = "일정과 근무 등의 데이터는 이 기기에 저장됩니다.";

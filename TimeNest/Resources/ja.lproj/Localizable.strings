@@ -43,6 +43,12 @@
 "theme.light" = "ライト";
 "theme.dark" = "ダーク";
 "theme.system" = "システム標準";
+"ads.remove" = "広告を削除";
+"ads.removed" = "広告削除済み";
+"ads.restore_purchases" = "購入を復元";
+"ads.purchase_completed" = "購入が完了しました";
+"ads.restore_completed" = "購入を復元しました";
+"ads.purchase_failed" = "購入できませんでした";
 
 /* About */
 "about.version" = "バージョン";
@@ -360,7 +366,7 @@
 "help.shifts.statistics_missing.answer" = "対象期間内に出勤記録と退勤記録が保存され、時給などの必要な情報が入力されているか確認してください。シフトだけでは給与統計は自動作成されません。";
 
 "help.ads.about.question" = "広告について";
-"help.ads.about.answer" = "TimeNest では、アプリの運営を支えるために広告が表示されることがあります。現在のバージョンには広告を非表示にする購入機能はありません。";
+"help.ads.about.answer" = "TimeNest では、アプリの運営を支えるために広告が表示されることがあります。設定から一度きりの購入で広告を非表示にできます。";
 
 "help.privacy.storage.question" = "データはどこに保存されますか？";
 "help.privacy.storage.answer" = "予定やシフトなどのデータは、この端末内に保存されます。";

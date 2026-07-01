@@ -43,6 +43,12 @@
 "theme.light" = "浅色";
 "theme.dark" = "深色";
 "theme.system" = "系统默认";
+"ads.remove" = "去除广告";
+"ads.removed" = "已去除广告";
+"ads.restore_purchases" = "恢复购买";
+"ads.purchase_completed" = "购买已完成";
+"ads.restore_completed" = "购买已恢复";
+"ads.purchase_failed" = "购买失败";
 
 /* About */
 "about.version" = "版本";
@@ -360,7 +366,7 @@
 "help.shifts.statistics_missing.answer" = "请确认目标期间内已经保存了出勤和退勤记录，并且时薪等必要信息已输入。只有班次本身不会自动生成工资统计。";
 
 "help.ads.about.question" = "关于广告";
-"help.ads.about.answer" = "为了支持 TimeNest 的运营，App 中可能会显示广告。当前版本不提供购买去广告功能。";
+"help.ads.about.answer" = "为了支持 TimeNest 的运营，App 中可能会显示广告。你可以在设置中通过一次性购买去除广告。";
 
 "help.privacy.storage.question" = "数据保存在哪里？";
 "help.privacy.storage.answer" = "日程和班次等数据保存在此设备中。";

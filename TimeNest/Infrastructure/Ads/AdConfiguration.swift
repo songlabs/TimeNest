@@ -3,9 +3,12 @@ import Combine
 import CoreGraphics
 import Foundation
 import GoogleMobileAds
+import StoreKit
 import UserMessagingPlatform
 
 enum AdConfiguration {
+    static let removeAdsProductID = "com.song.TimeNest.remove_ads"
+
     private static let testAppID = "ca-app-pub-3940256099942544~1458002511"
     private static let testBannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
 
@@ -156,5 +159,122 @@ final class AdConsentManager: ObservableObject {
         MobileAds.shared.requestConfiguration.publisherPrivacyPersonalizationState = .disabled
         MobileAds.shared.start(completionHandler: nil)
         canLoadAds = true
+    }
+}
+
+enum RemoveAdsPurchaseOutcome {
+    case completed
+    case restored
+    case cancelled
+    case pending
+    case failed
+}
+
+@MainActor
+final class RemoveAdsPurchaseManager: ObservableObject {
+    static let shared = RemoveAdsPurchaseManager()
+
+    @Published private(set) var isAdsRemoved: Bool
+    @Published private(set) var isPurchasing = false
+
+    private static let adsRemovedDefaultsKey = "removeAds.isPurchased"
+
+    private let defaults: UserDefaults
+    private var removeAdsProduct: Product?
+    private var isLoadingProduct = false
+
+    private init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+        isAdsRemoved = defaults.bool(forKey: Self.adsRemovedDefaultsKey)
+    }
+
+    @discardableResult
+    func loadProductIfNeeded() async -> Bool {
+        if removeAdsProduct != nil {
+            return true
+        }
+        guard !isLoadingProduct else {
+            return removeAdsProduct != nil
+        }
+
+        isLoadingProduct = true
+        defer { isLoadingProduct = false }
+
+        do {
+            let products = try await Product.products(for: [AdConfiguration.removeAdsProductID])
+            removeAdsProduct = products.first { $0.id == AdConfiguration.removeAdsProductID }
+            return removeAdsProduct != nil
+        } catch {
+            return false
+        }
+    }
+
+    func purchaseRemoveAds() async -> RemoveAdsPurchaseOutcome {
+        guard !isAdsRemoved else { return .completed }
+        guard !isPurchasing else { return .pending }
+        guard await loadProductIfNeeded(), let removeAdsProduct else {
+            return .failed
+        }
+
+        isPurchasing = true
+        defer { isPurchasing = false }
+
+        do {
+            let result = try await removeAdsProduct.purchase()
+            switch result {
+            case .success(let verificationResult):
+                guard case .verified(let transaction) = verificationResult,
+                      transaction.productID == AdConfiguration.removeAdsProductID,
+                      transaction.revocationDate == nil else {
+                    return .failed
+                }
+                setAdsRemoved(true)
+                await transaction.finish()
+                return .completed
+            case .userCancelled:
+                return .cancelled
+            case .pending:
+                return .pending
+            @unknown default:
+                return .failed
+            }
+        } catch {
+            return .failed
+        }
+    }
+
+    func restorePurchases() async -> RemoveAdsPurchaseOutcome {
+        do {
+            try await AppStore.sync()
+        } catch {
+            // currentEntitlements can still contain locally available purchases.
+        }
+
+        let restored = await refreshPurchasedState()
+        return restored ? .restored : .failed
+    }
+
+    @discardableResult
+    func refreshPurchasedState() async -> Bool {
+        let hasEntitlement = await hasVerifiedRemoveAdsEntitlement()
+        setAdsRemoved(hasEntitlement)
+        return hasEntitlement
+    }
+
+    private func hasVerifiedRemoveAdsEntitlement() async -> Bool {
+        for await result in Transaction.currentEntitlements {
+            if case .verified(let transaction) = result,
+               transaction.productID == AdConfiguration.removeAdsProductID,
+               transaction.revocationDate == nil {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func setAdsRemoved(_ value: Bool) {
+        guard isAdsRemoved != value else { return }
+        isAdsRemoved = value
+        defaults.set(value, forKey: Self.adsRemovedDefaultsKey)
     }
 }

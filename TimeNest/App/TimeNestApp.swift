@@ -101,6 +101,9 @@ struct TimeNestApp: App {
                 await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
             }
             .task {
+                await RemoveAdsPurchaseManager.shared.refreshPurchasedState()
+            }
+            .task {
                 AdConsentManager.shared.requestConsentInfoIfNeeded()
                 await widgetSnapshotCoordinator.refresh()
             }

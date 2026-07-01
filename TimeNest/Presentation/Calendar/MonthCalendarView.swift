@@ -12,6 +12,7 @@ struct MonthCalendarView: View {
     @State private var showingStatistics = false
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
+    @ObservedObject private var purchaseManager = RemoveAdsPurchaseManager.shared
     private let holidaySubscriptionManager: HolidaySubscriptionManager
 
     init(
@@ -353,14 +354,18 @@ struct MonthCalendarView: View {
 
     @ViewBuilder
     private var calendarAdBannerArea: some View {
-        if AdConfiguration.isEnabled {
+        if shouldShowAds {
             CalendarAdBannerContainer()
                 .frame(height: AdConfiguration.bannerHeight)
         }
     }
 
     private var calendarAdHeight: CGFloat {
-        AdConfiguration.isEnabled ? AdConfiguration.bannerHeight : 0
+        shouldShowAds ? AdConfiguration.bannerHeight : 0
+    }
+
+    private var shouldShowAds: Bool {
+        AdConfiguration.isEnabled && !purchaseManager.isAdsRemoved
     }
 
     private var calendarBottomSectionHeight: CGFloat {

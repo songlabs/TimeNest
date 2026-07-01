@@ -43,6 +43,12 @@
 "theme.light" = "淺色";
 "theme.dark" = "深色";
 "theme.system" = "系統預設";
+"ads.remove" = "移除廣告";
+"ads.removed" = "已移除廣告";
+"ads.restore_purchases" = "恢復購買";
+"ads.purchase_completed" = "購買已完成";
+"ads.restore_completed" = "購買已恢復";
+"ads.purchase_failed" = "購買失敗";
 
 /* About */
 "about.version" = "版本";
@@ -360,7 +366,7 @@
 "help.shifts.statistics_missing.answer" = "請確認目標期間內已經儲存了上班和下班記錄，並且時薪等必要資訊已輸入。只有班次本身不會自動產生薪資統計。";
 
 "help.ads.about.question" = "關於廣告";
-"help.ads.about.answer" = "為了支援 TimeNest 的營運，App 中可能會顯示廣告。目前版本不提供購買去廣告功能。";
+"help.ads.about.answer" = "為了支援 TimeNest 的營運，App 中可能會顯示廣告。你可以在設定中透過一次性購買移除廣告。";
 
 "help.privacy.storage.question" = "資料儲存在哪裡？";
 "help.privacy.storage.answer" = "行程和班次等資料會儲存在此裝置中。";

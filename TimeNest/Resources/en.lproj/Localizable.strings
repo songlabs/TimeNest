@@ -43,6 +43,12 @@
 "theme.light" = "Light";
 "theme.dark" = "Dark";
 "theme.system" = "System Default";
+"ads.remove" = "Remove Ads";
+"ads.removed" = "Ads Removed";
+"ads.restore_purchases" = "Restore Purchases";
+"ads.purchase_completed" = "Purchase completed";
+"ads.restore_completed" = "Purchases restored";
+"ads.purchase_failed" = "Purchase failed";
 
 /* About */
 "about.version" = "Version";
@@ -360,7 +366,7 @@
 "help.shifts.statistics_missing.answer" = "Check that clock-in and clock-out records were saved within the selected period and that required information such as the hourly rate was entered. A shift alone does not create pay statistics.";
 
 "help.ads.about.question" = "About ads";
-"help.ads.about.answer" = "TimeNest may display ads to support the operation of the app. The current version does not offer an ad-removal purchase.";
+"help.ads.about.answer" = "TimeNest may display ads to support the operation of the app. You can remove ads with a one-time purchase from Settings.";
 
 "help.privacy.storage.question" = "Where is my data stored?";
 "help.privacy.storage.answer" = "Data such as events and shifts is stored on this device.";

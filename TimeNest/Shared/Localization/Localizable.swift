@@ -52,6 +52,15 @@ enum LocalizedString: String {
     case themeDark = "theme.dark"
     case themeSystem = "theme.system"
 
+    // MARK: - Ads
+
+    case adsRemove = "ads.remove"
+    case adsRemoved = "ads.removed"
+    case adsRestorePurchases = "ads.restore_purchases"
+    case adsPurchaseCompleted = "ads.purchase_completed"
+    case adsRestoreCompleted = "ads.restore_completed"
+    case adsPurchaseFailed = "ads.purchase_failed"
+
     // MARK: - About
 
     case aboutVersion = "about.version"
