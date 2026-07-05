@@ -145,6 +145,13 @@
 "editor.transportFee" = "交通費";
 "editor.hourlyRate" = "時薪";
 "editor.currencyUnit" = "元";
+"event.memo.title" = "備忘";
+"event.memo.voice.placeholder" = "用語音輸入備忘";
+"event.memo.voice.start" = "開始語音輸入";
+"event.memo.voice.stop" = "停止語音輸入";
+"event.memo.voice.permission_denied" = "使用語音輸入備忘需要允許麥克風和語音辨識權限。";
+"event.memo.voice.unavailable" = "此裝置或目前語言不支援語音輸入。";
+"event.memo.voice.recognizing" = "語音輸入中...";
 "work_record.add" = "新增打工記錄";
 "work_record.edit" = "編輯打工記錄";
 "work_record.default_title" = "打工";

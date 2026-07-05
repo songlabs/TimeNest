@@ -145,6 +145,13 @@
 "editor.transportFee" = "교통비";
 "editor.hourlyRate" = "시급";
 "editor.currencyUnit" = "위안";
+"event.memo.title" = "메모";
+"event.memo.voice.placeholder" = "음성으로 메모 입력";
+"event.memo.voice.start" = "음성 입력 시작";
+"event.memo.voice.stop" = "음성 입력 중지";
+"event.memo.voice.permission_denied" = "메모 음성 입력을 사용하려면 마이크와 음성 인식 권한이 필요합니다.";
+"event.memo.voice.unavailable" = "이 기기 또는 현재 언어에서는 음성 입력을 사용할 수 없습니다.";
+"event.memo.voice.recognizing" = "음성 입력 중...";
 "work_record.add" = "알바 기록 새로 만들기";
 "work_record.edit" = "알바 기록 편집";
 "work_record.default_title" = "근무";

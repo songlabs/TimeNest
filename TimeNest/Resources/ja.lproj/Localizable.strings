@@ -145,6 +145,13 @@
 "editor.transportFee" = "交通費";
 "editor.hourlyRate" = "時給";
 "editor.currencyUnit" = "円";
+"event.memo.title" = "メモ";
+"event.memo.voice.placeholder" = "音声でメモを入力";
+"event.memo.voice.start" = "音声入力を開始";
+"event.memo.voice.stop" = "音声入力を停止";
+"event.memo.voice.permission_denied" = "音声入力を使用するには、マイクと音声認識の許可が必要です。";
+"event.memo.voice.unavailable" = "この端末または言語では音声入力を利用できません。";
+"event.memo.voice.recognizing" = "音声入力中...";
 "work_record.add" = "勤務記録を新規作成";
 "work_record.edit" = "勤務記録を編集";
 "work_record.default_title" = "バイト";

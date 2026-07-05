@@ -37,6 +37,10 @@
 	<false/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>We use the device identifier to deliver and measure advertising.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>TimeNest uses the microphone only to enter memo text by voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>TimeNest uses speech recognition only to convert your voice into memo text.</string>
 	<key>TimeNestAdsEnabled</key>
 	<string>$(TIMENEST_ADS_ENABLED)</string>
 	<key>TimeNestAdMobBannerUnitID</key>

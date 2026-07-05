@@ -145,6 +145,13 @@
 "editor.transportFee" = "Transport Fee";
 "editor.hourlyRate" = "Hourly Rate";
 "editor.currencyUnit" = "Yuan";
+"event.memo.title" = "Memo";
+"event.memo.voice.placeholder" = "Enter a memo by voice";
+"event.memo.voice.start" = "Start voice input";
+"event.memo.voice.stop" = "Stop voice input";
+"event.memo.voice.permission_denied" = "Microphone and speech recognition permission are required to use voice input for memos.";
+"event.memo.voice.unavailable" = "Voice input is not available on this device or for this language.";
+"event.memo.voice.recognizing" = "Voice input in progress...";
 "work_record.add" = "New Work Record";
 "work_record.edit" = "Edit Work Record";
 "work_record.default_title" = "Work";

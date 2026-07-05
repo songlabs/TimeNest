@@ -95,6 +95,7 @@ private enum EventEditorStyle {
 
 private enum EditorFocusedField: Hashable {
     case title
+    case note
     case transportFee
     case hourlyRate
 }
@@ -182,6 +183,10 @@ struct EventEditorView: View {
     @State private var workRecordEvents: [EventOccurrence]
     @State private var showingAddWorkRecord: Bool = false
     @State private var editingWorkRecord: WorkRecordEditorInitialSession?
+    @StateObject private var speechMemoRecognitionService = SpeechMemoRecognitionService()
+    @State private var speechMemoRecognitionStatus: SpeechMemoRecognitionStatus = .idle
+    @State private var speechMemoMessage: String?
+    @State private var speechMemoBaseText: String = ""
     @FocusState private var focusedField: EditorFocusedField?
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
@@ -291,6 +296,23 @@ struct EventEditorView: View {
                             }
                             .cardContainer()
 
+                            MemoInputSection(
+                                title: localization.localized(.eventMemoTitle),
+                                text: $note,
+                                placeholder: localization.localized(.eventMemoVoicePlaceholder),
+                                statusMessage: speechMemoStatusMessage,
+                                isRecognizing: speechMemoRecognitionStatus == .recording,
+                                microphoneAccessibilityLabel: speechMemoRecognitionStatus == .recording
+                                    ? localization.localized(.eventMemoVoiceStop)
+                                    : localization.localized(.eventMemoVoiceStart),
+                                focusedField: $focusedField,
+                                onMicrophoneTap: {
+                                    Task {
+                                        await toggleSpeechMemoRecognition()
+                                    }
+                                }
+                            )
+
                             if isEditingWorkClock {
                                 WorkInfoSection(
                                     restTime: $restTime,
@@ -343,6 +365,9 @@ struct EventEditorView: View {
             }
             .onAppear {
                 applySharedWorkValuesForNewEventIfNeeded(date: startDate, resetWhenMissing: false)
+            }
+            .onDisappear {
+                stopSpeechMemoRecognition()
             }
             .onChange(of: startDate) { oldValue, newValue in
                 handleStartDateChange(from: oldValue, to: newValue)
@@ -598,6 +623,13 @@ struct EventEditorView: View {
         return nil
     }
 
+    private var speechMemoStatusMessage: String? {
+        if speechMemoRecognitionStatus == .recording {
+            return localization.localized(.eventMemoVoiceRecognizing)
+        }
+        return speechMemoMessage
+    }
+
     private static func initialState(for mode: EventEditorMode) -> (title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, workInfo: WorkInfo?, shiftTemplateID: ShiftTimeTemplateID?, defaultWorkDate: Date) {
         switch mode {
         case .create(let initialDate):
@@ -777,6 +809,78 @@ struct EventEditorView: View {
             errorMessage = error.localizedDescription
             saving = false
         }
+    }
+
+    @MainActor
+    private func toggleSpeechMemoRecognition() async {
+        focusedField = nil
+
+        if speechMemoRecognitionStatus == .recording {
+            stopSpeechMemoRecognition()
+            return
+        }
+
+        speechMemoMessage = nil
+        speechMemoBaseText = note.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        let status = await speechMemoRecognitionService.startRecognition(
+            language: localization.currentLanguage,
+            onTranscription: { transcript, _ in
+                applySpeechMemoTranscription(transcript)
+            },
+            onCompletion: { failure in
+                handleSpeechMemoRecognitionCompletion(failure)
+            }
+        )
+
+        speechMemoRecognitionStatus = status
+        switch status {
+        case .denied:
+            speechMemoMessage = localization.localized(.eventMemoVoicePermissionDenied)
+            speechMemoBaseText = ""
+        case .unavailable:
+            speechMemoMessage = localization.localized(.eventMemoVoiceUnavailable)
+            speechMemoBaseText = ""
+        case .idle, .recording:
+            break
+        }
+    }
+
+    @MainActor
+    private func applySpeechMemoTranscription(_ transcript: String) {
+        let trimmedTranscript = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedTranscript.isEmpty else { return }
+
+        if speechMemoBaseText.isEmpty {
+            note = trimmedTranscript
+        } else {
+            note = "\(speechMemoBaseText)\n\(trimmedTranscript)"
+        }
+    }
+
+    @MainActor
+    private func handleSpeechMemoRecognitionCompletion(_ failure: SpeechMemoRecognitionFailure?) {
+        speechMemoBaseText = ""
+
+        switch failure {
+        case nil:
+            speechMemoRecognitionStatus = .idle
+            speechMemoMessage = nil
+        case .permissionDenied:
+            speechMemoRecognitionStatus = .denied
+            speechMemoMessage = localization.localized(.eventMemoVoicePermissionDenied)
+        case .unavailable, .recognitionFailed:
+            speechMemoRecognitionStatus = .unavailable
+            speechMemoMessage = localization.localized(.eventMemoVoiceUnavailable)
+        }
+    }
+
+    @MainActor
+    private func stopSpeechMemoRecognition() {
+        speechMemoRecognitionService.stopRecognition()
+        speechMemoRecognitionStatus = .idle
+        speechMemoMessage = nil
+        speechMemoBaseText = ""
     }
 
     private func normalizedEventTitle() -> String {
@@ -1691,6 +1795,61 @@ private struct ReminderPickerSheet: View {
                         dismiss()
                     }
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Memo Section
+
+private struct MemoInputSection: View {
+    let title: String
+    @Binding var text: String
+    let placeholder: String
+    let statusMessage: String?
+    let isRecognizing: Bool
+    let microphoneAccessibilityLabel: String
+    var focusedField: FocusState<EditorFocusedField?>.Binding
+    let onMicrophoneTap: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(EventEditorStyle.secondaryText)
+                .padding(.horizontal, EventEditorStyle.cardPadding)
+
+            HStack(alignment: .center, spacing: 12) {
+                TextField(placeholder, text: $text, axis: .vertical)
+                    .focused(focusedField, equals: .note)
+                    .textFieldStyle(.plain)
+                    .font(.body)
+                    .foregroundColor(EventEditorStyle.fieldText)
+                    .lineLimit(1...5)
+                    .tint(EventEditorStyle.primaryText)
+
+                Button(action: onMicrophoneTap) {
+                    Image(systemName: isRecognizing ? "mic.fill" : "mic")
+                        .font(.title3.weight(.semibold))
+                        .foregroundColor(isRecognizing ? ShiftCalendarColors.primaryBlue : EventEditorStyle.secondaryText)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(microphoneAccessibilityLabel)
+            }
+            .padding(.leading, EventEditorStyle.cardPadding)
+            .padding(.trailing, 10)
+            .padding(.vertical, 10)
+            .frame(minHeight: 72)
+            .background(EventEditorStyle.cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.cardCornerRadius, style: .continuous))
+
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(.footnote)
+                    .foregroundColor(isRecognizing ? ShiftCalendarColors.primaryBlue : EventEditorStyle.secondaryText)
+                    .padding(.horizontal, EventEditorStyle.cardPadding)
             }
         }
     }

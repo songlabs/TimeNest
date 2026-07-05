@@ -145,6 +145,13 @@
 "editor.transportFee" = "交通费";
 "editor.hourlyRate" = "时给";
 "editor.currencyUnit" = "元";
+"event.memo.title" = "备忘";
+"event.memo.voice.placeholder" = "用语音输入备忘";
+"event.memo.voice.start" = "开始语音输入";
+"event.memo.voice.stop" = "停止语音输入";
+"event.memo.voice.permission_denied" = "使用语音输入备忘需要允许麦克风和语音识别权限。";
+"event.memo.voice.unavailable" = "此设备或当前语言不支持语音输入。";
+"event.memo.voice.recognizing" = "语音输入中...";
 "work_record.add" = "新增打工记录";
 "work_record.edit" = "编辑打工记录";
 "work_record.default_title" = "打工";

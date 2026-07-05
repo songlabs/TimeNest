@@ -1,3 +1,5 @@
 "CFBundleDisplayName" = "TimeNest";
 "CFBundleName" = "TimeNest";
 "NSUserTrackingUsageDescription" = "We use the device identifier to deliver and measure advertising.";
+"NSMicrophoneUsageDescription" = "TimeNest uses the microphone only to enter memo text by voice.";
+"NSSpeechRecognitionUsageDescription" = "TimeNest uses speech recognition only to convert your voice into memo text.";
