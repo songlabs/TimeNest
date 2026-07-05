@@ -48,7 +48,11 @@
 "ads.restore_purchases" = "購入を復元";
 "ads.purchase_completed" = "購入が完了しました";
 "ads.restore_completed" = "購入を復元しました";
-"ads.purchase_failed" = "購入できませんでした";
+"ads.purchase_failed" = "購入を完了できませんでした。しばらくしてからもう一度お試しください。";
+"ads.purchase_unavailable" = "購入項目を利用できません。しばらくしてからもう一度お試しください。";
+"ads.purchase_pending" = "購入は承認待ちです。完了すると広告が非表示になります。";
+"ads.restore_failed" = "購入を復元できませんでした。しばらくしてからもう一度お試しください。";
+"ads.restore_not_found" = "復元できる購入が見つかりませんでした。";
 
 /* About */
 "about.version" = "バージョン";

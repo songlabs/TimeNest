@@ -48,7 +48,11 @@
 "ads.restore_purchases" = "恢復購買";
 "ads.purchase_completed" = "購買已完成";
 "ads.restore_completed" = "購買已恢復";
-"ads.purchase_failed" = "購買失敗";
+"ads.purchase_failed" = "購買無法完成，請稍後再試。";
+"ads.purchase_unavailable" = "購買項目暫時無法使用，請稍後再試。";
+"ads.purchase_pending" = "購買正在等待確認。完成後廣告會自動隱藏。";
+"ads.restore_failed" = "恢復購買失敗，請稍後再試。";
+"ads.restore_not_found" = "找不到可恢復的購買。";
 
 /* About */
 "about.version" = "版本";

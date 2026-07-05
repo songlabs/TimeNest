@@ -257,9 +257,11 @@ struct SettingsView: View {
         switch outcome {
         case .completed:
             purchaseAlertMessage = localization.localized(.adsPurchaseCompleted)
-        case .failed:
-            purchaseAlertMessage = localization.localized(.adsPurchaseFailed)
-        case .restored, .cancelled, .pending:
+        case .failed(let reason):
+            purchaseAlertMessage = purchaseFailureMessage(for: reason)
+        case .pending:
+            purchaseAlertMessage = localization.localized(.adsPurchasePending)
+        case .restored, .cancelled:
             break
         }
     }
@@ -269,10 +271,36 @@ struct SettingsView: View {
         switch outcome {
         case .restored, .completed:
             purchaseAlertMessage = localization.localized(.adsRestoreCompleted)
-        case .failed:
-            purchaseAlertMessage = localization.localized(.adsPurchaseFailed)
-        case .cancelled, .pending:
+        case .failed(let reason):
+            purchaseAlertMessage = restoreFailureMessage(for: reason)
+        case .pending:
+            purchaseAlertMessage = localization.localized(.adsPurchasePending)
+        case .cancelled:
             break
+        }
+    }
+
+    private func purchaseFailureMessage(for reason: RemoveAdsPurchaseFailureReason) -> String {
+        switch reason {
+        case .productUnavailable:
+            return localization.localized(.adsPurchaseUnavailable)
+        case .noRestorablePurchases:
+            return localization.localized(.adsRestoreNotFound)
+        case .restoreFailed:
+            return localization.localized(.adsRestoreFailed)
+        case .purchaseFailed, .verificationFailed, .productMismatch, .unknownPurchaseResult:
+            return localization.localized(.adsPurchaseFailed)
+        }
+    }
+
+    private func restoreFailureMessage(for reason: RemoveAdsPurchaseFailureReason) -> String {
+        switch reason {
+        case .noRestorablePurchases:
+            return localization.localized(.adsRestoreNotFound)
+        case .restoreFailed:
+            return localization.localized(.adsRestoreFailed)
+        case .productUnavailable, .purchaseFailed, .verificationFailed, .productMismatch, .unknownPurchaseResult:
+            return localization.localized(.adsPurchaseFailed)
         }
     }
 }

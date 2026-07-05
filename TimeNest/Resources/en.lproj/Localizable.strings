@@ -48,7 +48,11 @@
 "ads.restore_purchases" = "Restore Purchases";
 "ads.purchase_completed" = "Purchase completed";
 "ads.restore_completed" = "Purchases restored";
-"ads.purchase_failed" = "Purchase failed";
+"ads.purchase_failed" = "Purchase could not be completed. Please try again later.";
+"ads.purchase_unavailable" = "Purchases are temporarily unavailable. Please try again later.";
+"ads.purchase_pending" = "Purchase is pending approval. Ads will be hidden after it completes.";
+"ads.restore_failed" = "Could not restore purchases. Please try again later.";
+"ads.restore_not_found" = "No restorable purchase was found.";
 
 /* About */
 "about.version" = "Version";

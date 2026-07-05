@@ -60,6 +60,10 @@ enum LocalizedString: String {
     case adsPurchaseCompleted = "ads.purchase_completed"
     case adsRestoreCompleted = "ads.restore_completed"
     case adsPurchaseFailed = "ads.purchase_failed"
+    case adsPurchaseUnavailable = "ads.purchase_unavailable"
+    case adsPurchasePending = "ads.purchase_pending"
+    case adsRestoreFailed = "ads.restore_failed"
+    case adsRestoreNotFound = "ads.restore_not_found"
 
     // MARK: - About
 

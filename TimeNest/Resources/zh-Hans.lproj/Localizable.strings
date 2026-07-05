@@ -48,7 +48,11 @@
 "ads.restore_purchases" = "恢复购买";
 "ads.purchase_completed" = "购买已完成";
 "ads.restore_completed" = "购买已恢复";
-"ads.purchase_failed" = "购买失败";
+"ads.purchase_failed" = "购买无法完成，请稍后再试。";
+"ads.purchase_unavailable" = "购买项目暂时不可用，请稍后再试。";
+"ads.purchase_pending" = "购买正在等待确认。完成后广告会自动隐藏。";
+"ads.restore_failed" = "恢复购买失败，请稍后再试。";
+"ads.restore_not_found" = "没有找到可恢复的购买。";
 
 /* About */
 "about.version" = "版本";

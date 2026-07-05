@@ -48,7 +48,11 @@
 "ads.restore_purchases" = "구입 복원";
 "ads.purchase_completed" = "구입이 완료되었습니다";
 "ads.restore_completed" = "구입이 복원되었습니다";
-"ads.purchase_failed" = "구입에 실패했습니다";
+"ads.purchase_failed" = "구입을 완료할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+"ads.purchase_unavailable" = "구입 항목을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+"ads.purchase_pending" = "구입이 승인 대기 중입니다. 완료되면 광고가 숨겨집니다.";
+"ads.restore_failed" = "구입을 복원할 수 없습니다. 잠시 후 다시 시도해 주세요.";
+"ads.restore_not_found" = "복원할 수 있는 구입을 찾지 못했습니다.";
 
 /* About */
 "about.version" = "버전";

@@ -101,6 +101,7 @@ struct TimeNestApp: App {
                 await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
             }
             .task {
+                RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
                 await RemoveAdsPurchaseManager.shared.refreshPurchasedState()
             }
             .task {
