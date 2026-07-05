@@ -13,7 +13,7 @@
 - [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 327 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match and include `NSUserTrackingUsageDescription`.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
 - [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
-- [x] Debug and simulator builds use Google's official test IDs. Release device/archive builds are ad-enabled and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
+- [x] Debug and simulator builds use Google's official test IDs. Release device/archive builds are ad-enabled for unpurchased users and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
 - [x] Both Release build-setting sources use the approved production AdMob App ID and Banner Unit ID.
 - [x] Google UMP now updates consent once per launch and gates Mobile Ads initialization and banner loading on `canRequestAds`. Publisher Privacy Treatment disables ad personalization.
 - [x] ATT is requested after the UMP consent flow and before Mobile Ads initialization/banner loading. `NSUserTrackingUsageDescription` is localized in all five supported languages.
@@ -62,7 +62,7 @@
 - [x] `Info.plist` includes the `SKAdNetworkItems` list from Google's iOS guidance checked on 2026-06-23.
 - [ ] Confirm `TIMENEST_ADS_ENABLED=YES`, `TIMENEST_ADMOB_APP_ID` is the production App ID, and `TIMENEST_ADMOB_BANNER_UNIT_ID` is the production Banner Unit ID in the exact archive build settings.
 - [ ] Confirm the Release device/archive validation script succeeds and the processed archive `Info.plist` contains the production `GADApplicationIdentifier`, never Google's test App ID or a placeholder.
-- [ ] Reconfirm that the current app has no user-facing remove-ads purchase flow; do not advertise one.
+- [ ] Reconfirm the one-time Remove Ads purchase and restore flow on the exact submitted build. Product ID: `com.song.TimeNest.remove_ads`.
 - [x] Record Google Mobile Ads 13.5.0 and Google User Messaging Platform 3.1.0 notices in `Docs/ThirdPartyNotices.md`.
 - [x] Expose the two wrapper attributions and Apache-2.0 license type through Settings > Third-party Licenses.
 - [ ] On physical devices, verify fresh-install UMP consent followed by localized ATT, ATT authorized/denied/restricted behavior, returning-user consent, required privacy-options presentation, denied/no-consent layout stability, and production banner loading.
@@ -74,7 +74,7 @@
 - [ ] Update the published privacy policy so the advertising disclosure is final rather than conditional and clearly covers third-party data retention/deletion and how users can withdraw consent or reopen required privacy options.
 - [x] Replace the URL placeholders in `Docs/AppStoreMetadataDraft.md` with the public Privacy Policy and Support URLs.
 - [ ] Paste and recheck the final localized metadata against the exact submitted build and App Store Connect field limits.
-- [ ] Confirm metadata claims match the submitted build and do not describe login, cloud sync, sharing, analytics, or remove-ads features as implemented.
+- [ ] Confirm metadata claims match the submitted build and do not describe login, cloud sync, sharing, analytics, or other unimplemented features as implemented. Only describe Remove Ads if the submitted build and App Store Connect product are ready.
 - [x] Prepare the six-shot capture outline in `Docs/ScreenshotPlan.md`.
 - [ ] Prepare required iPhone screenshot sizes for each App Store locale selected in App Store Connect.
 - [ ] Capture: month view, week view, day view, event create/edit, holiday subscriptions, shift input/work statistics, and language/settings.

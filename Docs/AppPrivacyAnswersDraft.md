@@ -15,11 +15,11 @@
 - App settings, holiday-subscription choices, subscription URLs, and downloaded holiday cache data are stored locally.
 - The app and Widget share a calendar snapshot through the App Group on the same device. This is local App-to-Widget data sharing, not cloud synchronization or a backend upload.
 - When a user enables, tests, or refreshes a holiday subscription, the app sends an HTTPS request to the public ICS provider selected by the user. That provider may receive network information such as an IP address and request metadata under its own policy.
-- Google Mobile Ads and Google UMP are integrated. The first release requires ads. Debug and simulator builds use official test identifiers, while Release device/archive builds use approved production identifiers and fail build validation when they are missing or invalid.
+- Google Mobile Ads and Google UMP are integrated. Unpurchased users see ads when UMP permits ad requests. Debug and simulator builds use official test identifiers, while Release device/archive builds use approved production identifiers and fail build validation when they are missing or invalid.
 - Ads remain gated by UMP `canRequestAds`. After the UMP update and any required consent form complete, the app requests ATT when the status is not determined, then starts Mobile Ads. Publisher Privacy Treatment disables ad personalization.
 - If ATT is denied or restricted, the app remains usable and may continue requesting ads without IDFA when UMP permits ad requests. Banner loading is separately gated until the ATT decision completes.
 - The embedded Google Mobile Ads 13.5.0 privacy manifest declares linked coarse location, advertising data, product interaction, and Device ID. It marks Device ID as used for tracking. The Google UMP 3.1.0 privacy manifest also declares coarse location, performance data, and product interaction for app functionality.
-- The app currently has no in-app purchase or user-facing remove-ads flow.
+- The app offers a one-time Remove Ads In-App Purchase through Apple StoreKit. TimeNest does not collect or store payment card details, and purchase restoration uses Apple's transaction entitlements.
 - Settings exposes the published Privacy Policy URL through the system URL-opening flow.
 
 ## App Store Connect Answering Draft

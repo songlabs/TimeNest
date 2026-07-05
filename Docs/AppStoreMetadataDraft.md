@@ -18,9 +18,9 @@
 ## Submission Guardrails
 
 - Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; Widget support; five UI languages; and local-first storage.
-- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, automated recommendations, in-app purchases, or a remove-ads flow. They are not part of version 1.0.
-- Do not describe TimeNest as ad-free. Version 1.0 integrates Google Mobile Ads and is configured to display banner ads after the required consent flow permits ad requests.
-- **TODO:** Reconfirm banner behavior and Widget inclusion against the exact submitted build.
+- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, automated recommendations, or other unimplemented features. They are not part of version 1.0.
+- Do not describe TimeNest as ad-free for everyone. Version 1.0 integrates Google Mobile Ads for unpurchased users and includes a one-time Remove Ads In-App Purchase through Apple StoreKit.
+- **TODO:** Reconfirm banner behavior, Remove Ads purchase/restore behavior, and Widget inclusion against the exact submitted build.
 - **TODO:** Draft and review Traditional Chinese (`zh-Hant`) App Store metadata before enabling that App Store Connect product-page locale.
 
 ## Japanese (`ja`) - Primary

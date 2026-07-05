@@ -281,6 +281,7 @@
 		E1785C977E3904B8C0105619 /* TimeNestFileEncoder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileEncoder.swift; sourceTree = "<group>"; };
 		E2513065C4258C1A299CC35D /* HolidaySubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscriptionManager.swift; sourceTree = "<group>"; };
 		E2F78125BB977C2726B0497C /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		E4FA087D2FFA91AE000D2207 /* TimeNest.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = TimeNest.storekit; sourceTree = "<group>"; };
 		E799759E69C33C7F7D00BA68 /* BundleHolidayProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BundleHolidayProvider.swift; sourceTree = "<group>"; };
 		E81E35DBECA1EFA239E2481A /* WorkStatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkStatisticsView.swift; sourceTree = "<group>"; };
 		E91E182838B9F670B43F27CC /* CalendarDisplaySetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDisplaySetting.swift; sourceTree = "<group>"; };
@@ -458,6 +459,7 @@
 		3E07FB5761A2775BE17A7FF3 = {
 			isa = PBXGroup;
 			children = (
+				E4FA087D2FFA91AE000D2207 /* TimeNest.storekit */,
 				BE8799076891908CE115F40E /* Products */,
 				47F5CECDFF309E6A73792EA2 /* Project */,
 			);

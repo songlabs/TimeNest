@@ -223,7 +223,7 @@ struct SettingsView: View {
         }
         .task {
             await purchaseManager.loadProductIfNeeded()
-            await purchaseManager.refreshPurchasedState()
+            await purchaseManager.refreshPurchasedState(context: "settings appear")
         }
     }
 

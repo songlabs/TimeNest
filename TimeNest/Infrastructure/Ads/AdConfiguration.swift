@@ -180,6 +180,12 @@ enum RemoveAdsPurchaseFailureReason {
     case noRestorablePurchases
 }
 
+private struct RemoveAdsEntitlementScanResult {
+    let hasVerifiedRemoveAdsEntitlement: Bool
+    let checkedCount: Int
+    let matchedRemoveAdsCount: Int
+}
+
 @MainActor
 final class RemoveAdsPurchaseManager: ObservableObject {
     static let shared = RemoveAdsPurchaseManager()
@@ -267,8 +273,10 @@ final class RemoveAdsPurchaseManager: ObservableObject {
             let result = try await removeAdsProduct.purchase()
             switch result {
             case .success(let verificationResult):
+                Self.debugLog("Purchase result: success.")
                 switch verificationResult {
                 case .verified(let transaction):
+                    Self.debugLog("Purchase transaction verified: \(Self.debugSummary(for: transaction)).")
                     guard transaction.productID == AdConfiguration.removeAdsProductID else {
                         Self.debugLog("Purchase returned mismatched product id=\(transaction.productID).")
                         return .failed(.productMismatch)
@@ -276,21 +284,26 @@ final class RemoveAdsPurchaseManager: ObservableObject {
                     guard applyVerifiedRemoveAdsTransaction(transaction) else {
                         return .failed(.verificationFailed)
                     }
+                    Self.debugLog("Finishing purchase transaction id=\(transaction.id).")
                     await transaction.finish()
-                    Self.debugLog("Purchase completed and transaction finished for id=\(transaction.productID).")
+                    Self.debugLog("Purchase transaction finish completed for id=\(transaction.id).")
+                    let entitlementScan = await scanCurrentEntitlements(context: "post-purchase finish")
+                    if !entitlementScan.hasVerifiedRemoveAdsEntitlement {
+                        Self.debugLog("Post-purchase entitlement scan did not find remove-ads entitlement after a verified transaction. Keeping purchased state from the verified purchase transaction for this session.")
+                    }
                     return .completed
                 case .unverified(let transaction, let error):
                     Self.debugLog("Purchase transaction was unverified for id=\(transaction.productID): \(Self.debugDescription(for: error))")
                     return .failed(.verificationFailed)
                 }
             case .userCancelled:
-                Self.debugLog("Purchase was cancelled by the user.")
+                Self.debugLog("Purchase result: userCancelled.")
                 return .cancelled
             case .pending:
-                Self.debugLog("Purchase is pending external approval.")
+                Self.debugLog("Purchase result: pending external approval.")
                 return .pending
             @unknown default:
-                Self.debugLog("Purchase returned an unknown StoreKit result.")
+                Self.debugLog("Purchase result: unknown StoreKit result.")
                 return .failed(.unknownPurchaseResult)
             }
         } catch {
@@ -309,7 +322,8 @@ final class RemoveAdsPurchaseManager: ObservableObject {
             Self.debugLog("AppStore.sync failed; checking current entitlements anyway: \(Self.debugDescription(for: error))")
         }
 
-        let restored = await refreshPurchasedState()
+        let restored = await refreshPurchasedState(context: "restore after AppStore.sync")
+        Self.debugLog("Restore purchases finished. restored=\(restored), syncFailed=\(syncFailed).")
         if restored {
             return .restored
         }
@@ -317,29 +331,42 @@ final class RemoveAdsPurchaseManager: ObservableObject {
     }
 
     @discardableResult
-    func refreshPurchasedState() async -> Bool {
-        let hasEntitlement = await hasVerifiedRemoveAdsEntitlement()
+    func refreshPurchasedState(context: String = "manual refresh") async -> Bool {
+        let scanResult = await scanCurrentEntitlements(context: context)
+        let hasEntitlement = scanResult.hasVerifiedRemoveAdsEntitlement
         setAdsRemoved(hasEntitlement)
+        Self.debugLog("Purchased state refreshed from entitlements. context=\(context), isAdsRemoved=\(hasEntitlement).")
         return hasEntitlement
     }
 
-    private func hasVerifiedRemoveAdsEntitlement() async -> Bool {
+    private func scanCurrentEntitlements(context: String) async -> RemoveAdsEntitlementScanResult {
+        var checkedEntitlementCount = 0
+        var matchedRemoveAdsCount = 0
         for await result in Transaction.currentEntitlements {
+            checkedEntitlementCount += 1
             switch result {
             case .verified(let transaction):
-                if transaction.productID == AdConfiguration.removeAdsProductID,
-                   transaction.revocationDate == nil {
-                    Self.debugLog("Found verified remove-ads entitlement.")
-                    return true
+                Self.debugLog("Current entitlement checked. context=\(context), \(Self.debugSummary(for: transaction)).")
+                if transaction.productID == AdConfiguration.removeAdsProductID {
+                    if transaction.revocationDate == nil {
+                        matchedRemoveAdsCount += 1
+                    } else {
+                        Self.debugLog("Remove-ads entitlement is revoked. context=\(context), transactionID=\(transaction.id).")
+                    }
                 }
             case .unverified(let transaction, let error):
-                if transaction.productID == AdConfiguration.removeAdsProductID {
-                    Self.debugLog("Current entitlement was unverified for id=\(transaction.productID): \(Self.debugDescription(for: error))")
-                }
+                Self.debugLog("Current entitlement was unverified. context=\(context), transaction=\(Self.debugSummary(for: transaction)), error=\(Self.debugDescription(for: error))")
             }
         }
-        Self.debugLog("No verified remove-ads entitlement found.")
-        return false
+        Self.debugLog("Current entitlement scan finished. context=\(context), checked count=\(checkedEntitlementCount), matched remove-ads count=\(matchedRemoveAdsCount).")
+        if matchedRemoveAdsCount == 0 {
+            Self.debugLog("No verified remove-ads entitlement found. context=\(context), checked current entitlement count=\(checkedEntitlementCount).")
+        }
+        return RemoveAdsEntitlementScanResult(
+            hasVerifiedRemoveAdsEntitlement: matchedRemoveAdsCount > 0,
+            checkedCount: checkedEntitlementCount,
+            matchedRemoveAdsCount: matchedRemoveAdsCount
+        )
     }
 
     private func handleTransactionUpdate(_ result: VerificationResult<Transaction>) async {
@@ -383,6 +410,10 @@ final class RemoveAdsPurchaseManager: ObservableObject {
 
     private static func debugSummary(for product: Product) -> String {
         "id=\(product.id), displayName=\(product.displayName), type=\(product.type), price=\(product.displayPrice)"
+    }
+
+    private static func debugSummary(for transaction: Transaction) -> String {
+        "transactionID=\(transaction.id), originalID=\(transaction.originalID), productID=\(transaction.productID), productType=\(transaction.productType), purchaseDate=\(transaction.purchaseDate), revocationDate=\(String(describing: transaction.revocationDate)), expirationDate=\(String(describing: transaction.expirationDate)), environment=\(transaction.environmentStringRepresentation)"
     }
 
     private static func debugLog(_ message: @autoclosure () -> String) {

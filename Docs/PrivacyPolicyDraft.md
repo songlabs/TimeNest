@@ -17,7 +17,7 @@ TimeNest 是一个本地优先的日历与日程管理 App。我们重视用户�
 
 ### 1. 我们是否收集个人信息
 
-TimeNest 第一版是带广告发布的版本，不包含账号登录、云同步或去广告购买功能。App 集成 Google Mobile Ads，在 UMP 允许请求广告后于日历页面显示横幅广告。最终发布版本的数据处理说明必须根据正式广告配置、同意流程及 Google 的数据使用说明确认。
+TimeNest 第一版是带广告发布的版本，不包含账号登录或云同步功能。App 集成 Google Mobile Ads，在 UMP 允许请求广告后为未购买用户显示日历横幅广告，并通过 Apple In-App Purchase / StoreKit 提供一次性去广告购买。最终发布版本的数据处理说明必须根据正式广告配置、同意流程、内购配置及 Google 的数据使用说明确认。
 
 ### 2. 日历与日程数据
 
@@ -35,7 +35,7 @@ TimeNest 第一版是带广告发布的版本，不包含账号登录、云同�
 
 当前版本集成 Google Mobile Ads。根据 Google 的 iOS App Store 数据披露说明，该 SDK 可能处理 IP 地址（可能用于推断大致位置）、崩溃日志、性能数据、设备标识符、广告数据以及与广告或产品的互动数据。实际处理的数据取决于最终提交版本的 SDK、广告、地区、同意和可选功能配置。
 
-TimeNest 当前没有自行实现独立的分析、账号或后端上传功能，也未实现面向用户的去广告购买或恢复流程。App 会在每次启动时通过 Google User Messaging Platform 更新同意状态，仅在 UMP 返回允许请求广告后继续广告流程，并关闭广告个性化；根据用户选择和地区规则，Google 可能提供非个性化广告、受限广告或不提供广告。
+TimeNest 当前没有自行实现独立的分析、账号或后端上传功能。去广告购买由 Apple In-App Purchase / StoreKit 处理，TimeNest 不收集或保存支付卡号等付款信息；恢复购买通过 Apple StoreKit 交易记录完成。App 会在每次启动时通过 Google User Messaging Platform 更新同意状态，仅在 UMP 返回允许请求广告后为未购买用户继续广告流程，并关闭广告个性化；已购买用户不显示广告。根据用户选择和地区规则，Google 可能提供非个性化广告、受限广告或不提供广告。
 
 当前版本会在 UMP 更新和所需的同意表单完成后、初始化 Mobile Ads 和请求横幅广告前，通过 App Tracking Transparency 请求追踪授权。用户拒绝或系统限制追踪时，日历功能仍可正常使用；在 UMP 允许请求广告时，Google Mobile Ads 仍可能请求不包含 IDFA 的广告。最终公开政策和 App Store Connect 必须根据提交版本准确申报广告、设备标识符、使用数据、诊断信息及追踪状态，并与 ATT、Privacy Manifest 和用户选择保持一致。
 
@@ -59,7 +59,7 @@ TimeNest is a local-first calendar and schedule management app. We care about us
 
 ### 1. Personal Information
 
-The first TimeNest release is ad-supported and does not include account sign-in, cloud sync, or an ad-removal purchase. It integrates Google Mobile Ads to display a calendar banner after UMP permits ad requests. The final disclosure must be confirmed against the production ad configuration, consent flow, and Google's data-use documentation.
+The first TimeNest release is ad-supported and does not include account sign-in or cloud sync. It integrates Google Mobile Ads to display a calendar banner for unpurchased users after UMP permits ad requests, and it offers a one-time Remove Ads purchase through Apple In-App Purchase / StoreKit. The final disclosure must be confirmed against the production ad configuration, consent flow, in-app purchase configuration, and Google's data-use documentation.
 
 ### 2. Calendar and Schedule Data
 
@@ -77,7 +77,7 @@ The current version includes a Widget Extension. The app and widget use an App G
 
 The current version integrates Google Mobile Ads. According to Google's iOS App Store data-disclosure guidance, the SDK may process IP addresses (which may estimate general location), crash logs, performance data, device identifiers, advertising data, and advertising or product interaction data. The actual data depends on the SDK, ads, region, consent, and optional features in the submitted build.
 
-TimeNest does not currently implement its own analytics, account system, or backend upload, and it has no user-facing remove-ads purchase or restore flow. At each launch, Google User Messaging Platform updates consent information. The app continues the advertising flow only when UMP reports that ads may be requested, and it disables ad personalization. Depending on the user's choices and regional rules, Google may serve non-personalized ads, limited ads, or no ads.
+TimeNest does not currently implement its own analytics, account system, or backend upload. Remove Ads is handled by Apple In-App Purchase / StoreKit; TimeNest does not collect or store payment card details, and purchase restoration uses Apple StoreKit transaction records. At each launch, Google User Messaging Platform updates consent information. The app continues the advertising flow for unpurchased users only when UMP reports that ads may be requested, and it disables ad personalization. Purchased users do not see ads. Depending on the user's choices and regional rules, Google may serve non-personalized ads, limited ads, or no ads.
 
 After the UMP update and any required consent form complete, the current version requests App Tracking Transparency authorization before initializing Mobile Ads or requesting a banner. If the user denies tracking or the system restricts it, calendar functionality remains available; when UMP permits ad requests, Google Mobile Ads may still request ads without IDFA. The final published policy and App Store Connect declarations must accurately cover advertising, device identifiers, usage data, diagnostics, and tracking for the submitted build and remain consistent with ATT, the Privacy Manifest, and the user's choices.
 

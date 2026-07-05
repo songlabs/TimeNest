@@ -14,7 +14,7 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 - Light, dark, and system appearance settings.
 - A calendar banner-ad container backed by Google Mobile Ads.
 
-The first release is an ad-supported release and does not implement an in-app purchase or other user-facing remove-ads flow. Debug builds use Google's official test identifiers. Release builds require advertising to be enabled with approved production App and Banner IDs; missing, placeholder, malformed, or Google test IDs fail the Release build.
+The first release is ad-supported and includes a one-time Apple In-App Purchase to remove ads. Unpurchased users see banner ads after the required consent flow permits ad requests; purchased users do not create or reserve space for the banner. Debug builds use Google's official test identifiers. Release builds require advertising to be enabled with approved production App and Banner IDs; missing, placeholder, malformed, or Google test IDs fail the Release build.
 
 ## Technology
 
@@ -48,7 +48,7 @@ Replace the destination with an installed simulator when necessary. Signing, Bun
 
 The checked-in Xcode project and `Project.swift` define the same three build settings:
 
-- `TIMENEST_ADS_ENABLED`: `YES` for both Debug and Release. The first release must include ads.
+- `TIMENEST_ADS_ENABLED`: `YES` for both Debug and Release. The first release must support ads for users who have not purchased Remove Ads.
 - `TIMENEST_ADMOB_APP_ID`: Google's test App ID in Debug and simulator builds; Release device/archive builds use `ca-app-pub-7907716708037277~6985657856`.
 - `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's test Banner Unit ID in Debug and simulator builds; Release device/archive builds use `ca-app-pub-7907716708037277/8542282103`.
 
@@ -123,6 +123,7 @@ Calendar events, shifts, work records, settings, and holiday choices are stored 
 - Downloaded holiday data is cached on the device.
 - Holiday synchronization sends HTTPS requests to the public ICS provider selected in Settings.
 - Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true` and the ATT decision completes. Ad personalization is disabled through Publisher Privacy Treatment; denying ATT keeps the calendar usable and permits non-IDFA ad requests when UMP allows ads.
+- Remove Ads is a one-time Apple In-App Purchase handled by StoreKit. TimeNest does not collect or store payment card details, and purchase restoration uses Apple transaction entitlements.
 - The app has no account sign-in or cloud synchronization in the current implementation.
 
 Uninstalling the app removes its local container under normal iOS behavior. Existing SwiftData entities and decoding compatibility must be treated as user-data migration code and should not be removed as ordinary cleanup.
@@ -139,8 +140,8 @@ Uninstalling the app removes its local container under normal iOS behavior. Exis
 
 Before submission, confirm:
 
-- Confirm both Release device/archive identifiers use the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads.
-- Keep remove-ads claims out of version 1.0 metadata; no purchase or restore flow currently exists.
+- Confirm both Release device/archive identifiers use the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads for unpurchased users.
+- Confirm the one-time Remove Ads In-App Purchase and restore flow match the submitted build and App Store Connect product status before mentioning them in metadata.
 - Configure and verify the required consent messages and privacy-options behavior in the AdMob console.
 - Verify the five localized ATT purpose strings and authorized/denied paths on physical devices.
 - Validate the Privacy Manifest, App Privacy answers, privacy-policy URL, and Google Mobile Ads disclosures together.

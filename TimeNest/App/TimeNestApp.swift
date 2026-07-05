@@ -1,3 +1,4 @@
+import Foundation
 import SwiftData
 import SwiftUI
 
@@ -25,13 +26,8 @@ struct TimeNestApp: App {
             SwiftDataCalendarEventEntity.self,
             SwiftDataReminderEntity.self
         ])
-        let configuration = ModelConfiguration(
-            "TimeNest",
-            schema: schema,
-            isStoredInMemoryOnly: false,
-            cloudKitDatabase: .none
-        )
         do {
+            let configuration = try Self.makeModelConfiguration(schema: schema)
             modelContainer = try ModelContainer(
                 for: schema,
                 configurations: [configuration]
@@ -102,13 +98,57 @@ struct TimeNestApp: App {
             }
             .task {
                 RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
-                await RemoveAdsPurchaseManager.shared.refreshPurchasedState()
+                await RemoveAdsPurchaseManager.shared.refreshPurchasedState(context: "app startup")
             }
             .task {
                 AdConsentManager.shared.requestConsentInfoIfNeeded()
                 await widgetSnapshotCoordinator.refresh()
             }
         }
+    }
+
+    private static func makeModelConfiguration(schema: Schema) throws -> ModelConfiguration {
+        let appGroupID = WidgetSnapshotStore.appGroupIdentifier
+        guard let appGroupURL = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else {
+            throw AppGroupStoreError.containerUnavailable(appGroupID)
+        }
+
+        let applicationSupportURL = appGroupURL
+            .appendingPathComponent("Library", isDirectory: true)
+            .appendingPathComponent("Application Support", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: applicationSupportURL,
+            withIntermediateDirectories: true
+        )
+
+        var isDirectory: ObjCBool = false
+        let parentExists = FileManager.default.fileExists(
+            atPath: applicationSupportURL.path,
+            isDirectory: &isDirectory
+        )
+        guard parentExists, isDirectory.boolValue else {
+            throw AppGroupStoreError.applicationSupportDirectoryMissing(applicationSupportURL)
+        }
+
+        let storeURL = applicationSupportURL.appendingPathComponent("TimeNest.store", isDirectory: false)
+        debugLog("App Group container: \(appGroupURL.path)")
+        debugLog("SwiftData store URL: \(storeURL.path)")
+        debugLog("SwiftData store parent exists: \(parentExists), isDirectory: \(isDirectory.boolValue)")
+
+        return ModelConfiguration(
+            "TimeNest",
+            schema: schema,
+            url: storeURL,
+            cloudKitDatabase: .none
+        )
+    }
+
+    private static func debugLog(_ message: @autoclosure () -> String) {
+#if DEBUG
+        print("[TimeNestApp] \(message())")
+#endif
     }
 
     private var preferredColorScheme: ColorScheme? {
@@ -119,6 +159,20 @@ struct TimeNestApp: App {
             return .dark
         default:
             return nil
+        }
+    }
+}
+
+private enum AppGroupStoreError: LocalizedError {
+    case containerUnavailable(String)
+    case applicationSupportDirectoryMissing(URL)
+
+    var errorDescription: String? {
+        switch self {
+        case .containerUnavailable:
+            "App Group container is unavailable."
+        case .applicationSupportDirectoryMissing:
+            "SwiftData Application Support directory is unavailable."
         }
     }
 }

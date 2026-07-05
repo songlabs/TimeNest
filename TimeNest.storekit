@@ -1,0 +1,50 @@
+{
+  "identifier" : "TIMENEST01",
+  "nonRenewingSubscriptions" : [
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "REMOVE01",
+      "localizations" : [
+        {
+          "description" : "Remove ads from TimeNest",
+          "displayName" : "Remove Ads",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "去除 TimeNest 中的广告",
+          "displayName" : "去除广告",
+          "locale" : "zh_CN"
+        },
+        {
+          "description" : "移除 TimeNest 中的廣告",
+          "displayName" : "移除廣告",
+          "locale" : "zh_TW"
+        },
+        {
+          "description" : "TimeNest から広告を削除します",
+          "displayName" : "広告を削除",
+          "locale" : "ja_JP"
+        },
+        {
+          "description" : "TimeNest에서 광고를 제거합니다",
+          "displayName" : "광고 제거",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "com.song.TimeNest.remove_ads",
+      "referenceName" : "Remove Ads",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+  },
+  "subscriptionGroups" : [
+  ],
+  "version" : {
+    "major" : 2,
+    "minor" : 0
+  }
+}

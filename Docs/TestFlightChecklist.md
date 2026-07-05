@@ -1,6 +1,6 @@
 # TimeNest TestFlight Checklist
 
-> Run this checklist against the exact internal TestFlight candidate. Record device model, iOS version, app version/build, language, appearance, and network condition. The first release requires ads and includes a Widget Extension, but has no user-facing remove-ads purchase flow.
+> Run this checklist against the exact internal TestFlight candidate. Record device model, iOS version, app version/build, language, appearance, and network condition. The first release shows ads to unpurchased users, includes a Widget Extension, and offers a one-time Remove Ads purchase.
 
 ## 1. Internal Test Setup
 
@@ -65,7 +65,7 @@
 - [ ] Confirm no banner request occurs before UMP reports `canRequestAds == true`; deny or interrupt consent and verify the fixed banner area does not jump.
 - [ ] Confirm required UMP consent forms appear at the intended time and Help exposes the privacy-options action only when UMP requires it.
 - [ ] On a fresh install, confirm the localized ATT prompt appears only after UMP completes and before the first banner request. Verify both allowed and denied paths; denied must keep the app usable and request ads without IDFA when UMP permits.
-- [ ] Confirm no remove-ads purchase or state is shown or promised; the current implementation has no user-facing remove-ads flow.
+- [ ] Verify the Remove Ads purchase and restore flow through TestFlight/Sandbox. Purchased users should not create or reserve space for the banner; unpurchased users should keep the existing banner behavior.
 
 ## 9. Lifecycle, Offline, and Stability
 

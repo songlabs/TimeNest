@@ -26,7 +26,7 @@ Known limitations and pending release items:
 
 - There is no account system, developer-operated cloud sync, team sharing, or cross-device data synchronization in this release.
 - Public-holiday refresh and ad loading require network access; existing local calendar data should remain usable without network access.
-- The current first release has no in-app purchase or remove-ads flow.
+- The current first release offers a one-time Remove Ads In-App Purchase through Apple StoreKit. Please verify purchase and restore behavior in the uploaded TestFlight/Sandbox environment.
 - Final production advertising identifiers, App Privacy/Tracking answers, export-compliance answers, App Store screenshots, and physical-device ATT/TestFlight sign-off remain release checks until explicitly completed.
 - Apple Developer Program activation must be confirmed before App Store submission.
 
