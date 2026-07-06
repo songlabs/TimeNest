@@ -71,12 +71,12 @@
 "notification.daily_schedule_check" = "请确认今天的日程";
 "notification.event_starting_soon" = "日程即将开始";
 "notification.permission_denied.title" = "通知权限已关闭";
-"notification.permission_denied.message" = "TimeNest 需要通知权限才能发送予定提醒。请在 iOS 设置中打开通知。";
+"notification.permission_denied.message" = "TimeNest 需要通知权限才能发送日程提醒。请在 iOS 设置中打开通知。";
 "notification.open_settings" = "打开设置";
 "notification.reminder_time_past.title" = "提醒时间已过";
-"notification.reminder_time_past.message" = "予定已保存，但提醒时间已过，未设置通知。";
+"notification.reminder_time_past.message" = "日程已保存，但提醒时间已过，未设置通知。";
 "notification.schedule_failed.title" = "提醒设置失败";
-"notification.schedule_failed.message" = "予定已保存，但提醒设置失败。";
+"notification.schedule_failed.message" = "日程已保存，但提醒设置失败。";
 
 /* Reminder Options */
 "reminder.none" = "无";
@@ -154,7 +154,7 @@
 "work_clock.short_out" = "下";
 "editor.restTime" = "休息时间";
 "editor.transportFee" = "交通费";
-"editor.hourlyRate" = "时给";
+"editor.hourlyRate" = "时薪";
 "editor.currencyUnit" = "元";
 "event.memo.title" = "备忘";
 "event.memo.voice.placeholder" = "用语音输入备忘";
@@ -367,21 +367,21 @@
 "help.shifts.add.question" = "如何添加班次？";
 "help.shifts.add.answer" = "从日历顶部菜单打开“班次输入”，选择日期后点击班次按钮即可添加。添加后会显示在月、周、日视图中。";
 "help.shifts.multiple.question" = "一天可以添加多个班次吗？";
-"help.shifts.multiple.answer" = "同一天只能保留一个班次。已经有班次时，再选择其他班次会覆盖当天原有班次，但不会删除普通日程、出勤记录或退勤记录。";
+"help.shifts.multiple.answer" = "同一天只能保留一个班次。已经有班次时，再选择其他班次会覆盖当天原有班次，但不会删除普通日程、上班记录或下班记录。";
 "help.shifts.replace.question" = "如何修改当天班次？";
 "help.shifts.replace.answer" = "再次进入“班次输入”，选择同一天并点击新的班次即可替换。取消按钮只用于删除当前日期的班次，不会影响其他日程。";
 "help.shifts.change_time.question" = "如何自定义班次时间？";
 "help.shifts.change_time.answer" = "在设置的“自定义班次时间”中，可以修改白班、夜班和自定义班次的名称、开始时间、结束时间与颜色。修改后会用于之后创建的班次。";
 "help.shifts.difference.question" = "班次和工作记录有什么区别？";
-"help.shifts.difference.answer" = "班次表示预定的工作安排，例如白班或夜班。工作记录表示实际的出勤、退勤、休息时间、时薪和交通费，用于工作统计。";
-"help.shifts.record.question" = "如何记录出勤和退勤？";
-"help.shifts.record.answer" = "在新增或编辑日程时，可以输入出勤时间、退勤时间、休息时间、时薪和交通费。保存后，这些信息会作为工作记录参与统计。";
+"help.shifts.difference.answer" = "班次表示预定的工作安排，例如白班或夜班。工作记录表示实际的上班、下班、休息时间、时薪和交通费，用于工作统计。";
+"help.shifts.record.question" = "如何记录上班和下班？";
+"help.shifts.record.answer" = "在新增或编辑日程时，可以输入上班时间、下班时间、休息时间、时薪和交通费。保存后，这些信息会作为工作记录参与统计。";
 "help.shifts.overnight.question" = "第二天下班如何处理？";
-"help.shifts.overnight.answer" = "夜班等跨日工作时，退勤时间可以记录为次日。统计时会按从出勤到次日退勤的实际时间计算，并扣除休息时间。";
+"help.shifts.overnight.answer" = "夜班等跨日工作时，下班时间可以记录为次日。统计时会按从上班到次日下班的实际时间计算，并扣除休息时间。";
 "help.shifts.statistics.question" = "工作统计如何计算？";
-"help.shifts.statistics.answer" = "工作统计会根据已记录的出勤时间、退勤时间、休息时间、时薪和交通费计算。基本规则是：工作时间 = 退勤时间 - 出勤时间 - 休息时间；工资 = 工作时间 × 时薪；合计 = 工资 + 交通费。";
+"help.shifts.statistics.answer" = "工作统计会根据已记录的上班时间、下班时间、休息时间、时薪和交通费计算。基本规则是：工作时间 = 下班时间 - 上班时间 - 休息时间；工资 = 工作时间 × 时薪；合计 = 工资 + 交通费。";
 "help.shifts.statistics_missing.question" = "为什么统计结果没有显示？";
-"help.shifts.statistics_missing.answer" = "请确认目标期间内已经保存了出勤和退勤记录，并且时薪等必要信息已输入。只有班次本身不会自动生成工资统计。";
+"help.shifts.statistics_missing.answer" = "请确认目标期间内已经保存了上班和下班记录，并且时薪等必要信息已输入。只有班次本身不会自动生成工资统计。";
 
 "help.ads.about.question" = "关于广告";
 "help.ads.about.answer" = "为了支持 TimeNest 的运营，App 中可能会显示广告。你可以在设置中通过一次性购买去除广告。";

@@ -152,7 +152,7 @@
 "editor.workOut" = "退勤";
 "work_clock.short_in" = "出";
 "work_clock.short_out" = "退";
-"editor.restTime" = "休息時間";
+"editor.restTime" = "休憩時間";
 "editor.transportFee" = "交通費";
 "editor.hourlyRate" = "時給";
 "editor.currencyUnit" = "円";
