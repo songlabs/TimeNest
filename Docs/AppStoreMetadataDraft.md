@@ -5,7 +5,7 @@
 ## Shared App Information
 
 - App Name: TimeNest
-- Version: 1.0
+- Version: 1.1
 - Primary Language: Japanese (`ja`)
 - Supported Languages: `ja` / `zh-Hans` / `zh-Hant` / `en` / `ko`
 - Primary Category recommendation: Productivity
@@ -18,8 +18,8 @@
 ## Submission Guardrails
 
 - Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; Widget support; five UI languages; and local-first storage.
-- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, automated recommendations, or other unimplemented features. They are not part of version 1.0.
-- Do not describe TimeNest as ad-free for everyone. Version 1.0 integrates Google Mobile Ads for unpurchased users and includes a one-time Remove Ads In-App Purchase through Apple StoreKit.
+- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, automated recommendations, or other unimplemented features. They are not part of version 1.1.
+- Do not describe TimeNest as ad-free for everyone. Version 1.1 integrates Google Mobile Ads for unpurchased users and includes a one-time Remove Ads In-App Purchase through Apple StoreKit.
 - **TODO:** Reconfirm banner behavior, Remove Ads purchase/restore behavior, and Widget inclusion against the exact submitted build.
 - **TODO:** Draft and review Traditional Chinese (`zh-Hant`) App Store metadata before enabling that App Store Connect product-page locale.
 
@@ -171,20 +171,20 @@ TimeNest는 일정, 교대 근무와 근무 기록을 한곳에서 관리할 수
 
 캘린더,일정,교대,근무,출퇴근,공휴일,플래너,월간,주간,통계
 
-## Version 1.0 Release Notes Candidates
+## Version 1.1 Release Notes Candidates
 
 ### Japanese (`ja`)
 
-TimeNest 1.0 の初回リリースです。月・週・日のカレンダー、通常・終日予定の管理、シフトと勤務記録、勤務統計、祝日購読、ウィジェット、多言語表示に対応しています。
+TimeNest 1.1 のリリースです。月・週・日のカレンダー、通常・終日予定の管理、シフトと勤務記録、勤務統計、祝日購読、ウィジェット、多言語表示に対応しています。
 
 ### Simplified Chinese (`zh-Hans`)
 
-TimeNest 1.0 首次发布，支持月、周、日日历视图，普通日程与全天日程管理，班次与工作记录，工作统计，节假日订阅，小组件和多语言界面。
+TimeNest 1.1 版本支持月、周、日日历视图，普通日程与全天日程管理，班次与工作记录，工作统计，节假日订阅，小组件和多语言界面。
 
 ### English (`en`)
 
-TimeNest 1.0 introduces month, week, and day calendar views, timed and all-day event management, shifts, work records and statistics, holiday subscriptions, Widgets, and a multilingual UI.
+TimeNest 1.1 includes month, week, and day calendar views, timed and all-day event management, shifts, work records and statistics, holiday subscriptions, Widgets, and a multilingual UI.
 
 ### Korean (`ko`)
 
-TimeNest 1.0 첫 출시 버전입니다. 월/주/일 캘린더, 일반 및 종일 일정 관리, 교대 근무와 근무 기록, 근무 통계, 공휴일 구독, 위젯, 다국어 UI를 지원합니다.
+TimeNest 1.1 버전은 월/주/일 캘린더, 일반 및 종일 일정 관리, 교대 근무와 근무 기록, 근무 통계, 공휴일 구독, 위젯, 다국어 UI를 지원합니다.

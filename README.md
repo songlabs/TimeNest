@@ -55,6 +55,8 @@ The checked-in Xcode project and `Project.swift` define the same three build set
 
 `TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. Release device/archive values must be the approved production IDs, while simulator overrides keep development builds on Google's official test IDs. `Scripts/validate_admob_release_config.sh` rejects a production Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when changing the two production values.
 
+The Remove Ads StoreKit product ID is `com.song.TimeNest.remove_ads`; keep `AdConfiguration.removeAdsProductID`, `TimeNest.storekit`, App Store Connect, and release documents aligned when reviewing IAP.
+
 ## Unit Tests
 
 The `TimeNestTests` target covers calendar grid generation, localization resource parity, holiday-name normalization and ICS parsing, event scheduling, shift settings, timeline calculations, and work-statistics rules. Run the full unit-test target with:
@@ -115,7 +117,7 @@ The localization parity tests require the `ja`, `zh-Hans`, `zh-Hant`, `en`, and 
 
 ## Local-First Data
 
-Calendar events, shifts, work records, settings, and holiday choices are stored on the device. SwiftData repositories are the production event/reminder storage and use the App Group container so the app and Widget can share local data needed for Widget display. Downloaded holiday data is a replaceable local cache. Network access is limited to explicit or scheduled holiday-source refreshes and enabled ad SDK behavior; calendar editing and existing local data must not depend on a successful request.
+Calendar events, shifts, work records, settings, and holiday choices are stored on the device. SwiftData repositories are the production event/reminder storage and use the `group.com.songlabs.timenest` App Group container so the app and Widget can share local data needed for Widget display. Downloaded holiday data is a replaceable local cache. Network access is limited to explicit or scheduled holiday-source refreshes and enabled ad SDK behavior; calendar editing and existing local data must not depend on a successful request.
 
 ## Data And Privacy
 
