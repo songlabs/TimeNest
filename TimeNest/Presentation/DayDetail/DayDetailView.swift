@@ -21,8 +21,8 @@ struct DayDetailView: View {
     let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
 
     @State private var editingEvent: EditingEvent?
-    @State private var showingAddEvent: Bool = false
-    @State private var showingAddWorkRecord: Bool = false
+    @State private var showingAddEntry: Bool = false
+    @State private var addEntryInitialKind: EntryEditorKind = .event
     @State private var editingWorkRecord: WorkRecordEditorInitialSession?
 
     var body: some View {
@@ -48,24 +48,15 @@ struct DayDetailView: View {
         }
         .background(SettingsModalSurface.background)
         .presentationDetents([.fraction(DayDetailLayout.presentationHeightFraction)])
-        .sheet(isPresented: $showingAddEvent) {
+        .sheet(isPresented: $showingAddEntry) {
             let initialDate = cell.date.toDate()
             EventEditorView(
-                isPresented: $showingAddEvent,
+                isPresented: $showingAddEntry,
                 mode: .create(initialDate: initialDate),
                 existingEvents: cell.events,
+                initialEntryKind: addEntryInitialKind,
+                showsEntryKindPicker: true,
                 onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
-                }
-            )
-        }
-        .sheet(isPresented: $showingAddWorkRecord) {
-            let initialDate = cell.date.toDate()
-            WorkRecordEditorView(
-                isPresented: $showingAddWorkRecord,
-                mode: .create(initialDate: initialDate),
-                existingEvents: cell.events,
-                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
                     try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
                 }
             )
@@ -174,7 +165,7 @@ struct DayDetailView: View {
 
     private var addEventButton: some View {
         Button(action: {
-            showingAddEvent = true
+            presentAddEntry(kind: .event)
         }) {
             Text(localization.localized(.dayDetailAddEvent))
                 .font(.headline.weight(.semibold))
@@ -189,7 +180,7 @@ struct DayDetailView: View {
 
     private var addWorkRecordButton: some View {
         Button(action: {
-            showingAddWorkRecord = true
+            presentAddEntry(kind: .workRecord)
         }) {
             Text(localization.localized(.workRecordAdd))
                 .font(.headline.weight(.semibold))
@@ -212,6 +203,11 @@ struct DayDetailView: View {
 
     private func openEditor(for event: EventOccurrence) {
         editingEvent = EditingEvent(event)
+    }
+
+    private func presentAddEntry(kind: EntryEditorKind) {
+        addEntryInitialKind = kind
+        showingAddEntry = true
     }
 
     private var editingPresentationBinding: Binding<Bool> {

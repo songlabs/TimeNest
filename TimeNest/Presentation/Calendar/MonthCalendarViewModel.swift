@@ -10,6 +10,7 @@ class MonthCalendarViewModel: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published var selectedDayCell: CalendarDayCell?
     @Published var showingDayDetail: Bool = false
+    @Published var showingEntryEditor: Bool = false
     @Published var isShiftInputMode: Bool = false
     @Published var shiftInputTargetDate: Date?
     @Published var selectedShiftTemplate: ShiftTimeTemplate?
@@ -558,14 +559,21 @@ class MonthCalendarViewModel: ObservableObject {
             return
         }
 
-        showingDayDetail = true
+        if cell.events.isEmpty {
+            showingDayDetail = false
+            showingEntryEditor = true
+        } else {
+            showingEntryEditor = false
+            showingDayDetail = true
+        }
     }
 
-    func openSelectedDateDetail() async {
+    func openSelectedDateEntryEditor() async {
         let targetDate = selectedDate
         await ensureDataLoadedForDate(targetDate)
         selectedDayCell = findCell(for: targetDate) ?? createPlaceholderCell(for: targetDate)
-        showingDayDetail = true
+        showingDayDetail = false
+        showingEntryEditor = true
     }
 
     private func refreshSelectedDayCell() {

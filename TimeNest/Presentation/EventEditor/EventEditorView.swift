@@ -100,6 +100,11 @@ private enum EditorFocusedField: Hashable {
     case hourlyRate
 }
 
+enum EntryEditorKind: Hashable {
+    case event
+    case workRecord
+}
+
 
 private enum NotificationSaveAlert: Identifiable {
     case denied
@@ -153,9 +158,9 @@ struct EventEditorView: View {
     let mode: EventEditorMode
     let existingEvents: [EventOccurrence]
     var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
-    var onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)?
-    var onReloadEvents: ((Date) async -> [EventOccurrence])?
+    private let showsEntryKindPicker: Bool
 
+    @State private var selectedEntryKind: EntryEditorKind
     @State private var title: String
     @State private var note: String
     @State private var startDate: Date
@@ -180,14 +185,24 @@ struct EventEditorView: View {
     @State private var editingWorkTime: WorkTimeEditTarget?
     @State private var pendingNotificationSaveAlert: NotificationSaveAlert?
     @State private var workSessionId: UUID
-    @State private var workRecordEvents: [EventOccurrence]
-    @State private var showingAddWorkRecord: Bool = false
-    @State private var editingWorkRecord: WorkRecordEditorInitialSession?
     @StateObject private var speechMemoRecognitionService = SpeechMemoRecognitionService()
     @State private var speechMemoRecognitionStatus: SpeechMemoRecognitionStatus = .idle
     @State private var speechMemoMessage: String?
     @State private var speechMemoBaseText: String = ""
     @FocusState private var focusedField: EditorFocusedField?
+
+    @State private var workRecordTitle: String
+    @State private var workRecordDate: Date
+    @State private var workRecordInDate: Date
+    @State private var workRecordOutDate: Date
+    @State private var workRecordRestTime: Double
+    @State private var workRecordTransportFee: String
+    @State private var workRecordHourlyRate: String
+    @State private var workRecordSessionId: UUID
+    @State private var isWorkRecordOutTimeSet: Bool
+    @State private var showingWorkRecordDatePicker: Bool = false
+    @State private var showingWorkRecordRestTimePicker: Bool = false
+    @State private var editingWorkRecordTime: WorkTimeEditTarget?
 
     private let reminderOptions: [Int?] = [nil, 0, 5, 10, 15, 30, 60, 1440]
 
@@ -195,18 +210,25 @@ struct EventEditorView: View {
         isPresented: Binding<Bool>,
         mode: EventEditorMode,
         existingEvents: [EventOccurrence] = [],
-        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult,
-        onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)? = nil,
-        onReloadEvents: ((Date) async -> [EventOccurrence])? = nil
+        initialEntryKind: EntryEditorKind = .event,
+        showsEntryKindPicker: Bool = false,
+        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
     ) {
         _isPresented = isPresented
         self.mode = mode
         self.existingEvents = existingEvents
         self.onSave = onSave
-        self.onUpdateEvent = onUpdateEvent
-        self.onReloadEvents = onReloadEvents
+        let isCreateMode: Bool
+        switch mode {
+        case .create:
+            isCreateMode = true
+        case .edit:
+            isCreateMode = false
+        }
+        self.showsEntryKindPicker = showsEntryKindPicker && isCreateMode
 
         let initialState = EventEditorView.initialState(for: mode)
+        _selectedEntryKind = State(initialValue: isCreateMode ? initialEntryKind : .event)
         _title = State(initialValue: initialState.title)
         _note = State(initialValue: initialState.note ?? "")
         _startDate = State(initialValue: initialState.startDate)
@@ -235,7 +257,17 @@ struct EventEditorView: View {
         _transportFee = State(initialValue: sharedValues.transportFee.map(String.init) ?? "")
         _hourlyRate = State(initialValue: sharedValues.hourlyRate.map(String.init) ?? "")
         _selectedShiftTemplateID = State(initialValue: initialState.shiftTemplateID)
-        _workRecordEvents = State(initialValue: existingEvents)
+
+        let workRecordInitialValues = WorkRecordEditorView.initialValues(for: .create(initialDate: initialState.defaultWorkDate))
+        _workRecordTitle = State(initialValue: workRecordInitialValues.title)
+        _workRecordDate = State(initialValue: workRecordInitialValues.workDate)
+        _workRecordInDate = State(initialValue: workRecordInitialValues.workInTime)
+        _workRecordOutDate = State(initialValue: workRecordInitialValues.workOutTime)
+        _workRecordRestTime = State(initialValue: workRecordInitialValues.restHours)
+        _workRecordTransportFee = State(initialValue: workRecordInitialValues.transportFee.map(String.init) ?? "")
+        _workRecordHourlyRate = State(initialValue: workRecordInitialValues.hourlyRate.map(String.init) ?? "")
+        _workRecordSessionId = State(initialValue: workRecordInitialValues.workSessionId)
+        _isWorkRecordOutTimeSet = State(initialValue: workRecordInitialValues.isWorkOutTimeSet)
     }
 
     var body: some View {
@@ -254,95 +286,18 @@ struct EventEditorView: View {
                         onCancel: { isPresented = false },
                         onSave: {
                             Task {
-                                await save()
+                                await saveSelectedEntry()
                             }
                         }
                     )
 
                     ScrollView {
                         VStack(spacing: EventEditorStyle.sectionSpacing) {
-                            TitleInputSection(
-                                title: $title,
-                                placeholder: localization.localized(.editorTitle),
-                                focusedField: $focusedField
-                            )
-
-                            VStack(spacing: 0) {
-                                EventTimeSection(
-                                    startDate: $startDate,
-                                    endDate: $endDate,
-                                    isAllDay: $isAllDay,
-                                    allDayTitle: localization.localized(.editorAllDay),
-                                    startTitle: localization.localized(.editorStart),
-                                    endTitle: localization.localized(.editorEnd),
-                                    showingStartDatePicker: $showingStartDatePicker,
-                                    showingStartTimePicker: $showingStartTimePicker,
-                                    showingEndDatePicker: $showingEndDatePicker,
-                                    showingEndTimePicker: $showingEndTimePicker
-                                )
-                                .onChange(of: isAllDay) { _, newValue in
-                                    normalizeForAllDayChange(newValue)
-                                }
-
-                                CardDivider()
-
-                                ReminderSection(
-                                    reminderTitle: localization.localized(.editorReminder),
-                                    reminderOffsetMinutes: $reminderOffsetMinutes,
-                                    reminderOptions: reminderOptions,
-                                    reminderTitleFormatter: { reminderTitle(for: $0) },
-                                    showingReminderPicker: $showingReminderPicker
-                                )
-                            }
-                            .cardContainer()
-
-                            MemoInputSection(
-                                title: localization.localized(.eventMemoTitle),
-                                text: $note,
-                                placeholder: localization.localized(.eventMemoVoicePlaceholder),
-                                statusMessage: speechMemoStatusMessage,
-                                isRecognizing: speechMemoRecognitionStatus == .recording,
-                                microphoneAccessibilityLabel: speechMemoRecognitionStatus == .recording
-                                    ? localization.localized(.eventMemoVoiceStop)
-                                    : localization.localized(.eventMemoVoiceStart),
-                                focusedField: $focusedField,
-                                onMicrophoneTap: {
-                                    Task {
-                                        await toggleSpeechMemoRecognition()
-                                    }
-                                }
-                            )
-
-                            if isEditingWorkClock {
-                                WorkInfoSection(
-                                    restTime: $restTime,
-                                    transportFee: $transportFee,
-                                    hourlyRate: $hourlyRate,
-                                    showingRestTimePicker: $showingRestTimePicker,
-                                    workInDate: $workInDate,
-                                    workOutDate: $workOutDate,
-                                    editingWorkTime: $editingWorkTime,
-                                    focusedField: $focusedField,
-                                    workInTitle: localization.localized(.editorWorkIn),
-                                    workOutTitle: localization.localized(.editorWorkOut),
-                                    restTimeTitle: localization.localized(.editorRestTime),
-                                    transportFeeTitle: localization.localized(.editorTransportFee),
-                                    hourlyRateTitle: localization.localized(.editorHourlyRate),
-                                    currencyUnit: localization.localized(.editorCurrencyUnit)
-                                )
+                            if showsEntryKindPicker {
+                                entryKindPicker
                             }
 
-                            if let validationMessage = validationMessage ?? errorMessage {
-                                Text(validationMessage)
-                                    .font(.footnote)
-                                    .foregroundColor(EventEditorStyle.destructive)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding(.horizontal, EventEditorStyle.cardPadding)
-                            }
-
-                            if shouldShowWorkRecordsSection {
-                                workRecordsSection
-                            }
+                            editorFormContent
                         }
                         .padding(.horizontal, EventEditorStyle.horizontalPadding)
                         .padding(.top, EventEditorStyle.contentTopPadding)
@@ -372,6 +327,11 @@ struct EventEditorView: View {
             .onChange(of: startDate) { oldValue, newValue in
                 handleStartDateChange(from: oldValue, to: newValue)
             }
+            .onChange(of: selectedEntryKind) { _, _ in
+                focusedField = nil
+                dismissAllFloatingPickers()
+                errorMessage = nil
+            }
             .onChange(of: isFloatingPickerPresented) { _, isPresented in
                 if isPresented {
                     focusedField = nil
@@ -380,116 +340,146 @@ struct EventEditorView: View {
             .alert(item: $pendingNotificationSaveAlert) { alert in
                 notificationSaveAlert(for: alert)
             }
-            .sheet(isPresented: $showingAddWorkRecord) {
-                WorkRecordEditorView(
-                    isPresented: $showingAddWorkRecord,
-                    mode: .create(initialDate: workRecordTargetDate),
-                    existingEvents: workRecordEvents,
-                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                        try await onSave(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
-                    },
-                    onSaved: {
-                        Task {
-                            await reloadWorkRecordEvents(for: workRecordTargetDate)
-                        }
-                    }
-                )
-            }
-            .sheet(item: $editingWorkRecord) { session in
-                WorkRecordEditorView(
-                    isPresented: workRecordEditingPresentationBinding,
-                    mode: .edit(session),
-                    existingEvents: workRecordEvents,
-                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                        try await onSave(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
-                    },
-                    onUpdateEvent: onUpdateEvent,
-                    onSaved: {
-                        Task {
-                            await reloadWorkRecordEvents(for: workRecordTargetDate)
-                        }
-                    }
-                )
-            }
         }
         .presentationDetents([.fraction(0.6), .large])
     }
 
-    private var shouldShowWorkRecordsSection: Bool {
-        !isEditing && onReloadEvents != nil
-    }
-
-    private var workRecordTargetDate: Date {
-        Calendar.current.startOfDay(for: startDate)
-    }
-
-    private var workRecordSessions: [WorkRecordDisplaySession] {
-        let calendar = Calendar.current
-        let targetDate = workRecordTargetDate
-        let workEvents = workRecordEvents.filter { event in
-            event.isWorkClockEvent && calendar.isDate(event.workDate, inSameDayAs: targetDate)
+    private var entryKindPicker: some View {
+        Picker("", selection: $selectedEntryKind) {
+            Text(localization.localized(.entryKindEvent)).tag(EntryEditorKind.event)
+            Text(localization.localized(.entryKindWorkRecord)).tag(EntryEditorKind.workRecord)
         }
-        return WorkRecordDisplaySession.make(from: workEvents, selectedDate: targetDate)
+        .pickerStyle(.segmented)
     }
 
-    private var workRecordsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(localization.localized(.workRecordSectionTitle))
-                .font(.headline.weight(.semibold))
-                .foregroundColor(EventEditorStyle.primaryText)
+    @ViewBuilder
+    private var editorFormContent: some View {
+        if showsEntryKindPicker && selectedEntryKind == .workRecord {
+            workRecordFormContent
+        } else {
+            eventFormContent
+        }
+    }
 
-            if workRecordSessions.isEmpty {
-                Text(localization.localized(.workRecordEmpty))
-                    .font(.footnote)
-                    .foregroundColor(EventEditorStyle.secondaryText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 6)
-            } else {
-                VStack(spacing: 8) {
-                    ForEach(workRecordSessions) { session in
-                        WorkRecordSummaryRowView(
-                            session: session,
-                            selectedDate: workRecordTargetDate,
-                            onEdit: onUpdateEvent == nil ? nil : {
-                                editingWorkRecord = session.editorInitialSession(selectedDate: workRecordTargetDate)
-                            }
-                        )
+    private var eventFormContent: some View {
+        VStack(spacing: EventEditorStyle.sectionSpacing) {
+            TitleInputSection(
+                title: $title,
+                placeholder: localization.localized(.editorTitle),
+                focusedField: $focusedField
+            )
+
+            EventTimeSection(
+                startDate: $startDate,
+                endDate: $endDate,
+                isAllDay: $isAllDay,
+                reminderOffsetMinutes: $reminderOffsetMinutes,
+                allDayTitle: localization.localized(.editorAllDay),
+                reminderTitle: localization.localized(.editorReminder),
+                startTitle: localization.localized(.editorStart),
+                endTitle: localization.localized(.editorEnd),
+                reminderOptions: reminderOptions,
+                reminderTitleFormatter: { reminderTitle(for: $0) },
+                showingReminderPicker: $showingReminderPicker,
+                showingStartDatePicker: $showingStartDatePicker,
+                showingStartTimePicker: $showingStartTimePicker,
+                showingEndDatePicker: $showingEndDatePicker,
+                showingEndTimePicker: $showingEndTimePicker
+            )
+            .onChange(of: isAllDay) { _, newValue in
+                normalizeForAllDayChange(newValue)
+            }
+            .cardContainer()
+
+            MemoInputSection(
+                title: localization.localized(.eventMemoTitle),
+                text: $note,
+                placeholder: localization.localized(.eventMemoVoicePlaceholder),
+                statusMessage: speechMemoStatusMessage,
+                isRecognizing: speechMemoRecognitionStatus == .recording,
+                microphoneAccessibilityLabel: speechMemoRecognitionStatus == .recording
+                    ? localization.localized(.eventMemoVoiceStop)
+                    : localization.localized(.eventMemoVoiceStart),
+                focusedField: $focusedField,
+                onMicrophoneTap: {
+                    Task {
+                        await toggleSpeechMemoRecognition()
                     }
                 }
+            )
+
+            if isEditingWorkClock {
+                WorkInfoSection(
+                    restTime: $restTime,
+                    transportFee: $transportFee,
+                    hourlyRate: $hourlyRate,
+                    showingRestTimePicker: $showingRestTimePicker,
+                    workInDate: $workInDate,
+                    workOutDate: $workOutDate,
+                    editingWorkTime: $editingWorkTime,
+                    focusedField: $focusedField,
+                    workInTitle: localization.localized(.editorWorkIn),
+                    workOutTitle: localization.localized(.editorWorkOut),
+                    restTimeTitle: localization.localized(.editorRestTime),
+                    transportFeeTitle: localization.localized(.editorTransportFee),
+                    hourlyRateTitle: localization.localized(.editorHourlyRate),
+                    currencyUnit: localization.localized(.editorCurrencyUnit)
+                )
             }
 
-            Button {
-                focusedField = nil
-                showingAddWorkRecord = true
-            } label: {
-                Text(localization.localized(.workRecordAdd))
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: EventEditorStyle.rowHeight)
-                    .background(ShiftCalendarColors.primaryBlue)
-                    .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+            if let validationMessage = validationMessage ?? errorMessage {
+                validationText(validationMessage)
             }
-            .buttonStyle(.plain)
+
         }
-        .padding(EventEditorStyle.cardPadding)
-        .cardContainer()
     }
 
-    private func reloadWorkRecordEvents(for date: Date) async {
-        guard let onReloadEvents else { return }
-        workRecordEvents = await onReloadEvents(date)
-    }
+    private var workRecordFormContent: some View {
+        VStack(spacing: EventEditorStyle.sectionSpacing) {
+            TitleInputSection(
+                title: $workRecordTitle,
+                placeholder: localization.localized(.editorTitle),
+                focusedField: $focusedField
+            )
 
-    private var workRecordEditingPresentationBinding: Binding<Bool> {
-        Binding(
-            get: { editingWorkRecord != nil },
-            set: { isPresented in
-                if !isPresented {
-                    editingWorkRecord = nil
+            WorkRecordDateSection(
+                title: localization.localized(.editorDate),
+                dateText: formatDateOnly(workRecordDate),
+                onTap: {
+                    focusedField = nil
+                    showingWorkRecordDatePicker = true
                 }
+            )
+
+            WorkInfoSection(
+                restTime: $workRecordRestTime,
+                transportFee: $workRecordTransportFee,
+                hourlyRate: $workRecordHourlyRate,
+                showingRestTimePicker: $showingWorkRecordRestTimePicker,
+                workInDate: $workRecordInDate,
+                workOutDate: $workRecordOutDate,
+                editingWorkTime: $editingWorkRecordTime,
+                focusedField: $focusedField,
+                workInTitle: localization.localized(.editorWorkIn),
+                workOutTitle: localization.localized(.editorWorkOut),
+                restTimeTitle: localization.localized(.editorRestTime),
+                transportFeeTitle: localization.localized(.editorTransportFee),
+                hourlyRateTitle: localization.localized(.editorHourlyRate),
+                currencyUnit: localization.localized(.editorCurrencyUnit)
+            )
+
+            if let errorMessage {
+                validationText(errorMessage)
             }
-        )
+        }
+    }
+
+    private func validationText(_ text: String) -> some View {
+        Text(text)
+            .font(.footnote)
+            .foregroundColor(EventEditorStyle.destructive)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, EventEditorStyle.cardPadding)
     }
 
     @ViewBuilder
@@ -541,6 +531,54 @@ struct EventEditorView: View {
                 )
                 .id(target)
             }
+        } else if showingWorkRecordDatePicker {
+            FloatingPickerOverlay(onDismiss: { showingWorkRecordDatePicker = false }) {
+                FloatingDatePickerPanel(
+                    title: localization.localized(.editorDate),
+                    initialSelection: workRecordDate,
+                    cancelTitle: localization.localized(.cancel),
+                    doneTitle: localization.localized(.done),
+                    kind: .date,
+                    confirmColor: ShiftCalendarColors.primaryBlue,
+                    onCancel: { showingWorkRecordDatePicker = false },
+                    onDone: { selection in
+                        setWorkRecordDate(selection)
+                        showingWorkRecordDatePicker = false
+                    }
+                )
+            }
+        } else if showingWorkRecordRestTimePicker {
+            FloatingPickerOverlay(onDismiss: { showingWorkRecordRestTimePicker = false }) {
+                RestTimePickerPanel(
+                    restTime: $workRecordRestTime,
+                    title: localization.localized(.editorRestTime),
+                    cancelTitle: localization.localized(.cancel),
+                    doneTitle: localization.localized(.done),
+                    onCancel: { showingWorkRecordRestTimePicker = false },
+                    onDone: { showingWorkRecordRestTimePicker = false }
+                )
+            }
+        } else if let target = editingWorkRecordTime {
+            FloatingPickerOverlay(onDismiss: { editingWorkRecordTime = nil }) {
+                FloatingDatePickerPanel(
+                    title: target.pickerTitle(
+                        workInTitle: localization.localized(.editorWorkIn),
+                        workOutTitle: localization.localized(.editorWorkOut),
+                        timeTitle: localization.localized(.editorTime)
+                    ),
+                    initialSelection: workRecordTime(for: target),
+                    cancelTitle: localization.localized(.cancel),
+                    doneTitle: localization.localized(.done),
+                    kind: .time,
+                    confirmColor: ShiftCalendarColors.primaryBlue,
+                    onCancel: { editingWorkRecordTime = nil },
+                    onDone: { selection in
+                        setWorkRecordTime(selection, for: target)
+                        editingWorkRecordTime = nil
+                    }
+                )
+                .id(target)
+            }
         }
     }
 
@@ -553,7 +591,12 @@ struct EventEditorView: View {
     }
 
     private var isFloatingPickerPresented: Bool {
-        activeTimePickerMode != nil || showingRestTimePicker || editingWorkTime != nil
+        activeTimePickerMode != nil
+            || showingRestTimePicker
+            || editingWorkTime != nil
+            || showingWorkRecordDatePicker
+            || showingWorkRecordRestTimePicker
+            || editingWorkRecordTime != nil
     }
 
     private func dismissEventTimePicker() {
@@ -561,6 +604,15 @@ struct EventEditorView: View {
         showingStartTimePicker = false
         showingEndDatePicker = false
         showingEndTimePicker = false
+    }
+
+    private func dismissAllFloatingPickers() {
+        dismissEventTimePicker()
+        showingRestTimePicker = false
+        editingWorkTime = nil
+        showingWorkRecordDatePicker = false
+        showingWorkRecordRestTimePicker = false
+        editingWorkRecordTime = nil
     }
 
     private func eventPickerTitle(for mode: TimePickerMode) -> String {
@@ -594,6 +646,32 @@ struct EventEditorView: View {
         }
     }
 
+    private func workRecordTime(for target: WorkTimeEditTarget) -> Date {
+        switch target {
+        case .workIn:
+            return workRecordInDate
+        case .workOut:
+            return workRecordOutDate
+        }
+    }
+
+    private func setWorkRecordTime(_ selection: Date, for target: WorkTimeEditTarget) {
+        switch target {
+        case .workIn:
+            workRecordInDate = selection
+        case .workOut:
+            workRecordOutDate = selection
+            isWorkRecordOutTimeSet = true
+        }
+    }
+
+    private func setWorkRecordDate(_ selection: Date) {
+        let normalizedDate = Calendar.current.startOfDay(for: selection)
+        workRecordDate = normalizedDate
+        workRecordInDate = EventEditorView.date(on: normalizedDate, matchingTimeOf: workRecordInDate)
+        workRecordOutDate = EventEditorView.date(on: normalizedDate, matchingTimeOf: workRecordOutDate)
+    }
+
     private var isEditing: Bool {
         switch mode {
         case .create:
@@ -608,11 +686,17 @@ struct EventEditorView: View {
     }
 
     private var editorTitle: String {
-        isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
+        if showsEntryKindPicker {
+            return localization.localized(.entryCreateTitle)
+        }
+        return isEditing ? localization.localized(.editorEditEvent) : localization.localized(.editorNewEvent)
     }
 
     private var canSave: Bool {
-        validationMessage == nil
+        if showsEntryKindPicker && selectedEntryKind == .workRecord {
+            return !saving
+        }
+        return validationMessage == nil
     }
 
     private var validationMessage: String? {
@@ -695,9 +779,6 @@ struct EventEditorView: View {
 
         guard !calendar.isDate(oldValue, inSameDayAs: newValue) else { return }
         applySharedWorkValuesForNewEventIfNeeded(date: newValue, resetWhenMissing: true)
-        Task {
-            await reloadWorkRecordEvents(for: newValue)
-        }
     }
 
     private static func sharedWorkValues(ownWorkInfo: WorkInfo?, sessionId: UUID, targetDate: Date, existingEvents: [EventOccurrence], editingEventID: UUID?) -> (restHours: Double?, transportFee: Int?, hourlyRate: Int?) {
@@ -790,6 +871,14 @@ struct EventEditorView: View {
         return (components.hour ?? 0) * 60 + (components.minute ?? 0)
     }
 
+    private func saveSelectedEntry() async {
+        if showsEntryKindPicker && selectedEntryKind == .workRecord {
+            await saveWorkRecord()
+        } else {
+            await save()
+        }
+    }
+
     private func save() async {
         guard canSave else { return }
         saving = true
@@ -809,6 +898,41 @@ struct EventEditorView: View {
             errorMessage = error.localizedDescription
             saving = false
         }
+    }
+
+    private func saveWorkRecord() async {
+        guard !saving else { return }
+        saving = true
+        errorMessage = nil
+
+        do {
+            try await WorkRecordEditorSaveLogic.save(
+                context: workRecordSaveContext,
+                defaultTitle: localization.localized(.workRecordDefaultTitle),
+                onCreateEvent: onSave,
+                onUpdateEvent: nil
+            )
+            saving = false
+            isPresented = false
+        } catch {
+            errorMessage = error.localizedDescription
+            saving = false
+        }
+    }
+
+    private var workRecordSaveContext: WorkRecordEditorSaveContext {
+        WorkRecordEditorSaveContext(
+            title: workRecordTitle,
+            workDate: workRecordDate,
+            workInDate: workRecordInDate,
+            workOutDate: workRecordOutDate,
+            restTime: workRecordRestTime,
+            transportFee: workRecordTransportFee,
+            hourlyRate: workRecordHourlyRate,
+            workSessionId: workRecordSessionId,
+            isWorkOutTimeSet: isWorkRecordOutTimeSet,
+            editInitialSession: nil
+        )
     }
 
     @MainActor
@@ -1087,6 +1211,10 @@ struct EventEditorView: View {
             return localization.localized(.reminderNone)
         }
     }
+
+    private func formatDateOnly(_ date: Date) -> String {
+        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
+    }
 }
 
 
@@ -1119,6 +1247,139 @@ struct WorkRecordEditorInitialSession: Identifiable, Hashable {
 enum WorkRecordEditorMode {
     case create(initialDate: Date)
     case edit(WorkRecordEditorInitialSession)
+}
+
+private struct WorkRecordEditorSaveContext {
+    let title: String
+    let workDate: Date
+    let workInDate: Date
+    let workOutDate: Date
+    let restTime: Double
+    let transportFee: String
+    let hourlyRate: String
+    let workSessionId: UUID
+    let isWorkOutTimeSet: Bool
+    let editInitialSession: WorkRecordEditorInitialSession?
+}
+
+private enum WorkRecordEditorSaveLogic {
+    @discardableResult
+    static func save(
+        context: WorkRecordEditorSaveContext,
+        defaultTitle: String,
+        onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult,
+        onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)?
+    ) async throws -> (clockIn: EventNotificationScheduleResult, clockOut: EventNotificationScheduleResult) {
+        let normalizedDate = Calendar.current.startOfDay(for: context.workDate)
+        let normalizedIn = date(on: normalizedDate, matchingTimeOf: context.workInDate)
+        let normalizedOut = normalizedClockOutDate(
+            selectedClockOutDate: context.workOutDate,
+            clockInDate: normalizedIn,
+            workDay: normalizedDate,
+            isWorkOutTimeSet: context.isWorkOutTimeSet
+        )
+        let recordTitle = normalizedRecordTitle(context.title, defaultTitle: defaultTitle)
+        let transportFee = Int(context.transportFee.trimmingCharacters(in: .whitespacesAndNewlines))
+        let hourlyRate = Int(context.hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines))
+        let clockInWorkInfo = WorkInfo(
+            workInTime: normalizedIn,
+            workOutTime: nil,
+            restHours: context.restTime,
+            workDate: normalizedDate,
+            transportFee: transportFee,
+            hourlyRate: hourlyRate,
+            workSessionId: context.workSessionId,
+            isWorkOutTimeSet: context.isWorkOutTimeSet
+        )
+        let clockOutWorkInfo = WorkInfo(
+            workInTime: nil,
+            workOutTime: normalizedOut,
+            restHours: context.restTime,
+            workDate: normalizedDate,
+            transportFee: transportFee,
+            hourlyRate: hourlyRate,
+            workSessionId: context.workSessionId,
+            isWorkOutTimeSet: context.isWorkOutTimeSet
+        )
+
+        let clockInResult = try await saveClock(
+            kind: .clockIn,
+            title: recordTitle,
+            workDate: normalizedDate,
+            workInfo: clockInWorkInfo,
+            editInitialSession: context.editInitialSession,
+            onCreateEvent: onCreateEvent,
+            onUpdateEvent: onUpdateEvent
+        )
+        let clockOutResult = try await saveClock(
+            kind: .clockOut,
+            title: recordTitle,
+            workDate: normalizedDate,
+            workInfo: clockOutWorkInfo,
+            editInitialSession: context.editInitialSession,
+            onCreateEvent: onCreateEvent,
+            onUpdateEvent: onUpdateEvent
+        )
+        return (clockInResult, clockOutResult)
+    }
+
+    private static func saveClock(
+        kind: WorkClockKind,
+        title: String,
+        workDate: Date,
+        workInfo: WorkInfo,
+        editInitialSession: WorkRecordEditorInitialSession?,
+        onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult,
+        onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)?
+    ) async throws -> EventNotificationScheduleResult {
+        let eventID: UUID?
+        let clockDate: Date
+
+        switch kind {
+        case .clockIn:
+            eventID = editInitialSession?.clockInEventID
+            clockDate = workInfo.workInTime ?? workDate
+        case .clockOut:
+            eventID = editInitialSession?.clockOutEventID
+            clockDate = workInfo.workOutTime ?? workDate
+        }
+
+        let dates = workClockSaveDates(for: clockDate)
+        if let eventID, let onUpdateEvent {
+            return try await onUpdateEvent(eventID, title, nil, dates.start, dates.end, false, nil, nil, workInfo)
+        }
+        return try await onCreateEvent(title, nil, dates.start, dates.end, false, nil, nil, workInfo)
+    }
+
+    private static func normalizedRecordTitle(_ title: String, defaultTitle: String) -> String {
+        let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmedTitle.isEmpty ? defaultTitle : trimmedTitle
+    }
+
+    private static func normalizedClockOutDate(selectedClockOutDate: Date, clockInDate: Date, workDay: Date, isWorkOutTimeSet: Bool) -> Date {
+        let calendar = Calendar.current
+        var normalized = date(on: workDay, matchingTimeOf: selectedClockOutDate)
+        if isWorkOutTimeSet && normalized <= clockInDate {
+            normalized = calendar.date(byAdding: .day, value: 1, to: normalized) ?? normalized
+        }
+        return normalized
+    }
+
+    private static func workClockSaveDates(for clockDate: Date) -> (start: Date, end: Date) {
+        let end = CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false)
+        return (clockDate, end)
+    }
+
+    private static func date(on day: Date, matchingTimeOf sourceDate: Date) -> Date {
+        let calendar = Calendar.current
+        let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: sourceDate)
+        return calendar.date(
+            bySettingHour: timeComponents.hour ?? 0,
+            minute: timeComponents.minute ?? 0,
+            second: timeComponents.second ?? 0,
+            of: day
+        ) ?? sourceDate
+    }
 }
 
 struct WorkRecordEditorView: View {
@@ -1267,30 +1528,36 @@ struct WorkRecordEditorView: View {
     }
 
     private var workDateSection: some View {
-        Button {
-            focusedField = nil
-            showingWorkDatePicker = true
-        } label: {
-            HStack {
-                Text(localization.localized(.editorDate))
-                    .font(.subheadline)
-                    .foregroundColor(EventEditorStyle.secondaryText)
-
-                Spacer()
-
-                Text(formatDateOnly(workDate))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(EventEditorStyle.primaryText)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(EventEditorStyle.secondaryText)
+        WorkRecordDateSection(
+            title: localization.localized(.editorDate),
+            dateText: formatDateOnly(workDate),
+            onTap: {
+                focusedField = nil
+                showingWorkDatePicker = true
             }
-            .frame(height: EventEditorStyle.rowHeight)
-            .padding(.horizontal, EventEditorStyle.cardPadding)
+        )
+    }
+
+    private var workRecordSaveContext: WorkRecordEditorSaveContext {
+        WorkRecordEditorSaveContext(
+            title: workTitle,
+            workDate: workDate,
+            workInDate: workInDate,
+            workOutDate: workOutDate,
+            restTime: restTime,
+            transportFee: transportFee,
+            hourlyRate: hourlyRate,
+            workSessionId: workSessionId,
+            isWorkOutTimeSet: isWorkOutTimeSet,
+            editInitialSession: editInitialSession
+        )
+    }
+
+    private var editInitialSession: WorkRecordEditorInitialSession? {
+        if case .edit(let session) = mode {
+            return session
         }
-        .buttonStyle(.plain)
-        .cardContainer()
+        return nil
     }
 
     @ViewBuilder
@@ -1382,38 +1649,12 @@ struct WorkRecordEditorView: View {
         errorMessage = nil
 
         do {
-            let normalizedDate = Calendar.current.startOfDay(for: workDate)
-            let normalizedIn = WorkRecordEditorView.date(on: normalizedDate, matchingTimeOf: workInDate)
-            let normalizedOut = normalizedClockOutDate(
-                selectedClockOutDate: workOutDate,
-                clockInDate: normalizedIn,
-                workDay: normalizedDate,
-                isWorkOutTimeSet: isWorkOutTimeSet
+            try await WorkRecordEditorSaveLogic.save(
+                context: workRecordSaveContext,
+                defaultTitle: localization.localized(.workRecordDefaultTitle),
+                onCreateEvent: onCreateEvent,
+                onUpdateEvent: onUpdateEvent
             )
-            let recordTitle = normalizedRecordTitle()
-            let clockInWorkInfo = WorkInfo(
-                workInTime: normalizedIn,
-                workOutTime: nil,
-                restHours: restTime,
-                workDate: normalizedDate,
-                transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
-                hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines)),
-                workSessionId: workSessionId,
-                isWorkOutTimeSet: isWorkOutTimeSet
-            )
-            let clockOutWorkInfo = WorkInfo(
-                workInTime: nil,
-                workOutTime: normalizedOut,
-                restHours: restTime,
-                workDate: normalizedDate,
-                transportFee: Int(transportFee.trimmingCharacters(in: .whitespacesAndNewlines)),
-                hourlyRate: Int(hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines)),
-                workSessionId: workSessionId,
-                isWorkOutTimeSet: isWorkOutTimeSet
-            )
-
-            try await saveClock(kind: .clockIn, title: recordTitle, workInfo: clockInWorkInfo)
-            try await saveClock(kind: .clockOut, title: recordTitle, workInfo: clockOutWorkInfo)
             saving = false
             isPresented = false
             onSaved?()
@@ -1423,58 +1664,11 @@ struct WorkRecordEditorView: View {
         }
     }
 
-    @discardableResult
-    private func saveClock(kind: WorkClockKind, title: String, workInfo: WorkInfo) async throws -> EventNotificationScheduleResult {
-        let eventID: UUID?
-        let clockDate: Date
-
-        switch kind {
-        case .clockIn:
-            eventID = editInitialSession?.clockInEventID
-            clockDate = workInfo.workInTime ?? workDate
-        case .clockOut:
-            eventID = editInitialSession?.clockOutEventID
-            clockDate = workInfo.workOutTime ?? workDate
-        }
-
-        let dates = workClockSaveDates(for: clockDate)
-        if let eventID, let onUpdateEvent {
-            return try await onUpdateEvent(eventID, title, nil, dates.start, dates.end, false, nil, nil, workInfo)
-        }
-        return try await onCreateEvent(title, nil, dates.start, dates.end, false, nil, nil, workInfo)
-    }
-
-    private func normalizedRecordTitle() -> String {
-        let trimmedTitle = workTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmedTitle.isEmpty ? localization.localized(.workRecordDefaultTitle) : trimmedTitle
-    }
-
-    private var editInitialSession: WorkRecordEditorInitialSession? {
-        if case .edit(let session) = mode {
-            return session
-        }
-        return nil
-    }
-
-    private func normalizedClockOutDate(selectedClockOutDate: Date, clockInDate: Date, workDay: Date, isWorkOutTimeSet: Bool) -> Date {
-        let calendar = Calendar.current
-        var normalized = WorkRecordEditorView.date(on: workDay, matchingTimeOf: selectedClockOutDate)
-        if isWorkOutTimeSet && normalized <= clockInDate {
-            normalized = calendar.date(byAdding: .day, value: 1, to: normalized) ?? normalized
-        }
-        return normalized
-    }
-
-    private func workClockSaveDates(for clockDate: Date) -> (start: Date, end: Date) {
-        let end = CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false)
-        return (clockDate, end)
-    }
-
     private func formatDateOnly(_ date: Date) -> String {
         LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
     }
 
-    private static func initialValues(for mode: WorkRecordEditorMode) -> (title: String, workDate: Date, workInTime: Date, workOutTime: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?, workSessionId: UUID, isWorkOutTimeSet: Bool) {
+    fileprivate static func initialValues(for mode: WorkRecordEditorMode) -> (title: String, workDate: Date, workInTime: Date, workOutTime: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?, workSessionId: UUID, isWorkOutTimeSet: Bool) {
         switch mode {
         case .create(let initialDate):
             let workDate = Calendar.current.startOfDay(for: initialDate)
@@ -1546,89 +1740,6 @@ struct WorkRecordEditorView: View {
         ) ?? sourceDate
     }
 }
-
-private struct WorkRecordSummaryRowView: View {
-    let session: WorkRecordDisplaySession
-    let selectedDate: Date
-    let onEdit: (() -> Void)?
-
-    var body: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(session.displayTitle(defaultTitle: LocalizationManager.shared.localized(.workRecordDefaultTitle)))
-                    .font(.subheadline.weight(.medium))
-                    .foregroundColor(EventEditorStyle.primaryText)
-                    .lineLimit(1)
-
-                Text(timeRangeText)
-                    .font(.caption)
-                    .foregroundColor(EventEditorStyle.secondaryText)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let onEdit {
-                Button(action: onEdit) {
-                    Image(systemName: "pencil")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.blue)
-                        .frame(width: 32, height: 32)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 10)
-        .padding(.horizontal, 12)
-        .background(EventEditorStyle.fieldBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-    }
-
-    private var timeRangeText: String {
-        "\(clockInText) → \(clockOutText)"
-    }
-
-    private var clockInText: String {
-        guard let clockIn = session.clockIn else {
-            return LocalizationManager.shared.localized(.workRecordMissingClockIn)
-        }
-        return "\(LocalizationManager.shared.localized(.editorWorkIn)) \(formatTime(clockIn.actualWorkClockDate))"
-    }
-
-    private var clockOutText: String {
-        guard let clockOut = session.clockOut, clockOut.isWorkOutTimeSet else {
-            return LocalizationManager.shared.localized(.workRecordMissingClockOut)
-        }
-        let clockOutTime = effectiveClockOutTime(clockOut)
-        let time = formatTime(clockOutTime)
-        if isNextDay(clockOutTime) {
-            return "\(LocalizationManager.shared.localized(.editorWorkOut)) \(LocalizationManager.shared.localized(.workNextDayPrefix)) \(time)"
-        }
-        return "\(LocalizationManager.shared.localized(.editorWorkOut)) \(time)"
-    }
-
-    private func effectiveClockOutTime(_ clockOut: EventOccurrence) -> Date {
-        let outTime = clockOut.actualWorkClockDate
-        guard let clockInTime = session.clockIn?.actualWorkClockDate else {
-            return outTime
-        }
-        let calendar = Calendar.current
-        guard calendar.isDate(outTime, inSameDayAs: clockInTime), outTime <= clockInTime else {
-            return outTime
-        }
-        return calendar.date(byAdding: .day, value: 1, to: outTime) ?? outTime
-    }
-
-    private func isNextDay(_ date: Date) -> Bool {
-        Calendar.current.startOfDay(for: date) > Calendar.current.startOfDay(for: selectedDate)
-    }
-
-    private func formatTime(_ date: Date) -> String {
-        LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
-    }
-}
-
 
 // MARK: - Shared Editor Components
 
@@ -1703,53 +1814,33 @@ private extension View {
     }
 }
 
-// MARK: - Reminder Section
-
-/// 提醒设置组件（与时间设置卡片样式保持一致）
-private struct ReminderSection: View {
-    let reminderTitle: String
-    @Binding var reminderOffsetMinutes: Int?
-    let reminderOptions: [Int?]
-    let reminderTitleFormatter: (Int?) -> String
-    @Binding var showingReminderPicker: Bool
+private struct WorkRecordDateSection: View {
+    let title: String
+    let dateText: String
+    let onTap: () -> Void
 
     var body: some View {
-        Button {
-            showingReminderPicker = true
-        } label: {
+        Button(action: onTap) {
             HStack {
-                Text(reminderTitle)
+                Text(title)
                     .font(.subheadline)
                     .foregroundColor(EventEditorStyle.secondaryText)
-                    .frame(minWidth: 40, alignment: .leading)
 
                 Spacer()
 
-                HStack {
-                    Text(reminderTitleFormatter(reminderOffsetMinutes))
-                        .font(.subheadline.weight(.medium))
-                        .foregroundColor(EventEditorStyle.primaryText)
+                Text(dateText)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(EventEditorStyle.primaryText)
 
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(EventEditorStyle.secondaryText)
-                        .padding(.leading, 4)
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(EventEditorStyle.secondaryText)
             }
             .frame(height: EventEditorStyle.rowHeight)
             .padding(.horizontal, EventEditorStyle.cardPadding)
         }
         .buttonStyle(.plain)
-        .sheet(isPresented: $showingReminderPicker) {
-            ReminderPickerSheet(
-                title: reminderTitle,
-                reminderOffsetMinutes: $reminderOffsetMinutes,
-                reminderOptions: reminderOptions,
-                reminderTitleFormatter: reminderTitleFormatter,
-                showingReminderPicker: $showingReminderPicker
-            )
-        }
+        .cardContainer()
     }
 }
 
@@ -1859,109 +1950,183 @@ private struct EventTimeSection: View {
     @Binding var startDate: Date
     @Binding var endDate: Date
     @Binding var isAllDay: Bool
+    @Binding var reminderOffsetMinutes: Int?
     let allDayTitle: String
+    let reminderTitle: String
     let startTitle: String
     let endTitle: String
+    let reminderOptions: [Int?]
+    let reminderTitleFormatter: (Int?) -> String
+    @Binding var showingReminderPicker: Bool
     @Binding var showingStartDatePicker: Bool
     @Binding var showingStartTimePicker: Bool
     @Binding var showingEndDatePicker: Bool
     @Binding var showingEndTimePicker: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // 第一行：終日 + Toggle，独立一行
-            HStack {
-                Text(allDayTitle)
-                    .font(.subheadline)
-                    .foregroundColor(EventEditorStyle.primaryText)
-                Spacer()
-                Toggle("", isOn: $isAllDay)
-                    .toggleStyle(.switch)
-                    .controlSize(.small)
-                    .tint(EventEditorStyle.primaryText)
-            }
+        VStack(spacing: 0) {
+            allDayReminderRow
 
-            // 第二行：開始 + 日期/时间按钮
-            HStack(alignment: .center, spacing: 8) {
-                Text(startTitle)
-                    .font(.subheadline)
-                    .foregroundColor(EventEditorStyle.secondaryText)
-                    .frame(minWidth: 40, alignment: .leading)
+            CardDivider()
 
-                HStack(spacing: 8) {
-                    // 日期按钮
-                    Button {
-                        showingStartDatePicker = true
-                    } label: {
-                        Text(formatDateOnly(startDate))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(EventEditorStyle.fieldText)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .glassCapsuleStyle()
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center, spacing: 8) {
+                    Text(startTitle)
+                        .font(.subheadline)
+                        .foregroundColor(EventEditorStyle.secondaryText)
+                        .frame(minWidth: 40, alignment: .leading)
+
+                    HStack(spacing: 8) {
+                        Button {
+                            showingStartDatePicker = true
+                        } label: {
+                            Text(formatDateOnly(startDate))
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(EventEditorStyle.fieldText)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 12)
+                                .glassCapsuleStyle()
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            showingStartTimePicker = true
+                        } label: {
+                            Text(formatTimeOnly(startDate))
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(EventEditorStyle.fieldText)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 12)
+                                .glassCapsuleStyle()
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
-                    // 时间按钮
-                    Button {
-                        showingStartTimePicker = true
-                    } label: {
-                        Text(formatTimeOnly(startDate))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(EventEditorStyle.fieldText)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .glassCapsuleStyle()
-                    }
-                    .buttonStyle(.plain)
+                    Spacer()
                 }
 
-                Spacer()
-            }
+                HStack(alignment: .center, spacing: 8) {
+                    Text(endTitle)
+                        .font(.subheadline)
+                        .foregroundColor(EventEditorStyle.secondaryText)
+                        .frame(minWidth: 40, alignment: .leading)
 
-            // 第三行：終了 + 日期/时间按钮
-            HStack(alignment: .center, spacing: 8) {
-                Text(endTitle)
-                    .font(.subheadline)
-                    .foregroundColor(EventEditorStyle.secondaryText)
-                    .frame(minWidth: 40, alignment: .leading)
+                    HStack(spacing: 8) {
+                        Button {
+                            showingEndDatePicker = true
+                        } label: {
+                            Text(formatDateOnly(endDate))
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(EventEditorStyle.fieldText)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 12)
+                                .glassCapsuleStyle()
+                        }
+                        .buttonStyle(.plain)
 
-                HStack(spacing: 8) {
-                    // 日期按钮
-                    Button {
-                        showingEndDatePicker = true
-                    } label: {
-                        Text(formatDateOnly(endDate))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(EventEditorStyle.fieldText)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .glassCapsuleStyle()
+                        Button {
+                            showingEndTimePicker = true
+                        } label: {
+                            Text(formatTimeOnly(endDate))
+                                .font(.subheadline.weight(.medium))
+                                .foregroundColor(EventEditorStyle.fieldText)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 12)
+                                .glassCapsuleStyle()
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
 
-                    // 时间按钮
-                    Button {
-                        showingEndTimePicker = true
-                    } label: {
-                        Text(formatTimeOnly(endDate))
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(EventEditorStyle.fieldText)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 6)
-                            .padding(.horizontal, 12)
-                            .glassCapsuleStyle()
-                    }
-                    .buttonStyle(.plain)
+                    Spacer()
                 }
+            }
+            .padding(EventEditorStyle.cardPadding)
+        }
+        .sheet(isPresented: $showingReminderPicker) {
+            ReminderPickerSheet(
+                title: reminderTitle,
+                reminderOffsetMinutes: $reminderOffsetMinutes,
+                reminderOptions: reminderOptions,
+                reminderTitleFormatter: reminderTitleFormatter,
+                showingReminderPicker: $showingReminderPicker
+            )
+        }
+    }
 
-                Spacer()
+    private var allDayReminderRow: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                allDayToggleRow
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                Rectangle()
+                    .fill(EventEditorStyle.dividerColor)
+                    .frame(width: 1 / UIScreen.main.scale, height: 26)
+
+                reminderButtonRow
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            .padding(.horizontal, EventEditorStyle.cardPadding)
+            .frame(minHeight: EventEditorStyle.rowHeight)
+
+            VStack(spacing: 0) {
+                allDayToggleRow
+                    .padding(.horizontal, EventEditorStyle.cardPadding)
+                    .frame(minHeight: EventEditorStyle.rowHeight)
+
+                CardDivider()
+
+                reminderButtonRow
+                    .padding(.horizontal, EventEditorStyle.cardPadding)
+                    .frame(minHeight: EventEditorStyle.rowHeight)
             }
         }
-        .padding(EventEditorStyle.cardPadding)
+    }
+
+    private var allDayToggleRow: some View {
+        Toggle(isOn: $isAllDay) {
+            Text(allDayTitle)
+                .font(.subheadline)
+                .foregroundColor(EventEditorStyle.primaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        }
+        .toggleStyle(.switch)
+        .controlSize(.small)
+        .tint(EventEditorStyle.primaryText)
+    }
+
+    private var reminderButtonRow: some View {
+        Button {
+            showingReminderPicker = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(reminderTitle)
+                    .font(.subheadline)
+                    .foregroundColor(EventEditorStyle.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer(minLength: 6)
+
+                Text(reminderTitleFormatter(reminderOffsetMinutes))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundColor(EventEditorStyle.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(EventEditorStyle.secondaryText)
+                    .padding(.leading, 2)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func formatDateOnly(_ date: Date) -> String {

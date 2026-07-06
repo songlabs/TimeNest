@@ -125,6 +125,9 @@
 "picker.month_label" = "月";
 
 /* Event Editor */
+"entry.create.title" = "新規作成";
+"entry.kind.event" = "予定";
+"entry.kind.work_record" = "勤務記録";
 "editor.note" = "メモ";
 "editor.title" = "タイトル";
 "editor.basic_info" = "基本情報";

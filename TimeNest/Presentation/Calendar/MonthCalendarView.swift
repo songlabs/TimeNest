@@ -154,6 +154,28 @@ struct MonthCalendarView: View {
                 )
             }
         }
+        .sheet(isPresented: $viewModel.showingEntryEditor) {
+            let initialDate = viewModel.selectedDate
+            EventEditorView(
+                isPresented: $viewModel.showingEntryEditor,
+                mode: .create(initialDate: initialDate),
+                existingEvents: viewModel.selectedDayCell?.events ?? [],
+                initialEntryKind: .event,
+                showsEntryKindPicker: true,
+                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                    try await viewModel.createEvent(
+                        title: title,
+                        note: note,
+                        startDate: startDate,
+                        endDate: endDate,
+                        isAllDay: isAllDay,
+                        reminderOffsetMinutes: reminderOffsetMinutes,
+                        shiftTemplateID: shiftTemplateID,
+                        workInfo: workInfo
+                    )
+                }
+            )
+        }
     }
 
     private var yearMonthPickerOverlay: some View {
@@ -387,7 +409,7 @@ struct MonthCalendarView: View {
             onTodayTapped: handleTodayTapped,
             onAddEventTapped: {
                 Task {
-                    await viewModel.openSelectedDateDetail()
+                    await viewModel.openSelectedDateEntryEditor()
                 }
             },
             onModeChanged: handleModeChanged

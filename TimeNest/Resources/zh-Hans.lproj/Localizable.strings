@@ -125,6 +125,9 @@
 "picker.month_label" = "月";
 
 /* Event Editor */
+"entry.create.title" = "新建";
+"entry.kind.event" = "日程";
+"entry.kind.work_record" = "打工记录";
 "editor.note" = "备注";
 "editor.title" = "标题";
 "editor.basic_info" = "基本信息";

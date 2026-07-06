@@ -125,6 +125,9 @@
 "picker.month_label" = "월";
 
 /* Event Editor */
+"entry.create.title" = "새로 만들기";
+"entry.kind.event" = "일정";
+"entry.kind.work_record" = "알바 기록";
 "editor.note" = "메모";
 "editor.title" = "제목";
 "editor.basic_info" = "기본 정보";

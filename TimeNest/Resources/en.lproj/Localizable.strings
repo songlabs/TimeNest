@@ -125,6 +125,9 @@
 "picker.month_label" = "Month";
 
 /* Event Editor */
+"entry.create.title" = "New Entry";
+"entry.kind.event" = "Event";
+"entry.kind.work_record" = "Work Record";
 "editor.note" = "Note";
 "editor.title" = "Title";
 "editor.basic_info" = "Basic Info";

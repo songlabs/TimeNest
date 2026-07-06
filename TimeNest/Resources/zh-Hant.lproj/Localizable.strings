@@ -125,6 +125,9 @@
 "picker.month_label" = "月";
 
 /* Event Editor */
+"entry.create.title" = "新增";
+"entry.kind.event" = "行程";
+"entry.kind.work_record" = "打工記錄";
 "editor.note" = "備註";
 "editor.title" = "標題";
 "editor.basic_info" = "基本資訊";

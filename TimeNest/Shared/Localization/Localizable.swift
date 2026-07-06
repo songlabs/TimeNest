@@ -298,6 +298,9 @@ enum LocalizedString: String {
 
     // MARK: - Event Editor
 
+    case entryCreateTitle = "entry.create.title"
+    case entryKindEvent = "entry.kind.event"
+    case entryKindWorkRecord = "entry.kind.work_record"
     case editorTitle = "editor.title"
     case editorNote = "editor.note"
     case editorBasicInfo = "editor.basic_info"
