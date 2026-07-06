@@ -310,29 +310,8 @@ struct HourMinute24Picker: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Picker("", selection: hourBinding) {
-                ForEach(hours, id: \.self) { hour in
-                    Text(String(format: "%02d", hour))
-                        .font(.body.monospacedDigit())
-                        .tag(hour)
-                }
-            }
-            .pickerStyle(.wheel)
-            .labelsHidden()
-            .frame(width: 96)
-            .clipped()
-
-            Picker("", selection: minuteBinding) {
-                ForEach(minutes, id: \.self) { minute in
-                    Text(String(format: "%02d", minute))
-                        .font(.body.monospacedDigit())
-                        .tag(minute)
-                }
-            }
-            .pickerStyle(.wheel)
-            .labelsHidden()
-            .frame(width: 96)
-            .clipped()
+            CircularNumberWheelPicker(value: hourBinding, values: hours)
+            CircularNumberWheelPicker(value: minuteBinding, values: minutes)
         }
         .frame(height: 150)
     }
@@ -359,6 +338,84 @@ struct HourMinute24Picker: View {
         components.hour = hour ?? components.hour ?? 0
         components.minute = minute ?? components.minute ?? 0
         return calendar.date(from: components) ?? selection
+    }
+}
+
+private struct CircularNumberWheelPicker: View {
+    @Binding var value: Int
+    let values: [Int]
+
+    @State private var selectedIndex: Int
+    @State private var normalizationGeneration = 0
+
+    private let width: CGFloat = 96
+    private static let cycleCount = 100
+    private static let normalizationDelay: TimeInterval = 0.25
+
+    init(value: Binding<Int>, values: [Int]) {
+        _value = value
+        self.values = values
+        _selectedIndex = State(initialValue: Self.centerIndex(for: value.wrappedValue, values: values))
+    }
+
+    var body: some View {
+        Picker("", selection: indexBinding) {
+            ForEach(0..<itemCount, id: \.self) { index in
+                Text(String(format: "%02d", value(at: index)))
+                    .font(.body.monospacedDigit())
+                    .tag(index)
+            }
+        }
+        .pickerStyle(.wheel)
+        .labelsHidden()
+        .frame(width: width)
+        .clipped()
+        .onAppear {
+            selectedIndex = Self.centerIndex(for: value, values: values)
+        }
+        .onChange(of: value) { _, newValue in
+            guard value(at: selectedIndex) != newValue else { return }
+            selectedIndex = Self.centerIndex(for: newValue, values: values)
+        }
+    }
+
+    private var itemCount: Int {
+        values.count * Self.cycleCount
+    }
+
+    private var indexBinding: Binding<Int> {
+        Binding(
+            get: { selectedIndex },
+            set: { newIndex in
+                selectedIndex = newIndex
+                let newValue = value(at: newIndex)
+                if value != newValue {
+                    value = newValue
+                }
+                scheduleNormalization()
+            }
+        )
+    }
+
+    private func value(at index: Int) -> Int {
+        guard !values.isEmpty else { return 0 }
+        let normalizedIndex = ((index % values.count) + values.count) % values.count
+        return values[normalizedIndex]
+    }
+
+    private func scheduleNormalization() {
+        normalizationGeneration += 1
+        let generation = normalizationGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.normalizationDelay) {
+            guard generation == normalizationGeneration else { return }
+            selectedIndex = Self.centerIndex(for: value, values: values)
+        }
+    }
+
+    private static func centerIndex(for value: Int, values: [Int]) -> Int {
+        guard !values.isEmpty else { return 0 }
+        let valueIndex = values.firstIndex(of: value) ?? 0
+        return (cycleCount / 2) * values.count + valueIndex
     }
 }
 

@@ -442,27 +442,24 @@ struct EventEditorView: View {
                 focusedField: $focusedField
             )
 
-            WorkRecordDateSection(
-                title: localization.localized(.editorDate),
-                dateText: formatDateOnly(workRecordDate),
-                onTap: {
-                    focusedField = nil
-                    showingWorkRecordDatePicker = true
-                }
-            )
-
-            WorkInfoSection(
+            WorkRecordTimeSection(
                 restTime: $workRecordRestTime,
-                transportFee: $workRecordTransportFee,
-                hourlyRate: $workRecordHourlyRate,
+                workDate: workRecordDate,
                 showingRestTimePicker: $showingWorkRecordRestTimePicker,
+                showingDatePicker: $showingWorkRecordDatePicker,
                 workInDate: $workRecordInDate,
                 workOutDate: $workRecordOutDate,
                 editingWorkTime: $editingWorkRecordTime,
                 focusedField: $focusedField,
                 workInTitle: localization.localized(.editorWorkIn),
                 workOutTitle: localization.localized(.editorWorkOut),
-                restTimeTitle: localization.localized(.editorRestTime),
+                restTimeTitle: localization.localized(.editorRestTime)
+            )
+
+            WorkRecordCurrencySection(
+                transportFee: $workRecordTransportFee,
+                hourlyRate: $workRecordHourlyRate,
+                focusedField: $focusedField,
                 transportFeeTitle: localization.localized(.editorTransportFee),
                 hourlyRateTitle: localization.localized(.editorHourlyRate),
                 currencyUnit: localization.localized(.editorCurrencyUnit)
@@ -2387,6 +2384,184 @@ private enum WorkTimeEditTarget: Hashable, Identifiable {
         case .workOut:
             return "\(workOutTitle) \(timeTitle)"
         }
+    }
+}
+
+private struct WorkRecordTimeSection: View {
+    @Binding var restTime: Double
+    let workDate: Date
+    @Binding var showingRestTimePicker: Bool
+    @Binding var showingDatePicker: Bool
+    @Binding var workInDate: Date
+    @Binding var workOutDate: Date
+    @Binding var editingWorkTime: WorkTimeEditTarget?
+    var focusedField: FocusState<EditorFocusedField?>.Binding
+
+    let workInTitle: String
+    let workOutTitle: String
+    let restTimeTitle: String
+
+    var body: some View {
+        VStack(spacing: 0) {
+            workTimeRow(
+                title: workInTitle,
+                time: workInDate,
+                target: .workIn
+            )
+
+            CardDivider()
+
+            restTimeRow
+
+            CardDivider()
+
+            workTimeRow(
+                title: workOutTitle,
+                time: workOutDate,
+                target: .workOut
+            )
+        }
+        .cardContainer()
+    }
+
+    private func workTimeRow(title: String, time: Date, target: WorkTimeEditTarget) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            rowTitle(title)
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 8) {
+                Button {
+                    focusedField.wrappedValue = nil
+                    showingDatePicker = true
+                } label: {
+                    dateValuePill(formatDateOnly(workDate))
+                }
+                .buttonStyle(.plain)
+                .contentShape(Capsule())
+
+                Button {
+                    focusedField.wrappedValue = nil
+                    editingWorkTime = target
+                } label: {
+                    timeValuePill(formatWorkTime(time))
+                }
+                .buttonStyle(.plain)
+                .contentShape(Capsule())
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.horizontal, EventEditorStyle.cardPadding)
+        .frame(minHeight: EventEditorStyle.rowHeight + 8)
+    }
+
+    private var restTimeRow: some View {
+        HStack(alignment: .center, spacing: 8) {
+            rowTitle(restTimeTitle)
+
+            Spacer(minLength: 8)
+
+            Button {
+                focusedField.wrappedValue = nil
+                showingRestTimePicker = true
+            } label: {
+                timeValuePill(formatRestTime(restTime))
+            }
+            .buttonStyle(.plain)
+            .contentShape(Capsule())
+        }
+        .padding(.horizontal, EventEditorStyle.cardPadding)
+        .frame(minHeight: EventEditorStyle.rowHeight + 8)
+    }
+
+    private func rowTitle(_ title: String) -> some View {
+        Text(title)
+            .font(.subheadline)
+            .foregroundColor(EventEditorStyle.primaryText)
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .frame(width: 76, alignment: .leading)
+    }
+
+    private func dateValuePill(_ text: String) -> some View {
+        valueText(text)
+            .frame(minWidth: 112, maxWidth: .infinity)
+            .frame(height: EventEditorStyle.workInfoTimePillHeight)
+            .glassCapsuleStyle()
+    }
+
+    private func timeValuePill(_ text: String) -> some View {
+        valueText(text)
+            .frame(width: EventEditorStyle.workInfoTimePillWidth,
+                   height: EventEditorStyle.workInfoTimePillHeight)
+            .glassCapsuleStyle()
+    }
+
+    private func valueText(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.weight(.medium))
+            .foregroundColor(EventEditorStyle.fieldText)
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+    }
+
+    private func formatDateOnly(_ date: Date) -> String {
+        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
+    }
+
+    private func formatWorkTime(_ date: Date) -> String {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d", components.hour ?? 0, components.minute ?? 0)
+    }
+
+    private func formatRestTime(_ hours: Double) -> String {
+        let hour = Int(hours)
+        let minute = Int((hours - Double(hour)) * 60)
+        return String(format: "%d:%02d", hour, minute)
+    }
+}
+
+private struct WorkRecordCurrencySection: View {
+    @Binding var transportFee: String
+    @Binding var hourlyRate: String
+    var focusedField: FocusState<EditorFocusedField?>.Binding
+
+    let transportFeeTitle: String
+    let hourlyRateTitle: String
+    let currencyUnit: String
+
+    var body: some View {
+        HStack(spacing: EventEditorStyle.workColumnSpacing) {
+            currencyField(title: transportFeeTitle, value: $transportFee, field: .transportFee)
+            currencyField(title: hourlyRateTitle, value: $hourlyRate, field: .hourlyRate)
+        }
+        .padding(.horizontal, EventEditorStyle.cardPadding)
+        .padding(.vertical, EventEditorStyle.workInfoVerticalPadding)
+        .cardContainer()
+    }
+
+    private func currencyField(title: String, value: Binding<String>, field: EditorFocusedField) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(EventEditorStyle.secondaryText)
+
+            TextField("", text: value)
+                .focused(focusedField, equals: field)
+                .keyboardType(.numberPad)
+                .textFieldStyle(.plain)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity)
+                .frame(height: EventEditorStyle.controlHeight)
+                .padding(.horizontal, 10)
+                .background(EventEditorStyle.fieldBackground)
+                .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.controlCornerRadius, style: .continuous))
+
+            Text(currencyUnit)
+                .font(.subheadline)
+                .foregroundColor(EventEditorStyle.secondaryText)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
