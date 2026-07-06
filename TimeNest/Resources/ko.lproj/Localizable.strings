@@ -17,6 +17,10 @@
 "settings.about" = "앱 정보";
 "settings.holiday_region" = "공휴일";
 "settings.week_start" = "주 시작";
+"settings.calendar_display_customize" = "달력 표시 사용자화";
+"settings.calendar_display_customize.event_background" = "일정 배경색";
+"settings.calendar_display_customize.work_record_background" = "근무 기록 배경색";
+"settings.calendar_display_customize.reset_defaults" = "기본값으로 재설정";
 
 /* Language Options */
 "language.system" = "시스템 기본";

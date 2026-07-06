@@ -17,6 +17,10 @@
 "settings.about" = "アプリ情報";
 "settings.holiday_region" = "祝祭日";
 "settings.week_start" = "週の開始日";
+"settings.calendar_display_customize" = "カレンダー表示カスタマイズ";
+"settings.calendar_display_customize.event_background" = "予定の背景色";
+"settings.calendar_display_customize.work_record_background" = "勤務記録の背景色";
+"settings.calendar_display_customize.reset_defaults" = "初期値に戻す";
 
 /* Language Options */
 "language.system" = "システム標準";

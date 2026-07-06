@@ -130,6 +130,149 @@ enum ShiftDisplayColors {
     }
 }
 
+enum CalendarItemBackgroundKind: CaseIterable {
+    case event
+    case workRecord
+
+    var storageKey: String {
+        switch self {
+        case .event:
+            return "calendar.eventBackgroundColorHex"
+        case .workRecord:
+            return "calendar.workRecordBackgroundColorHex"
+        }
+    }
+
+    var defaultHex: String {
+        switch self {
+        case .event:
+            return "#E5F4FE"
+        case .workRecord:
+            return "#EFE7FF"
+        }
+    }
+}
+
+enum CalendarItemColorSettings {
+    static let eventBackgroundColorKey = CalendarItemBackgroundKind.event.storageKey
+    static let workRecordBackgroundColorKey = CalendarItemBackgroundKind.workRecord.storageKey
+
+    static let defaultEventBackgroundColorHex = CalendarItemBackgroundKind.event.defaultHex
+    static let defaultWorkRecordBackgroundColorHex = CalendarItemBackgroundKind.workRecord.defaultHex
+
+    static func kind(for event: EventOccurrence) -> CalendarItemBackgroundKind? {
+        if event.isWorkClockEvent {
+            return .workRecord
+        }
+        if event.shiftTemplateID != nil {
+            return nil
+        }
+        return .event
+    }
+
+    static func backgroundColor(for kind: CalendarItemBackgroundKind) -> Color {
+        let hex = UserDefaults.standard.string(forKey: kind.storageKey) ?? kind.defaultHex
+        return Color(hex: hex) ?? Color(hex: kind.defaultHex) ?? .gray
+    }
+
+    static func backgroundColor(
+        for event: EventOccurrence,
+        eventBackgroundColorHex: String,
+        workRecordBackgroundColorHex: String,
+        shiftFallback: Color
+    ) -> Color {
+        guard let kind = kind(for: event) else {
+            return shiftFallback
+        }
+        return backgroundColor(
+            for: kind,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex
+        )
+    }
+
+    static func backgroundColor(
+        for kind: CalendarItemBackgroundKind,
+        eventBackgroundColorHex: String,
+        workRecordBackgroundColorHex: String
+    ) -> Color {
+        let hex = resolvedHex(
+            for: kind,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex
+        )
+        return Color(hex: hex) ?? Color(hex: kind.defaultHex) ?? .gray
+    }
+
+    static func foregroundColor(
+        for event: EventOccurrence,
+        eventBackgroundColorHex: String,
+        workRecordBackgroundColorHex: String,
+        lightBackgroundFallback: Color
+    ) -> Color {
+        guard let kind = kind(for: event) else {
+            return lightBackgroundFallback
+        }
+        return foregroundColor(
+            for: kind,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            lightBackgroundFallback: lightBackgroundFallback
+        )
+    }
+
+    static func foregroundColor(
+        for kind: CalendarItemBackgroundKind,
+        eventBackgroundColorHex: String,
+        workRecordBackgroundColorHex: String,
+        lightBackgroundFallback: Color
+    ) -> Color {
+        let hex = resolvedHex(
+            for: kind,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex
+        )
+        return isDarkBackground(hex: hex) ? .white : lightBackgroundFallback
+    }
+
+    static func resetDefaults(defaults: UserDefaults = .standard) {
+        for kind in CalendarItemBackgroundKind.allCases {
+            defaults.set(kind.defaultHex, forKey: kind.storageKey)
+        }
+    }
+
+    private static func resolvedHex(
+        for kind: CalendarItemBackgroundKind,
+        eventBackgroundColorHex: String,
+        workRecordBackgroundColorHex: String
+    ) -> String {
+        switch kind {
+        case .event:
+            return eventBackgroundColorHex
+        case .workRecord:
+            return workRecordBackgroundColorHex
+        }
+    }
+
+    private static func isDarkBackground(hex: String) -> Bool {
+        guard let color = Color(hex: hex) else {
+            return false
+        }
+        let uiColor = UIColor(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        guard uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+            return false
+        }
+
+        let brightness = (red * 299 + green * 587 + blue * 114) / 1000
+        return brightness < 0.48
+    }
+}
+
 extension ShiftTimeTemplate {
     var displayBackgroundColor: Color {
         ShiftDisplayColors.backgroundColor(for: color)

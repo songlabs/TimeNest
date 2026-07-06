@@ -203,7 +203,7 @@ private struct WeekAllDayColumn: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(visibleEvents, id: \.id) { event in
-                AllDayEventChipView(title: event.localizedDisplayTitle, compact: true)
+                AllDayEventChipView(event: event, compact: true)
             }
 
             if hiddenCount > 0 {
@@ -223,20 +223,51 @@ private struct WeekAllDayColumn: View {
 }
 
 struct AllDayEventChipView: View {
-    let title: String
+    @AppStorage(CalendarItemColorSettings.eventBackgroundColorKey) private var eventBackgroundColorHex = CalendarItemColorSettings.defaultEventBackgroundColorHex
+    @AppStorage(CalendarItemColorSettings.workRecordBackgroundColorKey) private var workRecordBackgroundColorHex = CalendarItemColorSettings.defaultWorkRecordBackgroundColorHex
+
+    let event: EventOccurrence
     let compact: Bool
 
     var body: some View {
-        Text(title)
+        Text(event.localizedDisplayTitle)
             .font(.system(size: compact ? 10 : 13, weight: .semibold))
-            .foregroundColor(ShiftCalendarColors.primaryBlueDark)
+            .foregroundColor(chipForegroundColor)
             .lineLimit(1)
             .truncationMode(.tail)
             .padding(.horizontal, compact ? 5 : 10)
             .padding(.vertical, compact ? 3 : 6)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(ShiftCalendarColors.primaryBlue.opacity(0.14))
+            .background(chipBackgroundColor)
             .cornerRadius(compact ? 5 : 8)
+    }
+
+    private var chipBackgroundColor: Color {
+        CalendarItemColorSettings.backgroundColor(
+            for: event,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            shiftFallback: shiftLabelBackgroundFallback
+        )
+    }
+
+    private var chipForegroundColor: Color {
+        CalendarItemColorSettings.foregroundColor(
+            for: event,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            lightBackgroundFallback: chipForegroundFallback
+        )
+    }
+
+    private var shiftLabelBackgroundFallback: Color {
+        event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelBackgroundColor(for: $0.color) }
+            ?? ShiftCalendarColors.primaryBlue.opacity(0.14)
+    }
+
+    private var chipForegroundFallback: Color {
+        event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelForegroundColor(for: $0.color) }
+            ?? ShiftCalendarColors.primaryBlueDark
     }
 }
 
@@ -411,6 +442,9 @@ struct WeekTimeAxisView: View {
 }
 
 struct CalendarEventBlockView: View {
+    @AppStorage(CalendarItemColorSettings.eventBackgroundColorKey) private var eventBackgroundColorHex = CalendarItemColorSettings.defaultEventBackgroundColorHex
+    @AppStorage(CalendarItemColorSettings.workRecordBackgroundColorKey) private var workRecordBackgroundColorHex = CalendarItemColorSettings.defaultWorkRecordBackgroundColorHex
+
     let event: EventOccurrence
     let timeText: String
     let compact: Bool
@@ -432,19 +466,31 @@ struct CalendarEventBlockView: View {
         .padding(.horizontal, 6)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(eventColor)
+        .background(eventBackgroundColor)
         .cornerRadius(6)
     }
 
-    private var eventColor: Color {
-        event.shiftTemplateID?.color ?? ShiftCalendarColors.primaryBlue
+    private var eventBackgroundColor: Color {
+        CalendarItemColorSettings.backgroundColor(
+            for: event,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            shiftFallback: event.shiftTemplateID?.color ?? ShiftCalendarColors.primaryBlue
+        )
     }
 
     private var eventForegroundColor: Color {
-        guard let shiftTemplateID = event.shiftTemplateID else {
-            return ShiftCalendarColors.whiteText
-        }
-        return ShiftDisplayColors.solidForegroundColor(for: shiftTemplateID.color)
+        CalendarItemColorSettings.foregroundColor(
+            for: event,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            lightBackgroundFallback: eventForegroundFallback
+        )
+    }
+
+    private var eventForegroundFallback: Color {
+        event.shiftTemplateID.map { ShiftDisplayColors.solidForegroundColor(for: $0.color) }
+            ?? Color.black.opacity(0.82)
     }
 }
 

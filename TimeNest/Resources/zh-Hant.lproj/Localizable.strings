@@ -17,6 +17,10 @@
 "settings.about" = "App 資訊";
 "settings.holiday_region" = "節假日";
 "settings.week_start" = "一週開始";
+"settings.calendar_display_customize" = "行事曆顯示自訂";
+"settings.calendar_display_customize.event_background" = "行程背景色";
+"settings.calendar_display_customize.work_record_background" = "工作記錄背景色";
+"settings.calendar_display_customize.reset_defaults" = "恢復預設值";
 
 /* Language Options */
 "language.system" = "系統預設";

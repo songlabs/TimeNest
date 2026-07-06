@@ -20,6 +20,10 @@ enum LocalizedString: String {
     case settingsSupport = "settings.support"
     case settingsHolidayRegion = "settings.holiday_region"
     case settingsWeekStart = "settings.week_start"
+    case settingsCalendarDisplayCustomize = "settings.calendar_display_customize"
+    case settingsCalendarDisplayCustomizeEventBackground = "settings.calendar_display_customize.event_background"
+    case settingsCalendarDisplayCustomizeWorkRecordBackground = "settings.calendar_display_customize.work_record_background"
+    case settingsCalendarDisplayCustomizeResetDefaults = "settings.calendar_display_customize.reset_defaults"
     case shiftTimeSettingsTitle = "shift_time.settings_title"
 
     // MARK: - Language Options

@@ -114,6 +114,15 @@ struct SettingsView: View {
                             SettingsPickerOption(title: localization.localized(.themeSystem), tag: "system")
                         ]
                     )
+
+                    SettingsDivider()
+
+                    SettingsNavigationRow(
+                        title: localization.localized(.settingsCalendarDisplayCustomize)
+                    ) {
+                        CalendarDisplayCustomizeView()
+                            .environmentObject(localization)
+                    }
                 }
 
                 SettingsCard {
@@ -525,6 +534,119 @@ private struct SettingsValueRow: View {
     }
 }
 
+// MARK: - Calendar Display Customize
+
+private struct CalendarDisplayCustomizeView: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var localization: LocalizationManager
+    @AppStorage(CalendarItemColorSettings.eventBackgroundColorKey) private var eventBackgroundColorHex = CalendarItemColorSettings.defaultEventBackgroundColorHex
+    @AppStorage(CalendarItemColorSettings.workRecordBackgroundColorKey) private var workRecordBackgroundColorHex = CalendarItemColorSettings.defaultWorkRecordBackgroundColorHex
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: SettingsStyle.sectionSpacing) {
+                HStack {
+                    Text(localization.localized(.settingsCalendarDisplayCustomize))
+                        .font(TimeNestTheme.Fonts.popupTitle)
+                        .foregroundColor(SettingsModalSurface.primaryText)
+
+                    Spacer()
+
+                    ModalHeaderCloseButton {
+                        dismiss()
+                    }
+                }
+
+                SettingsCard {
+                    CalendarBackgroundColorRow(
+                        title: localization.localized(.settingsCalendarDisplayCustomizeEventBackground),
+                        colorHex: $eventBackgroundColorHex,
+                        defaultHex: CalendarItemColorSettings.defaultEventBackgroundColorHex
+                    )
+
+                    SettingsDivider()
+
+                    CalendarBackgroundColorRow(
+                        title: localization.localized(.settingsCalendarDisplayCustomizeWorkRecordBackground),
+                        colorHex: $workRecordBackgroundColorHex,
+                        defaultHex: CalendarItemColorSettings.defaultWorkRecordBackgroundColorHex
+                    )
+
+                    SettingsDivider()
+
+                    CalendarResetDefaultsRow(
+                        title: localization.localized(.settingsCalendarDisplayCustomizeResetDefaults),
+                        action: resetDefaults
+                    )
+                }
+            }
+            .padding(.horizontal, SettingsStyle.horizontalPadding)
+            .padding(.top, SettingsStyle.topPadding)
+            .padding(.bottom, SettingsStyle.bottomPadding)
+        }
+        .background(SettingsModalSurface.background)
+        .navigationBarBackButtonHidden(true)
+    }
+
+    private func resetDefaults() {
+        CalendarItemColorSettings.resetDefaults()
+        eventBackgroundColorHex = CalendarItemColorSettings.defaultEventBackgroundColorHex
+        workRecordBackgroundColorHex = CalendarItemColorSettings.defaultWorkRecordBackgroundColorHex
+    }
+}
+
+private struct CalendarBackgroundColorRow: View {
+    let title: String
+    @Binding var colorHex: String
+    let defaultHex: String
+
+    var body: some View {
+        SettingsRow(title: title) {
+            ColorPicker("", selection: colorBinding, supportsOpacity: false)
+                .labelsHidden()
+        }
+    }
+
+    private var colorBinding: Binding<Color> {
+        Binding(
+            get: {
+                Color(hex: colorHex) ?? Color(hex: defaultHex) ?? .gray
+            },
+            set: { newColor in
+                colorHex = newColor.toHexRGB()
+            }
+        )
+    }
+}
+
+private struct CalendarResetDefaultsRow: View {
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: SettingsStyle.rowContentSpacing) {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.body.weight(.medium))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24)
+
+                Text(title)
+                    .font(.body)
+                    .foregroundColor(SettingsStyle.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+
+                Spacer(minLength: SettingsStyle.rowAccessoryMinSpacing)
+            }
+            .frame(minHeight: SettingsStyle.rowMinHeight)
+            .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
 // MARK: - Shift Time Settings
 
 extension ShiftTimeTemplateID {
@@ -896,6 +1018,18 @@ extension Color {
         let alpha = Int(a * 255)
         
         return String(format: "#%02X%02X%02X%02X", red, green, blue, alpha)
+    }
+
+    func toHexRGB() -> String {
+        let uiColor = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+
+        let red = Int(r * 255)
+        let green = Int(g * 255)
+        let blue = Int(b * 255)
+
+        return String(format: "#%02X%02X%02X", red, green, blue)
     }
 }
 

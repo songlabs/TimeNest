@@ -17,6 +17,10 @@
 "settings.about" = "应用信息";
 "settings.holiday_region" = "节假日";
 "settings.week_start" = "一周开始";
+"settings.calendar_display_customize" = "日历显示自定义";
+"settings.calendar_display_customize.event_background" = "日程背景色";
+"settings.calendar_display_customize.work_record_background" = "工作记录背景色";
+"settings.calendar_display_customize.reset_defaults" = "恢复默认值";
 
 /* Language Options */
 "language.system" = "系统默认";

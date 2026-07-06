@@ -17,6 +17,10 @@
 "settings.about" = "About";
 "settings.holiday_region" = "Holiday Region";
 "settings.week_start" = "Week Start";
+"settings.calendar_display_customize" = "Customize Calendar Display";
+"settings.calendar_display_customize.event_background" = "Event Background";
+"settings.calendar_display_customize.work_record_background" = "Work Record Background";
+"settings.calendar_display_customize.reset_defaults" = "Reset Defaults";
 
 /* Language Options */
 "language.system" = "System Default";

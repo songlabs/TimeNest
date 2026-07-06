@@ -721,6 +721,8 @@ private struct ShiftInputHeaderView: View {
 
 struct DayCellView: View {
     @EnvironmentObject private var localization: LocalizationManager
+    @AppStorage(CalendarItemColorSettings.eventBackgroundColorKey) private var eventBackgroundColorHex = CalendarItemColorSettings.defaultEventBackgroundColorHex
+    @AppStorage(CalendarItemColorSettings.workRecordBackgroundColorKey) private var workRecordBackgroundColorHex = CalendarItemColorSettings.defaultWorkRecordBackgroundColorHex
     let cell: CalendarDayCell
     let cellWidth: CGFloat
     let cellHeight: CGFloat
@@ -867,13 +869,13 @@ struct DayCellView: View {
     private func workRecordLabelView(for session: WorkRecordDisplaySession) -> some View {
         Text(session.displayTitle(defaultTitle: localization.localized(.workRecordDefaultTitle)))
             .font(.system(size: 10, weight: .medium))
-            .foregroundColor(ShiftCalendarColors.primaryBlueDark)
+            .foregroundColor(workRecordLabelTextColor)
             .lineLimit(1)
             .truncationMode(.tail)
             .padding(.horizontal, 4)
             .padding(.vertical, 2)
             .frame(maxWidth: .infinity)
-            .background(workRecordLabelBackgroundColor(for: session))
+            .background(workRecordLabelBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
     }
 
@@ -887,17 +889,25 @@ struct DayCellView: View {
     }
 
     private func eventLabelTextColor(for event: EventOccurrence) -> Color {
-        guard let shiftTemplateID = event.shiftTemplateID else {
-            return ShiftCalendarColors.primaryBlueDark
-        }
-        return ShiftDisplayColors.calendarLabelForegroundColor(for: shiftTemplateID.color)
+        let fallback = event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelForegroundColor(for: $0.color) }
+            ?? ShiftCalendarColors.primaryBlueDark
+        return CalendarItemColorSettings.foregroundColor(
+            for: event,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            lightBackgroundFallback: fallback
+        )
     }
 
     private func eventLabelBackgroundColor(for event: EventOccurrence) -> Color {
-        guard let shiftTemplateID = event.shiftTemplateID else {
-            return ShiftCalendarColors.primaryBlue.opacity(0.12)
-        }
-        return ShiftDisplayColors.calendarLabelBackgroundColor(for: shiftTemplateID.color)
+        let shiftFallback = event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelBackgroundColor(for: $0.color) }
+            ?? ShiftCalendarColors.primaryBlue.opacity(0.12)
+        return CalendarItemColorSettings.backgroundColor(
+            for: event,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            shiftFallback: shiftFallback
+        )
     }
 
     private func eventLabelBorderColor(for event: EventOccurrence) -> Color {
@@ -907,14 +917,21 @@ struct DayCellView: View {
         return ShiftDisplayColors.calendarLabelBorderColor(for: shiftTemplateID.color)
     }
 
-    private func workRecordLabelBackgroundColor(for session: WorkRecordDisplaySession) -> Color {
-        if let clockIn = session.clockIn {
-            return eventLabelBackgroundColor(for: clockIn)
-        }
-        if let clockOut = session.clockOut {
-            return eventLabelBackgroundColor(for: clockOut)
-        }
-        return ShiftCalendarColors.primaryBlue.opacity(0.12)
+    private var workRecordLabelBackgroundColor: Color {
+        CalendarItemColorSettings.backgroundColor(
+            for: .workRecord,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex
+        )
+    }
+
+    private var workRecordLabelTextColor: Color {
+        CalendarItemColorSettings.foregroundColor(
+            for: .workRecord,
+            eventBackgroundColorHex: eventBackgroundColorHex,
+            workRecordBackgroundColorHex: workRecordBackgroundColorHex,
+            lightBackgroundFallback: ShiftCalendarColors.primaryBlueDark
+        )
     }
 
     private func formatTime(_ date: Date) -> String {

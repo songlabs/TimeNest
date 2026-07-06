@@ -53,7 +53,7 @@ struct DayAllDayEventsSection: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(events, id: \.id) { event in
-                    AllDayEventChipView(title: event.localizedDisplayTitle, compact: false)
+                    AllDayEventChipView(event: event, compact: false)
                 }
             }
             .padding(.vertical, 8)
