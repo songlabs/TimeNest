@@ -44,7 +44,9 @@ let project = Project(
                     "GENERATE_INFOPLIST_FILE": "NO",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNest/TimeNest.entitlements",
                     "CODE_SIGN_STYLE": "Automatic",
+                    "CURRENT_PROJECT_VERSION": "3",
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
+                    "MARKETING_VERSION": "1.1",
                     "TARGETED_DEVICE_FAMILY": "1,2"
                 ],
                 configurations: [
@@ -77,6 +79,8 @@ let project = Project(
             deploymentTargets: .iOS("17.0"),
             infoPlist: .extendingDefault(with: [
                 "CFBundleDisplayName": "TimeNest",
+                "CFBundleShortVersionString": "$(MARKETING_VERSION)",
+                "CFBundleVersion": "$(CURRENT_PROJECT_VERSION)",
                 "ITSAppUsesNonExemptEncryption": false,
                 "NSExtension": [
                     "NSExtensionPointIdentifier": "com.apple.widgetkit-extension"
@@ -94,10 +98,10 @@ let project = Project(
                     "APPLICATION_EXTENSION_API_ONLY": "YES",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNestWidgetExtension/TimeNestWidgetExtension.entitlements",
                     "CODE_SIGN_STYLE": "Automatic",
-                    "CURRENT_PROJECT_VERSION": "1",
+                    "CURRENT_PROJECT_VERSION": "3",
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "GENERATE_INFOPLIST_FILE": "YES",
-                    "MARKETING_VERSION": "1.0",
+                    "MARKETING_VERSION": "1.1",
                     "PRODUCT_BUNDLE_IDENTIFIER": "com.song.TimeNest.TimeNestWidgetExtension",
                     "SKIP_INSTALL": "YES",
                     "TARGETED_DEVICE_FAMILY": "1,2"

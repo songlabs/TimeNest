@@ -5,10 +5,9 @@
 ## 1. 対象範囲
 
 - 対象範囲: `v1.0.0..HEAD`
-- ローカル状態: `v1.0.0` tag はローカルに存在しないため、`git diff v1.0.0..HEAD` は失敗。
-- 代替確認: `origin` の `refs/tags/v1.0.0` が指す基準コミットを確認し、その短縮コミットから `HEAD` までを同等範囲として整理。
-- 対象コミット数: 8 commits
-- 現在の HEAD: `19f8a8e`
+- ローカル状態: `git fetch --tags` 後、`v1.0.0` tag はローカルに存在し、`git diff v1.0.0..HEAD` は使用可能。
+- 対象コミット数: 9 commits
+- 現在の HEAD: `808ff8a`
 
 ## 2. v1.0.0 以降の主な変更
 
@@ -166,15 +165,15 @@
 
 ## 9. 検証結果
 
+- `git fetch --tags`
+  - 成功。`v1.0.0` tag を取得済み。
+- `git rev-parse v1.0.0`
+  - 成功。`24ac97da657c0b72f0bddf38c0faa58ab6fadfbc`。
 - `git diff --name-status v1.0.0..HEAD`
-  - 失敗。理由: local tag `v1.0.0` が存在しない。
-- `git ls-remote --tags origin 'refs/tags/v1.0.0*'`
-  - 成功。remote tag は確認済み。
-- `git diff --name-status <remote-v1.0.0-base>..HEAD`
-  - 成功。37 files changed。
-- `git diff --stat <remote-v1.0.0-base>..HEAD`
-  - 成功。2379 insertions / 589 deletions。
-- `git diff --name-only <remote-v1.0.0-base>..HEAD`
+  - 成功。38 files changed。
+- `git diff --stat v1.0.0..HEAD`
+  - 成功。2616 insertions / 620 deletions。
+- `git diff --name-only v1.0.0..HEAD`
   - 成功。
 - `xcodebuild -list -project TimeNest.xcodeproj`
   - 成功。Schemes: `TimeNest`, `TimeNestWidgetExtension`。

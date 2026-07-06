@@ -8,7 +8,7 @@
 - [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.TimeNestWidgetExtension`.
 - [x] App and Widget entitlements use the same App Group: `group.com.songlabs.timenest`.
 - [x] Widget deep links use the registered `timenest` URL scheme.
-- [x] App and Widget versions currently match at `1.0 (1)`.
+- [x] App and Widget versions currently match at `1.1 (3)`.
 - [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
 - [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 351 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match at 5 keys and include tracking, microphone, and speech-recognition purpose strings.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
