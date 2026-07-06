@@ -85,25 +85,47 @@ struct TimeNestApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(
-                calendarDisplayUseCase: calendarDisplayUseCase,
-                eventUseCase: eventUseCase,
-                holidaySubscriptionManager: holidaySubscriptionManager
-            )
-            .preferredColorScheme(preferredColorScheme)
-            .environmentObject(LocalizationManager.shared)
-            .modelContainer(modelContainer)
-            .task {
-                await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
-            }
-            .task {
-                RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
-                await RemoveAdsPurchaseManager.shared.refreshPurchasedState(context: "app startup")
-            }
-            .task {
-                AdConsentManager.shared.requestConsentInfoIfNeeded()
-                await widgetSnapshotCoordinator.refresh()
-            }
+            rootView
+        }
+    }
+
+    @ViewBuilder
+    private var rootView: some View {
+#if DEBUG
+        if let scene = AppStoreScreenshotMode.requestedScene {
+            AppStoreScreenshotRootView(scene: scene)
+                .preferredColorScheme(.light)
+                .environmentObject(LocalizationManager.shared)
+                .onAppear {
+                    AppStoreScreenshotMode.configureEnvironment()
+                }
+        } else {
+            productionRootView
+        }
+#else
+        productionRootView
+#endif
+    }
+
+    private var productionRootView: some View {
+        ContentView(
+            calendarDisplayUseCase: calendarDisplayUseCase,
+            eventUseCase: eventUseCase,
+            holidaySubscriptionManager: holidaySubscriptionManager
+        )
+        .preferredColorScheme(preferredColorScheme)
+        .environmentObject(LocalizationManager.shared)
+        .modelContainer(modelContainer)
+        .task {
+            await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
+        }
+        .task {
+            RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
+            await RemoveAdsPurchaseManager.shared.refreshPurchasedState(context: "app startup")
+        }
+        .task {
+            AdConsentManager.shared.requestConsentInfoIfNeeded()
+            await widgetSnapshotCoordinator.refresh()
         }
     }
 
