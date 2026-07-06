@@ -344,7 +344,7 @@
 "help.category.privacy" = "Data and Privacy";
 
 "help.events.add.question" = "How do I add an event?";
-"help.events.add.answer" = "Tap the add button at the bottom right of the calendar, enter the details, and save.";
+"help.events.add.answer" = "Tap the add button at the bottom right of the calendar, enter the details, and save. The memo field also supports voice input on supported devices and languages.";
 "help.events.all_day.question" = "What is an all-day event?";
 "help.events.all_day.answer" = "It is shown for the whole day without a specific start or end time.";
 "help.events.edit_delete.question" = "How do I edit or delete an event?";
@@ -375,7 +375,7 @@
 "help.shifts.difference.question" = "What is the difference between shifts and work records?";
 "help.shifts.difference.answer" = "A shift is a planned work schedule, such as a day or night shift. Work records contain actual clock-in and clock-out times, breaks, hourly rates, and transport costs used for work statistics.";
 "help.shifts.record.question" = "How do I record clock-in and clock-out times?";
-"help.shifts.record.answer" = "When adding or editing an event, you can enter clock-in and clock-out times, break time, hourly rate, and transport cost. After saving, this information is included in work statistics.";
+"help.shifts.record.answer" = "From a day detail, tap New Work Record, or choose Work Record on the new-entry screen. Enter clock-in and clock-out times, break time, hourly rate, and transport cost; saved records are used in work statistics.";
 "help.shifts.overnight.question" = "How is an overnight clock-out handled?";
 "help.shifts.overnight.answer" = "For overnight work such as a night shift, the clock-out time can be recorded on the following day. Statistics use the actual time from clock-in to the next-day clock-out, minus break time.";
 "help.shifts.statistics.question" = "How are work statistics calculated?";
@@ -384,14 +384,14 @@
 "help.shifts.statistics_missing.answer" = "Check that clock-in and clock-out records were saved within the selected period and that required information such as the hourly rate was entered. A shift alone does not create pay statistics.";
 
 "help.ads.about.question" = "About ads";
-"help.ads.about.answer" = "TimeNest may display ads to support the operation of the app. You can remove ads with a one-time purchase from Settings.";
+"help.ads.about.answer" = "TimeNest may display ads when the consent flow permits ad requests. Use Remove Ads in Settings for a one-time purchase, and Restore Purchases to check the Apple purchase state.";
 
 "help.privacy.storage.question" = "Where is my data stored?";
-"help.privacy.storage.answer" = "Data such as events and shifts is stored on this device.";
+"help.privacy.storage.answer" = "Events, shifts, work records, display settings, and holiday settings are stored on this device. Calendar information needed for Widgets is shared only on this device through the App Group.";
 "help.privacy.account.question" = "Do I need an account?";
-"help.privacy.account.answer" = "You do not need to register an account to use TimeNest.";
+"help.privacy.account.answer" = "You do not need to register an account or sign in to use TimeNest, and there is no TimeNest-operated cloud sync.";
 "help.privacy.delete_app.question" = "What happens to data if I delete the app?";
-"help.privacy.delete_app.answer" = "Deleting the app also deletes TimeNest data stored on the device.";
+"help.privacy.delete_app.answer" = "Deleting the app also removes TimeNest data stored on the device under normal iOS behavior.";
 "help.privacy.options.action" = "Manage Ad Privacy Options";
 "help.privacy.options.description" = "Review or change the advertising privacy choices for this device.";
 "help.privacy.options.error_title" = "Privacy Options Unavailable";

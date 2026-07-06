@@ -6,6 +6,7 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 
 - Month, week, and day calendar views with shared navigation and footer controls.
 - Create, edit, and delete timed or all-day events.
+- Add memo text manually or by voice on supported devices and languages.
 - Shift templates, shift entry, same-day shift replacement, and shift deletion.
 - Clock-in, clock-out, rest time, transport fee, and hourly-rate records.
 - Work statistics for a selected date range.
@@ -49,10 +50,10 @@ Replace the destination with an installed simulator when necessary. Signing, Bun
 The checked-in Xcode project and `Project.swift` define the same three build settings:
 
 - `TIMENEST_ADS_ENABLED`: `YES` for both Debug and Release. The first release must support ads for users who have not purchased Remove Ads.
-- `TIMENEST_ADMOB_APP_ID`: Google's test App ID in Debug and simulator builds; Release device/archive builds use `ca-app-pub-7907716708037277~6985657856`.
-- `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's test Banner Unit ID in Debug and simulator builds; Release device/archive builds use `ca-app-pub-7907716708037277/8542282103`.
+- `TIMENEST_ADMOB_APP_ID`: Google's official test App ID in Debug and simulator builds; Release device/archive builds use the production App ID configured in `Project.swift` and the checked-in Xcode project.
+- `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's official test Banner Unit ID in Debug and simulator builds; Release device/archive builds use the production Banner Unit ID configured in `Project.swift` and the checked-in Xcode project.
 
-`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. Release device/archive values are the approved production IDs, while simulator overrides keep development builds on Google's official test IDs. `Scripts/validate_admob_release_config.sh` rejects a production Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when changing the two production values.
+`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. Release device/archive values must be the approved production IDs, while simulator overrides keep development builds on Google's official test IDs. `Scripts/validate_admob_release_config.sh` rejects a production Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when changing the two production values.
 
 ## Unit Tests
 
@@ -114,7 +115,7 @@ The localization parity tests require the `ja`, `zh-Hans`, `zh-Hant`, `en`, and 
 
 ## Local-First Data
 
-Calendar events, shifts, work records, settings, and holiday choices are stored on the device. SwiftData repositories are the production event/reminder storage, and downloaded holiday data is a replaceable local cache. Network access is limited to explicit or scheduled holiday-source refreshes and enabled ad SDK behavior; calendar editing and existing local data must not depend on a successful request.
+Calendar events, shifts, work records, settings, and holiday choices are stored on the device. SwiftData repositories are the production event/reminder storage and use the App Group container so the app and Widget can share local data needed for Widget display. Downloaded holiday data is a replaceable local cache. Network access is limited to explicit or scheduled holiday-source refreshes and enabled ad SDK behavior; calendar editing and existing local data must not depend on a successful request.
 
 ## Data And Privacy
 
@@ -122,6 +123,7 @@ Calendar events, shifts, work records, settings, and holiday choices are stored 
 - Display settings and holiday-subscription choices are stored locally in app preferences.
 - Downloaded holiday data is cached on the device.
 - Holiday synchronization sends HTTPS requests to the public ICS provider selected in Settings.
+- Voice memo input uses the microphone and Apple's Speech framework only when the user starts voice input in the memo field; recognized text is inserted into the local memo.
 - Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true` and the ATT decision completes. Ad personalization is disabled through Publisher Privacy Treatment; denying ATT keeps the calendar usable and permits non-IDFA ad requests when UMP allows ads.
 - Remove Ads is a one-time Apple In-App Purchase handled by StoreKit. TimeNest does not collect or store payment card details, and purchase restoration uses Apple transaction entitlements.
 - The app has no account sign-in or cloud synchronization in the current implementation.
@@ -147,7 +149,7 @@ Before submission, confirm:
 - Validate the Privacy Manifest, App Privacy answers, privacy-policy URL, and Google Mobile Ads disclosures together.
 - Verify Bundle ID, signing, version/build numbers, icons, screenshots, metadata, support URL, and privacy-policy URL.
 - Verify fresh install and upgrade install behavior, especially SwiftData compatibility.
-- Verify month/week/day navigation, event editing, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
+- Verify month/week/day navigation, event editing, memo voice input permissions, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
 - Verify all five app languages, system-language mode, week-start settings, and light/dark appearance.
 - Verify offline behavior and invalid or unavailable ICS sources.
 

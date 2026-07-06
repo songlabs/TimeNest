@@ -344,7 +344,7 @@
 "help.category.privacy" = "資料與隱私";
 
 "help.events.add.question" = "如何新增行程？";
-"help.events.add.answer" = "點擊行事曆右下角的新增按鈕，填寫內容後儲存。";
+"help.events.add.answer" = "點擊行事曆右下角的新增按鈕，填寫內容後儲存。備忘欄在支援的裝置和語言下也可以使用語音輸入。";
 "help.events.all_day.question" = "什麼是全天行程？";
 "help.events.all_day.answer" = "不指定開始和結束時間，並作為一整天的行程顯示。";
 "help.events.edit_delete.question" = "如何編輯或刪除行程？";
@@ -375,7 +375,7 @@
 "help.shifts.difference.question" = "班次和工作記錄有什麼差異？";
 "help.shifts.difference.answer" = "班次表示預定的工作安排，例如白班或夜班。工作記錄表示實際的上班、下班、休息時間、時薪和交通費，用於工作統計。";
 "help.shifts.record.question" = "如何記錄上班和下班？";
-"help.shifts.record.answer" = "在新增或編輯行程時，可以輸入上班時間、下班時間、休息時間、時薪和交通費。儲存後，這些資訊會作為工作記錄參與統計。";
+"help.shifts.record.answer" = "在日期詳情中開啟「新增打工記錄」，或在新增畫面選擇「打工記錄」，輸入上班時間、下班時間、休息時間、時薪和交通費。儲存後會參與工作統計。";
 "help.shifts.overnight.question" = "隔天下班如何處理？";
 "help.shifts.overnight.answer" = "夜班等跨日工作時，下班時間可以記錄為次日。統計時會按從上班到次日下班的實際時間計算，並扣除休息時間。";
 "help.shifts.statistics.question" = "工作統計如何計算？";
@@ -384,14 +384,14 @@
 "help.shifts.statistics_missing.answer" = "請確認目標期間內已經儲存了上班和下班記錄，並且時薪等必要資訊已輸入。只有班次本身不會自動產生薪資統計。";
 
 "help.ads.about.question" = "關於廣告";
-"help.ads.about.answer" = "為了支援 TimeNest 的營運，App 中可能會顯示廣告。你可以在設定中透過一次性購買移除廣告。";
+"help.ads.about.answer" = "當同意流程允許請求廣告時，TimeNest 可能會顯示廣告。你可以在設定中透過一次性購買移除廣告，也可以透過「恢復購買」確認 Apple 購買狀態。";
 
 "help.privacy.storage.question" = "資料儲存在哪裡？";
-"help.privacy.storage.answer" = "行程和班次等資料會儲存在此裝置中。";
+"help.privacy.storage.answer" = "行程、班次、打工記錄、顯示設定和節假日設定會儲存在此裝置中。Widget 顯示所需的行事曆資訊只會在同一裝置的 App Group 內共享。";
 "help.privacy.account.question" = "需要帳號嗎？";
-"help.privacy.account.answer" = "使用 TimeNest 不需要註冊帳號。";
+"help.privacy.account.answer" = "使用 TimeNest 不需要註冊帳號或登入，目前也沒有 TimeNest 自有雲端同步。";
 "help.privacy.delete_app.question" = "刪除 App 後資料會怎樣？";
-"help.privacy.delete_app.answer" = "刪除 App 後，儲存在裝置內的 TimeNest 資料也會被刪除。";
+"help.privacy.delete_app.answer" = "刪除 App 後，儲存在裝置內的 TimeNest 資料也會依照 iOS 的一般行為被刪除。";
 "help.privacy.options.action" = "管理廣告隱私選項";
 "help.privacy.options.description" = "查看或修改此裝置上的廣告隱私選擇。";
 "help.privacy.options.error_title" = "無法開啟隱私選項";

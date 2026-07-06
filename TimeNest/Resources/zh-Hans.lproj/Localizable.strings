@@ -344,7 +344,7 @@
 "help.category.privacy" = "数据与隐私";
 
 "help.events.add.question" = "如何添加日程？";
-"help.events.add.answer" = "点击日历右下角的添加按钮，填写内容后保存。";
+"help.events.add.answer" = "点击日历右下角的添加按钮，填写内容后保存。备忘栏在支持的设备和语言下也可以使用语音输入。";
 "help.events.all_day.question" = "什么是全天日程？";
 "help.events.all_day.answer" = "不指定开始和结束时间，并作为一整天的日程显示。";
 "help.events.edit_delete.question" = "如何编辑或删除日程？";
@@ -375,7 +375,7 @@
 "help.shifts.difference.question" = "班次和工作记录有什么区别？";
 "help.shifts.difference.answer" = "班次表示预定的工作安排，例如白班或夜班。工作记录表示实际的上班、下班、休息时间、时薪和交通费，用于工作统计。";
 "help.shifts.record.question" = "如何记录上班和下班？";
-"help.shifts.record.answer" = "在新增或编辑日程时，可以输入上班时间、下班时间、休息时间、时薪和交通费。保存后，这些信息会作为工作记录参与统计。";
+"help.shifts.record.answer" = "在日期详情中打开“新增打工记录”，或在新建画面选择“打工记录”，输入上班时间、下班时间、休息时间、时薪和交通费。保存后会参与工作统计。";
 "help.shifts.overnight.question" = "第二天下班如何处理？";
 "help.shifts.overnight.answer" = "夜班等跨日工作时，下班时间可以记录为次日。统计时会按从上班到次日下班的实际时间计算，并扣除休息时间。";
 "help.shifts.statistics.question" = "工作统计如何计算？";
@@ -384,14 +384,14 @@
 "help.shifts.statistics_missing.answer" = "请确认目标期间内已经保存了上班和下班记录，并且时薪等必要信息已输入。只有班次本身不会自动生成工资统计。";
 
 "help.ads.about.question" = "关于广告";
-"help.ads.about.answer" = "为了支持 TimeNest 的运营，App 中可能会显示广告。你可以在设置中通过一次性购买去除广告。";
+"help.ads.about.answer" = "当同意流程允许请求广告时，TimeNest 可能会显示广告。你可以在设置中通过一次性购买去除广告，也可以通过“恢复购买”确认 Apple 购买状态。";
 
 "help.privacy.storage.question" = "数据保存在哪里？";
-"help.privacy.storage.answer" = "日程和班次等数据保存在此设备中。";
+"help.privacy.storage.answer" = "日程、班次、打工记录、显示设置和节假日设置保存在此设备中。Widget 显示所需的日历信息只会在同一设备的 App Group 内共享。";
 "help.privacy.account.question" = "需要账号吗？";
-"help.privacy.account.answer" = "使用 TimeNest 无需注册账号。";
+"help.privacy.account.answer" = "使用 TimeNest 无需注册账号或登录，当前也没有 TimeNest 自有云同步。";
 "help.privacy.delete_app.question" = "删除 App 后数据会怎样？";
-"help.privacy.delete_app.answer" = "删除 App 后，保存在设备内的 TimeNest 数据也会被删除。";
+"help.privacy.delete_app.answer" = "删除 App 后，保存在设备内的 TimeNest 数据也会按照 iOS 的通常行为被删除。";
 "help.privacy.options.action" = "管理广告隐私选项";
 "help.privacy.options.description" = "查看或修改此设备上的广告隐私选择。";
 "help.privacy.options.error_title" = "无法打开隐私选项";

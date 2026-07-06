@@ -344,7 +344,7 @@
 "help.category.privacy" = "データとプライバシー";
 
 "help.events.add.question" = "予定を追加するには？";
-"help.events.add.answer" = "カレンダー右下の追加ボタンをタップし、内容を入力して保存します。";
+"help.events.add.answer" = "カレンダー右下の追加ボタンをタップし、内容を入力して保存します。メモ欄では、対応している端末と言語で音声入力も利用できます。";
 "help.events.all_day.question" = "終日予定とは？";
 "help.events.all_day.answer" = "開始・終了時刻を指定せず、その日全体の予定として表示する予定です。";
 "help.events.edit_delete.question" = "予定を編集・削除するには？";
@@ -375,7 +375,7 @@
 "help.shifts.difference.question" = "シフトと勤務記録の違いは？";
 "help.shifts.difference.answer" = "シフトは日勤や夜勤などの予定された勤務を表します。勤務記録は実際の出勤、退勤、休憩時間、時給、交通費を記録したもので、勤務統計に使用されます。";
 "help.shifts.record.question" = "出勤と退勤を記録するには？";
-"help.shifts.record.answer" = "予定の追加または編集画面で、出勤時刻、退勤時刻、休憩時間、時給、交通費を入力できます。保存した内容は勤務記録として統計に反映されます。";
+"help.shifts.record.answer" = "日付の詳細から「勤務記録を新規作成」を開くか、新規作成画面で「勤務記録」を選び、出勤時刻、退勤時刻、休憩時間、時給、交通費を入力します。保存した内容は勤務統計に反映されます。";
 "help.shifts.overnight.question" = "翌日の退勤はどのように扱われますか？";
 "help.shifts.overnight.answer" = "夜勤など日をまたぐ勤務では、退勤時刻を翌日として記録できます。統計では出勤から翌日の退勤までの実時間から休憩時間を差し引いて計算します。";
 "help.shifts.statistics.question" = "勤務統計はどのように計算されますか？";
@@ -384,14 +384,14 @@
 "help.shifts.statistics_missing.answer" = "対象期間内に出勤記録と退勤記録が保存され、時給などの必要な情報が入力されているか確認してください。シフトだけでは給与統計は自動作成されません。";
 
 "help.ads.about.question" = "広告について";
-"help.ads.about.answer" = "TimeNest では、アプリの運営を支えるために広告が表示されることがあります。設定から一度きりの購入で広告を非表示にできます。";
+"help.ads.about.answer" = "TimeNest では、同意フローで広告リクエストが許可された場合に広告が表示されることがあります。設定の「広告を削除」から一度きりの購入で広告を非表示にでき、「購入を復元」で Apple の購入状態を確認できます。";
 
 "help.privacy.storage.question" = "データはどこに保存されますか？";
-"help.privacy.storage.answer" = "予定やシフトなどのデータは、この端末内に保存されます。";
+"help.privacy.storage.answer" = "予定、シフト、勤務記録、表示設定、祝日設定は端末内に保存されます。ウィジェット表示に必要なカレンダー情報は App Group 内で同じ端末上だけ共有されます。";
 "help.privacy.account.question" = "アカウントは必要ですか？";
-"help.privacy.account.answer" = "TimeNest の利用にアカウント登録は必要ありません。";
+"help.privacy.account.answer" = "TimeNest の利用にアカウント登録やログインは必要ありません。TimeNest 独自のクラウド同期もありません。";
 "help.privacy.delete_app.question" = "App を削除した場合のデータについて";
-"help.privacy.delete_app.answer" = "App を削除すると、端末内に保存された TimeNest のデータも削除されます。";
+"help.privacy.delete_app.answer" = "App を削除すると、通常の iOS の動作に従って端末内に保存された TimeNest のデータも削除されます。";
 "help.privacy.options.action" = "広告のプライバシー設定を管理";
 "help.privacy.options.description" = "この端末の広告に関するプライバシー設定を確認または変更します。";
 "help.privacy.options.error_title" = "プライバシー設定を開けません";

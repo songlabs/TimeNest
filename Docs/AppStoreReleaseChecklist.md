@@ -2,7 +2,7 @@
 
 > Release-preparation checklist only. It does not guarantee App Review approval. Confirm manual items in Apple Developer, App Store Connect, Xcode Organizer, and the exact submitted build.
 
-## Repository Audit Snapshot (2026-06-25)
+## Repository Audit Snapshot (2026-07-06)
 
 - [x] App target, test target, and Widget Extension are present; project shared schemes are `TimeNest` and `TimeNestWidgetExtension`, and the workspace also contains `TimeNest-Workspace`.
 - [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.TimeNestWidgetExtension`.
@@ -10,9 +10,10 @@
 - [x] Widget deep links use the registered `timenest` URL scheme.
 - [x] App and Widget versions currently match at `1.0 (1)`.
 - [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
-- [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 327 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match and include `NSUserTrackingUsageDescription`.
+- [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 351 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match at 5 keys and include tracking, microphone, and speech-recognition purpose strings.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
 - [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
+- [x] Memo voice input uses microphone and speech-recognition permissions only from the event memo UI.
 - [x] Debug and simulator builds use Google's official test IDs. Release device/archive builds are ad-enabled for unpurchased users and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
 - [x] Both Release build-setting sources use the approved production AdMob App ID and Banner Unit ID.
 - [x] Google UMP now updates consent once per launch and gates Mobile Ads initialization and banner loading on `canRequestAds`. Publisher Privacy Treatment disables ad personalization.
