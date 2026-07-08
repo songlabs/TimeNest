@@ -118,5 +118,20 @@ let project = Project(
             sources: ["Tests/TimeNestTests/**"],
             dependencies: [.target(name: "TimeNest")]
         )
+    ],
+    schemes: [
+        .scheme(
+            name: "TimeNest",
+            shared: true,
+            buildAction: .buildAction(targets: ["TimeNest"]),
+            testAction: .targets(["TimeNestTests"]),
+            runAction: .runAction(
+                executable: "TimeNest",
+                options: .options(storeKitConfigurationPath: "TimeNest.storekit")
+            )
+        )
+    ],
+    additionalFiles: [
+        "TimeNest.storekit"
     ]
 )

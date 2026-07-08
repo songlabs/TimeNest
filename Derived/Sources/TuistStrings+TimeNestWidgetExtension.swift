@@ -29,6 +29,29 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let version = TimeNestWidgetExtensionStrings.tr("Localizable", "about.version")
   }
 
+  public enum Ads: Sendable {
+    /// Purchase completed
+    public static let purchaseCompleted = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.purchase_completed")
+    /// Purchase could not be completed. Please try again later.
+    public static let purchaseFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.purchase_failed")
+    /// Purchase is pending approval. Ads will be hidden after it completes.
+    public static let purchasePending = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.purchase_pending")
+    /// Purchases are temporarily unavailable. Please try again later.
+    public static let purchaseUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.purchase_unavailable")
+    /// Remove Ads
+    public static let remove = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.remove")
+    /// Ads Removed
+    public static let removed = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.removed")
+    /// Purchases restored
+    public static let restoreCompleted = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.restore_completed")
+    /// Could not restore purchases. Please try again later.
+    public static let restoreFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.restore_failed")
+    /// No restorable purchase was found.
+    public static let restoreNotFound = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.restore_not_found")
+    /// Restore Purchases
+    public static let restorePurchases = TimeNestWidgetExtensionStrings.tr("Localizable", "ads.restore_purchases")
+  }
+
   public enum AppError: Sendable {
     /// Failed to fetch holiday data
     public static let holidayData = TimeNestWidgetExtensionStrings.tr("Localizable", "app_error.holiday_data")
@@ -124,27 +147,52 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.title")
     /// Transport Fee
     public static let transportFee = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.transportFee")
-    /// Clock-in data already exists for this day. Overwrite it with the current time?
-    public static let workInOverwriteMessage = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.work_in_overwrite_message")
-    /// Overwrite clock-in data?
-    public static let workInOverwriteTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.work_in_overwrite_title")
-    /// Clock-out data already exists for this day. Overwrite it with the current time?
-    public static let workOutOverwriteMessage = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.work_out_overwrite_message")
-    /// Overwrite clock-out data?
-    public static let workOutOverwriteTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.work_out_overwrite_title")
-    /// Overwrite
-    public static let workOverwriteButton = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.work_overwrite_button")
-    /// Cancel
-    public static let workOverwriteCancelButton = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.work_overwrite_cancel_button")
     /// Clock In
     public static let workIn = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.workIn")
     /// Clock Out
     public static let workOut = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.workOut")
   }
 
+  public enum Entry: Sendable {
+
+    public enum Create: Sendable {
+      /// New Entry
+      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.create.title")
+    }
+
+    public enum Kind: Sendable {
+      /// Event
+      public static let event = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.kind.event")
+      /// Work Record
+      public static let workRecord = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.kind.work_record")
+    }
+  }
+
   public enum Event: Sendable {
+    /// Event
+    public static let defaultTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "event.default_title")
     /// Event not found.
     public static let notFound = TimeNestWidgetExtensionStrings.tr("Localizable", "event.not_found")
+
+    public enum Memo: Sendable {
+      /// Memo
+      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "event.memo.title")
+
+      public enum Voice: Sendable {
+        /// Microphone and speech recognition permission are required to use voice input for memos.
+        public static let permissionDenied = TimeNestWidgetExtensionStrings.tr("Localizable", "event.memo.voice.permission_denied")
+        /// Enter a memo by voice
+        public static let placeholder = TimeNestWidgetExtensionStrings.tr("Localizable", "event.memo.voice.placeholder")
+        /// Voice input in progress...
+        public static let recognizing = TimeNestWidgetExtensionStrings.tr("Localizable", "event.memo.voice.recognizing")
+        /// Start voice input
+        public static let start = TimeNestWidgetExtensionStrings.tr("Localizable", "event.memo.voice.start")
+        /// Stop voice input
+        public static let stop = TimeNestWidgetExtensionStrings.tr("Localizable", "event.memo.voice.stop")
+        /// Voice input is not available on this device or for this language.
+        public static let unavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "event.memo.voice.unavailable")
+      }
+    }
   }
 
   public enum EventMarker: Sendable {
@@ -223,7 +271,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public enum Ads: Sendable {
 
       public enum About: Sendable {
-        /// TimeNest may display ads to support the operation of the app. The current version does not offer an ad-removal purchase.
+        /// TimeNest may display ads when the consent flow permits ad requests. Use Remove Ads in Settings for a one-time purchase, and Restore Purchases to check the Apple purchase state.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.about.answer")
         /// About ads
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.ads.about.question")
@@ -257,7 +305,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public enum Events: Sendable {
 
       public enum Add: Sendable {
-        /// Tap the add button at the bottom right of the calendar, enter the details, and save.
+        /// Tap the add button at the bottom right of the calendar, enter the details, and save. The memo field also supports voice input on supported devices and languages.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.events.add.answer")
         /// How do I add an event?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.events.add.question")
@@ -314,14 +362,14 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public enum Privacy: Sendable {
 
       public enum Account: Sendable {
-        /// You do not need to register an account to use TimeNest.
+        /// You do not need to register an account or sign in to use TimeNest, and there is no TimeNest-operated cloud sync.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.account.answer")
         /// Do I need an account?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.account.question")
       }
 
       public enum DeleteApp: Sendable {
-        /// Deleting the app also deletes TimeNest data stored on the device.
+        /// Deleting the app also removes TimeNest data stored on the device under normal iOS behavior.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.delete_app.answer")
         /// What happens to data if I delete the app?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.delete_app.question")
@@ -339,7 +387,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       }
 
       public enum Storage: Sendable {
-        /// Data such as events and shifts is stored on this device.
+        /// Events, shifts, work records, display settings, and holiday settings are stored on this device. Calendar information needed for Widgets is shared only on this device through the App Group.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.storage.answer")
         /// Where is my data stored?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.storage.question")
@@ -384,7 +432,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       }
 
       public enum Record: Sendable {
-        /// When adding or editing an event, you can enter clock-in and clock-out times, break time, hourly rate, and transport cost. After saving, this information is included in work statistics.
+        /// From a day detail, tap New Work Record, or choose Work Record on the new-entry screen. Enter clock-in and clock-out times, break time, hourly rate, and transport cost; saved records are used in work statistics.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.shifts.record.answer")
         /// How do I record clock-in and clock-out times?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.shifts.record.question")
@@ -619,8 +667,31 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let enabled = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.enabled")
     /// Event starting soon
     public static let eventStartingSoon = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.event_starting_soon")
+    /// Open Settings
+    public static let openSettings = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.open_settings")
     /// Notification Time
     public static let time = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.time")
+
+    public enum PermissionDenied: Sendable {
+      /// TimeNest needs notification permission to send event reminders. Turn on notifications in iOS Settings.
+      public static let message = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.permission_denied.message")
+      /// Notifications Are Off
+      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.permission_denied.title")
+    }
+
+    public enum ReminderTimePast: Sendable {
+      /// The event was saved, but the reminder time has already passed, so no notification was set.
+      public static let message = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.reminder_time_past.message")
+      /// Reminder Time Has Passed
+      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.reminder_time_past.title")
+    }
+
+    public enum ScheduleFailed: Sendable {
+      /// The event was saved, but the reminder setup failed.
+      public static let message = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.schedule_failed.message")
+      /// Reminder Setup Failed
+      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "notification.schedule_failed.title")
+    }
   }
 
   public enum Picker: Sendable {
@@ -672,6 +743,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
   public enum Settings: Sendable {
     /// About
     public static let about = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.about")
+    /// Customize Calendar Display
+    public static let calendarDisplayCustomize = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar_display_customize")
     /// Holiday Region
     public static let holidayRegion = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.holiday_region")
     /// Language
@@ -686,6 +759,15 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.title")
     /// Week Start
     public static let weekStart = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.week_start")
+
+    public enum CalendarDisplayCustomize: Sendable {
+      /// Event Background
+      public static let eventBackground = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar_display_customize.event_background")
+      /// Reset Defaults
+      public static let resetDefaults = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar_display_customize.reset_defaults")
+      /// Work Record Background
+      public static let workRecordBackground = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar_display_customize.work_record_background")
+    }
   }
 
   public enum Shift: Sendable {
@@ -871,6 +953,30 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
   public enum Work: Sendable {
     /// Next day
     public static let nextDayPrefix = TimeNestWidgetExtensionStrings.tr("Localizable", "work.nextDayPrefix")
+  }
+
+  public enum WorkClock: Sendable {
+    /// In
+    public static let shortIn = TimeNestWidgetExtensionStrings.tr("Localizable", "work_clock.short_in")
+    /// Out
+    public static let shortOut = TimeNestWidgetExtensionStrings.tr("Localizable", "work_clock.short_out")
+  }
+
+  public enum WorkRecord: Sendable {
+    /// New Work Record
+    public static let add = TimeNestWidgetExtensionStrings.tr("Localizable", "work_record.add")
+    /// Work
+    public static let defaultTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "work_record.default_title")
+    /// Edit Work Record
+    public static let edit = TimeNestWidgetExtensionStrings.tr("Localizable", "work_record.edit")
+    /// No work records
+    public static let empty = TimeNestWidgetExtensionStrings.tr("Localizable", "work_record.empty")
+    /// No clock-in
+    public static let missingClockIn = TimeNestWidgetExtensionStrings.tr("Localizable", "work_record.missing_clock_in")
+    /// No clock-out
+    public static let missingClockOut = TimeNestWidgetExtensionStrings.tr("Localizable", "work_record.missing_clock_out")
+    /// Work Records
+    public static let sectionTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "work_record.section_title")
   }
 
   public enum WorkStatistics: Sendable {
