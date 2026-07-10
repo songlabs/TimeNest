@@ -1438,7 +1438,8 @@ final class HolidayNameLocalizerTests: XCTestCase {
                 localizationUseCase: CalendarLocalizationUseCase(),
                 eventUseCase: eventUseCase
             ),
-            eventUseCase: eventUseCase
+            eventUseCase: eventUseCase,
+            calendarSharingStore: makeCalendarSharingStore(eventUseCase: eventUseCase)
         )
 
         viewModel.selectedDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10)))
@@ -1460,7 +1461,8 @@ final class HolidayNameLocalizerTests: XCTestCase {
                 localizationUseCase: CalendarLocalizationUseCase(),
                 eventUseCase: eventUseCase
             ),
-            eventUseCase: eventUseCase
+            eventUseCase: eventUseCase,
+            calendarSharingStore: makeCalendarSharingStore(eventUseCase: eventUseCase)
         )
         let shiftDay = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10)))
         let existingStart = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 6, day: 10, hour: 8, minute: 30)))
@@ -1573,6 +1575,23 @@ final class HolidayNameLocalizerTests: XCTestCase {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = timeZone
         return calendar
+    }
+
+    @MainActor
+    private func makeCalendarSharingStore(eventUseCase: EventUseCase) -> CalendarSharingStore {
+        let identifier = UUID().uuidString
+        let defaults = UserDefaults(suiteName: "CalendarSharingStoreTests-\(identifier)")!
+        let cacheURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("CalendarSharingStoreTests-\(identifier).json")
+        return CalendarSharingStore(
+            client: CloudKitCalendarSharingClient(),
+            eventUseCase: eventUseCase,
+            cache: CalendarSharingCache(fileURL: cacheURL),
+            selectionPersistence: CalendarSelectionPersistence(
+                defaults: defaults,
+                key: "selection"
+            )
+        )
     }
 
 }

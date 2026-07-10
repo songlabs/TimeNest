@@ -53,6 +53,7 @@ let project = Project(
                     .debug(
                         name: "Debug",
                         settings: [
+                            "ICLOUD_CONTAINER_ENVIRONMENT": "Development",
                             "TIMENEST_ADMOB_APP_ID": "ca-app-pub-3940256099942544~1458002511",
                             "TIMENEST_ADMOB_BANNER_UNIT_ID": "ca-app-pub-3940256099942544/2435281174",
                             "TIMENEST_ADS_ENABLED": "YES"
@@ -61,6 +62,7 @@ let project = Project(
                     .release(
                         name: "Release",
                         settings: [
+                            "ICLOUD_CONTAINER_ENVIRONMENT": "Production",
                             "TIMENEST_ADMOB_APP_ID": "ca-app-pub-7907716708037277~6985657856",
                             "TIMENEST_ADMOB_BANNER_UNIT_ID": "ca-app-pub-7907716708037277/8542282103",
                             "TIMENEST_ADMOB_APP_ID[sdk=iphonesimulator*]": "ca-app-pub-3940256099942544~1458002511",

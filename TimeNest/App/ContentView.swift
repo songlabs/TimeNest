@@ -5,24 +5,29 @@ struct ContentView: View {
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
     private let holidaySubscriptionManager: HolidaySubscriptionManager
+    private let calendarSharingStore: CalendarSharingStore
 
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
         eventUseCase: EventUseCase,
-        holidaySubscriptionManager: HolidaySubscriptionManager
+        holidaySubscriptionManager: HolidaySubscriptionManager,
+        calendarSharingStore: CalendarSharingStore
     ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
         self.holidaySubscriptionManager = holidaySubscriptionManager
+        self.calendarSharingStore = calendarSharingStore
     }
 
     var body: some View {
         MonthCalendarView(
             calendarDisplayUseCase: calendarDisplayUseCase,
             eventUseCase: eventUseCase,
-            holidaySubscriptionManager: holidaySubscriptionManager
+            holidaySubscriptionManager: holidaySubscriptionManager,
+            calendarSharingStore: calendarSharingStore
         )
         .environmentObject(localization)
+        .environmentObject(calendarSharingStore)
         .onOpenURL { url in
             guard let date = TimeNestWidgetDeepLink.date(from: url) else { return }
             NotificationCenter.default.post(name: .widgetCalendarDateRequested, object: date)

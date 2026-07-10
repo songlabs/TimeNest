@@ -4,7 +4,10 @@ import SwiftUI
 
 @main
 struct TimeNestApp: App {
+    @UIApplicationDelegateAdaptor(TimeNestAppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("themeMode") private var themeMode: String = "system"
+    @StateObject private var calendarSharingStore: CalendarSharingStore
 
     private let modelContainer: ModelContainer
     private let eventRepository: EventRepository
@@ -76,9 +79,15 @@ struct TimeNestApp: App {
         )
         let snapshotCoordinator = WidgetSnapshotCoordinator(builder: snapshotBuilder)
         self.widgetSnapshotCoordinator = snapshotCoordinator
+        let calendarSharingStore = CalendarSharingStore(
+            client: CloudKitCalendarSharingClient(),
+            eventUseCase: eventUseCase
+        )
+        _calendarSharingStore = StateObject(wrappedValue: calendarSharingStore)
         eventUseCase.onEventsChanged = {
             Task { @MainActor in
                 snapshotCoordinator.scheduleRefresh()
+                await calendarSharingStore.synchronizeOwnedEventsIfNeeded()
             }
         }
     }
@@ -111,10 +120,12 @@ struct TimeNestApp: App {
         ContentView(
             calendarDisplayUseCase: calendarDisplayUseCase,
             eventUseCase: eventUseCase,
-            holidaySubscriptionManager: holidaySubscriptionManager
+            holidaySubscriptionManager: holidaySubscriptionManager,
+            calendarSharingStore: calendarSharingStore
         )
         .preferredColorScheme(preferredColorScheme)
         .environmentObject(LocalizationManager.shared)
+        .environmentObject(calendarSharingStore)
         .modelContainer(modelContainer)
         .task {
             await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
@@ -126,6 +137,13 @@ struct TimeNestApp: App {
         .task {
             AdConsentManager.shared.requestConsentInfoIfNeeded()
             await widgetSnapshotCoordinator.refresh()
+        }
+        .task {
+            await calendarSharingStore.start()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await calendarSharingStore.synchronizeAll() }
         }
     }
 

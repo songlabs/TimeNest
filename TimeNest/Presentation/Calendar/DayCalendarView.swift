@@ -4,6 +4,17 @@ import SwiftUI
 struct DayCalendarView: View {
     let selectedDate: Date
     let cell: CalendarDayCell?
+    let onEventTapped: (EventOccurrence) -> Void
+
+    init(
+        selectedDate: Date,
+        cell: CalendarDayCell?,
+        onEventTapped: @escaping (EventOccurrence) -> Void = { _ in }
+    ) {
+        self.selectedDate = selectedDate
+        self.cell = cell
+        self.onEventTapped = onEventTapped
+    }
 
     private let timeLabelWidth = CalendarTimelineLayout.timeLabelWidth
 
@@ -17,7 +28,8 @@ struct DayCalendarView: View {
                 if !allDayEvents.isEmpty {
                     DayAllDayEventsSection(
                         events: allDayEvents,
-                        timeLabelWidth: timeLabelWidth
+                        timeLabelWidth: timeLabelWidth,
+                        onEventTapped: onEventTapped
                     )
                 }
 
@@ -25,7 +37,8 @@ struct DayCalendarView: View {
                     cell: cell,
                     timeLabelWidth: timeLabelWidth,
                     contentWidth: contentWidth,
-                    timeAxisHeight: timeAxisHeight
+                    timeAxisHeight: timeAxisHeight,
+                    onEventTapped: onEventTapped
                 )
             }
         }
@@ -39,6 +52,7 @@ struct DayCalendarView: View {
 struct DayAllDayEventsSection: View {
     let events: [EventOccurrence]
     let timeLabelWidth: CGFloat
+    let onEventTapped: (EventOccurrence) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -54,6 +68,8 @@ struct DayAllDayEventsSection: View {
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(events, id: \.id) { event in
                     AllDayEventChipView(event: event, compact: false)
+                        .contentShape(Rectangle())
+                        .onTapGesture { onEventTapped(event) }
                 }
             }
             .padding(.vertical, 8)
@@ -76,6 +92,7 @@ struct DayTimeAxisView: View {
     let timeLabelWidth: CGFloat
     let contentWidth: CGFloat
     let timeAxisHeight: CGFloat
+    let onEventTapped: (EventOccurrence) -> Void
 
     private let startHour = CalendarTimelineLayout.startHour
     private let endHour = CalendarTimelineLayout.endHour
@@ -162,6 +179,8 @@ struct DayTimeAxisView: View {
                     alignment: .topLeading
                 )
                 .offset(x: 5, y: eventOffset(for: event))
+                .contentShape(Rectangle())
+                .onTapGesture { onEventTapped(event) }
             }
         }
         .frame(width: contentWidth, height: contentHeight, alignment: .topLeading)

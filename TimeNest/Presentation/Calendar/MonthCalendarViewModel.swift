@@ -37,6 +37,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
+    private let calendarSharingStore: CalendarSharingStore
     private var currentSetting: CalendarDisplaySetting
     private let subscriptionManager: HolidaySubscriptionManager
     private var reloadGeneration = 0
@@ -44,15 +45,18 @@ class MonthCalendarViewModel: ObservableObject {
     private var languageObserver: AnyCancellable?
     private var subscriptionObserver: AnyCancellable?
     private var weekStartObserver: AnyCancellable?
+    private var sharingObserver: AnyCancellable?
 
     private var notificationObservers: [AnyCancellable] = []
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
         eventUseCase: EventUseCase,
+        calendarSharingStore: CalendarSharingStore,
         subscriptionManager: HolidaySubscriptionManager? = nil
     ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
+        self.calendarSharingStore = calendarSharingStore
         self.subscriptionManager = subscriptionManager ?? .shared
 
         // 初始化时从 LocalizationManager 读取当前语言，从订阅管理器读取已启用的地区
@@ -75,6 +79,21 @@ class MonthCalendarViewModel: ObservableObject {
         setupSubscriptionObserver()
         // 监听 weekStart 设置变化
         setupWeekStartObserver()
+        setupSharingObserver()
+    }
+
+    private func setupSharingObserver() {
+        sharingObserver = calendarSharingStore.$revision
+            .dropFirst()
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    self.showingEntryEditor = false
+                    self.showingDayDetail = false
+                    self.exitShiftInputMode()
+                    await self.reloadMonth()
+                }
+            }
     }
 
     private func setupLanguageObserver() {
@@ -168,7 +187,7 @@ class MonthCalendarViewModel: ObservableObject {
             guard generation == reloadGeneration else { return }
 
             // 完全替换旧的 grid，不要 append / merge
-            self.grid = baseGrid
+            self.grid = gridForCurrentCalendar(from: baseGrid)
             refreshSelectedDayCell()
 
         } catch {
@@ -179,6 +198,38 @@ class MonthCalendarViewModel: ObservableObject {
         }
 
         isLoading = false
+    }
+
+    private func gridForCurrentCalendar(from baseGrid: MonthGrid) -> MonthGrid {
+        guard let calendarID = calendarSharingStore.selection.sharedCalendarID,
+              let firstDay = baseGrid.days.first?.date.toDate(),
+              let lastDay = baseGrid.days.last?.date.toDate() else {
+            return baseGrid
+        }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let rangeEnd = calendar.date(byAdding: .day, value: 1, to: lastDay) ?? lastDay
+        let occurrences = calendarSharingStore.occurrences(
+            for: calendarID,
+            in: DateInterval(start: firstDay, end: rangeEnd)
+        )
+        let occurrencesByDate = Dictionary(grouping: occurrences, by: { $0.occurrenceDate.id })
+        let days = baseGrid.days.map { day in
+            CalendarDayCell(
+                id: day.id,
+                date: day.date,
+                dayText: day.dayText,
+                weekdayText: day.weekdayText,
+                holidays: [],
+                events: occurrencesByDate[day.date.id] ?? [],
+                isToday: day.isToday,
+                isWeekend: day.isWeekend,
+                isInCurrentMonth: day.isInCurrentMonth,
+                shiftType: nil,
+                eventMarkers: []
+            )
+        }
+        return MonthGrid(title: baseGrid.title, weekdaySymbols: baseGrid.weekdaySymbols, days: days)
     }
 
     /// 获取当前月份的本地化标题
@@ -235,6 +286,9 @@ class MonthCalendarViewModel: ObservableObject {
 
     @discardableResult
     func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws -> EventNotificationScheduleResult {
+        guard calendarSharingStore.accessPolicy.canCreate else {
+            throw CalendarSharingError.permissionDenied
+        }
         let adjustedWorkInfo = try await adjustedWorkInfoForSave(title: title, startDate: startDate, workInfo: workInfo)
         let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: adjustedWorkInfo)
         let now = Date()
@@ -272,6 +326,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func enterShiftInputMode() {
+        guard calendarSharingStore.accessPolicy.canCreate else { return }
         refreshShiftTemplates()
         isShiftInputMode = true
         shiftInputTargetDate = selectedDate
@@ -551,6 +606,10 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func selectDay(_ cell: CalendarDayCell) {
+        if calendarSharingStore.accessPolicy.isReadOnly {
+            selectReadOnlyDay(cell)
+            return
+        }
         selectedDayCell = cell
         selectedDate = cell.date.toDate()
 
@@ -568,7 +627,16 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
+    func selectReadOnlyDay(_ cell: CalendarDayCell) {
+        selectedDayCell = cell
+        selectedDate = cell.date.toDate()
+        showingDayDetail = false
+        showingEntryEditor = false
+        exitShiftInputMode()
+    }
+
     func openSelectedDateEntryEditor() async {
+        guard calendarSharingStore.accessPolicy.canCreate else { return }
         let targetDate = selectedDate
         await ensureDataLoadedForDate(targetDate)
         selectedDayCell = findCell(for: targetDate) ?? createPlaceholderCell(for: targetDate)
@@ -582,6 +650,10 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func deleteEvent(id: UUID) async {
+        guard calendarSharingStore.accessPolicy.canDelete else {
+            errorMessage = CalendarSharingError.permissionDenied.localizedDescription
+            return
+        }
         do {
             try await eventUseCase.deleteEvent(id: id)
             await reloadMonth()
@@ -592,6 +664,9 @@ class MonthCalendarViewModel: ObservableObject {
 
     @discardableResult
     func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws -> EventNotificationScheduleResult {
+        guard calendarSharingStore.accessPolicy.canEdit else {
+            throw CalendarSharingError.permissionDenied
+        }
         do {
             let adjustedWorkInfo = try await adjustedWorkInfoForSave(title: title, startDate: startDate, workInfo: workInfo)
             let saveDates = eventDatesForSave(title: title, startDate: startDate, endDate: endDate, isAllDay: isAllDay, workInfo: adjustedWorkInfo)

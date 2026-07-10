@@ -9,17 +9,20 @@ struct CalendarBottomToolbarView: View {
     let onTodayTapped: () -> Void
     let onAddEventTapped: () -> Void
     let onModeChanged: ((CalendarViewMode) -> Void)?
+    let showsAddButton: Bool
 
     init(
         selectedViewMode: Binding<CalendarViewMode>,
         onTodayTapped: @escaping () -> Void,
         onAddEventTapped: @escaping () -> Void,
-        onModeChanged: ((CalendarViewMode) -> Void)? = nil
+        onModeChanged: ((CalendarViewMode) -> Void)? = nil,
+        showsAddButton: Bool = true
     ) {
         _selectedViewMode = selectedViewMode
         self.onTodayTapped = onTodayTapped
         self.onAddEventTapped = onAddEventTapped
         self.onModeChanged = onModeChanged
+        self.showsAddButton = showsAddButton
     }
 
     var body: some View {
@@ -75,13 +78,21 @@ struct CalendarBottomToolbarView: View {
                 Spacer()
 
                 // 右侧：添加按钮
-                Button(action: onAddEventTapped) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(width: ShiftCalendarLayout.addButtonSize, height: ShiftCalendarLayout.addButtonSize)
-                        .background(ShiftCalendarColors.primaryBlue)
-                        .clipShape(Circle())
+                Group {
+                    if showsAddButton {
+                        Button(action: onAddEventTapped) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundColor(.white)
+                                .frame(width: ShiftCalendarLayout.addButtonSize, height: ShiftCalendarLayout.addButtonSize)
+                                .background(ShiftCalendarColors.primaryBlue)
+                                .clipShape(Circle())
+                        }
+                    } else {
+                        Color.clear
+                            .frame(width: ShiftCalendarLayout.addButtonSize, height: ShiftCalendarLayout.addButtonSize)
+                            .accessibilityHidden(true)
+                    }
                 }
             }
             .padding(.horizontal, 12)

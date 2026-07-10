@@ -5,6 +5,19 @@ struct WeekCalendarView: View {
     let selectedDate: Date
     let cells: [CalendarDayCell]
     let onDateSelected: (Date) -> Void
+    let onEventTapped: (EventOccurrence) -> Void
+
+    init(
+        selectedDate: Date,
+        cells: [CalendarDayCell],
+        onDateSelected: @escaping (Date) -> Void,
+        onEventTapped: @escaping (EventOccurrence) -> Void = { _ in }
+    ) {
+        self.selectedDate = selectedDate
+        self.cells = cells
+        self.onDateSelected = onDateSelected
+        self.onEventTapped = onEventTapped
+    }
 
     private let timeLabelWidth = CalendarTimelineLayout.timeLabelWidth
     private let dateHeaderHeight: CGFloat = 72
@@ -46,7 +59,8 @@ struct WeekCalendarView: View {
                         timeLabelWidth: timeLabelWidth,
                         columnWidth: columnWidth,
                         selectedDate: selectedDate,
-                        rowHeight: allDayRowHeight
+                        rowHeight: allDayRowHeight,
+                        onEventTapped: onEventTapped
                     )
                     .frame(height: allDayRowHeight)
                 }
@@ -55,7 +69,8 @@ struct WeekCalendarView: View {
                     cells: cells,
                     timeLabelWidth: timeLabelWidth,
                     columnWidth: columnWidth,
-                    selectedDate: selectedDate
+                    selectedDate: selectedDate,
+                    onEventTapped: onEventTapped
                 )
                 .frame(height: timeAxisHeight)
             }
@@ -153,6 +168,7 @@ struct WeekAllDayEventsRow: View {
     let columnWidth: CGFloat
     let selectedDate: Date
     let rowHeight: CGFloat
+    let onEventTapped: (EventOccurrence) -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -168,7 +184,8 @@ struct WeekAllDayEventsRow: View {
             ForEach(cells, id: \.id) { cell in
                 WeekAllDayColumn(
                     events: allDayEvents(in: cell),
-                    isSelected: isDateSelected(cell.date)
+                    isSelected: isDateSelected(cell.date),
+                    onEventTapped: onEventTapped
                 )
                 .frame(width: columnWidth, height: rowHeight, alignment: .top)
             }
@@ -196,6 +213,7 @@ struct WeekAllDayEventsRow: View {
 private struct WeekAllDayColumn: View {
     let events: [EventOccurrence]
     let isSelected: Bool
+    let onEventTapped: (EventOccurrence) -> Void
 
     private var visibleEvents: [EventOccurrence] { Array(events.prefix(2)) }
     private var hiddenCount: Int { max(0, events.count - visibleEvents.count) }
@@ -204,6 +222,8 @@ private struct WeekAllDayColumn: View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(visibleEvents, id: \.id) { event in
                 AllDayEventChipView(event: event, compact: true)
+                    .contentShape(Rectangle())
+                    .onTapGesture { onEventTapped(event) }
             }
 
             if hiddenCount > 0 {
@@ -261,12 +281,12 @@ struct AllDayEventChipView: View {
     }
 
     private var shiftLabelBackgroundFallback: Color {
-        event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelBackgroundColor(for: $0.color) }
+        event.shiftDisplayColor.map { ShiftDisplayColors.calendarLabelBackgroundColor(for: $0) }
             ?? ShiftCalendarColors.primaryBlue.opacity(0.14)
     }
 
     private var chipForegroundFallback: Color {
-        event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelForegroundColor(for: $0.color) }
+        event.shiftDisplayColor.map { ShiftDisplayColors.calendarLabelForegroundColor(for: $0) }
             ?? ShiftCalendarColors.primaryBlueDark
     }
 }
@@ -282,6 +302,7 @@ struct WeekTimeAxisView: View {
     let timeLabelWidth: CGFloat
     let columnWidth: CGFloat
     let selectedDate: Date
+    let onEventTapped: (EventOccurrence) -> Void
 
     private let startHour = CalendarTimelineLayout.startHour
     private let endHour = CalendarTimelineLayout.endHour
@@ -392,6 +413,8 @@ struct WeekTimeAxisView: View {
                         x: CGFloat(index) * columnWidth + 3,
                         y: eventOffset(for: event)
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture { onEventTapped(event) }
                 }
             }
         }
@@ -475,7 +498,7 @@ struct CalendarEventBlockView: View {
             for: event,
             eventBackgroundColorHex: eventBackgroundColorHex,
             workRecordBackgroundColorHex: workRecordBackgroundColorHex,
-            shiftFallback: event.shiftTemplateID?.color ?? ShiftCalendarColors.primaryBlue
+            shiftFallback: event.shiftDisplayColor ?? ShiftCalendarColors.primaryBlue
         )
     }
 
@@ -489,7 +512,7 @@ struct CalendarEventBlockView: View {
     }
 
     private var eventForegroundFallback: Color {
-        event.shiftTemplateID.map { ShiftDisplayColors.solidForegroundColor(for: $0.color) }
+        event.shiftDisplayColor.map { ShiftDisplayColors.solidForegroundColor(for: $0) }
             ?? Color.black.opacity(0.82)
     }
 }

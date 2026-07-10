@@ -13,18 +13,24 @@ struct MonthCalendarView: View {
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
     @ObservedObject private var purchaseManager = RemoveAdsPurchaseManager.shared
+    @ObservedObject private var calendarSharingStore: CalendarSharingStore
     private let holidaySubscriptionManager: HolidaySubscriptionManager
+    @State private var showingCalendarSelection = false
+    @State private var readOnlyDetail: ReadOnlyCalendarDetail?
 
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
         eventUseCase: EventUseCase,
-        holidaySubscriptionManager: HolidaySubscriptionManager
+        holidaySubscriptionManager: HolidaySubscriptionManager,
+        calendarSharingStore: CalendarSharingStore
     ) {
         self.holidaySubscriptionManager = holidaySubscriptionManager
+        _calendarSharingStore = ObservedObject(wrappedValue: calendarSharingStore)
         _viewModel = StateObject(
             wrappedValue: MonthCalendarViewModel(
                 calendarDisplayUseCase: calendarDisplayUseCase,
                 eventUseCase: eventUseCase,
+                calendarSharingStore: calendarSharingStore,
                 subscriptionManager: holidaySubscriptionManager
             )
         )
@@ -42,6 +48,12 @@ struct MonthCalendarView: View {
                 CalendarHeaderView(
                     title: currentTitle,
                     displayMode: viewModel.displayMode,
+                    calendarAvatarInitial: calendarAvatarInitial,
+                    calendarDisplayName: calendarSharingStore.selectedCalendarDisplayName,
+                    isReadOnlyCalendar: calendarSharingStore.accessPolicy.isReadOnly,
+                    onCalendarTapped: {
+                        showingCalendarSelection = true
+                    },
                     onStatisticsTapped: openStatistics,
                     onShiftInputTapped: {
                         viewModel.enterShiftInputMode()
@@ -55,6 +67,16 @@ struct MonthCalendarView: View {
                     },
                     onSettingsTapped: openSettings
                 )
+
+                if let statusText = sharedCalendarStatusText {
+                    Text(statusText)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 4)
+                        .background(ShiftCalendarColors.primaryBlue.opacity(0.06))
+                        .accessibilityLabel(statusText)
+                }
 
                 calendarContent
                     .overlay {
@@ -84,6 +106,16 @@ struct MonthCalendarView: View {
             Task {
                 await viewModel.openCalendar(on: date)
             }
+        }
+        .popover(isPresented: $showingCalendarSelection) {
+            CalendarSelectionView()
+                .environmentObject(calendarSharingStore)
+                .environmentObject(localization)
+                .presentationCompactAdaptation(.sheet)
+        }
+        .sheet(item: $readOnlyDetail) { detail in
+            ReadOnlySharedCalendarDetailView(detail: detail)
+                .environmentObject(localization)
         }
         .sheet(isPresented: $showingSettings, onDismiss: {
             // 无论通过关闭按钮还是下拉手势关闭，都刷新 shiftTemplates
@@ -312,6 +344,7 @@ struct MonthCalendarView: View {
                                     .environmentObject(localization)
                                     .onTapGesture {
                                         viewModel.selectDay(cell)
+                                        presentReadOnlyDetailIfNeeded(for: cell)
                                     }
                                 } else {
                                     // 空 cell
@@ -412,7 +445,8 @@ struct MonthCalendarView: View {
                     await viewModel.openSelectedDateEntryEditor()
                 }
             },
-            onModeChanged: handleModeChanged
+            onModeChanged: handleModeChanged,
+            showsAddButton: calendarSharingStore.accessPolicy.showsAddButton
         )
     }
 
@@ -559,7 +593,8 @@ struct MonthCalendarView: View {
                 cells: viewModel.weekCells,
                 onDateSelected: { date in
                     viewModel.selectDate(date)
-                }
+                },
+                onEventTapped: presentReadOnlyEventIfNeeded
             )
             .environmentObject(localization)
         }
@@ -573,11 +608,44 @@ struct MonthCalendarView: View {
             // 日视图内容
             DayCalendarView(
                 selectedDate: viewModel.selectedDate,
-                cell: viewModel.dayCell
+                cell: viewModel.dayCell,
+                onEventTapped: presentReadOnlyEventIfNeeded
             )
             .environmentObject(localization)
         }
         .background(ShiftCalendarColors.backgroundColor)
+    }
+
+    private var calendarAvatarInitial: String? {
+        guard let calendar = calendarSharingStore.selectedSharedCalendar else { return nil }
+        return CalendarAvatarInitial.make(
+            displayName: calendar.displayName,
+            fallback: localization.localized(.calendarSharingUnknownPerson)
+        )
+    }
+
+    private var sharedCalendarStatusText: String? {
+        guard let calendar = calendarSharingStore.selectedSharedCalendar else { return nil }
+        return String(
+            format: localization.localized(.calendarSharingStatusFormat),
+            locale: localization.currentLocale,
+            calendar.resolvedDisplayName(
+                fallback: localization.localized(.calendarSharingUnknownPerson)
+            )
+        )
+    }
+
+    private func presentReadOnlyDetailIfNeeded(for cell: CalendarDayCell) {
+        guard calendarSharingStore.accessPolicy.isReadOnly, !cell.events.isEmpty else { return }
+        readOnlyDetail = ReadOnlyCalendarDetail(date: cell.date.toDate(), events: cell.events)
+    }
+
+    private func presentReadOnlyEventIfNeeded(_ event: EventOccurrence) {
+        guard calendarSharingStore.accessPolicy.isReadOnly else { return }
+        readOnlyDetail = ReadOnlyCalendarDetail(
+            date: event.occurrenceDate.toDate(),
+            events: [event]
+        )
     }
 }
 
@@ -889,7 +957,7 @@ struct DayCellView: View {
     }
 
     private func eventLabelTextColor(for event: EventOccurrence) -> Color {
-        let fallback = event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelForegroundColor(for: $0.color) }
+        let fallback = event.shiftDisplayColor.map { ShiftDisplayColors.calendarLabelForegroundColor(for: $0) }
             ?? ShiftCalendarColors.primaryBlueDark
         return CalendarItemColorSettings.foregroundColor(
             for: event,
@@ -900,7 +968,7 @@ struct DayCellView: View {
     }
 
     private func eventLabelBackgroundColor(for event: EventOccurrence) -> Color {
-        let shiftFallback = event.shiftTemplateID.map { ShiftDisplayColors.calendarLabelBackgroundColor(for: $0.color) }
+        let shiftFallback = event.shiftDisplayColor.map { ShiftDisplayColors.calendarLabelBackgroundColor(for: $0) }
             ?? ShiftCalendarColors.primaryBlue.opacity(0.12)
         return CalendarItemColorSettings.backgroundColor(
             for: event,
@@ -911,10 +979,10 @@ struct DayCellView: View {
     }
 
     private func eventLabelBorderColor(for event: EventOccurrence) -> Color {
-        guard let shiftTemplateID = event.shiftTemplateID else {
+        guard let shiftColor = event.shiftDisplayColor else {
             return .clear
         }
-        return ShiftDisplayColors.calendarLabelBorderColor(for: shiftTemplateID.color)
+        return ShiftDisplayColors.calendarLabelBorderColor(for: shiftColor)
     }
 
     private var workRecordLabelBackgroundColor: Color {

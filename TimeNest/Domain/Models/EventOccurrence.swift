@@ -14,6 +14,40 @@ struct EventOccurrence: Identifiable, Hashable {
     let notificationID: String?
     let shiftTemplateID: ShiftTimeTemplateID?
     let workInfo: WorkInfo?
+    /// Only populated for received CloudKit shifts. It never enters SwiftData or Widget data.
+    let sharedShiftColorHex: String?
+
+    init(
+        id: String,
+        eventID: UUID,
+        occurrenceDate: DateOnly,
+        startDate: Date,
+        endDate: Date,
+        isAllDay: Bool,
+        title: String,
+        note: String?,
+        categoryID: UUID?,
+        reminderOffsetMinutes: Int?,
+        notificationID: String?,
+        shiftTemplateID: ShiftTimeTemplateID?,
+        workInfo: WorkInfo?,
+        sharedShiftColorHex: String? = nil
+    ) {
+        self.id = id
+        self.eventID = eventID
+        self.occurrenceDate = occurrenceDate
+        self.startDate = startDate
+        self.endDate = endDate
+        self.isAllDay = isAllDay
+        self.title = title
+        self.note = note
+        self.categoryID = categoryID
+        self.reminderOffsetMinutes = reminderOffsetMinutes
+        self.notificationID = notificationID
+        self.shiftTemplateID = shiftTemplateID
+        self.workInfo = workInfo
+        self.sharedShiftColorHex = sharedShiftColorHex
+    }
 }
 
 enum WorkClockKind: Hashable {

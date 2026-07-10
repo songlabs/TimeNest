@@ -7,12 +7,44 @@ struct CalendarHeaderView: View {
 
     let title: String
     let displayMode: CalendarViewMode
+    let calendarAvatarInitial: String?
+    let calendarDisplayName: String
+    let isReadOnlyCalendar: Bool
+    let onCalendarTapped: () -> Void
     let onStatisticsTapped: () -> Void
     let onShiftInputTapped: () -> Void
     let onPrevious: () -> Void
     let onNext: () -> Void
     let onTitleTapped: () -> Void
     let onSettingsTapped: () -> Void
+
+    init(
+        title: String,
+        displayMode: CalendarViewMode,
+        calendarAvatarInitial: String? = nil,
+        calendarDisplayName: String = "",
+        isReadOnlyCalendar: Bool = false,
+        onCalendarTapped: @escaping () -> Void = {},
+        onStatisticsTapped: @escaping () -> Void,
+        onShiftInputTapped: @escaping () -> Void,
+        onPrevious: @escaping () -> Void,
+        onNext: @escaping () -> Void,
+        onTitleTapped: @escaping () -> Void,
+        onSettingsTapped: @escaping () -> Void
+    ) {
+        self.title = title
+        self.displayMode = displayMode
+        self.calendarAvatarInitial = calendarAvatarInitial
+        self.calendarDisplayName = calendarDisplayName
+        self.isReadOnlyCalendar = isReadOnlyCalendar
+        self.onCalendarTapped = onCalendarTapped
+        self.onStatisticsTapped = onStatisticsTapped
+        self.onShiftInputTapped = onShiftInputTapped
+        self.onPrevious = onPrevious
+        self.onNext = onNext
+        self.onTitleTapped = onTitleTapped
+        self.onSettingsTapped = onSettingsTapped
+    }
 
     var body: some View {
         unifiedHeaderView
@@ -26,7 +58,7 @@ struct CalendarHeaderView: View {
     /// 中间导航区域 + 右侧更多菜单。
     private var unifiedHeaderView: some View {
         HStack(spacing: 0) {
-            Color.clear
+            calendarSelectionButton
                 .frame(width: 44)
 
             HStack(spacing: 6) {
@@ -65,6 +97,33 @@ struct CalendarHeaderView: View {
         }
     }
 
+    private var calendarSelectionButton: some View {
+        Button(action: onCalendarTapped) {
+            ZStack(alignment: .bottomTrailing) {
+                CalendarIdentityAvatarView(initial: calendarAvatarInitial, size: 36)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundColor(ShiftCalendarColors.primaryBlue)
+                    .frame(width: 14, height: 14)
+                    .background(ShiftCalendarColors.backgroundColor)
+                    .clipShape(Circle())
+                    .offset(x: 2, y: 2)
+            }
+            .frame(width: 44, height: 44)
+            .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localization.localized(.calendarSharingSwitchAccessibilityLabel))
+        .accessibilityHint(localization.localized(.calendarSharingSwitchAccessibilityHint))
+        .accessibilityValue(
+            calendarDisplayName.isEmpty
+                ? localization.localized(.calendarSharingMyCalendar)
+                : calendarDisplayName
+        )
+        .accessibilityAddTraits(.isSelected)
+    }
+
     private var titleFont: Font {
         switch displayMode {
         case .month, .week:
@@ -86,14 +145,16 @@ struct CalendarHeaderView: View {
     /// 右侧更多菜单：收纳低频入口。
     private var moreMenu: some View {
         Menu {
-            if displayMode == .month {
+            if displayMode == .month && !isReadOnlyCalendar {
                 Button(action: onShiftInputTapped) {
                     Label(localization.localized(.shiftInputTitle), systemImage: "calendar.badge.plus")
                 }
             }
 
-            Button(action: onStatisticsTapped) {
-                Label(localization.localized(.workStatistics), systemImage: "chart.bar.xaxis")
+            if !isReadOnlyCalendar {
+                Button(action: onStatisticsTapped) {
+                    Label(localization.localized(.workStatistics), systemImage: "chart.bar.xaxis")
+                }
             }
 
             Button(action: onSettingsTapped) {

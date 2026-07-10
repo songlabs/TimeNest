@@ -298,6 +298,13 @@ extension EventOccurrence {
     var localizedDisplayTitle: String {
         ShiftTimeTemplate.localizedDisplayName(for: title, templateID: shiftTemplateID)
     }
+
+    var shiftDisplayColor: Color? {
+        if let sharedShiftColorHex, let color = Color(hex: sharedShiftColorHex) {
+            return color
+        }
+        return shiftTemplateID?.color
+    }
 }
 
 // MARK: - 事件标记颜色扩展
