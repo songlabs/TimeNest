@@ -83,7 +83,11 @@ final class AdConsentManager: ObservableObject {
     private init() {}
 
     func requestConsentInfoIfNeeded() {
-        guard AdConfiguration.isEnabled, !hasRequestedConsentInfo else { return }
+        guard AdConfiguration.isEnabled,
+              !RemoveAdsPurchaseManager.shared.isAdsRemoved,
+              !hasRequestedConsentInfo else {
+            return
+        }
         hasRequestedConsentInfo = true
 
         let parameters = RequestParameters()
@@ -284,9 +288,9 @@ final class RemoveAdsPurchaseManager: ObservableObject {
                     guard applyVerifiedRemoveAdsTransaction(transaction) else {
                         return .failed(.verificationFailed)
                     }
-                    Self.debugLog("Finishing purchase transaction id=\(transaction.id).")
+                    Self.debugLog("Finishing verified remove-ads transaction.")
                     await transaction.finish()
-                    Self.debugLog("Purchase transaction finish completed for id=\(transaction.id).")
+                    Self.debugLog("Verified remove-ads transaction finish completed.")
                     let entitlementScan = await scanCurrentEntitlements(context: "post-purchase finish")
                     if !entitlementScan.hasVerifiedRemoveAdsEntitlement {
                         Self.debugLog("Post-purchase entitlement scan did not find remove-ads entitlement after a verified transaction. Keeping purchased state from the verified purchase transaction for this session.")
@@ -351,7 +355,7 @@ final class RemoveAdsPurchaseManager: ObservableObject {
                     if transaction.revocationDate == nil {
                         matchedRemoveAdsCount += 1
                     } else {
-                        Self.debugLog("Remove-ads entitlement is revoked. context=\(context), transactionID=\(transaction.id).")
+                        Self.debugLog("Remove-ads entitlement is revoked. context=\(context).")
                     }
                 }
             case .unverified(let transaction, let error):
@@ -413,7 +417,7 @@ final class RemoveAdsPurchaseManager: ObservableObject {
     }
 
     private static func debugSummary(for transaction: Transaction) -> String {
-        "transactionID=\(transaction.id), originalID=\(transaction.originalID), productID=\(transaction.productID), productType=\(transaction.productType), purchaseDate=\(transaction.purchaseDate), revocationDate=\(String(describing: transaction.revocationDate)), expirationDate=\(String(describing: transaction.expirationDate)), environment=\(transaction.environmentStringRepresentation)"
+        "productID=\(transaction.productID), productType=\(transaction.productType), purchaseDate=\(transaction.purchaseDate), revocationDate=\(String(describing: transaction.revocationDate)), expirationDate=\(String(describing: transaction.expirationDate)), environment=\(transaction.environment)"
     }
 
     private static func debugLog(_ message: @autoclosure () -> String) {

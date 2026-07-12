@@ -2,6 +2,16 @@
 
 作成日: 2026-07-06
 
+## 2026-07-12 追補
+
+- 現在の repository HEAD は `8bea0d9`。下記の 2026-07-06 時点の commit 数、HEAD、diff 件数、検証結果は履歴スナップショットであり、現在値として扱わない。
+- その後、Apple iCloud / CloudKit を使う共有カレンダーを追加。作成者は予定・シフト・勤務記録を個別に共有でき、受信側は閲覧のみ。メモ、通知、音声内容、時給、給与、交通費、テンプレート、広告・購入状態、端末情報、App 設定、Widget の私的データ、祝日購読内部情報は共有対象外。
+- `ja` / `zh-Hans` / `zh-Hant` / `en` / `ko` の `Localizable.strings` は現在各 392 keys。`InfoPlist.strings` は各 5 keys。
+- TimeNest 独自アカウント、開発者運用 backend、汎用 cloud sync は引き続き存在しないが、「cloud sharing は未実装」という旧表現は現在の CloudKit 共有機能には適用しない。
+- `v1.0.0` の app sandbox `Library/Application Support/TimeNest.store` と、現在の App Group `Library/Application Support/TimeNest.store` は別 URL であり、自動 fallback はないため upgrade data loss risk は成立していた。現在は `LegacyStoreMigrator` の一回限りの model-level migration で code-side risk を修正済み。
+- migration は移行先が空の場合だけ全 2 entities を保存し、既存の移行先データを上書き・merge せず、旧 store を削除しない。local temporary-store tests は通過したが、App Store `v1.0.0` からの実機 upgrade は未確認。
+- public `privacy.html` / `support.html` の source は本 repository にない。CloudKit 対応草案は更新したが、公開 URL は未同期で人工 publish が必要。
+
 ## 1. 対象範囲
 
 - 対象範囲: `v1.0.0..HEAD`
@@ -64,9 +74,9 @@
 - `VersionedSchema` / `SchemaMigrationPlan` の追加はない。
 - SwiftData の schema 構成は `SwiftDataCalendarEventEntity` と `SwiftDataReminderEntity` のまま。
 - ただし production store の URL が App Group container 配下に変更された。
-  - Widget と共有するための App Group container を使う構成。
-  - 旧 store location から新 store location への copy/migration 処理はこの差分では確認できない。
-  - 既存インストールからの upgrade data preservation は人工確認が必要。
+  - App は App Group の SwiftData store を使い、Widget は同じ App Group 内の別ファイル `widget-snapshot.json` を読む。Widget は SwiftData store を直接開かない。
+  - 旧 store location から新 store location への guarded model-level migration を追加済み。
+  - local temporary-store tests で data copy / no overwrite / no repeat / rollback を確認済み。App Store install package の実機 upgrade data preservation は人工確認が必要。
 - Widget snapshot refresh はイベント変更時と起動時に走る構成。
 
 ### Bug 修正
@@ -110,7 +120,8 @@
 - SwiftData schema file の変更はなし。
 - schema migration plan 追加なし。
 - store location は App Group container 配下へ変更されている。
-- 既存 store から App Group store への migration/copy 処理は確認できないため、upgrade install で既存データが見えるかは人工確認が必要。
+- 既存 store から App Group store への一回限りの model-level migration を追加。移行先に event/reminder が存在する場合は import せず、旧 store は保持する。
+- migration regression tests は temporary directory 上で通過。実際の App Store `v1.0.0` からの upgrade install は未確認のため、実機 release gate として残る。
 - Widget bundle / App Group / entitlement は repository 上で整合しているが、Apple Developer 側の identifier / profile は人工確認が必要。
 
 ## 6. 多言語 / Help / README 更新内容
@@ -159,9 +170,7 @@
   - 音声メモ permission allow/deny。
   - Purchased/unpurchased ad layout。
   - Widget refresh and deep link。
-  - Upgrade install after App Group SwiftData store location change。
-- Git:
-  - ローカルに `v1.0.0` tag が存在しないため、必要なら tag fetch/作成を人手で判断。
+  - App Store `v1.0.0` から current candidate への実機 upgrade と migrated data / Widget refresh。
 
 ## 9. 検証結果
 
@@ -193,10 +202,31 @@
 
 ## 10. 非意図 diff
 
-- 現時点で確認された diff は本作業の意図範囲内。
-- 変更対象:
-  - README
-  - Help localized strings
-  - App Store release checklist の事実更新
-  - 本 review document
-- SwiftData schema、広告ロジック、StoreKit ロジック、UMP/ATT ロジック、Widget/App Group 設定、署名設定は本作業では変更していない。
+- 作業開始時点で 18 tracked files に未 commit 変更が存在。本作業はそれらを reset / checkout せず保持した。
+- 現在の worktree は 22 entries（19 modified / 3 untracked）。このうち本作業の変更を含むのは 13 files（migration code/test/project registration、README、7 release docs、support draft）。
+- 残る 9 files（2 generated strings、`AdConfiguration.swift`、`CloudKitCalendarSharingClient.swift`、5 locale strings）は作業開始前からの別変更で、本作業では内容を変更していない。
+- `TimeNestApp.swift` に作業開始前から存在した ad-consent startup diff は保持し、本作業では ModelContainer 作成部分だけを migration 対応へ変更した。
+- SwiftData schema、広告ロジック、StoreKit Product ID、CloudKit schema、Widget/App Group identifier、署名設定は本作業では変更していない。SwiftData store migration とその tests は本追補で追加した。
+
+## 11. 2026-07-12 追補の検証結果
+
+- `tuist generate --no-open`
+  - 成功。追加した migration source / test の project 登録だけを確認し、generated strings の trailing whitespace は機械的に除去。
+- SwiftData default `ModelConfiguration("TimeNest", ...)` URL probe
+  - `Library/Application Support/TimeNest.store` を確認。current App Group store は App Group container の `Library/Application Support/TimeNest.store` であり、同名だが container が異なる。
+- `xcodebuild -workspace TimeNest.xcworkspace -scheme TimeNest -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:TimeNestTests/LegacyStoreMigrationTests test`
+  - 成功。6 tests / 0 failures。
+- local upgrade simulation
+  - 上記 migration tests の temporary directory で、予定・シフト・勤務記録・reminder の import、二回目の no-op、destination data protection、save 前 failure rollback、legacy store preservation を確認。
+- `xcodebuild -workspace TimeNest.xcworkspace -scheme TimeNest -configuration Debug -destination 'platform=iOS Simulator,name=iPhone 17' build`
+  - 成功。
+- `xcodebuild -workspace TimeNest.xcworkspace -scheme TimeNest -configuration Release -destination 'generic/platform=iOS Simulator' build`
+  - 成功。最終 source 変更後にも再実行済み。
+- `xcodebuild -workspace TimeNest.xcworkspace -scheme TimeNest -destination 'platform=iOS Simulator,name=iPhone 17' test`
+  - 成功。187 tests / 0 failures。
+- public URL check
+  - `privacy.html` / `support.html` は HTTP 200。ただし CloudKit disclosure / sharing support / Traditional Chinese language list は未反映で、公開 source の人工更新が必要。
+- `git diff --check`
+  - 成功。
+- Archive / signing / Organizer validation / upload
+  - 本作業の禁止事項に従い未実行。

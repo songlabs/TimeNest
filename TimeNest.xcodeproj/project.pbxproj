@@ -30,8 +30,10 @@
 		216457AE00E9B8E7B8EAAE04 /* CalendarSharingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3A50049E09FE0CDB9A8A0A3 /* CalendarSharingModels.swift */; };
 		2A29C0D5BAF560D733D461B1 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C782E37B736D8E03823F101 /* Localizable.strings */; };
 		2BBAA283D6F758E85311F5B7 /* TimeNestWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 40CE646EF687AB7A7AA103A5 /* TimeNestWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		2CB8C375608982FD526F3BC6 /* LegacyStoreMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2526FED6E41D57A40D2A3384 /* LegacyStoreMigrationTests.swift */; };
 		2E6816AB0A09DC4A5E7070D7 /* ReminderScheduling.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3189AE518B84EB9C17417160 /* ReminderScheduling.swift */; };
 		2F6DE0F23840DF36BEBFD5CD /* WidgetSnapshotCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8E29A5142D201F4716BE83A /* WidgetSnapshotCoordinator.swift */; };
+		31C5DD568968E94F80C23E44 /* LegacyStoreMigrator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 572D1383EFAE21F37EBBEB49 /* LegacyStoreMigrator.swift */; };
 		32BB4B0199854A155036D99D /* WorkStatisticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E81E35DBECA1EFA239E2481A /* WorkStatisticsView.swift */; };
 		36D36BCDEDD761782DD873B9 /* ICSDownloadService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F91FD96863142DA3FDD3A281 /* ICSDownloadService.swift */; };
 		3885194124E81A81E3EA5AEB /* ReminderUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9DAAC92C759FA388396D515 /* ReminderUseCase.swift */; };
@@ -204,6 +206,7 @@
 		2112727B74951811FF87468E /* ReminderStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderStep.swift; sourceTree = "<group>"; };
 		23C741E9AFC95D68570F8BF9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		2402FC9F05631D686365D6EE /* HolidayNameLocalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayNameLocalizer.swift; sourceTree = "<group>"; };
+		2526FED6E41D57A40D2A3384 /* LegacyStoreMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyStoreMigrationTests.swift; sourceTree = "<group>"; };
 		255F8DF37315D59AA95EB8C6 /* MonthCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarView.swift; sourceTree = "<group>"; };
 		2A06BBF22976DDC130A4D262 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		2ABF7A719DD2B715D9199174 /* SwiftDataCalendarEventEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataCalendarEventEntity.swift; sourceTree = "<group>"; };
@@ -223,6 +226,7 @@
 		523DBD26D2047F7710E61B9F /* CalendarDisplayUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDisplayUseCase.swift; sourceTree = "<group>"; };
 		54397E24A5C183E8B958D162 /* HolidayRegion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRegion.swift; sourceTree = "<group>"; };
 		56173AE8F9BFC1AD236F1583 /* EventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventRepository.swift; sourceTree = "<group>"; };
+		572D1383EFAE21F37EBBEB49 /* LegacyStoreMigrator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LegacyStoreMigrator.swift; sourceTree = "<group>"; };
 		572E3EA9D52F0C5443BFA9B7 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		59A18716AECA636B75D5EA18 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		5C542F8ABD886FDBF6BE6E30 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -666,6 +670,7 @@
 		B35F5DD8A22639E15A98CBED /* Persistence */ = {
 			isa = PBXGroup;
 			children = (
+				572D1383EFAE21F37EBBEB49 /* LegacyStoreMigrator.swift */,
 				2ABF7A719DD2B715D9199174 /* SwiftDataCalendarEventEntity.swift */,
 				A928DCCA18FF0F3B04CAC4CD /* SwiftDataEventMapper.swift */,
 				CE153F85137A2023D9E1A57B /* SwiftDataEventRepository.swift */,
@@ -776,6 +781,7 @@
 				CBCF46D788726D4DCCE90149 /* CalendarSharingTests.swift */,
 				101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */,
 				5F13F5A7D39130718BFA3D8C /* ICSParseServiceTests.swift */,
+				2526FED6E41D57A40D2A3384 /* LegacyStoreMigrationTests.swift */,
 				699CA3294F4766305E8F0475 /* SettingsAndStatisticsLogicTests.swift */,
 			);
 			path = TimeNestTests;
@@ -963,6 +969,7 @@
 				FCB689DFEB2900FB86661384 /* CalendarSharingTests.swift in Sources */,
 				030693C09B9F4289D5D6BA8B /* HolidayNameLocalizerTests.swift in Sources */,
 				7D94668215024A4C620771B9 /* ICSParseServiceTests.swift in Sources */,
+				2CB8C375608982FD526F3BC6 /* LegacyStoreMigrationTests.swift in Sources */,
 				E0195D25135AD75438254F40 /* SettingsAndStatisticsLogicTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1028,6 +1035,7 @@
 				1DE97C99308A4D7C3FE1738B /* InMemoryEventRepository.swift in Sources */,
 				B89B1698AB583D10078BFFEB /* InMemoryReminderRepository.swift in Sources */,
 				91358C1C8BC8A90ED283F457 /* NoopReminderScheduler.swift in Sources */,
+				31C5DD568968E94F80C23E44 /* LegacyStoreMigrator.swift in Sources */,
 				63269FA47CA3D0AFBB22F285 /* SwiftDataCalendarEventEntity.swift in Sources */,
 				8D11BD6CB5FCB905B4D59B23 /* SwiftDataEventMapper.swift in Sources */,
 				A4C08451CAC6D6B86F2900C9 /* SwiftDataEventRepository.swift in Sources */,

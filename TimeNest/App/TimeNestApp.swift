@@ -30,11 +30,7 @@ struct TimeNestApp: App {
             SwiftDataReminderEntity.self
         ])
         do {
-            let configuration = try Self.makeModelConfiguration(schema: schema)
-            modelContainer = try ModelContainer(
-                for: schema,
-                configurations: [configuration]
-            )
+            modelContainer = try Self.makeModelContainer(schema: schema)
         } catch {
             fatalError("Failed to create SwiftData ModelContainer: \(error)")
         }
@@ -132,10 +128,14 @@ struct TimeNestApp: App {
         }
         .task {
             RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
-            await RemoveAdsPurchaseManager.shared.refreshPurchasedState(context: "app startup")
+            let isAdsRemoved = await RemoveAdsPurchaseManager.shared.refreshPurchasedState(
+                context: "app startup"
+            )
+            if !isAdsRemoved {
+                AdConsentManager.shared.requestConsentInfoIfNeeded()
+            }
         }
         .task {
-            AdConsentManager.shared.requestConsentInfoIfNeeded()
             await widgetSnapshotCoordinator.refresh()
         }
         .task {
@@ -147,8 +147,8 @@ struct TimeNestApp: App {
         }
     }
 
-    private static func makeModelConfiguration(schema: Schema) throws -> ModelConfiguration {
-        let appGroupID = WidgetSnapshotStore.appGroupIdentifier
+    private static func makeModelContainer(schema: Schema) throws -> ModelContainer {
+        let appGroupID = LegacyStoreMigrator.appGroupIdentifier
         guard let appGroupURL = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupID
         ) else {
@@ -172,17 +172,28 @@ struct TimeNestApp: App {
             throw AppGroupStoreError.applicationSupportDirectoryMissing(applicationSupportURL)
         }
 
-        let storeURL = applicationSupportURL.appendingPathComponent("TimeNest.store", isDirectory: false)
-        debugLog("App Group container: \(appGroupURL.path)")
-        debugLog("SwiftData store URL: \(storeURL.path)")
+        let storeURL = LegacyStoreMigrator.destinationStoreURL(
+            appGroupContainerURL: appGroupURL
+        )
+        let legacyApplicationSupportURL = URL.applicationSupportDirectory
+        let legacyStoreURL = legacyApplicationSupportURL.appendingPathComponent(
+            LegacyStoreMigrator.storeFileName,
+            isDirectory: false
+        )
+        let markerURL = applicationSupportURL.appendingPathComponent(
+            LegacyStoreMigrator.markerFileName,
+            isDirectory: false
+        )
         debugLog("SwiftData store parent exists: \(parentExists), isDirectory: \(isDirectory.boolValue)")
 
-        return ModelConfiguration(
-            "TimeNest",
+        let preparation = try LegacyStoreMigrator.prepareModelContainer(
             schema: schema,
-            url: storeURL,
-            cloudKitDatabase: .none
+            legacyStoreURL: legacyStoreURL,
+            destinationStoreURL: storeURL,
+            markerURL: markerURL
         )
+        debugLog(preparation.outcome.logSummary)
+        return preparation.container
     }
 
     private static func debugLog(_ message: @autoclosure () -> String) {

@@ -389,7 +389,7 @@
 "help.privacy.storage.question" = "数据保存在哪里？";
 "help.privacy.storage.answer" = "日程、班次、打工记录、显示设置和节假日设置保存在此设备中。Widget 显示所需的日历信息只会在同一设备的 App Group 内共享。";
 "help.privacy.account.question" = "需要账号吗？";
-"help.privacy.account.answer" = "使用 TimeNest 无需注册账号或登录，当前也没有 TimeNest 自有云同步。";
+"help.privacy.account.answer" = "使用 TimeNest 无需注册账号或登录。TimeNest 不提供自有云同步，共享日历使用 Apple 的 iCloud（CloudKit）。";
 "help.privacy.delete_app.question" = "删除 App 后数据会怎样？";
 "help.privacy.delete_app.answer" = "删除 App 后，保存在设备内的 TimeNest 数据也会按照 iOS 的通常行为被删除。";
 "help.privacy.options.action" = "管理广告隐私选项";

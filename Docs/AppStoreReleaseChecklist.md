@@ -2,7 +2,7 @@
 
 > Release-preparation checklist only. It does not guarantee App Review approval. Confirm manual items in Apple Developer, App Store Connect, Xcode Organizer, and the exact submitted build.
 
-## Repository Audit Snapshot (2026-07-06)
+## Repository Audit Snapshot (updated 2026-07-12)
 
 - [x] App target, test target, and Widget Extension are present; project shared schemes are `TimeNest` and `TimeNestWidgetExtension`, and the workspace also contains `TimeNest-Workspace`.
 - [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.TimeNestWidgetExtension`.
@@ -10,14 +10,15 @@
 - [x] Widget deep links use the registered `timenest` URL scheme.
 - [x] App and Widget versions currently match at `1.1 (3)`.
 - [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
-- [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 351 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match at 5 keys and include tracking, microphone, and speech-recognition purpose strings.
+- [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 392 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match at 5 keys and include tracking, microphone, and speech-recognition purpose strings.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
-- [x] Current implementation has no account sign-in, cloud sync, or TimeNest-owned backend upload.
+- [x] Current implementation has no TimeNest account, developer-operated general cloud sync, or TimeNest-owned backend upload. Optional shared calendars use Apple iCloud/CloudKit, keep recipients read-only, and exclude private memo, notification, pay, transport-fee, purchase, ad, settings, and device data.
 - [x] Memo voice input uses microphone and speech-recognition permissions only from the event memo UI.
 - [x] Debug and simulator builds use Google's official test IDs. Release device/archive builds are ad-enabled for unpurchased users and cannot be built with disabled ads, empty IDs, placeholders, malformed IDs, or Google's test IDs.
 - [x] Both Release build-setting sources use the approved production AdMob App ID and Banner Unit ID.
 - [x] Google UMP now updates consent once per launch and gates Mobile Ads initialization and banner loading on `canRequestAds`. Publisher Privacy Treatment disables ad personalization.
 - [x] ATT is requested after the UMP consent flow and before Mobile Ads initialization/banner loading. `NSUserTrackingUsageDescription` is localized in all five supported languages.
+- [x] The `v1.0.0` app-sandbox `TimeNest.store` and the current App Group `TimeNest.store` use the same two-entity schema, and a guarded one-time model-level migration now runs before the current store enters normal use.
 
 ## 1. Developer Program and App Store Connect
 
@@ -52,7 +53,7 @@
 
 - [x] Record the public Privacy Policy URL in release documents: https://songlabs.github.io/timenest/privacy.html
 - [x] Expose the public Privacy Policy from Settings > Support > Privacy Policy using the system URL-opening flow.
-- [ ] Confirm the published privacy policy matches the submitted build, including its effective date, support contact, and final advertising disclosure.
+- [ ] Manually publish the CloudKit-sharing updates from `Docs/PrivacyPolicyDraft.md` and `Docs/SupportPageDraft.md`, then confirm both public URLs match the submitted build. The public HTML sources are not in this repository and were not updated here.
 - [x] Prepare `Docs/AppPrivacyAnswersDraft.md` covering local storage, Widget App Group sharing, public ICS requests, Google Mobile Ads uncertainty, and ATT decision points.
 - [ ] Submission gate: complete App Store Connect App Privacy answers using the submitted Google Mobile Ads SDK/configuration and the app's public ICS requests, local notifications, local storage, and Widget App Group behavior.
 - [ ] Review the archive privacy report and all SDK privacy manifests. Confirm the app-level `PrivacyInfo.xcprivacy` and App Store answers remain accurate for the submitted build.
@@ -72,10 +73,10 @@
 
 - [x] Record the public Support URL in release documents: https://songlabs.github.io/timenest/support.html
 - [ ] Confirm both public URLs remain reachable without authentication and accurately describe the submitted build.
-- [ ] Update the published privacy policy so the advertising disclosure is final rather than conditional and clearly covers third-party data retention/deletion and how users can withdraw consent or reopen required privacy options.
+- [ ] Update the published privacy policy so the CloudKit and advertising disclosures are final rather than conditional and clearly cover sharing lifecycle, third-party data retention/deletion, and how users can withdraw consent or reopen required privacy options.
 - [x] Replace the URL placeholders in `Docs/AppStoreMetadataDraft.md` with the public Privacy Policy and Support URLs.
 - [ ] Paste and recheck the final localized metadata against the exact submitted build and App Store Connect field limits.
-- [ ] Confirm metadata claims match the submitted build and do not describe login, cloud sync, sharing, analytics, or other unimplemented features as implemented. Only describe Remove Ads if the submitted build and App Store Connect product are ready.
+- [ ] Confirm metadata claims match the submitted build. Describe CloudKit calendar sharing as optional and recipient read-only; do not imply collaborative editing, full-account sync, private-field sharing, analytics, or other unimplemented features. Only describe Remove Ads if the submitted build and App Store Connect product are ready.
 - [x] Prepare the six-shot capture outline in `Docs/ScreenshotPlan.md`.
 - [ ] Prepare required iPhone screenshot sizes for each App Store locale selected in App Store Connect.
 - [ ] Capture: month view, week view, day view, event create/edit, holiday subscriptions, shift input/work statistics, and language/settings.
@@ -94,5 +95,6 @@
 - [ ] Confirm notification permission allow/deny behavior when saving an event with a reminder.
 - [ ] Complete `Docs/TestFlightChecklist.md` on the exact candidate build.
 - [ ] Complete at least one TestFlight internal-test pass and record device, iOS version, app version/build, language, network state, and result.
-- [ ] Confirm fresh-install and upgrade-install behavior, including SwiftData compatibility and Widget refresh.
+- [ ] On a physical device, install the App Store `v1.0.0`, create an event, shift, work record, and reminder, upgrade to the exact candidate, and confirm SwiftData preservation plus Widget refresh. The local temporary-store migration tests do not satisfy this gate.
+- [ ] On two physical devices with separate Apple IDs, verify CloudKit invitation acceptance, recipient read-only behavior, shared-content switches, calendar-name updates, stopping/leaving a share, and excluded private fields. Confirm the CloudKit Production schema and iCloud container are deployed for the submitted build.
 - [ ] Resolve release-blocking crashes, upload errors, missing metadata, and privacy-answer mismatches before submission.

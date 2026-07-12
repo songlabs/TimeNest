@@ -389,7 +389,7 @@
 "help.privacy.storage.question" = "Where is my data stored?";
 "help.privacy.storage.answer" = "Events, shifts, work records, display settings, and holiday settings are stored on this device. Calendar information needed for Widgets is shared only on this device through the App Group.";
 "help.privacy.account.question" = "Do I need an account?";
-"help.privacy.account.answer" = "You do not need to register an account or sign in to use TimeNest, and there is no TimeNest-operated cloud sync.";
+"help.privacy.account.answer" = "You do not need to register an account or sign in to use TimeNest. TimeNest has no developer-operated cloud sync; shared calendars use Apple's iCloud (CloudKit).";
 "help.privacy.delete_app.question" = "What happens to data if I delete the app?";
 "help.privacy.delete_app.answer" = "Deleting the app also removes TimeNest data stored on the device under normal iOS behavior.";
 "help.privacy.options.action" = "Manage Ad Privacy Options";

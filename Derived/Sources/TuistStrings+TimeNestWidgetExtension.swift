@@ -83,8 +83,6 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static func dateRangeFormat(_ p1: Any, _ p2: Any) -> String {
       return TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.date_range_format",String(describing: p1), String(describing: p2))
     }
-    /// Display Name
-    public static let displayName = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.display_name")
     /// Leave Share
     public static let leave = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.leave")
     /// This shared calendar will be removed from TimeNest. The owner's data will not be affected.
@@ -107,7 +105,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let readOnly = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.read_only")
     /// Shared with Me
     public static let receivedCalendars = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.received_calendars")
-    /// Enter both a display name and calendar name.
+    /// Enter a calendar name.
     public static let requiredFields = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.required_fields")
     /// Retry
     public static let retry = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.retry")
@@ -466,7 +464,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public enum Privacy: Sendable {
 
       public enum Account: Sendable {
-        /// You do not need to register an account or sign in to use TimeNest, and there is no TimeNest-operated cloud sync.
+        /// You do not need to register an account or sign in to use TimeNest. TimeNest has no developer-operated cloud sync; shared calendars use Apple's iCloud (CloudKit).
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.account.answer")
         /// Do I need an account?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.privacy.account.question")

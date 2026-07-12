@@ -431,6 +431,7 @@ enum CalendarSharingErrorMapper {
         case .serverResponseLost: "serverResponseLost"
         case .assetNotAvailable: "assetNotAvailable"
         case .accountTemporarilyUnavailable: "accountTemporarilyUnavailable"
+        case .participantAlreadyInvited: "participantAlreadyInvited"
         @unknown default: "unknown"
         }
     }

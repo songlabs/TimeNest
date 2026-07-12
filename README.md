@@ -11,6 +11,7 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 - Clock-in, clock-out, rest time, transport fee, and hourly-rate records.
 - Work statistics for a selected date range.
 - Public-holiday subscriptions and ICS synchronization for Japan, China, Taiwan, Korea, and the United States.
+- Optional CloudKit calendar sharing with read-only recipients and separate switches for events, shifts, and work records. Memos, notifications, voice content, hourly rates, pay, and transport fees are not shared.
 - Japanese, Simplified Chinese, Traditional Chinese, English, and Korean UI resources, plus a system-language mode.
 - Light, dark, and system appearance settings.
 - A calendar banner-ad container backed by Google Mobile Ads.
@@ -25,6 +26,7 @@ The first release is ad-supported and includes a one-time Apple In-App Purchase 
 - iOS 17.0 or later
 - Tuist project description with a checked-in Xcode project/workspace
 - Google Mobile Ads and Google User Messaging Platform through Swift Package Manager
+- Apple CloudKit calendar sharing
 
 ## Local Build
 
@@ -117,7 +119,9 @@ The localization parity tests require the `ja`, `zh-Hans`, `zh-Hant`, `en`, and 
 
 ## Local-First Data
 
-Calendar events, shifts, work records, settings, and holiday choices are stored on the device. SwiftData repositories are the production event/reminder storage and use the `group.com.songlabs.timenest` App Group container so the app and Widget can share local data needed for Widget display. Downloaded holiday data is a replaceable local cache. Network access is limited to explicit or scheduled holiday-source refreshes and enabled ad SDK behavior; calendar editing and existing local data must not depend on a successful request.
+Calendar events, shifts, work records, settings, and holiday choices are stored on the device by default. SwiftData repositories are the production event/reminder storage and use `TimeNest.store` under the `group.com.songlabs.timenest` App Group container. The Widget does not open that SwiftData store directly; it reads a separate `widget-snapshot.json` snapshot in the same App Group. Downloaded holiday data is a replaceable local cache. Network access is used for optional CloudKit calendar sharing, explicit or scheduled holiday-source refreshes, StoreKit, and enabled ad SDK behavior; local calendar editing and existing local data must not depend on a successful request.
+
+`v1.0.0` stored the same SwiftData schema in the app sandbox's Application Support directory. Before the current App Group container enters normal use, `LegacyStoreMigrator` performs a one-time model-level import only when the destination has no events or reminders. It preserves the legacy store, never merges into or overwrites a populated destination, validates migrated counts, and uses both destination state and a marker to prevent repeated import. Temporary-store regression tests cover the migration path; a real App Store `v1.0.0` physical-device upgrade remains a required release check.
 
 ## Data And Privacy
 
@@ -128,7 +132,7 @@ Calendar events, shifts, work records, settings, and holiday choices are stored 
 - Voice memo input uses the microphone and Apple's Speech framework only when the user starts voice input in the memo field; recognized text is inserted into the local memo.
 - Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true` and the ATT decision completes. Ad personalization is disabled through Publisher Privacy Treatment; denying ATT keeps the calendar usable and permits non-IDFA ad requests when UMP allows ads.
 - Remove Ads is a one-time Apple In-App Purchase handled by StoreKit. TimeNest does not collect or store payment card details, and purchase restoration uses Apple transaction entitlements.
-- The app has no account sign-in or cloud synchronization in the current implementation.
+- The app has no TimeNest account, developer-operated backend, or general-purpose cloud sync. Optional shared calendars use the user's Apple iCloud account and CloudKit; recipients are read-only and only the selected event, shift, and work-record fields enter the shared zone.
 
 Uninstalling the app removes its local container under normal iOS behavior. Existing SwiftData entities and decoding compatibility must be treated as user-data migration code and should not be removed as ordinary cleanup.
 
@@ -150,10 +154,11 @@ Before submission, confirm:
 - Verify the five localized ATT purpose strings and authorized/denied paths on physical devices.
 - Validate the Privacy Manifest, App Privacy answers, privacy-policy URL, and Google Mobile Ads disclosures together.
 - Verify Bundle ID, signing, version/build numbers, icons, screenshots, metadata, support URL, and privacy-policy URL.
-- Verify fresh install and upgrade install behavior, especially SwiftData compatibility.
+- Verify a physical-device App Store `v1.0.0` upgrade preserves schedules, shifts, work records, reminders, and Widget refresh. Local temporary-store tests are not a substitute for this check.
 - Verify month/week/day navigation, event editing, memo voice input permissions, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
 - Verify all five app languages, system-language mode, week-start settings, and light/dark appearance.
 - Verify offline behavior and invalid or unavailable ICS sources.
+- Verify CloudKit sharing on two physical devices, including invitation acceptance, recipient read-only behavior, content switches, name updates, stopping/leaving a share, and excluded private fields.
 
 Release-preparation documents:
 
@@ -162,6 +167,7 @@ Release-preparation documents:
 - [App Store release checklist](Docs/AppStoreReleaseChecklist.md)
 - [TestFlight checklist](Docs/TestFlightChecklist.md)
 - [Privacy policy draft](Docs/PrivacyPolicyDraft.md)
+- [Public support page draft](Docs/SupportPageDraft.md)
 - [App Store metadata draft](Docs/AppStoreMetadataDraft.md)
 - [App Review notes draft](Docs/AppReviewNotesDraft.md)
 - [TestFlight submission notes](Docs/TestFlightSubmissionNotes.md)

@@ -17,11 +17,12 @@
 
 ## Submission Guardrails
 
-- Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; Widget support; five UI languages; and local-first storage.
-- Do not add claims about account sign-in, developer-operated cloud sync, team sharing, automated recommendations, or other unimplemented features. They are not part of version 1.1.
+- Current scope: month, week, and day views; create, edit, and delete timed or all-day schedules; shift management; work records and statistics; public-holiday subscriptions; optional read-only-recipient CloudKit calendar sharing; Widget support; five UI languages; and local-first storage.
+- Do not add claims about account sign-in, developer-operated general cloud sync, collaborative editing, private-field sharing, automated recommendations, or other unimplemented features. CloudKit sharing recipients can only view the event, shift, and work-record categories selected by the owner.
 - Do not describe TimeNest as ad-free for everyone. Version 1.1 integrates Google Mobile Ads for unpurchased users and includes a one-time Remove Ads In-App Purchase through Apple StoreKit.
 - **TODO:** Reconfirm banner behavior, Remove Ads purchase/restore behavior, and Widget inclusion against the exact submitted build.
 - **TODO:** Draft and review Traditional Chinese (`zh-Hant`) App Store metadata before enabling that App Store Connect product-page locale.
+- **TODO:** Manually publish and verify the CloudKit-sharing updates on the Privacy Policy and Support URLs; their public HTML sources are not in this repository.
 
 ## Japanese (`ja`) - Primary
 
@@ -55,6 +56,7 @@ TimeNest は、予定、シフト、勤務記録をひとつにまとめて管�
 - カレンダー情報を確認できるウィジェット
 - 日本語、簡体字中国語、繁体字中国語、英語、韓国語の表示
 - ユーザー作成データのローカル優先保存
+- iCloudを利用したカレンダー共有（共有相手は閲覧のみ、共有内容を選択可能）
 
 ### Keywords
 
@@ -92,6 +94,7 @@ TimeNest 支持通过公开 HTTPS ICS 来源订阅日本、中国大陆、台湾
 - 日历小组件
 - 日语、简体中文、繁体中文、英语和韩语界面
 - 用户创建数据优先保存在本地
+- 通过 iCloud 共享日历（接收方仅可查看，可选择共享内容）
 
 ### Keywords
 
@@ -129,6 +132,7 @@ Key features:
 - Calendar Widget
 - Japanese, Simplified Chinese, Traditional Chinese, English, and Korean UI
 - Local-first storage for user-created data
+- iCloud calendar sharing with read-only recipients and selectable shared content
 
 ### Keywords
 
@@ -166,6 +170,7 @@ TimeNest는 일정, 교대 근무와 근무 기록을 한곳에서 관리할 수
 - 캘린더 위젯
 - 일본어, 중국어 간체, 중국어 번체, 영어, 한국어 UI
 - 사용자 생성 데이터의 로컬 우선 저장
+- iCloud 캘린더 공유(공유받은 사용자는 보기 전용, 공유 콘텐츠 선택 가능)
 
 ### Keywords
 
@@ -175,16 +180,16 @@ TimeNest는 일정, 교대 근무와 근무 기록을 한곳에서 관리할 수
 
 ### Japanese (`ja`)
 
-TimeNest 1.1 のリリースです。月・週・日のカレンダー、通常・終日予定の管理、シフトと勤務記録、勤務統計、祝日購読、ウィジェット、多言語表示に対応しています。
+TimeNest 1.1 のリリースです。月・週・日のカレンダー、通常・終日予定の管理、シフトと勤務記録、勤務統計、祝日購読、閲覧専用のカレンダー共有、ウィジェット、多言語表示に対応しています。
 
 ### Simplified Chinese (`zh-Hans`)
 
-TimeNest 1.1 版本支持月、周、日日历视图，普通日程与全天日程管理，班次与工作记录，工作统计，节假日订阅，小组件和多语言界面。
+TimeNest 1.1 版本支持月、周、日日历视图，普通日程与全天日程管理，班次与工作记录，工作统计，节假日订阅，仅查看的日历共享，小组件和多语言界面。
 
 ### English (`en`)
 
-TimeNest 1.1 includes month, week, and day calendar views, timed and all-day event management, shifts, work records and statistics, holiday subscriptions, Widgets, and a multilingual UI.
+TimeNest 1.1 includes month, week, and day calendar views, timed and all-day event management, shifts, work records and statistics, holiday subscriptions, read-only-recipient calendar sharing, Widgets, and a multilingual UI.
 
 ### Korean (`ko`)
 
-TimeNest 1.1 버전은 월/주/일 캘린더, 일반 및 종일 일정 관리, 교대 근무와 근무 기록, 근무 통계, 공휴일 구독, 위젯, 다국어 UI를 지원합니다.
+TimeNest 1.1 버전은 월/주/일 캘린더, 일반 및 종일 일정 관리, 교대 근무와 근무 기록, 근무 통계, 공휴일 구독, 보기 전용 캘린더 공유, 위젯, 다국어 UI를 지원합니다.

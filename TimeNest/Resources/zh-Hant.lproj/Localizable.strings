@@ -389,7 +389,7 @@
 "help.privacy.storage.question" = "資料儲存在哪裡？";
 "help.privacy.storage.answer" = "行程、班次、打工記錄、顯示設定和節假日設定會儲存在此裝置中。Widget 顯示所需的行事曆資訊只會在同一裝置的 App Group 內共享。";
 "help.privacy.account.question" = "需要帳號嗎？";
-"help.privacy.account.answer" = "使用 TimeNest 不需要註冊帳號或登入，目前也沒有 TimeNest 自有雲端同步。";
+"help.privacy.account.answer" = "使用 TimeNest 不需要註冊帳號或登入。TimeNest 不提供自有雲端同步，共享日曆使用 Apple 的 iCloud（CloudKit）。";
 "help.privacy.delete_app.question" = "刪除 App 後資料會怎樣？";
 "help.privacy.delete_app.answer" = "刪除 App 後，儲存在裝置內的 TimeNest 資料也會依照 iOS 的一般行為被刪除。";
 "help.privacy.options.action" = "管理廣告隱私選項";

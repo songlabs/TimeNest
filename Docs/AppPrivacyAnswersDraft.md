@@ -6,12 +6,15 @@
 
 - Privacy Policy URL: https://songlabs.github.io/timenest/privacy.html
 - Support URL: https://songlabs.github.io/timenest/support.html
+- Publication status (2026-07-12): the repository does not contain the public HTML sources, so the CloudKit updates in `PrivacyPolicyDraft.md` and `SupportPageDraft.md` still require manual publication and URL verification.
 
 ## Confirmed Current Data Flows
 
 - User-created schedules, notes, shifts, and work records are stored locally with SwiftData by default.
+- A one-time local-only migration preserves eligible `v1.0.0` SwiftData records when moving from the app sandbox store to the App Group store. It does not upload data, delete the legacy store, or merge into a populated destination.
 - The SwiftData production configuration does not use CloudKit.
 - TimeNest currently has no account system, sign-in, developer-operated cloud synchronization, or TimeNest-owned backend upload.
+- Optional shared calendars use Apple iCloud/CloudKit. The owner selects whether events, shifts, and work records enter the shared zone, and recipients are read-only. Shared records exclude memo text, notifications, voice content, hourly rates, pay, transport fees, templates, purchase/ad state, device information, app settings, Widget-private data, and holiday-subscription internals.
 - App settings, holiday-subscription choices, subscription URLs, and downloaded holiday cache data are stored locally.
 - The app and Widget share a calendar snapshot through the App Group on the same device. This is local App-to-Widget data sharing, not cloud synchronization or a backend upload.
 - When a user enables, tests, or refreshes a holiday subscription, the app sends an HTTPS request to the public ICS provider selected by the user. That provider may receive network information such as an IP address and request metadata under its own policy.
@@ -28,6 +31,7 @@
 
 - User-created calendar, shift, and work-record content: locally stored by default and not uploaded to a TimeNest-owned server in the current implementation.
 - Widget snapshot: shared only within the on-device App Group for Widget display.
+- CloudKit shared calendars: uploaded to and synchronized by Apple iCloud only when the user enables sharing; evaluate this transfer and Apple's role against the current App Privacy questionnaire and published policy.
 - Holiday ICS requests: sent to a user-selected third-party public provider; evaluate the questionnaire using Apple's current definition of collection and the provider interaction in the submitted build.
 - Google Mobile Ads data: **TODO - final answer required.** Review the exact production SDK version and configuration against Google's current App Store data-disclosure documentation and the archive privacy report.
 
@@ -58,4 +62,5 @@ The embedded SDK privacy manifests and Google's current disclosure guidance iden
 - [ ] Verify the localized ATT prompt and authorized/denied/restricted paths on physical devices after the UMP flow.
 - [ ] Complete the App Store Connect App Privacy questionnaire manually using its current wording.
 - [ ] Confirm Settings > Support > Privacy Policy opens https://songlabs.github.io/timenest/privacy.html in the exact release candidate.
+- [ ] Publish the CloudKit-sharing updates from `Docs/PrivacyPolicyDraft.md` and `Docs/SupportPageDraft.md`; the repository change alone does not update either public URL.
 - [ ] Confirm the submitted answers match the published privacy policy.

@@ -389,7 +389,7 @@
 "help.privacy.storage.question" = "データはどこに保存されますか？";
 "help.privacy.storage.answer" = "予定、シフト、勤務記録、表示設定、祝日設定は端末内に保存されます。ウィジェット表示に必要なカレンダー情報は App Group 内で同じ端末上だけ共有されます。";
 "help.privacy.account.question" = "アカウントは必要ですか？";
-"help.privacy.account.answer" = "TimeNest の利用にアカウント登録やログインは必要ありません。TimeNest 独自のクラウド同期もありません。";
+"help.privacy.account.answer" = "TimeNest の利用にアカウント登録やログインは必要ありません。TimeNest 独自のクラウド同期はなく、共有カレンダーには Apple の iCloud（CloudKit）を使用します。";
 "help.privacy.delete_app.question" = "App を削除した場合のデータについて";
 "help.privacy.delete_app.answer" = "App を削除すると、通常の iOS の動作に従って端末内に保存された TimeNest のデータも削除されます。";
 "help.privacy.options.action" = "広告のプライバシー設定を管理";

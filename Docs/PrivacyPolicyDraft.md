@@ -4,6 +4,7 @@
 
 - Published Privacy Policy URL: https://songlabs.github.io/timenest/privacy.html
 - Support URL: https://songlabs.github.io/timenest/support.html
+- Publication status (2026-07-12): **not synchronized.** The public-page source files are not present in this repository; manually publish this draft and `Docs/SupportPageDraft.md`, then verify both URLs.
 - In-app entry: Settings > Support > Privacy Policy opens the published policy with the system URL-opening flow.
 - Pre-submission gate: confirm the entry works in the exact release candidate and the published policy matches that build, including the effective date, final advertising disclosure, third-party retention/deletion handling, and a clear method to withdraw consent or reopen required privacy options.
 
@@ -17,11 +18,13 @@ TimeNest 是一个本地优先的日历与日程管理 App。我们重视用户�
 
 ### 1. 我们是否收集个人信息
 
-TimeNest 第一版是带广告发布的版本，不包含账号登录或云同步功能。App 集成 Google Mobile Ads，在 UMP 允许请求广告后为未购买用户显示日历横幅广告，并通过 Apple In-App Purchase / StoreKit 提供一次性去广告购买。最终发布版本的数据处理说明必须根据正式广告配置、同意流程、内购配置及 Google 的数据使用说明确认。
+TimeNest 第一版是带广告发布的版本，不包含 TimeNest 账号登录、自有后端或通用云同步。App 集成 Google Mobile Ads，在 UMP 允许请求广告后为未购买用户显示日历横幅广告，并通过 Apple In-App Purchase / StoreKit 提供一次性去广告购买。最终发布版本的数据处理说明必须根据正式广告配置、同意流程、内购配置及 Google 的数据使用说明确认。
 
 ### 2. 日历与日程数据
 
-用户在 TimeNest 中创建的日程、备注、班次、工时记录，以及显示语言、周起始日、节假日地区选择、节假日订阅 URL 和节假日缓存数据，默认保存在用户设备本地。当前版本没有账号系统、云同步或 TimeNest 自有后端，也不会将这些数据上传到 TimeNest 自有服务器。
+用户在 TimeNest 中创建的日程、备注、班次、工时记录，以及显示语言、周起始日、节假日地区选择、节假日订阅 URL 和节假日缓存数据，默认保存在用户设备的 App 沙盒或 App Group 本地容器中。当前版本没有 TimeNest 账号系统、自有后端或通用云同步，也不会将这些数据上传到 TimeNest 自有服务器。
+
+只有在用户主动启用共享日历时，TimeNest 才会通过 Apple iCloud（CloudKit）传输和存储所选共享数据。所有者可分别选择是否共享日程、班次和工作记录；接收方仅可查看，不能创建、编辑或删除共享内容。共享记录不包含备注、通知、语音输入内容、时薪、工资、交通费、班次模板、广告状态、购买状态、设备设置、App 设置、Widget 私有数据或节假日订阅内部信息。CloudKit 数据由 Apple 服务处理，用户应同时查看 Apple 的相关隐私说明。
 
 ### 3. 节假日订阅
 
@@ -43,7 +46,7 @@ TimeNest 当前没有自行实现独立的分析、账号或后端上传功能�
 
 ### 6. 数据删除
 
-用户可以在 App 内删除自己创建的日程，或卸载 App 以删除本地保存的数据。节假日订阅可以在设置中禁用或修改。
+用户可以在 App 内删除自己创建的日程，或卸载 App 以删除本地保存的数据。所有者删除已共享的日程、班次或工作记录后，该内容会从所有者本地数据中删除，并在后续同步时从接收方的共享视图中移除。节假日订阅可以在设置中禁用或修改。共享所有者可在共享日历管理页停止共享；这会撤销接收方访问，但不会删除所有者其余的本地日程、班次或工作记录。接收方可退出共享；退出后 TimeNest 会移除该共享日历的本地缓存和入口，但不会删除所有者的数据。CloudKit 中数据的处理同时受 Apple iCloud 服务规则约束。
 
 ### 7. 联系方式
 
@@ -59,11 +62,13 @@ TimeNest is a local-first calendar and schedule management app. We care about us
 
 ### 1. Personal Information
 
-The first TimeNest release is ad-supported and does not include account sign-in or cloud sync. It integrates Google Mobile Ads to display a calendar banner for unpurchased users after UMP permits ad requests, and it offers a one-time Remove Ads purchase through Apple In-App Purchase / StoreKit. The final disclosure must be confirmed against the production ad configuration, consent flow, in-app purchase configuration, and Google's data-use documentation.
+The first TimeNest release is ad-supported and does not include a TimeNest account, developer-operated backend, or general-purpose cloud sync. It integrates Google Mobile Ads to display a calendar banner for unpurchased users after UMP permits ad requests, and it offers a one-time Remove Ads purchase through Apple In-App Purchase / StoreKit. The final disclosure must be confirmed against the production ad configuration, consent flow, in-app purchase configuration, and Google's data-use documentation.
 
 ### 2. Calendar and Schedule Data
 
-Schedules, notes, shifts, work-time records, display language, week start settings, holiday region selections, holiday subscription URLs, and cached holiday data created or configured in TimeNest are stored locally on the user's device by default. The current version has no account system, cloud sync, or TimeNest-owned backend, and does not upload this data to TimeNest-owned servers.
+Schedules, notes, shifts, work-time records, display language, week start settings, holiday region selections, holiday subscription URLs, and cached holiday data created or configured in TimeNest are stored locally in the app sandbox or App Group container by default. The current version has no TimeNest account system, developer-operated backend, or general-purpose cloud sync, and does not upload this data to TimeNest-owned servers.
+
+Only when a user actively enables a shared calendar does TimeNest transfer and store the selected shared data through Apple iCloud (CloudKit). The owner can separately choose events, shifts, and work records. Recipients have read-only access and cannot create, edit, or delete shared content. Shared records exclude memos, notifications, voice-input content, hourly rates, pay, transport fees, shift templates, advertising state, purchase state, device settings, app settings, Widget-private data, and holiday-subscription internals. CloudKit data is processed by Apple services; users should also review Apple's applicable privacy information.
 
 ### 3. Holiday Subscriptions
 
@@ -85,7 +90,7 @@ References: [Google Mobile Ads SDK App Store data disclosure](https://developers
 
 ### 6. Data Deletion
 
-Users can delete schedules inside the app or uninstall the app to remove locally stored data. Holiday subscriptions can be disabled or modified in Settings.
+Users can delete schedules inside the app or uninstall the app to remove locally stored data. When an owner deletes a shared event, shift, or work record, it is removed from the owner's local data and from recipients' shared view during a later synchronization. Holiday subscriptions can be disabled or modified in Settings. A share owner can stop sharing from shared-calendar management; this revokes recipient access without deleting the owner's remaining local events, shifts, or work records. A recipient can leave a share; TimeNest then removes that shared calendar's local cache and entry without deleting the owner's data. CloudKit data is also governed by Apple iCloud service rules.
 
 ### 7. Contact
 

@@ -477,7 +477,7 @@ public enum TimeNestStrings: Sendable {
       public enum Privacy: Sendable {
 
         public enum Account: Sendable {
-          /// You do not need to register an account or sign in to use TimeNest, and there is no TimeNest-operated cloud sync.
+          /// You do not need to register an account or sign in to use TimeNest. TimeNest has no developer-operated cloud sync; shared calendars use Apple's iCloud (CloudKit).
           public static let answer = TimeNestStrings.tr("Localizable", "help.privacy.account.answer")
           /// Do I need an account?
           public static let question = TimeNestStrings.tr("Localizable", "help.privacy.account.question")

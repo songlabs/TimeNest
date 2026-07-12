@@ -389,7 +389,7 @@
 "help.privacy.storage.question" = "데이터는 어디에 저장되나요?";
 "help.privacy.storage.answer" = "일정, 근무, 알바 기록, 표시 설정 및 공휴일 설정은 이 기기에 저장됩니다. Widget 표시에 필요한 캘린더 정보는 같은 기기의 App Group 안에서만 공유됩니다.";
 "help.privacy.account.question" = "계정이 필요한가요?";
-"help.privacy.account.answer" = "TimeNest를 사용하는 데 계정 등록이나 로그인이 필요하지 않으며, TimeNest가 운영하는 클라우드 동기화도 없습니다.";
+"help.privacy.account.answer" = "TimeNest를 사용하는 데 계정 등록이나 로그인이 필요하지 않습니다. TimeNest가 운영하는 클라우드 동기화는 없으며, 공유 캘린더는 Apple iCloud(CloudKit)를 사용합니다.";
 "help.privacy.delete_app.question" = "App을 삭제한 경우의 데이터";
 "help.privacy.delete_app.answer" = "App을 삭제하면 일반적인 iOS 동작에 따라 기기에 저장된 TimeNest 데이터도 삭제됩니다.";
 "help.privacy.options.action" = "광고 개인정보 옵션 관리";
