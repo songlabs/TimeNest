@@ -433,7 +433,6 @@
 "calendar_sharing.read_only" = "閲覧のみ";
 "calendar_sharing.shared_with_count" = "%ld人と共有";
 "calendar_sharing.owner_read_only_format" = "%1$@・%2$@";
-"calendar_sharing.display_name" = "表示名";
 "calendar_sharing.calendar_name" = "カレンダー名";
 "calendar_sharing.start" = "共有を開始";
 "calendar_sharing.stop" = "共有を停止";
@@ -442,7 +441,7 @@
 "calendar_sharing.participants" = "共有相手";
 "calendar_sharing.open_system_management" = "招待と参加者を管理";
 "calendar_sharing.privacy_note" = "共有対象は共有設定で選択できます。メモ、通知、時給、給与情報は共有されません。";
-"calendar_sharing.required_fields" = "表示名とカレンダー名を入力してください。";
+"calendar_sharing.required_fields" = "カレンダー名を入力してください。";
 "calendar_sharing.stop_confirmation" = "共有相手はこのカレンダーを閲覧できなくなります。TimeNest内の予定は削除されません。";
 "calendar_sharing.leave_confirmation" = "この共有カレンダーをTimeNestから削除します。作成者の予定には影響しません。";
 "calendar_sharing.unknown_person" = "共有ユーザー";

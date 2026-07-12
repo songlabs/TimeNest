@@ -71,6 +71,14 @@ struct SharedCalendarDescriptor: Codable, Identifiable, Hashable {
         Self.nonempty(calendarName) ?? fallback
     }
 
+    var distinctDisplayName: String? {
+        guard let displayName = Self.nonempty(displayName) else { return nil }
+        guard let calendarName = Self.nonempty(calendarName) else { return displayName }
+        return displayName.localizedCaseInsensitiveCompare(calendarName) == .orderedSame
+            ? nil
+            : displayName
+    }
+
     private static func nonempty(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
               !value.isEmpty else {

@@ -433,7 +433,6 @@
 "calendar_sharing.read_only" = "View Only";
 "calendar_sharing.shared_with_count" = "Shared with %ld people";
 "calendar_sharing.owner_read_only_format" = "%1$@ · %2$@";
-"calendar_sharing.display_name" = "Display Name";
 "calendar_sharing.calendar_name" = "Calendar Name";
 "calendar_sharing.start" = "Start Sharing";
 "calendar_sharing.stop" = "Stop Sharing";
@@ -442,7 +441,7 @@
 "calendar_sharing.participants" = "Participants";
 "calendar_sharing.open_system_management" = "Manage Invitations and Participants";
 "calendar_sharing.privacy_note" = "Choose the shared content in sharing settings. Memos, notifications, hourly rates, and pay information are not shared.";
-"calendar_sharing.required_fields" = "Enter both a display name and calendar name.";
+"calendar_sharing.required_fields" = "Enter a calendar name.";
 "calendar_sharing.stop_confirmation" = "Participants will no longer be able to view this calendar. Your local TimeNest events will not be deleted.";
 "calendar_sharing.leave_confirmation" = "This shared calendar will be removed from TimeNest. The owner's data will not be affected.";
 "calendar_sharing.unknown_person" = "Shared User";

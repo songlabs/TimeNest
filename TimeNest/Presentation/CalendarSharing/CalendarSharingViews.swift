@@ -126,9 +126,9 @@ struct CalendarSelectionView: View {
     }
 
     private func sharedCalendarSubtitle(_ calendar: SharedCalendarDescriptor) -> String {
-        let displayName = calendar.resolvedDisplayName(
-            fallback: localization.localized(.calendarSharingUnknownPerson)
-        )
+        guard let displayName = calendar.distinctDisplayName else {
+            return localization.localized(.calendarSharingReadOnly)
+        }
         return String(
             format: localization.localized(.calendarSharingOwnerReadOnlyFormat),
             locale: localization.currentLocale,
@@ -170,7 +170,6 @@ struct CalendarSharingManagementView: View {
     @EnvironmentObject private var sharingStore: CalendarSharingStore
     @EnvironmentObject private var localization: LocalizationManager
 
-    @State private var displayName = ""
     @State private var calendarName = ""
     @State private var sharingContent = SharedContentConfiguration.newShareDefault
     @State private var isWorking = false
@@ -257,8 +256,6 @@ struct CalendarSharingManagementView: View {
 
     private var createSharingSection: some View {
         Section {
-            TextField(localization.localized(.calendarSharingDisplayName), text: $displayName)
-                .textContentType(.name)
             TextField(localization.localized(.calendarSharingCalendarName), text: $calendarName)
         }
     }
@@ -308,10 +305,6 @@ struct CalendarSharingManagementView: View {
     private func ownedSharingSection(_ calendar: OwnedSharedCalendarDescriptor) -> some View {
         Section(localization.localized(.calendarSharingMyCalendar)) {
             LabeledContent(
-                localization.localized(.calendarSharingDisplayName),
-                value: calendar.displayName
-            )
-            LabeledContent(
                 localization.localized(.calendarSharingCalendarName),
                 value: calendar.calendarName
             )
@@ -336,11 +329,11 @@ struct CalendarSharingManagementView: View {
                         Text(calendar.resolvedCalendarName(
                             fallback: localization.localized(.calendarSharingUnknownCalendar)
                         ))
-                        Text(calendar.resolvedDisplayName(
-                            fallback: localization.localized(.calendarSharingUnknownPerson)
-                        ))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        if let displayName = calendar.distinctDisplayName {
+                            Text(displayName)
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
                     Button(localization.localized(.calendarSharingLeave), role: .destructive) {
@@ -353,8 +346,8 @@ struct CalendarSharingManagementView: View {
     }
 
     private func createSharing() async {
-        guard !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !calendarName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        let normalizedCalendarName = calendarName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalizedCalendarName.isEmpty else {
             presentationState.showAlert(
                 .message(localization.localized(.calendarSharingRequiredFields))
             )
@@ -364,11 +357,10 @@ struct CalendarSharingManagementView: View {
         defer { isWorking = false }
         do {
             let share = try await sharingStore.createShare(
-                displayName: displayName,
-                calendarName: calendarName,
+                calendarName: normalizedCalendarName,
                 content: sharingContent
             )
-            presentationState.present(share: share, title: calendarName)
+            presentationState.present(share: share, title: normalizedCalendarName)
             CalendarSharingDiagnostics.debug(
                 operation: "startSharing",
                 stage: "controller_ready",

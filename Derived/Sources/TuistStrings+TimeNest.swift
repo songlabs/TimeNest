@@ -96,8 +96,6 @@ public enum TimeNestStrings: Sendable {
       public static func dateRangeFormat(_ p1: Any, _ p2: Any) -> String {
         return TimeNestStrings.tr("Localizable", "calendar_sharing.date_range_format",String(describing: p1), String(describing: p2))
       }
-      /// Display Name
-      public static let displayName = TimeNestStrings.tr("Localizable", "calendar_sharing.display_name")
       /// Leave Share
       public static let leave = TimeNestStrings.tr("Localizable", "calendar_sharing.leave")
       /// This shared calendar will be removed from TimeNest. The owner's data will not be affected.
@@ -120,7 +118,7 @@ public enum TimeNestStrings: Sendable {
       public static let readOnly = TimeNestStrings.tr("Localizable", "calendar_sharing.read_only")
       /// Shared with Me
       public static let receivedCalendars = TimeNestStrings.tr("Localizable", "calendar_sharing.received_calendars")
-      /// Enter both a display name and calendar name.
+      /// Enter a calendar name.
       public static let requiredFields = TimeNestStrings.tr("Localizable", "calendar_sharing.required_fields")
       /// Retry
       public static let retry = TimeNestStrings.tr("Localizable", "calendar_sharing.retry")

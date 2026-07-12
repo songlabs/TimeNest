@@ -207,7 +207,7 @@ final class CalendarSharingStore: ObservableObject {
     }
 
     func createShare(
-        displayName: String,
+        displayName: String? = nil,
         calendarName: String,
         content: SharedContentConfiguration = .newShareDefault
     ) async throws -> CKShare {
@@ -223,8 +223,10 @@ final class CalendarSharingStore: ObservableObject {
         shareCreationIsInProgress = true
         defer { shareCreationIsInProgress = false }
 
-        let trimmedDisplayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDisplayName = displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedCalendarName = calendarName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let internalDisplayName = trimmedDisplayName.flatMap { $0.isEmpty ? nil : $0 }
+            ?? trimmedCalendarName
         let selectedSourceBefore = selectionKind
         lastError = nil
         CalendarSharingDiagnostics.debug(
@@ -237,7 +239,7 @@ final class CalendarSharingStore: ObservableObject {
         do {
             let snapshots = try await localSharedContentSnapshots()
             let state = try await client.createShare(
-                displayName: trimmedDisplayName,
+                displayName: internalDisplayName,
                 calendarName: trimmedCalendarName,
                 content: content,
                 events: snapshots.events,

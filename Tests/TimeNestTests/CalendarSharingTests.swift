@@ -449,6 +449,22 @@ final class CalendarSharingPresentationLogicTests: XCTestCase {
         XCTAssertNotEqual(calendar.resolvedCalendarName(fallback: "Shared Calendar"), calendar.id)
     }
 
+    func testDisplayNameIsOnlyShownWhenDistinctFromCalendarName() {
+        var calendar = SharedCalendarDescriptor(
+            id: "shared-id",
+            zoneName: "shared-zone",
+            ownerName: "private-owner",
+            displayName: "Owner",
+            calendarName: "Shared Calendar",
+            participantCount: 0
+        )
+
+        XCTAssertEqual(calendar.distinctDisplayName, "Owner")
+
+        calendar.displayName = " Shared Calendar "
+        XCTAssertNil(calendar.distinctDisplayName)
+    }
+
     func testCloudKitErrorsMapToUnderstandableCategories() {
         XCTAssertEqual(CalendarSharingErrorMapper.map(code: .notAuthenticated), .noICloudAccount)
         XCTAssertEqual(CalendarSharingErrorMapper.map(code: .accountTemporarilyUnavailable), .networkUnavailable)
@@ -826,6 +842,17 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
         presentation.present(share: share, title: "B")
         XCTAssertNotNil(presentation.presentedShare)
         XCTAssertNil(presentation.alertState)
+    }
+
+    func testShareUsesCalendarNameAsInternalDisplayNameWhenNotProvided() async throws {
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        _ = try await context.store.createShare(calendarName: " Shared calendar ")
+
+        XCTAssertEqual(client.createdDisplayName, "Shared calendar")
+        XCTAssertEqual(client.createdCalendarName, "Shared calendar")
     }
 
     func testAllContentOffDoesNotCallCloudKit() async throws {

@@ -433,7 +433,6 @@
 "calendar_sharing.read_only" = "僅供檢視";
 "calendar_sharing.shared_with_count" = "已與%ld人共享";
 "calendar_sharing.owner_read_only_format" = "%1$@ · %2$@";
-"calendar_sharing.display_name" = "顯示名稱";
 "calendar_sharing.calendar_name" = "日曆名稱";
 "calendar_sharing.start" = "開始共享";
 "calendar_sharing.stop" = "停止共享";
@@ -442,7 +441,7 @@
 "calendar_sharing.participants" = "共享成員";
 "calendar_sharing.open_system_management" = "管理邀請與成員";
 "calendar_sharing.privacy_note" = "可在共享設定中選擇共享內容。備忘錄、通知、時薪與薪資資訊不會被共享。";
-"calendar_sharing.required_fields" = "請輸入顯示名稱與日曆名稱。";
+"calendar_sharing.required_fields" = "請輸入日曆名稱。";
 "calendar_sharing.stop_confirmation" = "其他成員將無法再檢視此日曆。TimeNest 內的本機行程不會被刪除。";
 "calendar_sharing.leave_confirmation" = "此共享日曆將從 TimeNest 移除，不會影響建立者的資料。";
 "calendar_sharing.unknown_person" = "共享使用者";

@@ -626,7 +626,12 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             )
             let calendarRecord = try await optionalRecord(calendarID, database: privateDatabase)
                 ?? CKRecord(recordType: CalendarSharingCloudSchema.calendarRecordType, recordID: calendarID)
-            calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] = displayName as CKRecordValue
+            let existingDisplayName = (
+                calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] as? String
+            )?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let internalDisplayName = existingDisplayName.flatMap { $0.isEmpty ? nil : $0 }
+                ?? displayName
+            calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] = internalDisplayName as CKRecordValue
             calendarRecord[CalendarSharingCloudSchema.CalendarField.calendarName] = calendarName as CKRecordValue
             calendarRecord[CalendarSharingCloudSchema.CalendarField.updatedAt] = Date() as CKRecordValue
             CalendarSharingCloudSchema.apply(content, to: calendarRecord)
@@ -681,7 +686,7 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             }
             let state = OwnedSharedCalendarCloudState(
                 calendar: OwnedSharedCalendarDescriptor(
-                    displayName: displayName,
+                    displayName: internalDisplayName,
                     calendarName: calendarName,
                     participantCount: participantCount(in: saved),
                     contentConfiguration: content

@@ -199,7 +199,6 @@ enum LocalizedString: String {
     case calendarSharingReadOnly = "calendar_sharing.read_only"
     case calendarSharingSharedWithCount = "calendar_sharing.shared_with_count"
     case calendarSharingOwnerReadOnlyFormat = "calendar_sharing.owner_read_only_format"
-    case calendarSharingDisplayName = "calendar_sharing.display_name"
     case calendarSharingCalendarName = "calendar_sharing.calendar_name"
     case calendarSharingStart = "calendar_sharing.start"
     case calendarSharingStop = "calendar_sharing.stop"
