@@ -506,6 +506,246 @@ final class CalendarSharingPresentationLogicTests: XCTestCase {
 
         XCTAssertEqual(CalendarSharingErrorMapper.map(error), .networkUnavailable)
     }
+
+    func testCloudKitRawValueTwelveIsInvalidArguments() throws {
+        let code = try XCTUnwrap(CKError.Code(rawValue: 12))
+
+        XCTAssertEqual(code, .invalidArguments)
+        XCTAssertEqual(CalendarSharingErrorMapper.cloudErrorCodeName(code), "invalidArguments")
+        XCTAssertEqual(
+            CalendarSharingErrorMapper.cloudErrorCodeSummary(CKError(.invalidArguments)),
+            "invalidArguments(12)"
+        )
+    }
+
+    func testPartialFailureExposesLeafErrorCodes() {
+        let partialErrors: [AnyHashable: Error] = [
+            AnyHashable("one"): CKError(.networkFailure),
+            AnyHashable("two"): CKError(.zoneNotFound)
+        ]
+        let error = CKError(
+            .partialFailure,
+            userInfo: [CKPartialErrorsByItemIDKey: partialErrors]
+        )
+
+        let codes = CalendarSharingErrorMapper.cloudErrorCodes(in: error)
+
+        XCTAssertTrue(codes.contains(.partialFailure))
+        XCTAssertTrue(codes.contains(.networkFailure))
+        XCTAssertTrue(codes.contains(.zoneNotFound))
+    }
+
+    func testDiagnosticSummaryRedactsUniqueIdentifiersFromServerMessage() {
+        let uniqueID = "11111111-2222-3333-4444-555555555555"
+        let error = CKError(
+            .invalidArguments,
+            userInfo: [NSLocalizedDescriptionKey: "Invalid record \(uniqueID)"]
+        )
+
+        let summary = CalendarSharingErrorMapper.diagnosticSummary(error)
+
+        XCTAssertTrue(summary.contains("errorDomain=CKErrorDomain"))
+        XCTAssertTrue(summary.contains("invalidArguments(12)"))
+        XCTAssertTrue(summary.contains("serverMessage="))
+        XCTAssertTrue(summary.contains("<redacted>"))
+        XCTAssertFalse(summary.contains(uniqueID))
+    }
+
+    func testOnlyUnknownItemCanRepresentMissingQueriedRecordType() {
+        let mixedLeafErrors: [AnyHashable: Error] = [
+            AnyHashable("missing"): CKError(.unknownItem),
+            AnyHashable("invalid"): CKError(.invalidArguments)
+        ]
+        let mixedError = CKError(
+            .partialFailure,
+            userInfo: [CKPartialErrorsByItemIDKey: mixedLeafErrors]
+        )
+
+        XCTAssertTrue(
+            CalendarSharingErrorMapper.shouldTreatMissingQueriedRecordTypeAsEmpty(
+                CKError(.unknownItem)
+            )
+        )
+        XCTAssertFalse(
+            CalendarSharingErrorMapper.shouldTreatMissingQueriedRecordTypeAsEmpty(mixedError)
+        )
+        XCTAssertFalse(
+            CalendarSharingErrorMapper.shouldTreatMissingQueriedRecordTypeAsEmpty(
+                CKError(.invalidArguments)
+            )
+        )
+    }
+
+    func testChangeTokenExpiredRestartsOnlyOnce() {
+        let error = CKError(.changeTokenExpired)
+
+        XCTAssertTrue(
+            CalendarSharingErrorMapper.shouldRestartZoneChangesFromBeginning(
+                error,
+                alreadyRetried: false
+            )
+        )
+        XCTAssertFalse(
+            CalendarSharingErrorMapper.shouldRestartZoneChangesFromBeginning(
+                error,
+                alreadyRetried: true
+            )
+        )
+        XCTAssertFalse(
+            CalendarSharingErrorMapper.shouldRestartZoneChangesFromBeginning(
+                CKError(.networkFailure),
+                alreadyRetried: false
+            )
+        )
+    }
+}
+
+final class ReceivedSharedCalendarPayloadAssemblerTests: XCTestCase {
+    func testClassifiesSharedZoneRecordsAndBuildsPayload() throws {
+        let zoneID = makeZoneID(name: "zone-a")
+        var records = SharedZoneRecordCollection()
+        let root = makeCalendarRecord(zoneID: zoneID)
+        let event = makeEventRecord(zoneID: zoneID)
+        let shift = makeShiftRecord(zoneID: zoneID)
+        let work = makeWorkRecord(zoneID: zoneID)
+        records.apply([root, event, shift, work, CKShare(recordZoneID: zoneID)])
+
+        let payload = try XCTUnwrap(
+            ReceivedSharedCalendarPayloadAssembler.makePayload(zoneID: zoneID, records: records)
+        )
+
+        XCTAssertEqual(payload.calendar.calendarName, "Shared calendar")
+        XCTAssertEqual(payload.events.map(\.id), [Self.eventID])
+        XCTAssertEqual(payload.shifts.map(\.id), [Self.shiftID])
+        XCTAssertEqual(payload.workRecords.map(\.id), [Self.workID])
+        XCTAssertEqual(records.records(ofType: CKRecord.SystemType.share).count, 1)
+    }
+
+    func testEmptyContentRecordsKeepCalendarRoot() throws {
+        let zoneID = makeZoneID(name: "zone-empty")
+        var records = SharedZoneRecordCollection()
+        records.apply([makeCalendarRecord(zoneID: zoneID)])
+
+        let payload = try XCTUnwrap(
+            ReceivedSharedCalendarPayloadAssembler.makePayload(zoneID: zoneID, records: records)
+        )
+
+        XCTAssertTrue(payload.events.isEmpty)
+        XCTAssertTrue(payload.shifts.isEmpty)
+        XCTAssertTrue(payload.workRecords.isEmpty)
+    }
+
+    func testMissingCalendarRootDoesNotBuildInvalidPayload() {
+        let zoneID = makeZoneID(name: "zone-without-root")
+        var records = SharedZoneRecordCollection()
+        records.apply([makeEventRecord(zoneID: zoneID)])
+
+        XCTAssertNil(
+            ReceivedSharedCalendarPayloadAssembler.makePayload(zoneID: zoneID, records: records)
+        )
+    }
+
+    func testOneInvalidZoneDoesNotDiscardAnotherValidPayloadDuringAssembly() {
+        let validZoneID = makeZoneID(name: "valid-zone")
+        let invalidZoneID = makeZoneID(name: "invalid-zone")
+        var validRecords = SharedZoneRecordCollection()
+        validRecords.apply([makeCalendarRecord(zoneID: validZoneID)])
+        let invalidRecords = SharedZoneRecordCollection()
+
+        let payloads = [
+            (validZoneID, validRecords),
+            (invalidZoneID, invalidRecords)
+        ].compactMap { zoneID, records in
+            ReceivedSharedCalendarPayloadAssembler.makePayload(zoneID: zoneID, records: records)
+        }
+
+        XCTAssertEqual(payloads.count, 1)
+        XCTAssertEqual(payloads.first?.calendar.zoneName, validZoneID.zoneName)
+    }
+
+    func testDeletionRemovesChangedRecordFromFullZoneSnapshot() {
+        let zoneID = makeZoneID(name: "zone-delete")
+        let event = makeEventRecord(zoneID: zoneID)
+        var records = SharedZoneRecordCollection()
+        records.apply([makeCalendarRecord(zoneID: zoneID), event])
+
+        records.remove(event.recordID)
+
+        let payload = ReceivedSharedCalendarPayloadAssembler.makePayload(zoneID: zoneID, records: records)
+        XCTAssertTrue(payload?.events.isEmpty == true)
+    }
+
+    private static let eventID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    private static let shiftID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+    private static let workID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+    private let timestamp = Date(timeIntervalSince1970: 1_700_000_000)
+
+    private func makeZoneID(name: String) -> CKRecordZone.ID {
+        CKRecordZone.ID(zoneName: name, ownerName: "test-owner")
+    }
+
+    private func makeCalendarRecord(zoneID: CKRecordZone.ID) -> CKRecord {
+        let recordID = CKRecord.ID(
+            recordName: CalendarSharingCloudSchema.calendarRecordName,
+            zoneID: zoneID
+        )
+        let record = CKRecord(
+            recordType: CalendarSharingCloudSchema.calendarRecordType,
+            recordID: recordID
+        )
+        record[CalendarSharingCloudSchema.CalendarField.displayName] = "Owner" as CKRecordValue
+        record[CalendarSharingCloudSchema.CalendarField.calendarName] = "Shared calendar" as CKRecordValue
+        record[CalendarSharingCloudSchema.CalendarField.sharesEvents] = NSNumber(value: true)
+        record[CalendarSharingCloudSchema.CalendarField.sharesShifts] = NSNumber(value: true)
+        record[CalendarSharingCloudSchema.CalendarField.sharesWorkRecords] = NSNumber(value: true)
+        record[CalendarSharingCloudSchema.CalendarField.schemaVersion] = NSNumber(value: 2)
+        return record
+    }
+
+    private func makeEventRecord(zoneID: CKRecordZone.ID) -> CKRecord {
+        let record = CKRecord(
+            recordType: CalendarSharingCloudSchema.eventRecordType,
+            recordID: CKRecord.ID(recordName: "event", zoneID: zoneID)
+        )
+        record[CalendarSharingCloudSchema.EventField.eventID] = Self.eventID.uuidString as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.title] = "Event" as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.startDate] = timestamp as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.endDate] = timestamp.addingTimeInterval(3_600) as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.isAllDay] = NSNumber(value: false)
+        record[CalendarSharingCloudSchema.EventField.updatedAt] = timestamp as CKRecordValue
+        return record
+    }
+
+    private func makeShiftRecord(zoneID: CKRecordZone.ID) -> CKRecord {
+        let record = CKRecord(
+            recordType: CalendarSharingCloudSchema.shiftRecordType,
+            recordID: CKRecord.ID(recordName: "shift", zoneID: zoneID)
+        )
+        record[CalendarSharingCloudSchema.ShiftField.shiftID] = Self.shiftID.uuidString as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.registeredDate] = timestamp as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.displayName] = "Day" as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.startDate] = timestamp as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.endDate] = timestamp.addingTimeInterval(3_600) as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.spansMidnight] = NSNumber(value: false)
+        record[CalendarSharingCloudSchema.ShiftField.colorHex] = "#3366CC" as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.updatedAt] = timestamp as CKRecordValue
+        return record
+    }
+
+    private func makeWorkRecord(zoneID: CKRecordZone.ID) -> CKRecord {
+        let record = CKRecord(
+            recordType: CalendarSharingCloudSchema.workRecordType,
+            recordID: CKRecord.ID(recordName: "work", zoneID: zoneID)
+        )
+        record[CalendarSharingCloudSchema.WorkRecordField.workRecordID] = Self.workID.uuidString as CKRecordValue
+        record[CalendarSharingCloudSchema.WorkRecordField.workDate] = timestamp as CKRecordValue
+        record[CalendarSharingCloudSchema.WorkRecordField.workInTime] = timestamp as CKRecordValue
+        record[CalendarSharingCloudSchema.WorkRecordField.workOutTime] = timestamp.addingTimeInterval(3_600) as CKRecordValue
+        record[CalendarSharingCloudSchema.WorkRecordField.isWorkOutTimeSet] = NSNumber(value: true)
+        record[CalendarSharingCloudSchema.WorkRecordField.restHours] = NSNumber(value: 0.5)
+        record[CalendarSharingCloudSchema.WorkRecordField.updatedAt] = timestamp as CKRecordValue
+        return record
+    }
 }
 
 @MainActor

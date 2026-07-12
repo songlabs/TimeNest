@@ -401,11 +401,18 @@ final class CalendarSharingStore: ObservableObject {
         let allEvents = try await eventUseCase.events(
             in: DateInterval(start: .distantPast, end: .distantFuture)
         )
-        return LocalSharedContentSnapshots(
+        let snapshots = LocalSharedContentSnapshots(
             events: allEvents.compactMap(SharedEventMapper.snapshot(from:)),
             shifts: allEvents.compactMap { SharedShiftMapper.snapshot(from: $0) },
             workRecords: SharedWorkRecordMapper.snapshots(from: allEvents)
         )
+        CalendarSharingDiagnostics.debug(
+            operation: "collectSharedContent",
+            stage: "completed",
+            database: "local",
+            details: "sourceEvents=\(allEvents.count) events=\(snapshots.events.count) shifts=\(snapshots.shifts.count) workRecords=\(snapshots.workRecords.count)"
+        )
+        return snapshots
     }
 
     @discardableResult
