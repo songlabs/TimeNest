@@ -47,6 +47,11 @@ enum AppStoreScreenshotScene: String, CaseIterable {
     case help = "help"
     case settings = "settings"
     case removeAds = "remove_ads"
+    case sharedManageEntry = "shared_manage_entry"
+    case sharedContent = "shared_content"
+    case sharedMonth = "shared_month"
+    case sharedReadOnly = "shared_read_only"
+    case sharedSwitcher = "shared_switcher"
 }
 
 enum AppStoreScreenshotMode {
@@ -111,6 +116,18 @@ struct AppStoreScreenshotRootView: View {
                 AppStoreScreenshotSettingsOverviewView()
             case .removeAds:
                 AppStoreScreenshotRemoveAdsView()
+            case .sharedManageEntry:
+                AppStoreScreenshotSharedCalendarSelectionView(selection: .mine)
+            case .sharedContent:
+                AppStoreScreenshotSharedCalendarManagementView()
+            case .sharedMonth:
+                AppStoreScreenshotSharedMonthView()
+            case .sharedReadOnly:
+                AppStoreScreenshotSharedReadOnlyDetailView()
+            case .sharedSwitcher:
+                AppStoreScreenshotSharedCalendarSelectionView(
+                    selection: .shared(AppStoreScreenshotSharedCalendarData.calendarID)
+                )
             }
         }
         .environment(\.locale, Locale(identifier: "ja_JP"))

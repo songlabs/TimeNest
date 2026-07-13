@@ -31,6 +31,17 @@ final class CalendarSharingInvitationRouter {
 }
 
 final class TimeNestSceneDelegate: NSObject, UIWindowSceneDelegate {
+    func scene(
+        _ scene: UIScene,
+        willConnectTo session: UISceneSession,
+        options connectionOptions: UIScene.ConnectionOptions
+    ) {
+        guard let metadata = connectionOptions.cloudKitShareMetadata else { return }
+        Task { @MainActor in
+            CalendarSharingInvitationRouter.shared.receive(metadata)
+        }
+    }
+
     func windowScene(
         _ windowScene: UIWindowScene,
         userDidAcceptCloudKitShareWith cloudKitShareMetadata: CKShare.Metadata

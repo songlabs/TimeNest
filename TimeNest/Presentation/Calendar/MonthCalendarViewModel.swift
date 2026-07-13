@@ -348,6 +348,10 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func cancelShift() async {
+        guard calendarSharingStore.accessPolicy.canDelete else {
+            errorMessage = CalendarSharingError.permissionDenied.localizedDescription
+            return
+        }
         let targetDate = shiftInputTargetDate ?? selectedDate
 
         do {
@@ -384,6 +388,10 @@ class MonthCalendarViewModel: ObservableObject {
 
     @discardableResult
     func createShiftEvent(on date: Date, template: ShiftTimeTemplate) async -> Bool {
+        guard calendarSharingStore.accessPolicy.canCreate else {
+            errorMessage = CalendarSharingError.permissionDenied.localizedDescription
+            return false
+        }
         do {
             guard let dates = shiftEventDates(on: date, template: template) else { return false }
             let now = Date()

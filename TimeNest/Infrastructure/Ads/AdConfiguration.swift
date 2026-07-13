@@ -9,8 +9,10 @@ import UserMessagingPlatform
 enum AdConfiguration {
     static let removeAdsProductID = "com.song.TimeNest.remove_ads"
 
+#if DEBUG || targetEnvironment(simulator)
     private static let testAppID = "ca-app-pub-3940256099942544~1458002511"
     private static let testBannerAdUnitID = "ca-app-pub-3940256099942544/2435281174"
+#endif
 
     static let isEnabled: Bool = {
 #if DEBUG || targetEnvironment(simulator)
@@ -21,7 +23,7 @@ enum AdConfiguration {
         let appID = infoString(for: "GADApplicationIdentifier")
         let bannerID = infoString(for: "TimeNestAdMobBannerUnitID")
         precondition(
-            appID != testAppID && bannerID != testBannerAdUnitID,
+            !usesGoogleTestPublisherID(appID) && !usesGoogleTestPublisherID(bannerID),
             "Release builds cannot use Google's test AdMob IDs."
         )
         precondition(
@@ -65,6 +67,16 @@ enum AdConfiguration {
             of: #"^ca-app-pub-[0-9]{16}/[0-9]{10}$"#,
             options: .regularExpression
         ) != nil
+    }
+
+    private static func usesGoogleTestPublisherID(_ value: String) -> Bool {
+        let publisherPrefix = "ca-app-pub-"
+        guard value.hasPrefix(publisherPrefix) else { return false }
+
+        let publisherStart = value.index(value.startIndex, offsetBy: publisherPrefix.count)
+        let publisherEnd = value[publisherStart...].firstIndex(where: { $0 == "~" || $0 == "/" })
+            ?? value.endIndex
+        return UInt64(value[publisherStart..<publisherEnd]) == 3_940_256_099_942_544
     }
 }
 

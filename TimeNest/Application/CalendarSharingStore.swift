@@ -225,6 +225,9 @@ final class CalendarSharingStore: ObservableObject {
 
         let trimmedDisplayName = displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedCalendarName = calendarName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedCalendarName.isEmpty else {
+            throw CalendarSharingError.shareCreationFailed
+        }
         let internalDisplayName = trimmedDisplayName.flatMap { $0.isEmpty ? nil : $0 }
             ?? trimmedCalendarName
         let selectedSourceBefore = selectionKind

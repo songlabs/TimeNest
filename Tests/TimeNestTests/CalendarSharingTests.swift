@@ -449,6 +449,29 @@ final class CalendarSharingPresentationLogicTests: XCTestCase {
         XCTAssertNotEqual(calendar.resolvedCalendarName(fallback: "Shared Calendar"), calendar.id)
     }
 
+    func testLegacyDisplayNameAndCalendarOnlyRecordsResolveCompatibly() {
+        let zoneID = CKRecordZone.ID(zoneName: "legacy-zone", ownerName: "legacy-owner")
+        let legacyRecord = CKRecord(
+            recordType: CalendarSharingCloudSchema.calendarRecordType,
+            recordID: CKRecord.ID(recordName: "legacy", zoneID: zoneID)
+        )
+        legacyRecord[CalendarSharingCloudSchema.CalendarField.displayName] = " Legacy calendar " as CKRecordValue
+
+        let legacyNames = CalendarSharingCloudSchema.compatibleNames(from: legacyRecord)
+        XCTAssertEqual(legacyNames.displayName, "Legacy calendar")
+        XCTAssertEqual(legacyNames.calendarName, "Legacy calendar")
+
+        let calendarOnlyRecord = CKRecord(
+            recordType: CalendarSharingCloudSchema.calendarRecordType,
+            recordID: CKRecord.ID(recordName: "calendar-only", zoneID: zoneID)
+        )
+        calendarOnlyRecord[CalendarSharingCloudSchema.CalendarField.calendarName] = " Family " as CKRecordValue
+
+        let calendarOnlyNames = CalendarSharingCloudSchema.compatibleNames(from: calendarOnlyRecord)
+        XCTAssertEqual(calendarOnlyNames.displayName, "Family")
+        XCTAssertEqual(calendarOnlyNames.calendarName, "Family")
+    }
+
     func testDisplayNameIsOnlyShownWhenDistinctFromCalendarName() {
         var calendar = SharedCalendarDescriptor(
             id: "shared-id",
@@ -551,7 +574,7 @@ final class CalendarSharingPresentationLogicTests: XCTestCase {
         XCTAssertTrue(codes.contains(.zoneNotFound))
     }
 
-    func testDiagnosticSummaryRedactsUniqueIdentifiersFromServerMessage() {
+    func testDiagnosticSummaryOmitsServerMessagesAndUniqueIdentifiers() {
         let uniqueID = "11111111-2222-3333-4444-555555555555"
         let error = CKError(
             .invalidArguments,
@@ -562,8 +585,7 @@ final class CalendarSharingPresentationLogicTests: XCTestCase {
 
         XCTAssertTrue(summary.contains("errorDomain=CKErrorDomain"))
         XCTAssertTrue(summary.contains("invalidArguments(12)"))
-        XCTAssertTrue(summary.contains("serverMessage="))
-        XCTAssertTrue(summary.contains("<redacted>"))
+        XCTAssertTrue(summary.contains("serverMessage=omitted"))
         XCTAssertFalse(summary.contains(uniqueID))
     }
 
@@ -881,6 +903,21 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
         XCTAssertEqual(client.updateCallCount, 0)
     }
 
+    func testWhitespaceCalendarNameDoesNotCallCloudKit() async throws {
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        do {
+            _ = try await context.store.createShare(calendarName: "   \n ")
+            XCTFail("Expected a blank calendar name to be rejected")
+        } catch let error as CalendarSharingError {
+            XCTAssertEqual(error, .shareCreationFailed)
+        }
+
+        XCTAssertEqual(client.createCallCount, 0)
+    }
+
     func testDisablingAndReenablingShiftKeepsLocalDataAndUsesStableSnapshot() async throws {
         let repository = InMemoryEventRepository()
         let calendar = Calendar(identifier: .gregorian)
@@ -1033,6 +1070,72 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
         XCTAssertEqual(context.store.receivedCalendars, [calendar])
         XCTAssertEqual(context.store.lastError, .networkUnavailable)
         XCTAssertEqual(context.store.syncStatus, .failed)
+    }
+
+    func testReadOnlySelectionBlocksShiftMutationEntryPoints() async throws {
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(repository: repository)
+        let calendar = Calendar(identifier: .gregorian)
+        let shiftDay = try XCTUnwrap(calendar.date(
+            from: DateComponents(year: 2026, month: 7, day: 13)
+        ))
+        let shiftStart = try XCTUnwrap(calendar.date(
+            from: DateComponents(year: 2026, month: 7, day: 13, hour: 9)
+        ))
+        let shiftEnd = try XCTUnwrap(calendar.date(
+            from: DateComponents(year: 2026, month: 7, day: 13, hour: 17)
+        ))
+        let original = makeSharingEvent(
+            id: UUID(uuidString: "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD")!,
+            title: "Day Shift",
+            note: nil,
+            start: shiftStart,
+            end: shiftEnd,
+            shiftTemplateID: .day
+        )
+        try await repository.create(original)
+
+        let receivedCalendar = makeReceivedCalendar(id: "read-only-calendar")
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(
+            client: client,
+            selection: .shared(receivedCalendar.id),
+            cachedCalendars: [receivedCalendar],
+            repository: repository
+        )
+        defer { context.cleanup() }
+
+        let viewModel = MonthCalendarViewModel(
+            calendarDisplayUseCase: CalendarDisplayUseCase(
+                holidayUseCase: HolidayUseCase(holidayProvider: BundleHolidayProvider()),
+                localizationUseCase: CalendarLocalizationUseCase(),
+                eventUseCase: eventUseCase
+            ),
+            eventUseCase: eventUseCase,
+            calendarSharingStore: context.store
+        )
+        let replacement = ShiftTimeTemplate(
+            id: .night,
+            nameKey: .shiftNight,
+            displayName: "Night Shift",
+            note: "",
+            colorHex: "#5C6BC0",
+            startTime: "17:00",
+            endTime: "09:00",
+            enabled: true
+        )
+
+        let didCreate = await viewModel.createShiftEvent(on: shiftDay, template: replacement)
+        viewModel.selectedDate = shiftDay
+        await viewModel.cancelShift()
+        let storedEvent = try await repository.event(id: original.id)
+
+        XCTAssertFalse(didCreate)
+        XCTAssertEqual(storedEvent, original)
+        XCTAssertEqual(
+            viewModel.errorMessage,
+            CalendarSharingError.permissionDenied.localizedDescription
+        )
     }
 
     func testErrorPresentationClearsShareToAvoidSheetAlertCompetition() {

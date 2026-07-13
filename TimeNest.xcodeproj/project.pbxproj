@@ -122,6 +122,7 @@
 		EACD70DA0475843CFE1EFC26 /* TuistStrings+TimeNest.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD60AC012AFD4FB0D80E74A4 /* TuistStrings+TimeNest.swift */; };
 		ED55F5AA8BA20313B0D4A40D /* ReminderStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2112727B74951811FF87468E /* ReminderStep.swift */; };
 		F070011046E45E3F7915ACCD /* ShiftTimeTemplateID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */; };
+		F1A3E93C2FB56723E63925D5 /* AppStoreSharedCalendarScreenshotScenes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81284C7724C0DA30DA537B0B /* AppStoreSharedCalendarScreenshotScenes.swift */; };
 		F6926445027ACF53819DE6D7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D916BD562FD27692278BE08C /* SettingsView.swift */; };
 		F8DA7139680EDB332AE1B2E6 /* SwiftDataReminderEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B26128BDCDE6FD0907625F /* SwiftDataReminderEntity.swift */; };
 		FB7C124BB79025D299359E52 /* TuistStrings+TimeNestWidgetExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628806BD83D5701C69BE9FE7 /* TuistStrings+TimeNestWidgetExtension.swift */; };
@@ -248,6 +249,7 @@
 		7C4251982C80EB3BB5CEEF79 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		7ECE250FA345A1F3AD59B44C /* HolidayEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayEvent.swift; sourceTree = "<group>"; };
 		7F0E80203EF1356D852C7E9F /* DayCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayCalendarView.swift; sourceTree = "<group>"; };
+		81284C7724C0DA30DA537B0B /* AppStoreSharedCalendarScreenshotScenes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreSharedCalendarScreenshotScenes.swift; sourceTree = "<group>"; };
 		859200B953D65910745C1393 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		86D32FB2CE7ACD239BD9C9FC /* TimeNestTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestTheme.swift; sourceTree = "<group>"; };
 		8766BACE67A7E6BF321F82A9 /* MonthCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarViewModel.swift; sourceTree = "<group>"; };
@@ -374,6 +376,7 @@
 		17DA94F6675D2CAC4F2F239A /* App */ = {
 			isa = PBXGroup;
 			children = (
+				81284C7724C0DA30DA537B0B /* AppStoreSharedCalendarScreenshotScenes.swift */,
 				F319E82329456A82CF351800 /* CloudKitShareLifecycle.swift */,
 				23C741E9AFC95D68570F8BF9 /* ContentView.swift */,
 				698213AABC972D7419FB4E0E /* TimeNestApp.swift */,
@@ -981,6 +984,7 @@
 				7671D365849B6A4C88FEB783 /* TuistAssets+TimeNest.swift in Sources */,
 				9C99DD8100D2974E11B65A0C /* TuistBundle+TimeNest.swift in Sources */,
 				EACD70DA0475843CFE1EFC26 /* TuistStrings+TimeNest.swift in Sources */,
+				F1A3E93C2FB56723E63925D5 /* AppStoreSharedCalendarScreenshotScenes.swift in Sources */,
 				1EB3DD6D9AEC4ADE18F09FC6 /* CloudKitShareLifecycle.swift in Sources */,
 				AA041746F2F4582BE0B36431 /* ContentView.swift in Sources */,
 				3C0DBB33175D0EDD6186D401 /* TimeNestApp.swift in Sources */,

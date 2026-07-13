@@ -1,0 +1,40 @@
+{
+  "locale": "ja",
+  "screenshots": [
+    {
+      "file": "01_shared_calendar.png",
+      "title": "カレンダーを / 家族や仲間と共有",
+      "width": 1284,
+      "height": 2778,
+      "source": "raw/01_manage_entry.png"
+    },
+    {
+      "file": "02_share_content.png",
+      "title": "共有する内容を / 自由に選択",
+      "width": 1284,
+      "height": 2778,
+      "source": "raw/02_share_content.png"
+    },
+    {
+      "file": "03_received_schedule.png",
+      "title": "受け取った予定を / いつでも確認",
+      "width": 1284,
+      "height": 2778,
+      "source": "raw/03_received_month.png"
+    },
+    {
+      "file": "04_read_only.png",
+      "title": "共有先では / 読み取り専用で安心",
+      "width": 1284,
+      "height": 2778,
+      "source": "raw/04_read_only_detail.png"
+    },
+    {
+      "file": "05_calendar_switcher.png",
+      "title": "自分のカレンダーと / かんたんに切り替え",
+      "width": 1284,
+      "height": 2778,
+      "source": "raw/05_calendar_switcher.png"
+    }
+  ]
+}

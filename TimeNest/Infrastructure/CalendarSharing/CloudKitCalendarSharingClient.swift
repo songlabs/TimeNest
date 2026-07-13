@@ -41,14 +41,15 @@ enum ReceivedSharedCalendarPayloadAssembler {
         }
         let content = CalendarSharingCloudSchema.contentConfiguration(from: calendarRecord)
         let share = records.records(ofType: CKRecord.SystemType.share).first as? CKShare
+        let names = CalendarSharingCloudSchema.compatibleNames(from: calendarRecord)
 
         return ReceivedSharedCalendarPayload(
             calendar: SharedCalendarDescriptor(
                 id: CalendarSharingCloudSchema.identity(for: zoneID),
                 zoneName: zoneID.zoneName,
                 ownerName: zoneID.ownerName,
-                displayName: calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] as? String,
-                calendarName: calendarRecord[CalendarSharingCloudSchema.CalendarField.calendarName] as? String,
+                displayName: names.displayName,
+                calendarName: names.calendarName,
                 participantCount: share.map(participantCount(in:)) ?? 0,
                 contentConfiguration: content
             ),
@@ -300,6 +301,22 @@ enum CalendarSharingCloudSchema {
         record[CalendarField.schemaVersion] = NSNumber(value: content.schemaVersion)
     }
 
+    static func compatibleNames(from record: CKRecord) -> (displayName: String?, calendarName: String?) {
+        let storedDisplayName = normalizedName(record[CalendarField.displayName] as? String)
+        let storedCalendarName = normalizedName(record[CalendarField.calendarName] as? String)
+        let calendarName = storedCalendarName ?? storedDisplayName
+        let displayName = storedDisplayName ?? calendarName
+        return (displayName, calendarName)
+    }
+
+    static func normalizedName(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else {
+            return nil
+        }
+        return value
+    }
+
     static func identity(for zoneID: CKRecordZone.ID) -> String {
         Data("\(zoneID.ownerName)\u{1F}\(zoneID.zoneName)".utf8).base64EncodedString()
     }
@@ -443,14 +460,12 @@ enum CalendarSharingErrorMapper {
         let leafCodes = cloudErrors
             .filter { $0.code != .partialFailure }
             .map { "\(cloudErrorCodeName($0.code))(\($0.code.rawValue))" }
-        let messages = ([error] + cloudErrors).flatMap(sanitizedMessages)
-
         return [
             "errorDomain=\(rootDomain)",
             "errorDomains=\(domains.sorted().joined(separator: ","))",
             "ckErrorCodes=\(cloudErrorCodeSummary(error))",
             "leafErrorCodes=\(leafCodes.isEmpty ? "none" : Array(Set(leafCodes)).sorted().joined(separator: ","))",
-            "serverMessage=\(messages.isEmpty ? "none" : Array(Set(messages)).joined(separator: " | "))"
+            "serverMessage=omitted"
         ].joined(separator: " ")
     }
 
@@ -468,37 +483,6 @@ enum CalendarSharingErrorMapper {
         return [cloudError] + partialErrors.values.flatMap(cloudErrors(in:))
     }
 
-    private static func sanitizedMessages(_ error: Error) -> [String] {
-        let nsError = error as NSError
-        let userInfoMessages = nsError.userInfo.compactMap { key, value -> String? in
-            let normalizedKey = String(describing: key).lowercased()
-            guard normalizedKey.contains("description") || normalizedKey.contains("message"),
-                  let message = value as? String,
-                  !message.isEmpty else {
-                return nil
-            }
-            return message
-        }
-        return ([nsError.localizedDescription] + userInfoMessages)
-            .filter { !$0.isEmpty }
-            .map(redactIdentifiers)
-    }
-
-    private static func redactIdentifiers(in text: String) -> String {
-        let patterns = [
-            #"[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"#,
-            #"[A-Za-z0-9_+/=-]{17,}"#
-        ]
-        return patterns.reduce(String(text.prefix(512))) { partial, pattern in
-            guard let expression = try? NSRegularExpression(pattern: pattern) else { return partial }
-            let range = NSRange(partial.startIndex..., in: partial)
-            return expression.stringByReplacingMatches(
-                in: partial,
-                range: range,
-                withTemplate: "<redacted>"
-            )
-        }
-    }
 }
 
 @MainActor
@@ -568,10 +552,11 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                 )
                 return nil
             }
+            let names = CalendarSharingCloudSchema.compatibleNames(from: calendarRecord)
             let state = OwnedSharedCalendarCloudState(
                 calendar: OwnedSharedCalendarDescriptor(
-                    displayName: calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] as? String ?? "",
-                    calendarName: calendarRecord[CalendarSharingCloudSchema.CalendarField.calendarName] as? String ?? "",
+                    displayName: names.displayName ?? "",
+                    calendarName: names.calendarName ?? "",
                     participantCount: participantCount(in: share),
                     contentConfiguration: CalendarSharingCloudSchema.contentConfiguration(from: calendarRecord)
                 ),
@@ -627,11 +612,10 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             )
             let calendarRecord = try await optionalRecord(calendarID, database: privateDatabase)
                 ?? CKRecord(recordType: CalendarSharingCloudSchema.calendarRecordType, recordID: calendarID)
-            let existingDisplayName = (
+            let existingDisplayName = CalendarSharingCloudSchema.normalizedName(
                 calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] as? String
-            )?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let internalDisplayName = existingDisplayName.flatMap { $0.isEmpty ? nil : $0 }
-                ?? displayName
+            )
+            let internalDisplayName = existingDisplayName ?? displayName
             calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] = internalDisplayName as CKRecordValue
             calendarRecord[CalendarSharingCloudSchema.CalendarField.calendarName] = calendarName as CKRecordValue
             calendarRecord[CalendarSharingCloudSchema.CalendarField.updatedAt] = Date() as CKRecordValue
@@ -863,7 +847,7 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                             database: "shared",
                             details: "recordType=\(CalendarSharingCloudSchema.calendarRecordType) recordCount=0 zone=\(zone.zoneID.zoneName) reason=missing_root"
                         )
-                        continue
+                        throw CalendarSharingError.syncFailed
                     }
                     payloads.append(payload)
                 } catch {
@@ -910,6 +894,19 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
 
     func accept(metadata: CKShare.Metadata) async throws -> String {
         try await verifyAccountAvailability()
+        let calendarID = CalendarSharingCloudSchema.identity(for: metadata.share.recordID.zoneID)
+        switch metadata.participantStatus {
+        case .accepted:
+            return calendarID
+        case .removed:
+            throw CalendarSharingError.shareUnavailable
+        case .unknown:
+            throw CalendarSharingError.invitationPending
+        case .pending:
+            break
+        @unknown default:
+            throw CalendarSharingError.invitationPending
+        }
         do {
             let results = try await container.accept([metadata])
             guard let result = results[metadata] else {

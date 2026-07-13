@@ -64,16 +64,16 @@ struct SharedCalendarDescriptor: Codable, Identifiable, Hashable {
     }
 
     func resolvedDisplayName(fallback: String) -> String {
-        Self.nonempty(displayName) ?? fallback
+        Self.nonempty(displayName) ?? Self.nonempty(calendarName) ?? fallback
     }
 
     func resolvedCalendarName(fallback: String) -> String {
-        Self.nonempty(calendarName) ?? fallback
+        Self.nonempty(calendarName) ?? Self.nonempty(displayName) ?? fallback
     }
 
     var distinctDisplayName: String? {
         guard let displayName = Self.nonempty(displayName) else { return nil }
-        guard let calendarName = Self.nonempty(calendarName) else { return displayName }
+        let calendarName = Self.nonempty(calendarName) ?? displayName
         return displayName.localizedCaseInsensitiveCompare(calendarName) == .orderedSame
             ? nil
             : displayName
