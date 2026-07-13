@@ -269,7 +269,7 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum Entry: Sendable {
-
+    
       public enum Create: Sendable {
         /// New Entry
         public static let title = TimeNestStrings.tr("Localizable", "entry.create.title")
@@ -384,7 +384,7 @@ public enum TimeNestStrings: Sendable {
       public static let title = TimeNestStrings.tr("Localizable", "help.title")
 
       public enum Ads: Sendable {
-
+      
         public enum About: Sendable {
           /// TimeNest may display ads when the consent flow permits ad requests. Use Remove Ads in Settings for a one-time purchase, and Restore Purchases to check the Apple purchase state.
           public static let answer = TimeNestStrings.tr("Localizable", "help.ads.about.answer")
@@ -418,7 +418,7 @@ public enum TimeNestStrings: Sendable {
       }
 
       public enum Events: Sendable {
-
+      
         public enum Add: Sendable {
           /// Tap the add button at the bottom right of the calendar, enter the details, and save. The memo field also supports voice input on supported devices and languages.
           public static let answer = TimeNestStrings.tr("Localizable", "help.events.add.answer")
@@ -442,7 +442,7 @@ public enum TimeNestStrings: Sendable {
       }
 
       public enum Holidays: Sendable {
-
+      
         public enum Language: Sendable {
           /// Holiday names are shown in the language associated with the selected region.
           public static let answer = TimeNestStrings.tr("Localizable", "help.holidays.language.answer")
@@ -475,7 +475,7 @@ public enum TimeNestStrings: Sendable {
       }
 
       public enum Privacy: Sendable {
-
+      
         public enum Account: Sendable {
           /// You do not need to register an account or sign in to use TimeNest. TimeNest has no developer-operated cloud sync; shared calendars use Apple's iCloud (CloudKit).
           public static let answer = TimeNestStrings.tr("Localizable", "help.privacy.account.answer")
@@ -510,7 +510,7 @@ public enum TimeNestStrings: Sendable {
       }
 
       public enum Shifts: Sendable {
-
+      
         public enum Add: Sendable {
           /// Open Shift Input from the menu at the top of the calendar, select a date, and tap a shift button. The shift will appear in the month, week, and day views.
           public static let answer = TimeNestStrings.tr("Localizable", "help.shifts.add.answer")
@@ -576,7 +576,7 @@ public enum TimeNestStrings: Sendable {
       }
 
       public enum Views: Sendable {
-
+      
         public enum Move: Sendable {
           /// Use the previous and next buttons at the top, or swipe the calendar left or right.
           public static let answer = TimeNestStrings.tr("Localizable", "help.views.move.answer")
@@ -705,7 +705,7 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum Ics: Sendable {
-
+    
       public enum Error: Sendable {
         /// ICS data is empty.
         public static let emptyResponse = TimeNestStrings.tr("Localizable", "ics.error.empty_response")
@@ -739,7 +739,7 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum IcsParse: Sendable {
-
+    
       public enum Error: Sendable {
         /// ICS content is empty
         public static let emptyContent = TimeNestStrings.tr("Localizable", "ics_parse.error.empty_content")
