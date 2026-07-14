@@ -322,6 +322,63 @@ enum CalendarSharingCloudSchema {
     }
 }
 
+enum CalendarSharingCloudRecordFactory {
+    static func makeEventRecord(
+        snapshot: SharedEventSnapshot,
+        recordID: CKRecord.ID,
+        existingRecord: CKRecord? = nil
+    ) -> CKRecord {
+        let record = existingRecord
+            ?? CKRecord(recordType: CalendarSharingCloudSchema.eventRecordType, recordID: recordID)
+        record[CalendarSharingCloudSchema.EventField.eventID] = snapshot.id.uuidString as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.title] = snapshot.title as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.startDate] = snapshot.startDate as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.endDate] = snapshot.endDate as CKRecordValue
+        record[CalendarSharingCloudSchema.EventField.isAllDay] = NSNumber(value: snapshot.isAllDay)
+        record[CalendarSharingCloudSchema.EventField.updatedAt] = snapshot.updatedAt as CKRecordValue
+        return record
+    }
+
+    static func makeShiftRecord(
+        snapshot: SharedShiftSnapshot,
+        recordID: CKRecord.ID,
+        existingRecord: CKRecord? = nil
+    ) -> CKRecord {
+        let record = existingRecord
+            ?? CKRecord(recordType: CalendarSharingCloudSchema.shiftRecordType, recordID: recordID)
+        record[CalendarSharingCloudSchema.ShiftField.shiftID] = snapshot.id.uuidString as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.registeredDate] = snapshot.registeredDate as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.displayName] = snapshot.displayName as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.startDate] = snapshot.startDate as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.endDate] = snapshot.endDate as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.spansMidnight] = NSNumber(value: snapshot.spansMidnight)
+        record[CalendarSharingCloudSchema.ShiftField.colorHex] = snapshot.colorHex as CKRecordValue
+        record[CalendarSharingCloudSchema.ShiftField.updatedAt] = snapshot.updatedAt as CKRecordValue
+        return record
+    }
+
+    static func makeWorkRecord(
+        snapshot: SharedWorkRecordSnapshot,
+        recordID: CKRecord.ID,
+        existingRecord: CKRecord? = nil
+    ) -> CKRecord {
+        let record = existingRecord
+            ?? CKRecord(recordType: CalendarSharingCloudSchema.workRecordType, recordID: recordID)
+        record[CalendarSharingCloudSchema.WorkRecordField.workRecordID] = snapshot.id.uuidString as CKRecordValue
+        record[CalendarSharingCloudSchema.WorkRecordField.workDate] = snapshot.workDate as CKRecordValue
+        record[CalendarSharingCloudSchema.WorkRecordField.workInTime] = snapshot.workInTime as CKRecordValue?
+        record[CalendarSharingCloudSchema.WorkRecordField.workOutTime] = snapshot.workOutTime as CKRecordValue?
+        record[CalendarSharingCloudSchema.WorkRecordField.isWorkOutTimeSet] = NSNumber(value: snapshot.isWorkOutTimeSet)
+        record[CalendarSharingCloudSchema.WorkRecordField.restHours] = NSNumber(value: snapshot.restHours)
+        record[CalendarSharingCloudSchema.WorkRecordField.updatedAt] = snapshot.updatedAt as CKRecordValue
+        return record
+    }
+
+    static func makeZoneWideShare(recordZoneID: CKRecordZone.ID) -> CKShare {
+        CKShare(recordZoneID: recordZoneID)
+    }
+}
+
 enum CalendarSharingErrorMapper {
     static func map(
         _ error: Error,
@@ -652,7 +709,7 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             stage = "save_share"
             let shareID = CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: ownedZoneID)
             let share = (try await optionalRecord(shareID, database: privateDatabase) as? CKShare)
-                ?? CKShare(recordZoneID: ownedZoneID)
+                ?? CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: ownedZoneID)
             share.publicPermission = .none
             for participant in share.participants where participant.role != .owner {
                 participant.permission = .readOnly
@@ -1001,23 +1058,13 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             database: privateDatabase
         )
         let existingByID = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) })
-        let calendarID = CKRecord.ID(
-            recordName: CalendarSharingCloudSchema.calendarRecordName,
-            zoneID: ownedZoneID
-        )
-
         let recordsToSave = snapshots.map { snapshot -> CKRecord in
             let recordID = sharedEventRecordID(snapshot.id, zoneID: ownedZoneID)
-            let record = existingByID[recordID]
-                ?? CKRecord(recordType: CalendarSharingCloudSchema.eventRecordType, recordID: recordID)
-            record.parent = CKRecord.Reference(recordID: calendarID, action: .none)
-            record[CalendarSharingCloudSchema.EventField.eventID] = snapshot.id.uuidString as CKRecordValue
-            record[CalendarSharingCloudSchema.EventField.title] = snapshot.title as CKRecordValue
-            record[CalendarSharingCloudSchema.EventField.startDate] = snapshot.startDate as CKRecordValue
-            record[CalendarSharingCloudSchema.EventField.endDate] = snapshot.endDate as CKRecordValue
-            record[CalendarSharingCloudSchema.EventField.isAllDay] = NSNumber(value: snapshot.isAllDay)
-            record[CalendarSharingCloudSchema.EventField.updatedAt] = snapshot.updatedAt as CKRecordValue
-            return record
+            return CalendarSharingCloudRecordFactory.makeEventRecord(
+                snapshot: snapshot,
+                recordID: recordID,
+                existingRecord: existingByID[recordID]
+            )
         }
 
         let desiredRecordIDs = Set(recordsToSave.map(\.recordID))
@@ -1053,24 +1100,13 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             database: privateDatabase
         )
         let existingByID = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) })
-        let calendarID = CKRecord.ID(
-            recordName: CalendarSharingCloudSchema.calendarRecordName,
-            zoneID: ownedZoneID
-        )
         let recordsToSave = snapshots.map { snapshot -> CKRecord in
             let recordID = sharedShiftRecordID(snapshot.id, zoneID: ownedZoneID)
-            let record = existingByID[recordID]
-                ?? CKRecord(recordType: CalendarSharingCloudSchema.shiftRecordType, recordID: recordID)
-            record.parent = CKRecord.Reference(recordID: calendarID, action: .none)
-            record[CalendarSharingCloudSchema.ShiftField.shiftID] = snapshot.id.uuidString as CKRecordValue
-            record[CalendarSharingCloudSchema.ShiftField.registeredDate] = snapshot.registeredDate as CKRecordValue
-            record[CalendarSharingCloudSchema.ShiftField.displayName] = snapshot.displayName as CKRecordValue
-            record[CalendarSharingCloudSchema.ShiftField.startDate] = snapshot.startDate as CKRecordValue
-            record[CalendarSharingCloudSchema.ShiftField.endDate] = snapshot.endDate as CKRecordValue
-            record[CalendarSharingCloudSchema.ShiftField.spansMidnight] = NSNumber(value: snapshot.spansMidnight)
-            record[CalendarSharingCloudSchema.ShiftField.colorHex] = snapshot.colorHex as CKRecordValue
-            record[CalendarSharingCloudSchema.ShiftField.updatedAt] = snapshot.updatedAt as CKRecordValue
-            return record
+            return CalendarSharingCloudRecordFactory.makeShiftRecord(
+                snapshot: snapshot,
+                recordID: recordID,
+                existingRecord: existingByID[recordID]
+            )
         }
         try await saveAndDelete(recordsToSave: recordsToSave, existingRecords: existingRecords)
     }
@@ -1083,23 +1119,13 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             database: privateDatabase
         )
         let existingByID = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) })
-        let calendarID = CKRecord.ID(
-            recordName: CalendarSharingCloudSchema.calendarRecordName,
-            zoneID: ownedZoneID
-        )
         let recordsToSave = snapshots.map { snapshot -> CKRecord in
             let recordID = sharedWorkRecordID(snapshot.id, zoneID: ownedZoneID)
-            let record = existingByID[recordID]
-                ?? CKRecord(recordType: CalendarSharingCloudSchema.workRecordType, recordID: recordID)
-            record.parent = CKRecord.Reference(recordID: calendarID, action: .none)
-            record[CalendarSharingCloudSchema.WorkRecordField.workRecordID] = snapshot.id.uuidString as CKRecordValue
-            record[CalendarSharingCloudSchema.WorkRecordField.workDate] = snapshot.workDate as CKRecordValue
-            record[CalendarSharingCloudSchema.WorkRecordField.workInTime] = snapshot.workInTime as CKRecordValue?
-            record[CalendarSharingCloudSchema.WorkRecordField.workOutTime] = snapshot.workOutTime as CKRecordValue?
-            record[CalendarSharingCloudSchema.WorkRecordField.isWorkOutTimeSet] = NSNumber(value: snapshot.isWorkOutTimeSet)
-            record[CalendarSharingCloudSchema.WorkRecordField.restHours] = NSNumber(value: snapshot.restHours)
-            record[CalendarSharingCloudSchema.WorkRecordField.updatedAt] = snapshot.updatedAt as CKRecordValue
-            return record
+            return CalendarSharingCloudRecordFactory.makeWorkRecord(
+                snapshot: snapshot,
+                recordID: recordID,
+                existingRecord: existingByID[recordID]
+            )
         }
         try await saveAndDelete(recordsToSave: recordsToSave, existingRecords: existingRecords)
     }

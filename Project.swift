@@ -44,7 +44,7 @@ let project = Project(
                     "GENERATE_INFOPLIST_FILE": "NO",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNest/TimeNest.entitlements",
                     "CODE_SIGN_STYLE": "Automatic",
-                    "CURRENT_PROJECT_VERSION": "4",
+                    "CURRENT_PROJECT_VERSION": "5",
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "MARKETING_VERSION": "1.2",
                     "TARGETED_DEVICE_FAMILY": "1,2"
@@ -100,7 +100,7 @@ let project = Project(
                     "APPLICATION_EXTENSION_API_ONLY": "YES",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNestWidgetExtension/TimeNestWidgetExtension.entitlements",
                     "CODE_SIGN_STYLE": "Automatic",
-                    "CURRENT_PROJECT_VERSION": "4",
+                    "CURRENT_PROJECT_VERSION": "5",
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "GENERATE_INFOPLIST_FILE": "YES",
                     "MARKETING_VERSION": "1.2",

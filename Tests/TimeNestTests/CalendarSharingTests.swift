@@ -254,6 +254,111 @@ final class SharedContentConfigurationTests: XCTestCase {
     }
 }
 
+final class CalendarSharingCloudRecordFactoryTests: XCTestCase {
+    func testContentRecordsUseSharedZoneAndFieldsWithoutHierarchicalParents() {
+        let zoneID = CKRecordZone.ID(
+            zoneName: CalendarSharingCloudSchema.zoneName,
+            ownerName: CKCurrentUserDefaultName
+        )
+        let timestamp = Date(timeIntervalSince1970: 1_700_000_000)
+        let eventID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let shiftID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let workID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+
+        let event = CalendarSharingCloudRecordFactory.makeEventRecord(
+            snapshot: SharedEventSnapshot(
+                id: eventID,
+                title: "Event",
+                startDate: timestamp,
+                endDate: timestamp.addingTimeInterval(3_600),
+                isAllDay: false,
+                updatedAt: timestamp
+            ),
+            recordID: CKRecord.ID(recordName: "event-test", zoneID: zoneID)
+        )
+        let shift = CalendarSharingCloudRecordFactory.makeShiftRecord(
+            snapshot: SharedShiftSnapshot(
+                id: shiftID,
+                registeredDate: timestamp,
+                displayName: "Day",
+                startDate: timestamp,
+                endDate: timestamp.addingTimeInterval(3_600),
+                spansMidnight: false,
+                colorHex: "#3366CC",
+                updatedAt: timestamp
+            ),
+            recordID: CKRecord.ID(recordName: "shift-test", zoneID: zoneID)
+        )
+        let work = CalendarSharingCloudRecordFactory.makeWorkRecord(
+            snapshot: SharedWorkRecordSnapshot(
+                id: workID,
+                workDate: timestamp,
+                workInTime: timestamp,
+                workOutTime: timestamp.addingTimeInterval(3_600),
+                isWorkOutTimeSet: true,
+                restHours: 0.5,
+                updatedAt: timestamp
+            ),
+            recordID: CKRecord.ID(recordName: "work-test", zoneID: zoneID)
+        )
+
+        XCTAssertEqual(
+            [event.recordType, shift.recordType, work.recordType],
+            [
+                CalendarSharingCloudSchema.eventRecordType,
+                CalendarSharingCloudSchema.shiftRecordType,
+                CalendarSharingCloudSchema.workRecordType
+            ]
+        )
+        for record in [event, shift, work] {
+            XCTAssertNil(record.parent)
+            XCTAssertEqual(record.recordID.zoneID, zoneID)
+        }
+        XCTAssertEqual(Set(event.allKeys()), Set([
+            CalendarSharingCloudSchema.EventField.eventID,
+            CalendarSharingCloudSchema.EventField.title,
+            CalendarSharingCloudSchema.EventField.startDate,
+            CalendarSharingCloudSchema.EventField.endDate,
+            CalendarSharingCloudSchema.EventField.isAllDay,
+            CalendarSharingCloudSchema.EventField.updatedAt
+        ]))
+        XCTAssertEqual(Set(shift.allKeys()), Set([
+            CalendarSharingCloudSchema.ShiftField.shiftID,
+            CalendarSharingCloudSchema.ShiftField.registeredDate,
+            CalendarSharingCloudSchema.ShiftField.displayName,
+            CalendarSharingCloudSchema.ShiftField.startDate,
+            CalendarSharingCloudSchema.ShiftField.endDate,
+            CalendarSharingCloudSchema.ShiftField.spansMidnight,
+            CalendarSharingCloudSchema.ShiftField.colorHex,
+            CalendarSharingCloudSchema.ShiftField.updatedAt
+        ]))
+        XCTAssertEqual(Set(work.allKeys()), Set([
+            CalendarSharingCloudSchema.WorkRecordField.workRecordID,
+            CalendarSharingCloudSchema.WorkRecordField.workDate,
+            CalendarSharingCloudSchema.WorkRecordField.workInTime,
+            CalendarSharingCloudSchema.WorkRecordField.workOutTime,
+            CalendarSharingCloudSchema.WorkRecordField.isWorkOutTimeSet,
+            CalendarSharingCloudSchema.WorkRecordField.restHours,
+            CalendarSharingCloudSchema.WorkRecordField.updatedAt
+        ]))
+        XCTAssertEqual(event[CalendarSharingCloudSchema.EventField.eventID] as? String, eventID.uuidString)
+        XCTAssertEqual(shift[CalendarSharingCloudSchema.ShiftField.shiftID] as? String, shiftID.uuidString)
+        XCTAssertEqual(work[CalendarSharingCloudSchema.WorkRecordField.workRecordID] as? String, workID.uuidString)
+    }
+
+    func testShareFactoryCreatesZoneWideShareInSharedZone() {
+        let zoneID = CKRecordZone.ID(
+            zoneName: CalendarSharingCloudSchema.zoneName,
+            ownerName: CKCurrentUserDefaultName
+        )
+
+        let share = CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: zoneID)
+
+        XCTAssertEqual(share.recordType, CKRecord.SystemType.share)
+        XCTAssertEqual(share.recordID.zoneID, zoneID)
+    }
+}
+
 final class SharedShiftMappingTests: XCTestCase {
     func testShiftSnapshotContainsOnlyDisplayFieldsAndKeepsOvernightColor() throws {
         let calendar = Calendar(identifier: .gregorian)
@@ -646,6 +751,10 @@ final class ReceivedSharedCalendarPayloadAssemblerTests: XCTestCase {
         let event = makeEventRecord(zoneID: zoneID)
         let shift = makeShiftRecord(zoneID: zoneID)
         let work = makeWorkRecord(zoneID: zoneID)
+        let legacyParent = CKRecord.Reference(recordID: root.recordID, action: .none)
+        event.parent = legacyParent
+        shift.parent = legacyParent
+        work.parent = legacyParent
         records.apply([root, event, shift, work, CKShare(recordZoneID: zoneID)])
 
         let payload = try XCTUnwrap(
@@ -657,6 +766,9 @@ final class ReceivedSharedCalendarPayloadAssemblerTests: XCTestCase {
         XCTAssertEqual(payload.shifts.map(\.id), [Self.shiftID])
         XCTAssertEqual(payload.workRecords.map(\.id), [Self.workID])
         XCTAssertEqual(records.records(ofType: CKRecord.SystemType.share).count, 1)
+        XCTAssertNotNil(event.parent)
+        XCTAssertNotNil(shift.parent)
+        XCTAssertNotNil(work.parent)
     }
 
     func testEmptyContentRecordsKeepCalendarRoot() throws {
