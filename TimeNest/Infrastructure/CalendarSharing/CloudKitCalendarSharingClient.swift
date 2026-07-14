@@ -163,6 +163,58 @@ struct CalendarSharingContentReconciliationPlan {
     }
 }
 
+struct CalendarSharingContentRecordPlan {
+    let recordType: CKRecord.RecordType
+    let legacyRecordIDsToDelete: [CKRecord.ID]
+    let recordsToRecreate: [CKRecord]
+    let recordsToSave: [CKRecord]
+    let ordinaryRecordIDsToDelete: [CKRecord.ID]
+
+    init<Snapshot>(
+        recordType: CKRecord.RecordType,
+        existingRecords: [CKRecord],
+        snapshots: [Snapshot],
+        recordID: (Snapshot) -> CKRecord.ID,
+        makeRecord: (Snapshot, CKRecord.ID, CKRecord?) -> CKRecord
+    ) {
+        self.recordType = recordType
+
+        var latestSnapshotByID: [CKRecord.ID: Snapshot] = [:]
+        for snapshot in snapshots {
+            latestSnapshotByID[recordID(snapshot)] = snapshot
+        }
+        let existingByID = Dictionary(
+            uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) }
+        )
+        let desiredRecordIDs = Set(latestSnapshotByID.keys)
+
+        legacyRecordIDsToDelete = existingRecords
+            .filter { $0.parent != nil }
+            .map(\.recordID)
+            .sorted { $0.recordName < $1.recordName }
+        ordinaryRecordIDsToDelete = existingRecords
+            .filter { $0.parent == nil && !desiredRecordIDs.contains($0.recordID) }
+            .map(\.recordID)
+            .sorted { $0.recordName < $1.recordName }
+
+        var recreatedRecords: [CKRecord] = []
+        var savedRecords: [CKRecord] = []
+        for desiredRecordID in desiredRecordIDs.sorted(by: { $0.recordName < $1.recordName }) {
+            guard let snapshot = latestSnapshotByID[desiredRecordID] else { continue }
+            let existingRecord = existingByID[desiredRecordID]
+            if existingRecord?.parent != nil {
+                // A legacy hierarchical relationship cannot be reliably removed by a
+                // changed-keys update. Recreate from a fresh instance after deletion.
+                recreatedRecords.append(makeRecord(snapshot, desiredRecordID, nil))
+            } else {
+                savedRecords.append(makeRecord(snapshot, desiredRecordID, existingRecord))
+            }
+        }
+        recordsToRecreate = recreatedRecords
+        recordsToSave = savedRecords
+    }
+}
+
 @MainActor
 protocol CalendarSharingClientProtocol {
     func ownedCalendarState() async throws -> OwnedSharedCalendarCloudState?
@@ -232,6 +284,32 @@ enum CalendarSharingDiagnostics {
         let contextualDetails = details()
         logger.error(
             "operation=\(operation, privacy: .public) stage=\(stage, privacy: .public) database=\(database, privacy: .public) \(contextualDetails, privacy: .public) \(errorDetails, privacy: .public)"
+        )
+#endif
+    }
+
+    static func contentRecordStageSucceeded(
+        stage: String,
+        recordType: CKRecord.RecordType,
+        count: Int
+    ) {
+#if DEBUG
+        logger.debug(
+            "stage=\(stage, privacy: .public) recordType=\(recordType, privacy: .public) count=\(count) result=success"
+        )
+#endif
+    }
+
+    static func contentRecordStageFailed(
+        stage: String,
+        recordType: CKRecord.RecordType,
+        count: Int,
+        error: Error
+    ) {
+#if DEBUG
+        let nsError = error as NSError
+        logger.error(
+            "stage=\(stage, privacy: .public) recordType=\(recordType, privacy: .public) count=\(count) result=failure errorDomain=\(nsError.domain, privacy: .public) errorCode=\(nsError.code)"
         )
 #endif
     }
@@ -328,8 +406,11 @@ enum CalendarSharingCloudRecordFactory {
         recordID: CKRecord.ID,
         existingRecord: CKRecord? = nil
     ) -> CKRecord {
-        let record = existingRecord
-            ?? CKRecord(recordType: CalendarSharingCloudSchema.eventRecordType, recordID: recordID)
+        let record = makeContentRecord(
+            recordType: CalendarSharingCloudSchema.eventRecordType,
+            recordID: recordID,
+            existingRecord: existingRecord
+        )
         record[CalendarSharingCloudSchema.EventField.eventID] = snapshot.id.uuidString as CKRecordValue
         record[CalendarSharingCloudSchema.EventField.title] = snapshot.title as CKRecordValue
         record[CalendarSharingCloudSchema.EventField.startDate] = snapshot.startDate as CKRecordValue
@@ -344,8 +425,11 @@ enum CalendarSharingCloudRecordFactory {
         recordID: CKRecord.ID,
         existingRecord: CKRecord? = nil
     ) -> CKRecord {
-        let record = existingRecord
-            ?? CKRecord(recordType: CalendarSharingCloudSchema.shiftRecordType, recordID: recordID)
+        let record = makeContentRecord(
+            recordType: CalendarSharingCloudSchema.shiftRecordType,
+            recordID: recordID,
+            existingRecord: existingRecord
+        )
         record[CalendarSharingCloudSchema.ShiftField.shiftID] = snapshot.id.uuidString as CKRecordValue
         record[CalendarSharingCloudSchema.ShiftField.registeredDate] = snapshot.registeredDate as CKRecordValue
         record[CalendarSharingCloudSchema.ShiftField.displayName] = snapshot.displayName as CKRecordValue
@@ -362,8 +446,11 @@ enum CalendarSharingCloudRecordFactory {
         recordID: CKRecord.ID,
         existingRecord: CKRecord? = nil
     ) -> CKRecord {
-        let record = existingRecord
-            ?? CKRecord(recordType: CalendarSharingCloudSchema.workRecordType, recordID: recordID)
+        let record = makeContentRecord(
+            recordType: CalendarSharingCloudSchema.workRecordType,
+            recordID: recordID,
+            existingRecord: existingRecord
+        )
         record[CalendarSharingCloudSchema.WorkRecordField.workRecordID] = snapshot.id.uuidString as CKRecordValue
         record[CalendarSharingCloudSchema.WorkRecordField.workDate] = snapshot.workDate as CKRecordValue
         record[CalendarSharingCloudSchema.WorkRecordField.workInTime] = snapshot.workInTime as CKRecordValue?
@@ -376,6 +463,117 @@ enum CalendarSharingCloudRecordFactory {
 
     static func makeZoneWideShare(recordZoneID: CKRecordZone.ID) -> CKShare {
         CKShare(recordZoneID: recordZoneID)
+    }
+
+    private static func makeContentRecord(
+        recordType: CKRecord.RecordType,
+        recordID: CKRecord.ID,
+        existingRecord: CKRecord?
+    ) -> CKRecord {
+        guard let existingRecord,
+              existingRecord.parent == nil,
+              existingRecord.recordID == recordID,
+              existingRecord.recordType == recordType else {
+            return CKRecord(recordType: recordType, recordID: recordID)
+        }
+        return existingRecord
+    }
+}
+
+@MainActor
+protocol CalendarSharingContentRecordDatabase {
+    func save(_ records: [CKRecord]) async throws
+    func delete(_ recordIDs: [CKRecord.ID]) async throws
+}
+
+@MainActor
+private struct CloudKitContentRecordDatabase: CalendarSharingContentRecordDatabase {
+    let database: CKDatabase
+
+    func save(_ records: [CKRecord]) async throws {
+        let result = try await database.modifyRecords(
+            saving: records,
+            deleting: [],
+            savePolicy: .changedKeys,
+            atomically: false
+        )
+        try validate(result.saveResults)
+    }
+
+    func delete(_ recordIDs: [CKRecord.ID]) async throws {
+        let result = try await database.modifyRecords(
+            saving: [],
+            deleting: recordIDs,
+            savePolicy: .ifServerRecordUnchanged,
+            atomically: false
+        )
+        try validate(result.deleteResults)
+    }
+
+    private func validate<Key, Value>(_ results: [Key: Result<Value, Error>]) throws {
+        for result in results.values {
+            _ = try result.get()
+        }
+    }
+}
+
+@MainActor
+struct CalendarSharingContentRecordPlanExecutor {
+    let database: any CalendarSharingContentRecordDatabase
+
+    func execute(
+        _ plan: CalendarSharingContentRecordPlan,
+        migrationStageName: String
+    ) async throws {
+        try await migrate(
+            stage: "migrate_\(migrationStageName)_delete",
+            recordType: plan.recordType,
+            count: plan.legacyRecordIDsToDelete.count
+        ) {
+            for batch in plan.legacyRecordIDsToDelete.chunked(maxCount: 200) {
+                try await database.delete(batch)
+            }
+        }
+        try await migrate(
+            stage: "migrate_\(migrationStageName)_recreate",
+            recordType: plan.recordType,
+            count: plan.recordsToRecreate.count
+        ) {
+            for batch in plan.recordsToRecreate.chunked(maxCount: 200) {
+                try await database.save(batch)
+            }
+        }
+        for batch in plan.recordsToSave.chunked(maxCount: 200) {
+            try await database.save(batch)
+        }
+        for batch in plan.ordinaryRecordIDsToDelete.chunked(maxCount: 200) {
+            try await database.delete(batch)
+        }
+    }
+
+    private func migrate(
+        stage: String,
+        recordType: CKRecord.RecordType,
+        count: Int,
+        operation: () async throws -> Void
+    ) async throws {
+        guard count > 0 else { return }
+        do {
+            try await operation()
+            CalendarSharingDiagnostics.contentRecordStageSucceeded(
+                stage: stage,
+                recordType: recordType,
+                count: count
+            )
+        } catch {
+            CalendarSharingDiagnostics.contentRecordStageFailed(
+                stage: stage,
+                recordType: recordType,
+                count: count,
+                error: error
+            )
+            throw error
+        }
     }
 }
 
@@ -1045,118 +1243,158 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         workRecords: [SharedWorkRecordSnapshot]
     ) async throws {
         let plan = CalendarSharingContentReconciliationPlan(content: content)
-        try await replaceOwnedEventRecords(plan.eventsToSave(events))
-        try await replaceOwnedShiftRecords(plan.shiftsToSave(shifts))
-        try await replaceOwnedWorkRecords(plan.workRecordsToSave(workRecords))
-    }
-
-    private func replaceOwnedEventRecords(_ snapshots: [SharedEventSnapshot]) async throws {
-        let existingRecords = try await recordsAllowingMissingRecordType(
+        let existingRecords = try await allRecordsFromZoneChanges(
+            zoneID: ownedZoneID,
+            database: privateDatabase,
+            operation: "reconcileOwnedContent"
+        )
+        try await saveContentRecords(
+            stage: "save_events",
             recordType: CalendarSharingCloudSchema.eventRecordType,
-            queryStage: "query_owned_events",
-            zoneID: ownedZoneID,
-            database: privateDatabase
-        )
-        let existingByID = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) })
-        let recordsToSave = snapshots.map { snapshot -> CKRecord in
-            let recordID = sharedEventRecordID(snapshot.id, zoneID: ownedZoneID)
-            return CalendarSharingCloudRecordFactory.makeEventRecord(
-                snapshot: snapshot,
-                recordID: recordID,
-                existingRecord: existingByID[recordID]
+            count: plan.eventsToSave(events).count
+        ) {
+            try await replaceOwnedEventRecords(
+                plan.eventsToSave(events),
+                existingRecords: existingRecords.records(
+                    ofType: CalendarSharingCloudSchema.eventRecordType
+                )
             )
         }
-
-        let desiredRecordIDs = Set(recordsToSave.map(\.recordID))
-        let recordIDsToDelete = existingRecords
-            .map(\.recordID)
-            .filter { !desiredRecordIDs.contains($0) }
-
-        for batch in recordsToSave.chunked(maxCount: 200) {
-            let result = try await privateDatabase.modifyRecords(
-                saving: batch,
-                deleting: [],
-                savePolicy: .changedKeys,
-                atomically: false
-            )
-            try validate(result.saveResults)
-        }
-        for batch in recordIDsToDelete.chunked(maxCount: 200) {
-            let result = try await privateDatabase.modifyRecords(
-                saving: [],
-                deleting: batch,
-                savePolicy: .ifServerRecordUnchanged,
-                atomically: false
-            )
-            try validate(result.deleteResults)
-        }
-    }
-
-    private func replaceOwnedShiftRecords(_ snapshots: [SharedShiftSnapshot]) async throws {
-        let existingRecords = try await recordsAllowingMissingRecordType(
+        try await saveContentRecords(
+            stage: "save_shifts",
             recordType: CalendarSharingCloudSchema.shiftRecordType,
-            queryStage: "query_owned_shifts",
-            zoneID: ownedZoneID,
-            database: privateDatabase
-        )
-        let existingByID = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) })
-        let recordsToSave = snapshots.map { snapshot -> CKRecord in
-            let recordID = sharedShiftRecordID(snapshot.id, zoneID: ownedZoneID)
-            return CalendarSharingCloudRecordFactory.makeShiftRecord(
-                snapshot: snapshot,
-                recordID: recordID,
-                existingRecord: existingByID[recordID]
+            count: plan.shiftsToSave(shifts).count
+        ) {
+            try await replaceOwnedShiftRecords(
+                plan.shiftsToSave(shifts),
+                existingRecords: existingRecords.records(
+                    ofType: CalendarSharingCloudSchema.shiftRecordType
+                )
             )
         }
-        try await saveAndDelete(recordsToSave: recordsToSave, existingRecords: existingRecords)
-    }
-
-    private func replaceOwnedWorkRecords(_ snapshots: [SharedWorkRecordSnapshot]) async throws {
-        let existingRecords = try await recordsAllowingMissingRecordType(
+        try await saveContentRecords(
+            stage: "save_work_records",
             recordType: CalendarSharingCloudSchema.workRecordType,
-            queryStage: "query_owned_work_records",
-            zoneID: ownedZoneID,
-            database: privateDatabase
-        )
-        let existingByID = Dictionary(uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) })
-        let recordsToSave = snapshots.map { snapshot -> CKRecord in
-            let recordID = sharedWorkRecordID(snapshot.id, zoneID: ownedZoneID)
-            return CalendarSharingCloudRecordFactory.makeWorkRecord(
-                snapshot: snapshot,
-                recordID: recordID,
-                existingRecord: existingByID[recordID]
+            count: plan.workRecordsToSave(workRecords).count
+        ) {
+            try await replaceOwnedWorkRecords(
+                plan.workRecordsToSave(workRecords),
+                existingRecords: existingRecords.records(
+                    ofType: CalendarSharingCloudSchema.workRecordType
+                )
             )
         }
-        try await saveAndDelete(recordsToSave: recordsToSave, existingRecords: existingRecords)
     }
 
-    private func saveAndDelete(
-        recordsToSave: [CKRecord],
+    private func saveContentRecords(
+        stage: String,
+        recordType: CKRecord.RecordType,
+        count: Int,
+        operation: () async throws -> Void
+    ) async throws {
+        do {
+            try await operation()
+            CalendarSharingDiagnostics.contentRecordStageSucceeded(
+                stage: stage,
+                recordType: recordType,
+                count: count
+            )
+        } catch {
+            CalendarSharingDiagnostics.contentRecordStageFailed(
+                stage: stage,
+                recordType: recordType,
+                count: count,
+                error: error
+            )
+            throw error
+        }
+    }
+
+    private func replaceOwnedEventRecords(
+        _ snapshots: [SharedEventSnapshot],
         existingRecords: [CKRecord]
     ) async throws {
-        let desiredRecordIDs = Set(recordsToSave.map(\.recordID))
-        let recordIDsToDelete = existingRecords
-            .map(\.recordID)
-            .filter { !desiredRecordIDs.contains($0) }
+        try await replaceOwnedRecords(
+            snapshots,
+            recordType: CalendarSharingCloudSchema.eventRecordType,
+            migrationStageName: "events",
+            existingRecords: existingRecords,
+            recordID: { [ownedZoneID] snapshot in
+                sharedEventRecordID(snapshot.id, zoneID: ownedZoneID)
+            },
+            makeRecord: { snapshot, recordID, existingRecord in
+                CalendarSharingCloudRecordFactory.makeEventRecord(
+                    snapshot: snapshot,
+                    recordID: recordID,
+                    existingRecord: existingRecord
+                )
+            }
+        )
+    }
 
-        for batch in recordsToSave.chunked(maxCount: 200) {
-            let result = try await privateDatabase.modifyRecords(
-                saving: batch,
-                deleting: [],
-                savePolicy: .changedKeys,
-                atomically: false
-            )
-            try validate(result.saveResults)
-        }
-        for batch in recordIDsToDelete.chunked(maxCount: 200) {
-            let result = try await privateDatabase.modifyRecords(
-                saving: [],
-                deleting: batch,
-                savePolicy: .ifServerRecordUnchanged,
-                atomically: false
-            )
-            try validate(result.deleteResults)
-        }
+    private func replaceOwnedShiftRecords(
+        _ snapshots: [SharedShiftSnapshot],
+        existingRecords: [CKRecord]
+    ) async throws {
+        try await replaceOwnedRecords(
+            snapshots,
+            recordType: CalendarSharingCloudSchema.shiftRecordType,
+            migrationStageName: "shifts",
+            existingRecords: existingRecords,
+            recordID: { [ownedZoneID] snapshot in
+                sharedShiftRecordID(snapshot.id, zoneID: ownedZoneID)
+            },
+            makeRecord: { snapshot, recordID, existingRecord in
+                CalendarSharingCloudRecordFactory.makeShiftRecord(
+                    snapshot: snapshot,
+                    recordID: recordID,
+                    existingRecord: existingRecord
+                )
+            }
+        )
+    }
+
+    private func replaceOwnedWorkRecords(
+        _ snapshots: [SharedWorkRecordSnapshot],
+        existingRecords: [CKRecord]
+    ) async throws {
+        try await replaceOwnedRecords(
+            snapshots,
+            recordType: CalendarSharingCloudSchema.workRecordType,
+            migrationStageName: "work_records",
+            existingRecords: existingRecords,
+            recordID: { [ownedZoneID] snapshot in
+                sharedWorkRecordID(snapshot.id, zoneID: ownedZoneID)
+            },
+            makeRecord: { snapshot, recordID, existingRecord in
+                CalendarSharingCloudRecordFactory.makeWorkRecord(
+                    snapshot: snapshot,
+                    recordID: recordID,
+                    existingRecord: existingRecord
+                )
+            }
+        )
+    }
+
+    private func replaceOwnedRecords<Snapshot>(
+        _ snapshots: [Snapshot],
+        recordType: CKRecord.RecordType,
+        migrationStageName: String,
+        existingRecords: [CKRecord],
+        recordID: (Snapshot) -> CKRecord.ID,
+        makeRecord: (Snapshot, CKRecord.ID, CKRecord?) -> CKRecord
+    ) async throws {
+        let plan = CalendarSharingContentRecordPlan(
+            recordType: recordType,
+            existingRecords: existingRecords,
+            snapshots: snapshots,
+            recordID: recordID,
+            makeRecord: makeRecord
+        )
+        let executor = CalendarSharingContentRecordPlanExecutor(
+            database: CloudKitContentRecordDatabase(database: privateDatabase)
+        )
+        try await executor.execute(plan, migrationStageName: migrationStageName)
     }
 
     private func accountStatusName(_ status: CKAccountStatus) -> String {
@@ -1180,39 +1418,36 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         }
     }
 
-    private func allRecords(
-        recordType: String,
-        zoneID: CKRecordZone.ID,
-        database: CKDatabase
-    ) async throws -> [CKRecord] {
-        let query = CKQuery(recordType: recordType, predicate: NSPredicate(value: true))
-        var response = try await database.records(matching: query, inZoneWith: zoneID)
-        var records = try response.matchResults.map { try $0.1.get() }
-
-        while let cursor = response.queryCursor {
-            response = try await database.records(continuingMatchFrom: cursor)
-            records.append(contentsOf: try response.matchResults.map { try $0.1.get() })
-        }
-        return records
-    }
-
     private func allSharedRecordsFromZoneChanges(
         zoneID: CKRecordZone.ID
+    ) async throws -> SharedZoneRecordCollection {
+        try await allRecordsFromZoneChanges(
+            zoneID: zoneID,
+            database: sharedDatabase,
+            operation: "refreshSharedCalendars"
+        )
+    }
+
+    private func allRecordsFromZoneChanges(
+        zoneID: CKRecordZone.ID,
+        database: CKDatabase,
+        operation: String
     ) async throws -> SharedZoneRecordCollection {
         var records = SharedZoneRecordCollection()
         var changeToken: CKServerChangeToken?
         var restartedAfterExpiredToken = false
+        let databaseName = database.databaseScope == .shared ? "shared" : "private"
 
         CalendarSharingDiagnostics.debug(
-            operation: "refreshSharedCalendars",
+            operation: operation,
             stage: "fetch_zone_changes_started",
-            database: "shared",
+            database: databaseName,
             details: "zone=\(zoneID.zoneName) previousToken=false"
         )
 
         while true {
             do {
-                let response = try await sharedDatabase.recordZoneChanges(
+                let response = try await database.recordZoneChanges(
                     inZoneWith: zoneID,
                     since: changeToken
                 )
@@ -1226,9 +1461,9 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                 changeToken = response.changeToken
 
                 CalendarSharingDiagnostics.debug(
-                    operation: "refreshSharedCalendars",
+                    operation: operation,
                     stage: "fetch_zone_changes_completed",
-                    database: "shared",
+                    database: databaseName,
                     details: "zone=\(zoneID.zoneName) changed=\(changedRecords.count) deleted=\(response.deletions.count) recordCount=\(records.recordsByID.count) moreComing=\(response.moreComing)"
                 )
                 if !response.moreComing {
@@ -1243,18 +1478,18 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                     changeToken = nil
                     records = SharedZoneRecordCollection()
                     CalendarSharingDiagnostics.error(
-                        operation: "refreshSharedCalendars",
+                        operation: operation,
                         stage: "fetch_zone_changes_restart",
-                        database: "shared",
+                        database: databaseName,
                         error: error,
                         details: "zone=\(zoneID.zoneName) restartFromBeginning=true"
                     )
                     continue
                 }
                 CalendarSharingDiagnostics.error(
-                    operation: "refreshSharedCalendars",
+                    operation: operation,
                     stage: "fetch_zone_changes_failed",
-                    database: "shared",
+                    database: databaseName,
                     error: error,
                     details: "zone=\(zoneID.zoneName)"
                 )
@@ -1287,25 +1522,6 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                 database: "shared",
                 details: "recordType=\(recordType) recordCount=\(records.records(ofType: recordType).count) zone=\(zoneID.zoneName)"
             )
-        }
-    }
-
-    private func recordsAllowingMissingRecordType(
-        recordType: String,
-        queryStage: String,
-        zoneID: CKRecordZone.ID,
-        database: CKDatabase
-    ) async throws -> [CKRecord] {
-        do {
-            return try await allRecords(recordType: recordType, zoneID: zoneID, database: database)
-        } catch where CalendarSharingErrorMapper.shouldTreatMissingQueriedRecordTypeAsEmpty(error) {
-            CalendarSharingDiagnostics.debug(
-                operation: queryStage,
-                stage: "missing_record_type",
-                database: database.databaseScope == .shared ? "shared" : "private",
-                details: "recordType=\(recordType) treatedAsEmpty=true"
-            )
-            return []
         }
     }
 

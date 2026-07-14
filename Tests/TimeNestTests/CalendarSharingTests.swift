@@ -111,6 +111,14 @@ final class SharedEventMappingTests: XCTestCase {
         XCTAssertNil(occurrence.workInfo)
     }
 
+    func testOrdinaryEventIsClassifiedOnlyAsSharedEvent() throws {
+        let event = makeEvent(title: "Appointment")
+
+        XCTAssertNotNil(SharedEventMapper.snapshot(from: event))
+        XCTAssertNil(SharedShiftMapper.snapshot(from: event))
+        XCTAssertTrue(SharedWorkRecordMapper.snapshots(from: [event]).isEmpty)
+    }
+
     private func makeEvent(
         title: String,
         note: String? = nil,
@@ -346,6 +354,168 @@ final class CalendarSharingCloudRecordFactoryTests: XCTestCase {
         XCTAssertEqual(work[CalendarSharingCloudSchema.WorkRecordField.workRecordID] as? String, workID.uuidString)
     }
 
+    func testFactoryReplacesLegacyInstancesAndPreservesIdentityZoneTypeAndUpdatedFields() throws {
+        let zoneID = CKRecordZone.ID(
+            zoneName: CalendarSharingCloudSchema.zoneName,
+            ownerName: CKCurrentUserDefaultName
+        )
+        let firstTimestamp = Date(timeIntervalSince1970: 1_700_000_000)
+        let secondTimestamp = firstTimestamp.addingTimeInterval(3_600)
+        let eventID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let shiftID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let workID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let eventRecordID = CKRecord.ID(recordName: "event-test", zoneID: zoneID)
+        let shiftRecordID = CKRecord.ID(recordName: "shift-test", zoneID: zoneID)
+        let workRecordID = CKRecord.ID(recordName: "work-test", zoneID: zoneID)
+
+        let existingEvent = CalendarSharingCloudRecordFactory.makeEventRecord(
+            snapshot: SharedEventSnapshot(
+                id: eventID,
+                title: "First event",
+                startDate: firstTimestamp,
+                endDate: firstTimestamp.addingTimeInterval(1_800),
+                isAllDay: false,
+                updatedAt: firstTimestamp
+            ),
+            recordID: eventRecordID
+        )
+        let existingShift = CalendarSharingCloudRecordFactory.makeShiftRecord(
+            snapshot: SharedShiftSnapshot(
+                id: shiftID,
+                registeredDate: firstTimestamp,
+                displayName: "First shift",
+                startDate: firstTimestamp,
+                endDate: firstTimestamp.addingTimeInterval(1_800),
+                spansMidnight: false,
+                colorHex: "#111111",
+                updatedAt: firstTimestamp
+            ),
+            recordID: shiftRecordID
+        )
+        let existingWork = CalendarSharingCloudRecordFactory.makeWorkRecord(
+            snapshot: SharedWorkRecordSnapshot(
+                id: workID,
+                workDate: firstTimestamp,
+                workInTime: firstTimestamp,
+                workOutTime: nil,
+                isWorkOutTimeSet: false,
+                restHours: 0,
+                updatedAt: firstTimestamp
+            ),
+            recordID: workRecordID
+        )
+        let legacyParent = CKRecord.Reference(
+            recordID: CKRecord.ID(
+                recordName: CalendarSharingCloudSchema.calendarRecordName,
+                zoneID: zoneID
+            ),
+            action: .none
+        )
+        [existingEvent, existingShift, existingWork].forEach { $0.parent = legacyParent }
+
+        let updatedEvent = CalendarSharingCloudRecordFactory.makeEventRecord(
+            snapshot: SharedEventSnapshot(
+                id: eventID,
+                title: "Updated event",
+                startDate: secondTimestamp,
+                endDate: secondTimestamp.addingTimeInterval(7_200),
+                isAllDay: true,
+                updatedAt: secondTimestamp
+            ),
+            recordID: eventRecordID,
+            existingRecord: existingEvent
+        )
+        let updatedShift = CalendarSharingCloudRecordFactory.makeShiftRecord(
+            snapshot: SharedShiftSnapshot(
+                id: shiftID,
+                registeredDate: secondTimestamp,
+                displayName: "Updated shift",
+                startDate: secondTimestamp,
+                endDate: secondTimestamp.addingTimeInterval(7_200),
+                spansMidnight: true,
+                colorHex: "#ABCDEF",
+                updatedAt: secondTimestamp
+            ),
+            recordID: shiftRecordID,
+            existingRecord: existingShift
+        )
+        let updatedWork = CalendarSharingCloudRecordFactory.makeWorkRecord(
+            snapshot: SharedWorkRecordSnapshot(
+                id: workID,
+                workDate: secondTimestamp,
+                workInTime: secondTimestamp,
+                workOutTime: secondTimestamp.addingTimeInterval(7_200),
+                isWorkOutTimeSet: true,
+                restHours: 1.25,
+                updatedAt: secondTimestamp
+            ),
+            recordID: workRecordID,
+            existingRecord: existingWork
+        )
+
+        XCTAssertFalse(updatedEvent === existingEvent)
+        XCTAssertFalse(updatedShift === existingShift)
+        XCTAssertFalse(updatedWork === existingWork)
+        for (record, expectedID, expectedType) in [
+            (updatedEvent, eventRecordID, CalendarSharingCloudSchema.eventRecordType),
+            (updatedShift, shiftRecordID, CalendarSharingCloudSchema.shiftRecordType),
+            (updatedWork, workRecordID, CalendarSharingCloudSchema.workRecordType)
+        ] {
+            XCTAssertNil(record.parent)
+            XCTAssertEqual(record.recordID, expectedID)
+            XCTAssertEqual(record.recordID.zoneID, zoneID)
+            XCTAssertEqual(record.recordType, expectedType)
+        }
+        XCTAssertEqual(
+            updatedEvent[CalendarSharingCloudSchema.EventField.eventID] as? String,
+            eventID.uuidString
+        )
+        XCTAssertEqual(
+            updatedEvent[CalendarSharingCloudSchema.EventField.title] as? String,
+            "Updated event"
+        )
+        XCTAssertEqual(
+            updatedEvent[CalendarSharingCloudSchema.EventField.startDate] as? Date,
+            secondTimestamp
+        )
+        XCTAssertEqual(
+            (updatedEvent[CalendarSharingCloudSchema.EventField.isAllDay] as? NSNumber)?.boolValue,
+            true
+        )
+        XCTAssertEqual(
+            updatedShift[CalendarSharingCloudSchema.ShiftField.shiftID] as? String,
+            shiftID.uuidString
+        )
+        XCTAssertEqual(
+            updatedShift[CalendarSharingCloudSchema.ShiftField.displayName] as? String,
+            "Updated shift"
+        )
+        XCTAssertEqual(
+            updatedShift[CalendarSharingCloudSchema.ShiftField.colorHex] as? String,
+            "#ABCDEF"
+        )
+        XCTAssertEqual(
+            (updatedShift[CalendarSharingCloudSchema.ShiftField.spansMidnight] as? NSNumber)?.boolValue,
+            true
+        )
+        XCTAssertEqual(
+            updatedWork[CalendarSharingCloudSchema.WorkRecordField.workRecordID] as? String,
+            workID.uuidString
+        )
+        XCTAssertEqual(
+            updatedWork[CalendarSharingCloudSchema.WorkRecordField.workOutTime] as? Date,
+            secondTimestamp.addingTimeInterval(7_200)
+        )
+        XCTAssertEqual(
+            (updatedWork[CalendarSharingCloudSchema.WorkRecordField.isWorkOutTimeSet] as? NSNumber)?.boolValue,
+            true
+        )
+        XCTAssertEqual(
+            (updatedWork[CalendarSharingCloudSchema.WorkRecordField.restHours] as? NSNumber)?.doubleValue,
+            1.25
+        )
+    }
+
     func testShareFactoryCreatesZoneWideShareInSharedZone() {
         let zoneID = CKRecordZone.ID(
             zoneName: CalendarSharingCloudSchema.zoneName,
@@ -356,6 +526,420 @@ final class CalendarSharingCloudRecordFactoryTests: XCTestCase {
 
         XCTAssertEqual(share.recordType, CKRecord.SystemType.share)
         XCTAssertEqual(share.recordID.zoneID, zoneID)
+    }
+}
+
+@MainActor
+final class CalendarSharingContentRecordMigrationTests: XCTestCase {
+    func testLegacySharedEventEntersDeleteAndFreshRecreatePlan() throws {
+        try assertLegacyPlan(for: .event)
+    }
+
+    func testLegacySharedShiftEntersDeleteAndFreshRecreatePlan() throws {
+        try assertLegacyPlan(for: .shift)
+    }
+
+    func testLegacySharedWorkRecordEntersDeleteAndFreshRecreatePlan() throws {
+        try assertLegacyPlan(for: .workRecord)
+    }
+
+    func testLegacyRecordMissingFromSnapshotIsDeletedWithoutRecreation() {
+        for kind in ContentKind.allCases {
+            let legacy = makeExistingRecord(kind, hasParent: true)
+            let plan = makePlan(kind, existingRecords: [legacy], snapshotCopies: 0)
+
+            XCTAssertEqual(plan.legacyRecordIDsToDelete, [legacy.recordID])
+            XCTAssertTrue(plan.recordsToRecreate.isEmpty)
+            XCTAssertTrue(plan.recordsToSave.isEmpty)
+            XCTAssertTrue(plan.ordinaryRecordIDsToDelete.isEmpty)
+        }
+    }
+
+    func testOrdinaryExistingRecordsAreReusedWithoutMigrationAndFieldsAreUpdated() throws {
+        for kind in ContentKind.allCases {
+            let existing = makeExistingRecord(kind, hasParent: false)
+            let plan = makePlan(kind, existingRecords: [existing])
+            let saved = try XCTUnwrap(plan.recordsToSave.first)
+
+            XCTAssertTrue(saved === existing)
+            XCTAssertTrue(plan.legacyRecordIDsToDelete.isEmpty)
+            XCTAssertTrue(plan.recordsToRecreate.isEmpty)
+            XCTAssertTrue(plan.ordinaryRecordIDsToDelete.isEmpty)
+            XCTAssertEqual(saved.recordID, recordID(for: kind))
+            XCTAssertEqual(saved.recordID.zoneID, zoneID)
+            XCTAssertEqual(saved.recordType, kind.recordType)
+            XCTAssertNil(saved.parent)
+            assertUpdatedField(on: saved, kind: kind)
+        }
+    }
+
+    func testOrdinaryRecordMissingFromSnapshotUsesNormalDeleteOnly() {
+        for kind in ContentKind.allCases {
+            let existing = makeExistingRecord(kind, hasParent: false)
+            let plan = makePlan(kind, existingRecords: [existing], snapshotCopies: 0)
+
+            XCTAssertTrue(plan.legacyRecordIDsToDelete.isEmpty)
+            XCTAssertTrue(plan.recordsToRecreate.isEmpty)
+            XCTAssertTrue(plan.recordsToSave.isEmpty)
+            XCTAssertEqual(plan.ordinaryRecordIDsToDelete, [existing.recordID])
+        }
+    }
+
+    func testDuplicateSnapshotIDsProduceOnlyOneRecord() {
+        for kind in ContentKind.allCases {
+            let plan = makePlan(kind, existingRecords: [], snapshotCopies: 2)
+            let allRecordIDs = (plan.recordsToRecreate + plan.recordsToSave).map(\.recordID)
+
+            XCTAssertEqual(allRecordIDs.count, 1)
+            XCTAssertEqual(Set(allRecordIDs).count, 1)
+        }
+    }
+
+    func testTwoRoundMigrationOrderAndIdempotencyForAllContentTypes() async throws {
+        for kind in ContentKind.allCases {
+            let legacy = makeExistingRecord(kind, hasParent: true)
+            let firstPlan = makePlan(kind, existingRecords: [legacy])
+            let firstDatabase = FakeContentRecordDatabase()
+
+            try await CalendarSharingContentRecordPlanExecutor(database: firstDatabase).execute(
+                firstPlan,
+                migrationStageName: kind.stageName
+            )
+
+            XCTAssertEqual(firstDatabase.calls, [
+                .delete([kind.recordName]),
+                .save([kind.recordName])
+            ])
+            let recreated = try XCTUnwrap(firstPlan.recordsToRecreate.first)
+            let secondPlan = makePlan(kind, existingRecords: [recreated])
+            let secondDatabase = FakeContentRecordDatabase()
+
+            try await CalendarSharingContentRecordPlanExecutor(database: secondDatabase).execute(
+                secondPlan,
+                migrationStageName: kind.stageName
+            )
+
+            XCTAssertTrue(secondPlan.legacyRecordIDsToDelete.isEmpty)
+            XCTAssertTrue(secondPlan.recordsToRecreate.isEmpty)
+            XCTAssertEqual(secondDatabase.calls, [.save([kind.recordName])])
+        }
+    }
+
+    func testDeleteFailurePreventsRecreation() async {
+        let kind = ContentKind.shift
+        let legacy = makeExistingRecord(kind, hasParent: true)
+        let plan = makePlan(kind, existingRecords: [legacy])
+        let database = FakeContentRecordDatabase()
+        database.failDeleteCall = 1
+
+        do {
+            try await CalendarSharingContentRecordPlanExecutor(database: database).execute(
+                plan,
+                migrationStageName: kind.stageName
+            )
+            XCTFail("Expected the injected delete failure")
+        } catch {
+            XCTAssertEqual(database.calls, [.delete([kind.recordName])])
+            XCTAssertFalse(database.calls.contains(.save([kind.recordName])))
+        }
+    }
+
+    func testRecreateFailureCanRetryAsNewNoParentRecord() async throws {
+        let kind = ContentKind.workRecord
+        let legacy = makeExistingRecord(kind, hasParent: true)
+        let firstPlan = makePlan(kind, existingRecords: [legacy])
+        let firstDatabase = FakeContentRecordDatabase()
+        firstDatabase.failSaveCall = 1
+
+        do {
+            try await CalendarSharingContentRecordPlanExecutor(database: firstDatabase).execute(
+                firstPlan,
+                migrationStageName: kind.stageName
+            )
+            XCTFail("Expected the injected recreate failure")
+        } catch {
+            XCTAssertEqual(firstDatabase.calls, [
+                .delete([kind.recordName]),
+                .save([kind.recordName])
+            ])
+        }
+
+        let retryPlan = makePlan(kind, existingRecords: [])
+        let retryDatabase = FakeContentRecordDatabase()
+        try await CalendarSharingContentRecordPlanExecutor(database: retryDatabase).execute(
+            retryPlan,
+            migrationStageName: kind.stageName
+        )
+
+        XCTAssertTrue(retryPlan.legacyRecordIDsToDelete.isEmpty)
+        XCTAssertTrue(retryPlan.recordsToRecreate.isEmpty)
+        XCTAssertEqual(retryPlan.recordsToSave.count, 1)
+        XCTAssertNil(retryPlan.recordsToSave.first?.parent)
+        XCTAssertEqual(retryDatabase.calls, [.save([kind.recordName])])
+    }
+
+    private func assertLegacyPlan(for kind: ContentKind) throws {
+        let legacy = makeExistingRecord(kind, hasParent: true)
+        let plan = makePlan(kind, existingRecords: [legacy])
+        let recreated = try XCTUnwrap(plan.recordsToRecreate.first)
+
+        XCTAssertEqual(plan.legacyRecordIDsToDelete, [legacy.recordID])
+        XCTAssertTrue(plan.recordsToSave.isEmpty)
+        XCTAssertTrue(plan.ordinaryRecordIDsToDelete.isEmpty)
+        XCTAssertFalse(recreated === legacy)
+        XCTAssertNil(recreated.parent)
+        XCTAssertEqual(recreated.recordID, legacy.recordID)
+        XCTAssertEqual(recreated.recordID.zoneID, zoneID)
+        XCTAssertEqual(recreated.recordType, kind.recordType)
+        assertUpdatedField(on: recreated, kind: kind)
+    }
+
+    private func makePlan(
+        _ kind: ContentKind,
+        existingRecords: [CKRecord],
+        snapshotCopies: Int = 1
+    ) -> CalendarSharingContentRecordPlan {
+        switch kind {
+        case .event:
+            let snapshots = Array(repeating: updatedEventSnapshot, count: snapshotCopies)
+            return CalendarSharingContentRecordPlan(
+                recordType: kind.recordType,
+                existingRecords: existingRecords,
+                snapshots: snapshots,
+                recordID: { _ in self.recordID(for: kind) },
+                makeRecord: { snapshot, recordID, existingRecord in
+                    CalendarSharingCloudRecordFactory.makeEventRecord(
+                        snapshot: snapshot,
+                        recordID: recordID,
+                        existingRecord: existingRecord
+                    )
+                }
+            )
+        case .shift:
+            let snapshots = Array(repeating: updatedShiftSnapshot, count: snapshotCopies)
+            return CalendarSharingContentRecordPlan(
+                recordType: kind.recordType,
+                existingRecords: existingRecords,
+                snapshots: snapshots,
+                recordID: { _ in self.recordID(for: kind) },
+                makeRecord: { snapshot, recordID, existingRecord in
+                    CalendarSharingCloudRecordFactory.makeShiftRecord(
+                        snapshot: snapshot,
+                        recordID: recordID,
+                        existingRecord: existingRecord
+                    )
+                }
+            )
+        case .workRecord:
+            let snapshots = Array(repeating: updatedWorkRecordSnapshot, count: snapshotCopies)
+            return CalendarSharingContentRecordPlan(
+                recordType: kind.recordType,
+                existingRecords: existingRecords,
+                snapshots: snapshots,
+                recordID: { _ in self.recordID(for: kind) },
+                makeRecord: { snapshot, recordID, existingRecord in
+                    CalendarSharingCloudRecordFactory.makeWorkRecord(
+                        snapshot: snapshot,
+                        recordID: recordID,
+                        existingRecord: existingRecord
+                    )
+                }
+            )
+        }
+    }
+
+    private func makeExistingRecord(_ kind: ContentKind, hasParent: Bool) -> CKRecord {
+        let record: CKRecord
+        switch kind {
+        case .event:
+            record = CalendarSharingCloudRecordFactory.makeEventRecord(
+                snapshot: originalEventSnapshot,
+                recordID: recordID(for: kind)
+            )
+        case .shift:
+            record = CalendarSharingCloudRecordFactory.makeShiftRecord(
+                snapshot: originalShiftSnapshot,
+                recordID: recordID(for: kind)
+            )
+        case .workRecord:
+            record = CalendarSharingCloudRecordFactory.makeWorkRecord(
+                snapshot: originalWorkRecordSnapshot,
+                recordID: recordID(for: kind)
+            )
+        }
+        if hasParent {
+            record.parent = CKRecord.Reference(
+                recordID: CKRecord.ID(
+                    recordName: CalendarSharingCloudSchema.calendarRecordName,
+                    zoneID: zoneID
+                ),
+                action: .none
+            )
+        }
+        return record
+    }
+
+    private func assertUpdatedField(on record: CKRecord, kind: ContentKind) {
+        switch kind {
+        case .event:
+            XCTAssertEqual(
+                record[CalendarSharingCloudSchema.EventField.title] as? String,
+                updatedEventSnapshot.title
+            )
+        case .shift:
+            XCTAssertEqual(
+                record[CalendarSharingCloudSchema.ShiftField.displayName] as? String,
+                updatedShiftSnapshot.displayName
+            )
+        case .workRecord:
+            XCTAssertEqual(
+                (record[CalendarSharingCloudSchema.WorkRecordField.restHours] as? NSNumber)?.doubleValue,
+                updatedWorkRecordSnapshot.restHours
+            )
+        }
+    }
+
+    private func recordID(for kind: ContentKind) -> CKRecord.ID {
+        CKRecord.ID(recordName: kind.recordName, zoneID: zoneID)
+    }
+
+    private enum ContentKind: CaseIterable {
+        case event
+        case shift
+        case workRecord
+
+        var recordName: String {
+            switch self {
+            case .event: "event-test"
+            case .shift: "shift-test"
+            case .workRecord: "work-test"
+            }
+        }
+
+        var recordType: CKRecord.RecordType {
+            switch self {
+            case .event: CalendarSharingCloudSchema.eventRecordType
+            case .shift: CalendarSharingCloudSchema.shiftRecordType
+            case .workRecord: CalendarSharingCloudSchema.workRecordType
+            }
+        }
+
+        var stageName: String {
+            switch self {
+            case .event: "events"
+            case .shift: "shifts"
+            case .workRecord: "work_records"
+            }
+        }
+    }
+
+    private let zoneID = CKRecordZone.ID(
+        zoneName: CalendarSharingCloudSchema.zoneName,
+        ownerName: CKCurrentUserDefaultName
+    )
+    private let originalTimestamp = Date(timeIntervalSince1970: 1_700_000_000)
+    private let updatedTimestamp = Date(timeIntervalSince1970: 1_700_003_600)
+
+    private var originalEventSnapshot: SharedEventSnapshot {
+        SharedEventSnapshot(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            title: "Original event",
+            startDate: originalTimestamp,
+            endDate: originalTimestamp.addingTimeInterval(1_800),
+            isAllDay: false,
+            updatedAt: originalTimestamp
+        )
+    }
+
+    private var updatedEventSnapshot: SharedEventSnapshot {
+        SharedEventSnapshot(
+            id: originalEventSnapshot.id,
+            title: "Updated event",
+            startDate: updatedTimestamp,
+            endDate: updatedTimestamp.addingTimeInterval(3_600),
+            isAllDay: true,
+            updatedAt: updatedTimestamp
+        )
+    }
+
+    private var originalShiftSnapshot: SharedShiftSnapshot {
+        SharedShiftSnapshot(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            registeredDate: originalTimestamp,
+            displayName: "Original shift",
+            startDate: originalTimestamp,
+            endDate: originalTimestamp.addingTimeInterval(1_800),
+            spansMidnight: false,
+            colorHex: "#111111",
+            updatedAt: originalTimestamp
+        )
+    }
+
+    private var updatedShiftSnapshot: SharedShiftSnapshot {
+        SharedShiftSnapshot(
+            id: originalShiftSnapshot.id,
+            registeredDate: updatedTimestamp,
+            displayName: "Updated shift",
+            startDate: updatedTimestamp,
+            endDate: updatedTimestamp.addingTimeInterval(3_600),
+            spansMidnight: true,
+            colorHex: "#ABCDEF",
+            updatedAt: updatedTimestamp
+        )
+    }
+
+    private var originalWorkRecordSnapshot: SharedWorkRecordSnapshot {
+        SharedWorkRecordSnapshot(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            workDate: originalTimestamp,
+            workInTime: originalTimestamp,
+            workOutTime: nil,
+            isWorkOutTimeSet: false,
+            restHours: 0,
+            updatedAt: originalTimestamp
+        )
+    }
+
+    private var updatedWorkRecordSnapshot: SharedWorkRecordSnapshot {
+        SharedWorkRecordSnapshot(
+            id: originalWorkRecordSnapshot.id,
+            workDate: updatedTimestamp,
+            workInTime: updatedTimestamp,
+            workOutTime: updatedTimestamp.addingTimeInterval(3_600),
+            isWorkOutTimeSet: true,
+            restHours: 1.25,
+            updatedAt: updatedTimestamp
+        )
+    }
+}
+
+@MainActor
+private final class FakeContentRecordDatabase: CalendarSharingContentRecordDatabase {
+    enum Call: Equatable {
+        case save([String])
+        case delete([String])
+    }
+
+    var calls: [Call] = []
+    var failSaveCall: Int?
+    var failDeleteCall: Int?
+    private var saveCallCount = 0
+    private var deleteCallCount = 0
+
+    func save(_ records: [CKRecord]) async throws {
+        saveCallCount += 1
+        calls.append(.save(records.map(\.recordID.recordName)))
+        if saveCallCount == failSaveCall {
+            throw CKError(.networkFailure)
+        }
+    }
+
+    func delete(_ recordIDs: [CKRecord.ID]) async throws {
+        deleteCallCount += 1
+        calls.append(.delete(recordIDs.map(\.recordName)))
+        if deleteCallCount == failDeleteCall {
+            throw CKError(.networkFailure)
+        }
     }
 }
 
