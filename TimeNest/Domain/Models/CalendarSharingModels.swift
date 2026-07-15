@@ -138,6 +138,14 @@ struct SharedEventSnapshot: Codable, Identifiable, Hashable {
 }
 
 enum SharedEventMapper {
+    enum ExclusionReason: String, Equatable {
+        case shift
+        case workRecord
+        case inconsistentWorkInfo
+        case workClockWithoutWorkInfo
+        case legacyShift
+    }
+
     static func snapshot(from event: CalendarEvent) -> SharedEventSnapshot? {
         guard isShareable(event) else { return nil }
         return SharedEventSnapshot(
@@ -151,16 +159,32 @@ enum SharedEventMapper {
     }
 
     static func isShareable(_ event: CalendarEvent) -> Bool {
-        guard event.shiftTemplateID == nil,
-              event.workInfo == nil,
-              event.workClockKind == nil else {
-            return false
+        exclusionReason(for: event) == nil
+    }
+
+    static func exclusionReason(for event: CalendarEvent) -> ExclusionReason? {
+        if event.shiftTemplateID != nil {
+            return .shift
+        }
+
+        switch (event.workInfo != nil, event.workClockKind != nil) {
+        case (true, true):
+            return .workRecord
+        case (true, false):
+            return .inconsistentWorkInfo
+        case (false, true):
+            return .workClockWithoutWorkInfo
+        case (false, false):
+            break
         }
 
         // Legacy shifts may predate shiftTemplateID. Excluding known/template titles is the
         // privacy-safe choice; it prevents old shift data from entering the shared zone.
         let matchesConfiguredShift = ShiftTimeTemplate.all().contains { $0.displayName == event.title }
-        return !matchesConfiguredShift && !ShiftTimeTemplate.isKnownDefaultDisplayName(event.title)
+        if matchesConfiguredShift || ShiftTimeTemplate.isKnownDefaultDisplayName(event.title) {
+            return .legacyShift
+        }
+        return nil
     }
 
     static func occurrences(
@@ -344,8 +368,12 @@ struct SharedWorkRecordSnapshot: Codable, Identifiable, Hashable {
 }
 
 enum SharedWorkRecordMapper {
+    static func isCandidate(_ event: CalendarEvent) -> Bool {
+        event.workClockKind != nil && event.workInfo != nil
+    }
+
     static func snapshots(from events: [CalendarEvent]) -> [SharedWorkRecordSnapshot] {
-        let workEvents = events.filter { $0.workClockKind != nil && $0.workInfo != nil }
+        let workEvents = events.filter(isCandidate)
         let groups = Dictionary(grouping: workEvents, by: groupKey(for:))
 
         return groups.values.compactMap(makeSnapshot(from:)).sorted { lhs, rhs in

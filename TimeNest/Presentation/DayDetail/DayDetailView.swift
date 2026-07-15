@@ -17,8 +17,8 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
-    let onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
-    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
+    let onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
+    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
 
     @State private var editingEvent: EditingEvent?
     @State private var showingAddEntry: Bool = false

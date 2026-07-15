@@ -157,7 +157,7 @@ struct EventEditorView: View {
     @Binding var isPresented: Bool
     let mode: EventEditorMode
     let existingEvents: [EventOccurrence]
-    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
+    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
     private let showsEntryKindPicker: Bool
 
     @State private var selectedEntryKind: EntryEditorKind
@@ -212,7 +212,7 @@ struct EventEditorView: View {
         existingEvents: [EventOccurrence] = [],
         initialEntryKind: EntryEditorKind = .event,
         showsEntryKindPicker: Bool = false,
-        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
+        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
     ) {
         _isPresented = isPresented
         self.mode = mode
@@ -906,7 +906,9 @@ struct EventEditorView: View {
             try await WorkRecordEditorSaveLogic.save(
                 context: workRecordSaveContext,
                 defaultTitle: localization.localized(.workRecordDefaultTitle),
-                onCreateEvent: onSave,
+                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                    try await onSave(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
+                },
                 onUpdateEvent: nil
             )
             saving = false
@@ -1053,7 +1055,7 @@ struct EventEditorView: View {
         openURL(url) { _ in }
     }
 
-    private func normalizedSaveContext() -> (dates: (start: Date, end: Date), workInfo: WorkInfo) {
+    private func normalizedSaveContext() -> (dates: (start: Date, end: Date), workInfo: WorkInfo?) {
         if WorkClockTitleMatcher.isClockOutTitle(title) {
             let matchedClockIn = matchingClockInForClockOut()
             let normalizedWorkDate = matchedClockIn.map { Calendar.current.startOfDay(for: $0.workDate) } ?? workDate
@@ -1082,12 +1084,7 @@ struct EventEditorView: View {
             return (workClockSaveDates(for: workInDate), info)
         }
 
-        return ((startDate, endDate), currentWorkInfo(
-            workInTime: workInDate,
-            workOutTime: workOutDate,
-            workDate: workDate,
-            workSessionId: workSessionId
-        ))
+        return ((startDate, endDate), nil)
     }
 
     private func currentWorkInfo(workInTime: Date?, workOutTime: Date?, workDate: Date?, workSessionId: UUID?) -> WorkInfo {

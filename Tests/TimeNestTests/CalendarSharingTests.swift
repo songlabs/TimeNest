@@ -119,7 +119,72 @@ final class SharedEventMappingTests: XCTestCase {
         XCTAssertTrue(SharedWorkRecordMapper.snapshots(from: [event]).isEmpty)
     }
 
+    func testTwoOrdinaryEventsProduceTwoSharedEventSnapshots() {
+        let events = [
+            makeEvent(
+                id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
+                title: "Appointment A"
+            ),
+            makeEvent(
+                id: UUID(uuidString: "10000000-0000-0000-0000-000000000002")!,
+                title: "Appointment B"
+            )
+        ]
+
+        XCTAssertEqual(events.compactMap(SharedEventMapper.snapshot(from:)).count, 2)
+    }
+
+    func testCompleteWorkRecordDoesNotProduceSharedEventSnapshots() {
+        let sessionID = UUID(uuidString: "20000000-0000-0000-0000-000000000001")!
+        let start = Date(timeIntervalSince1970: 1_767_225_600)
+        let clockIn = makeEvent(
+            id: UUID(uuidString: "20000000-0000-0000-0000-000000000002")!,
+            title: "Work record",
+            workInfo: WorkInfo(
+                workInTime: start,
+                workDate: start,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: true
+            )
+        )
+        let clockOut = makeEvent(
+            id: UUID(uuidString: "20000000-0000-0000-0000-000000000003")!,
+            title: "Work record",
+            workInfo: WorkInfo(
+                workOutTime: start.addingTimeInterval(28_800),
+                workDate: start,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: true
+            )
+        )
+
+        XCTAssertNil(SharedEventMapper.snapshot(from: clockIn))
+        XCTAssertNil(SharedEventMapper.snapshot(from: clockOut))
+        XCTAssertTrue(SharedWorkRecordMapper.isCandidate(clockIn))
+        XCTAssertTrue(SharedWorkRecordMapper.isCandidate(clockOut))
+        XCTAssertEqual(SharedWorkRecordMapper.snapshots(from: [clockIn, clockOut]).count, 1)
+    }
+
+    func testInconsistentWorkInfoHasExplicitExclusionAndIsNotAWorkRecordCandidate() {
+        let start = Date(timeIntervalSince1970: 1_767_225_600)
+        let event = makeEvent(
+            title: "Appointment",
+            workInfo: WorkInfo(
+                workInTime: start,
+                workOutTime: start.addingTimeInterval(3_600),
+                workDate: start,
+                workSessionId: UUID()
+            )
+        )
+
+        XCTAssertNil(event.workClockKind)
+        XCTAssertEqual(SharedEventMapper.exclusionReason(for: event), .inconsistentWorkInfo)
+        XCTAssertNil(SharedEventMapper.snapshot(from: event))
+        XCTAssertFalse(SharedWorkRecordMapper.isCandidate(event))
+    }
+
     private func makeEvent(
+        id: UUID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
         title: String,
         note: String? = nil,
         reminderOffsetMinutes: Int? = nil,
@@ -129,7 +194,7 @@ final class SharedEventMappingTests: XCTestCase {
     ) -> CalendarEvent {
         let start = Date(timeIntervalSince1970: 1_767_225_600)
         return CalendarEvent(
-            id: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!,
+            id: id,
             title: title,
             note: note,
             startDate: start,
@@ -1571,6 +1636,89 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
 
         XCTAssertEqual(client.createdDisplayName, "Shared calendar")
         XCTAssertEqual(client.createdCalendarName, "Shared calendar")
+    }
+
+    @MainActor
+    func testTwoOrdinaryEventSavesClearInconsistentWorkInfoAndShareTwoEvents() async throws {
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(repository: repository)
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(
+            client: client,
+            selection: .mine,
+            repository: repository
+        )
+        defer { context.cleanup() }
+        let viewModel = MonthCalendarViewModel(
+            calendarDisplayUseCase: CalendarDisplayUseCase(
+                holidayUseCase: HolidayUseCase(holidayProvider: BundleHolidayProvider()),
+                localizationUseCase: CalendarLocalizationUseCase(),
+                eventUseCase: eventUseCase
+            ),
+            eventUseCase: eventUseCase,
+            calendarSharingStore: context.store
+        )
+        let firstStart = Date(timeIntervalSince1970: 1_768_000_000)
+        let firstEnd = firstStart.addingTimeInterval(3_600)
+        let inconsistentWorkInfo = WorkInfo(
+            workInTime: firstStart,
+            workOutTime: firstEnd,
+            workDate: firstStart,
+            workSessionId: UUID()
+        )
+
+        _ = try await viewModel.createEvent(
+            title: "Appointment A",
+            note: nil,
+            startDate: firstStart,
+            endDate: firstEnd,
+            isAllDay: false,
+            reminderOffsetMinutes: nil,
+            shiftTemplateID: nil,
+            workInfo: inconsistentWorkInfo
+        )
+        _ = try await viewModel.createEvent(
+            title: "Appointment B",
+            note: nil,
+            startDate: firstStart.addingTimeInterval(7_200),
+            endDate: firstEnd.addingTimeInterval(7_200),
+            isAllDay: false,
+            reminderOffsetMinutes: nil,
+            shiftTemplateID: nil,
+            workInfo: nil
+        )
+
+        let eventsBeforeUpdate = try await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        let firstSavedEvent = try XCTUnwrap(
+            eventsBeforeUpdate.first { $0.title == "Appointment A" }
+        )
+        _ = try await viewModel.updateEvent(
+            id: firstSavedEvent.id,
+            title: firstSavedEvent.title,
+            note: firstSavedEvent.note,
+            startDate: firstSavedEvent.startDate,
+            endDate: firstSavedEvent.endDate,
+            isAllDay: firstSavedEvent.isAllDay,
+            reminderOffsetMinutes: firstSavedEvent.reminderOffsetMinutes,
+            shiftTemplateID: nil,
+            workInfo: inconsistentWorkInfo
+        )
+
+        let savedEvents = try await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertEqual(savedEvents.count, 2)
+        XCTAssertTrue(savedEvents.allSatisfy { $0.shiftTemplateID == nil })
+        XCTAssertTrue(savedEvents.allSatisfy { $0.workInfo == nil })
+        XCTAssertTrue(savedEvents.allSatisfy { $0.workClockKind == nil })
+
+        _ = try await context.store.createShare(calendarName: "Shared calendar")
+
+        XCTAssertEqual(client.createdSnapshots.count, 2)
+        XCTAssertTrue(client.createdShifts.isEmpty)
+        XCTAssertTrue(client.createdWorkRecords.isEmpty)
     }
 
     func testAllContentOffDoesNotCallCloudKit() async throws {

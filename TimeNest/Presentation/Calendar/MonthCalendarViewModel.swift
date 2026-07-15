@@ -285,7 +285,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     @discardableResult
-    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws -> EventNotificationScheduleResult {
+    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo?) async throws -> EventNotificationScheduleResult {
         guard calendarSharingStore.accessPolicy.canCreate else {
             throw CalendarSharingError.permissionDenied
         }
@@ -313,7 +313,8 @@ class MonthCalendarViewModel: ObservableObject {
         )
 
         let notificationResult: EventNotificationScheduleResult
-        if let kind = workClockKind(title: title, workInfo: adjustedWorkInfo) {
+        if let adjustedWorkInfo,
+           let kind = workClockKind(title: title, workInfo: adjustedWorkInfo) {
             notificationResult = try await upsertWorkClockEvent(event, kind: kind)
             if let sessionId = adjustedWorkInfo.workSessionId {
                 try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
@@ -609,8 +610,9 @@ class MonthCalendarViewModel: ObservableObject {
         WorkClockTitleMatcher.kind(for: title)
     }
 
-    private func workClockKind(title: String, workInfo: WorkInfo) -> WorkClockKind? {
-        WorkClockTitleMatcher.kind(for: title) ?? WorkClockTitleMatcher.kind(for: workInfo)
+    private func workClockKind(title: String, workInfo: WorkInfo?) -> WorkClockKind? {
+        guard let workInfo else { return nil }
+        return WorkClockTitleMatcher.kind(for: title) ?? WorkClockTitleMatcher.kind(for: workInfo)
     }
 
     func selectDay(_ cell: CalendarDayCell) {
@@ -671,7 +673,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     @discardableResult
-    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo) async throws -> EventNotificationScheduleResult {
+    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo?) async throws -> EventNotificationScheduleResult {
         guard calendarSharingStore.accessPolicy.canEdit else {
             throw CalendarSharingError.permissionDenied
         }
@@ -718,7 +720,8 @@ class MonthCalendarViewModel: ObservableObject {
                 try await eventUseCase.deleteEvent(id: shiftEventToReplace.id)
             }
 
-            if workClockKind(title: title, workInfo: adjustedWorkInfo) != nil {
+            if let adjustedWorkInfo,
+               workClockKind(title: title, workInfo: adjustedWorkInfo) != nil {
                 if let sessionId = adjustedWorkInfo.workSessionId {
                     try await syncSharedWorkValues(for: sessionId, workDate: adjustedWorkInfo.workDate ?? saveDates.start, restHours: adjustedWorkInfo.restHours, transportFee: adjustedWorkInfo.transportFee, hourlyRate: adjustedWorkInfo.hourlyRate)
                 }
@@ -731,9 +734,16 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    private func adjustedWorkInfoForSave(title: String, startDate: Date, workInfo: WorkInfo) async throws -> WorkInfo {
+    private func adjustedWorkInfoForSave(title: String, startDate: Date, workInfo: WorkInfo?) async throws -> WorkInfo? {
+        guard let workInfo else { return nil }
         guard let kind = workClockKind(title: title, workInfo: workInfo) else {
-            return workInfo
+            CalendarSharingDiagnostics.debug(
+                operation: "saveLocalEvent",
+                stage: "clear_inconsistent_work_info",
+                database: "local",
+                details: "hasWorkInfo=true hasWorkClockKind=false workInfoCleared=true"
+            )
+            return nil
         }
 
         var adjusted = workInfo
@@ -793,11 +803,11 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
 
-    private func eventDatesForSave(title: String, startDate: Date, endDate: Date, isAllDay: Bool, workInfo: WorkInfo) -> (start: Date, end: Date) {
-        if workClockKind(title: title, workInfo: workInfo) == .clockIn, let workInTime = workInfo.workInTime {
+    private func eventDatesForSave(title: String, startDate: Date, endDate: Date, isAllDay: Bool, workInfo: WorkInfo?) -> (start: Date, end: Date) {
+        if workClockKind(title: title, workInfo: workInfo) == .clockIn, let workInTime = workInfo?.workInTime {
             return workClockEventDates(for: workInTime)
         }
-        if workClockKind(title: title, workInfo: workInfo) == .clockOut, let workOutTime = workInfo.workOutTime {
+        if workClockKind(title: title, workInfo: workInfo) == .clockOut, let workOutTime = workInfo?.workOutTime {
             return workClockEventDates(for: workOutTime)
         }
         return EventEditorDateNormalizer.persistenceDates(

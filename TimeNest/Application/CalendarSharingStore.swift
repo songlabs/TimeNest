@@ -411,6 +411,20 @@ final class CalendarSharingStore: ObservableObject {
             shifts: allEvents.compactMap { SharedShiftMapper.snapshot(from: $0) },
             workRecords: SharedWorkRecordMapper.snapshots(from: allEvents)
         )
+#if DEBUG
+        for (sourceIndex, event) in allEvents.enumerated() {
+            let mappedAsEvent = SharedEventMapper.snapshot(from: event) != nil
+            let mappedAsShift = SharedShiftMapper.snapshot(from: event) != nil
+            let isWorkRecordCandidate = SharedWorkRecordMapper.isCandidate(event)
+            let eventExclusion = SharedEventMapper.exclusionReason(for: event)?.rawValue ?? "none"
+            CalendarSharingDiagnostics.debug(
+                operation: "collectSharedContent",
+                stage: "classify_source_event",
+                database: "local",
+                details: "sourceIndex=\(sourceIndex) hasShiftTemplateID=\(event.shiftTemplateID != nil) hasWorkInfo=\(event.workInfo != nil) hasWorkClockKind=\(event.workClockKind != nil) mappedAsEvent=\(mappedAsEvent) mappedAsShift=\(mappedAsShift) isWorkRecordCandidate=\(isWorkRecordCandidate) eventExclusion=\(eventExclusion)"
+            )
+        }
+#endif
         CalendarSharingDiagnostics.debug(
             operation: "collectSharedContent",
             stage: "completed",
