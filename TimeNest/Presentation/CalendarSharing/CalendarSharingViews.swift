@@ -351,8 +351,7 @@ struct CalendarSelectionView: View {
                         }
                     }
                     Spacer()
-                    if calendar.kind != .sharedOwned,
-                       sharingStore.selection.calendarID == calendar.id {
+                    if sharingStore.selection.calendarID == calendar.id {
                         Image(systemName: "checkmark")
                             .fontWeight(.semibold)
                             .foregroundStyle(ShiftCalendarColors.primaryBlue)
