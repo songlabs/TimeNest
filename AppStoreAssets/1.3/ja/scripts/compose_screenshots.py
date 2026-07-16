@@ -22,7 +22,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--platform",
-        choices=("iPhone", "iPad", "all"),
+        type=str.lower,
+        choices=("iphone", "ipad", "all"),
         default="all",
         help="Platform to compose (default: all).",
     )
@@ -206,52 +207,65 @@ def device_mockup(
     return frame.rotate(angle, resample=RESAMPLING.BICUBIC, expand=True)
 
 
-def place_with_shadow(canvas: Image.Image, item: Image.Image, position: tuple[int, int]) -> None:
+def place_with_shadow(
+    canvas: Image.Image,
+    item: Image.Image,
+    position: tuple[int, int],
+    scale: float = 1.0,
+) -> None:
     shadow = Image.new("RGBA", item.size, (0, 0, 0, 0))
     silhouette = item.getchannel("A")
     shadow.putalpha(silhouette.point(lambda value: round(value * 0.42)))
     black = Image.new("RGBA", item.size, (0, 0, 0, 255))
     black.putalpha(shadow.getchannel("A"))
-    black = black.filter(ImageFilter.GaussianBlur(radius=34))
-    canvas.alpha_composite(black, (position[0] + 22, position[1] + 34))
+    black = black.filter(ImageFilter.GaussianBlur(radius=max(1, round(34 * scale))))
+    canvas.alpha_composite(
+        black,
+        (position[0] + round(22 * scale), position[1] + round(34 * scale)),
+    )
     canvas.alpha_composite(item, position)
 
 
-def compose_iphone(raw: Image.Image, screen: dict, font_path: str) -> Image.Image:
-    canvas = gradient_background((1320, 2868), screen["colors"], screen["accent"])
-    title_font = ImageFont.truetype(font_path, 78, index=0)
-    subtitle_font = ImageFont.truetype(font_path, 40, index=0)
+def compose_iphone(raw: Image.Image, screen: dict, font_path: str, config: dict) -> Image.Image:
+    canvas_size = tuple(config.get("canvas_size", config["final_size"]))
+    scale = min(canvas_size[0] / 1320, canvas_size[1] / 2868)
+    frame = config["frame"]
+    canvas = gradient_background(canvas_size, screen["colors"], screen["accent"])
+    title_font = ImageFont.truetype(font_path, round(78 * scale), index=0)
+    subtitle_font = ImageFont.truetype(font_path, round(40 * scale), index=0)
 
     y = draw_centered_text(
         canvas,
         screen.get("iphone_title", screen["title"]),
         title_font,
-        1120,
-        128,
+        round(1120 * scale),
+        round(128 * scale),
         (255, 255, 255, 255),
-        18,
+        round(18 * scale),
     )
     y = draw_centered_text(
         canvas,
         screen.get("iphone_subtitle", screen["subtitle"]),
         subtitle_font,
-        1050,
-        y + 28,
+        round(1050 * scale),
+        y + round(28 * scale),
         (245, 250, 252, 235),
-        16,
+        round(16 * scale),
     )
 
+    screen_width = int(frame["screen_width"])
+    screen_height = round(screen_width * raw.height / raw.width)
     mockup = device_mockup(
         raw,
         screen["iphone_crop"],
-        screen_size=(900, 1956),
-        border=24,
-        corner_radius=62,
+        screen_size=(screen_width, screen_height),
+        border=int(frame["border"]),
+        corner_radius=int(frame["corner_radius"]),
         angle=-1.4 if int(screen["id"]) % 2 else 1.4,
     )
     x = (canvas.width - mockup.width) // 2
-    device_y = max(700, y + 62)
-    place_with_shadow(canvas, mockup, (x, device_y))
+    device_y = max(int(frame["minimum_top"]), y + round(62 * scale))
+    place_with_shadow(canvas, mockup, (x, device_y), scale=scale)
     return canvas
 
 
@@ -303,6 +317,8 @@ def compose(platforms: Iterable[str]) -> None:
     manifest = load_manifest()
     font_path = find_font()
     for platform in platforms:
+        config = manifest["platforms"][platform]
+        raw_size = tuple(config.get("raw_size", (config["width"], config["height"])))
         for screen in manifest["screens"]:
             filename = f'{screen["id"]}_{screen["slug"]}.png'
             raw_path = ROOT / platform / "raw" / filename
@@ -310,8 +326,10 @@ def compose(platforms: Iterable[str]) -> None:
             if not raw_path.is_file():
                 raise FileNotFoundError(f"Missing raw screenshot: {raw_path}")
             with Image.open(raw_path) as raw:
+                if raw.size != raw_size:
+                    raise ValueError(f"{raw_path} has {raw.size}; expected {raw_size}")
                 final = (
-                    compose_iphone(raw, screen, font_path)
+                    compose_iphone(raw, screen, font_path, config)
                     if platform == "iPhone"
                     else compose_ipad(raw, screen, font_path)
                 )
@@ -321,7 +339,12 @@ def compose(platforms: Iterable[str]) -> None:
 
 def main() -> None:
     args = parse_args()
-    platforms = ("iPhone", "iPad") if args.platform == "all" else (args.platform,)
+    platform_names = {"iphone": "iPhone", "ipad": "iPad"}
+    platforms = (
+        ("iPhone", "iPad")
+        if args.platform == "all"
+        else (platform_names[args.platform],)
+    )
     compose(platforms)
 
 

@@ -14,6 +14,15 @@ final class WidgetSetupUITests: XCTestCase {
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         XCTAssertTrue(springboard.wait(for: .runningForeground, timeout: 5))
 
+        let appSwitcher = springboard.otherElements["AppSwitcherContentView"]
+        if appSwitcher.waitForExistence(timeout: 2) {
+            XCUIDevice.shared.press(.home)
+            XCTAssertFalse(
+                appSwitcher.waitForExistence(timeout: 2),
+                "Unable to leave the App Switcher for the Home Screen."
+            )
+        }
+
         let emptyArea = springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.82, dy: 0.72))
         emptyArea.press(forDuration: 2.0)
 

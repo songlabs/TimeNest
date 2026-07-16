@@ -19,7 +19,12 @@ def expected_names() -> list[str]:
     return [f'{item["id"]}_{item["slug"]}.png' for item in MANIFEST["screens"]]
 
 
-def validate_image(path: Path, expected_size: tuple[int, int], final: bool) -> list[str]:
+def validate_image(
+    path: Path,
+    expected_size: tuple[int, int],
+    final: bool,
+    forbidden_sizes: set[tuple[int, int]] | None = None,
+) -> list[str]:
     errors: list[str] = []
     try:
         with Image.open(path) as image:
@@ -27,6 +32,8 @@ def validate_image(path: Path, expected_size: tuple[int, int], final: bool) -> l
                 errors.append(f"{path}: expected PNG, got {image.format}")
             if image.size != expected_size:
                 errors.append(f"{path}: expected {expected_size}, got {image.size}")
+            if forbidden_sizes and image.size in forbidden_sizes:
+                errors.append(f"{path}: contains forbidden stale size {image.size}")
             if final and image.mode != "RGB":
                 errors.append(f"{path}: final image must be RGB, got {image.mode}")
             if "A" in image.getbands():
@@ -60,7 +67,9 @@ def main() -> int:
 
     for platform in ("iPhone", "iPad"):
         config = MANIFEST["platforms"][platform]
-        size = (config["width"], config["height"])
+        raw_size = tuple(config.get("raw_size", (config["width"], config["height"])))
+        final_size = tuple(config.get("final_size", (config["width"], config["height"])))
+        forbidden_sizes = {(1320, 2868)} if platform == "iPhone" else set()
         raw_dir = ROOT / platform / "raw"
         final_dir = ROOT / platform / "final"
         for directory in (raw_dir, final_dir):
@@ -71,8 +80,22 @@ def main() -> int:
                 errors.append(f"{directory}: missing={missing}, extra={extra}")
 
         for name in names:
-            errors.extend(validate_image(raw_dir / name, size, final=False))
-            errors.extend(validate_image(final_dir / name, size, final=True))
+            errors.extend(
+                validate_image(
+                    raw_dir / name,
+                    raw_size,
+                    final=False,
+                    forbidden_sizes=forbidden_sizes,
+                )
+            )
+            errors.extend(
+                validate_image(
+                    final_dir / name,
+                    final_size,
+                    final=True,
+                    forbidden_sizes=forbidden_sizes,
+                )
+            )
 
     if errors:
         print("Screenshot verification failed:", file=sys.stderr)
@@ -81,6 +104,7 @@ def main() -> int:
         return 1
 
     print("Verified 40 PNG files: 20 raw and 20 final.")
+    print("iPhone: 10 raw and 10 final at 1284x2778; no stale 1320x2868 files.")
     print("Final files: exact target dimensions, RGB, opaque, embedded sRGB profile.")
     print("Manifest: 10 complete Japanese title/subtitle/description sets.")
     return 0

@@ -4,8 +4,8 @@ TimeNestの現在のDebugビルドと既存の本番UIコンポーネントか�
 
 ## ディレクトリ
 
-- `iPhone/raw`: iPhone Simulatorの元画像10枚（1320 x 2868）
-- `iPhone/final`: 宣伝文案と端末枠を合成した10枚（1320 x 2868）
+- `iPhone/raw`: iPhone 6.5インチSimulatorの元画像10枚（1284 x 2778）
+- `iPhone/final`: 宣伝文案と端末枠を合成した10枚（1284 x 2778）
 - `iPad/raw`: iPad Simulatorの元画像10枚（2064 x 2752）
 - `iPad/final`: 宣伝文案と端末枠を合成した10枚（2064 x 2752）
 - `copy/screenshot-copy.md`: 10テーマ分のタイトル、サブタイトル、説明
@@ -19,23 +19,22 @@ TimeNestの現在のDebugビルドと既存の本番UIコンポーネントか�
 
 | 区分 | Simulator | OS | 出力寸法 |
 |---|---|---|---|
-| iPhone | iPhone 17 Pro Max | iOS 26.5 | 1320 x 2868 |
+| iPhone | iPhone 13 Pro Max | iOS 26.5 | 1284 x 2778 |
 | iPad | iPad Pro 13-inch (M5) | iPadOS 26.5 | 2064 x 2752 |
 
 撮影用データはDebug専用の匿名サンプルです。2026年7月を基準に、予定、日勤・夜勤・早番、勤務時間、海の日、閲覧専用の共有カレンダーを表示します。実アカウント、実CloudKit、連絡先、ユーザー識別子は使用しません。
 
 ## 再撮影
 
-Xcode、Tuistで生成済みのworkspace、専用のiPhone/iPad Simulatorが必要です。
+Xcode、Tuistで生成済みのworkspace、専用のiPhone/iPad Simulatorが必要です。iPhone 6.5インチ版は `com.apple.CoreSimulator.SimDeviceType.iPhone-13-Pro-Max` で実測した `1284 x 2778` を使用します。
 
-```zsh
+```bash
 PHONE_UDID="<dedicated iPhone simulator>" \
-IPAD_UDID="<dedicated iPad simulator>" \
 RESET_SIMULATORS=1 \
-AppStoreAssets/1.3/ja/scripts/capture_screenshots.sh
+bash AppStoreAssets/1.3/ja/scripts/capture_screenshots.sh iphone
 ```
 
-`RESET_SIMULATORS=1` は指定したSimulatorを消去します。Widgetを重複させず再現するため、個人データを入れていない撮影専用Simulatorでのみ使用してください。消去しない場合は `RESET_SIMULATORS=0` にします。`CAPTURE_WIDGET=0` でWidgetの自動追加と再撮影だけを省略できます。
+`iphone` を指定するとiPadのraw画像には触れません。`RESET_SIMULATORS=1` は指定したSimulatorを消去します。Widgetを重複させず再現するため、個人データを入れていない撮影専用Simulatorでのみ使用してください。消去しない場合は `RESET_SIMULATORS=0` にします。`CAPTURE_WIDGET=0` でWidgetの自動追加と再撮影だけを省略できます。
 
 Widgetは `TimeNestScreenshotUITests` がSpringBoardのWidgetギャラリーを操作し、現在のTimeNest Widget Extensionを実際に追加して撮影します。UIやWidgetを画像生成で作り直してはいません。
 
@@ -43,10 +42,12 @@ Widgetは `TimeNestScreenshotUITests` がSpringBoardのWidgetギャラリーを�
 
 Python 3とPillowが必要です。macOS標準の日本語フォントを自動検出します。必要な場合のみ、`TIMENEST_SCREENSHOT_FONT` で別のローカルフォントを指定できます。
 
-```zsh
-python3 AppStoreAssets/1.3/ja/scripts/compose_screenshots.py
+```bash
+python3 AppStoreAssets/1.3/ja/scripts/compose_screenshots.py --platform iphone
 python3 AppStoreAssets/1.3/ja/scripts/verify_screenshots.py
 ```
+
+`--platform iphone` は、新しいiPhone rawからiPhone finalだけを再生成し、iPad出力を変更しません。
 
 外部の端末フレームやフォント素材は使いません。端末枠、背景、影は合成スクリプトが描画し、UI部分は `raw` の実キャプチャを使用します。
 

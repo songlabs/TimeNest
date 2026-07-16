@@ -4,10 +4,23 @@
   "locale": "ja",
   "platforms": {
     "iPhone": {
-      "width": 1320,
-      "height": 2868,
-      "device": "iPhone 17 Pro Max",
-      "os": "iOS 26.5"
+      "width": 1284,
+      "height": 2778,
+      "raw_size": [1284, 2778],
+      "final_size": [1284, 2778],
+      "canvas_size": [1284, 2778],
+      "raw_directory": "iPhone/raw",
+      "final_directory": "iPhone/final",
+      "device": "iPhone 13 Pro Max",
+      "device_type": "com.apple.CoreSimulator.SimDeviceType.iPhone-13-Pro-Max",
+      "os": "iOS 26.5",
+      "runtime": "com.apple.CoreSimulator.SimRuntime.iOS-26-5",
+      "frame": {
+        "screen_width": 872,
+        "border": 23,
+        "corner_radius": 60,
+        "minimum_top": 678
+      }
     },
     "iPad": {
       "width": 2064,
@@ -119,13 +132,13 @@
       "description": "地域に対応した祝日を追加し、普段の予定と同じカレンダーで確認できます。",
       "colors": ["#9A3F54", "#D66D7F"],
       "accent": "#FFD5DE",
-      "iphone_crop": [0.0, 0.04, 1.0, 0.93],
+      "iphone_crop": [0.0, 0.0, 1.0, 1.0],
       "ipad_crop": [0.10, 0.02, 0.90, 0.84]
     },
     {
       "id": "08",
       "slug": "shared_calendar",
-      "scene": "shared_calendar",
+      "scene": "shared_month",
       "title": "カレンダーをかんたん共有",
       "subtitle": "予定・シフト・勤務記録を、相手は閲覧専用で確認できます。",
       "iphone_subtitle": "予定・シフト・勤務記録を、\n相手は閲覧専用で確認できます。",
@@ -140,7 +153,7 @@
     {
       "id": "09",
       "slug": "calendar_switcher",
-      "scene": "shared_calendar_switcher",
+      "scene": "shared_switcher",
       "title": "表示するカレンダーをすぐ切替",
       "subtitle": "チェックマークで、選択中のカレンダーがひと目で分かります。",
       "iphone_title": "表示するカレンダーを\nすぐ切替",
@@ -150,7 +163,7 @@
       "description": "自分のカレンダーと受け取った共有カレンダーを一覧から切り替えられます。",
       "colors": ["#40556E", "#788DA2"],
       "accent": "#DDEAF2",
-      "iphone_crop": [0.0, 0.28, 1.0, 1.0],
+      "iphone_crop": [0.0, 0.0, 1.0, 1.0],
       "ipad_crop": [0.00, 0.00, 1.00, 1.00]
     },
     {
