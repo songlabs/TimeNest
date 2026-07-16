@@ -1,5 +1,8 @@
 import ProjectDescription
 
+let marketingVersion = "1.3"
+let buildNumber = "6"
+
 let project = Project(
     name: "TimeNest",
     packages: [
@@ -44,9 +47,9 @@ let project = Project(
                     "GENERATE_INFOPLIST_FILE": "NO",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNest/TimeNest.entitlements",
                     "CODE_SIGN_STYLE": "Automatic",
-                    "CURRENT_PROJECT_VERSION": "5",
+                    "CURRENT_PROJECT_VERSION": .string(buildNumber),
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
-                    "MARKETING_VERSION": "1.2",
+                    "MARKETING_VERSION": .string(marketingVersion),
                     "TARGETED_DEVICE_FAMILY": "1,2"
                 ],
                 configurations: [
@@ -100,10 +103,10 @@ let project = Project(
                     "APPLICATION_EXTENSION_API_ONLY": "YES",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNestWidgetExtension/TimeNestWidgetExtension.entitlements",
                     "CODE_SIGN_STYLE": "Automatic",
-                    "CURRENT_PROJECT_VERSION": "5",
+                    "CURRENT_PROJECT_VERSION": .string(buildNumber),
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "GENERATE_INFOPLIST_FILE": "YES",
-                    "MARKETING_VERSION": "1.2",
+                    "MARKETING_VERSION": .string(marketingVersion),
                     "PRODUCT_BUNDLE_IDENTIFIER": "com.song.TimeNest.TimeNestWidgetExtension",
                     "SKIP_INSTALL": "YES",
                     "TARGETED_DEVICE_FAMILY": "1,2"
