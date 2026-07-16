@@ -148,13 +148,11 @@ final class CalendarSharingStore: ObservableObject {
 
     func start() async {
         await loadLocalCalendars()
-        _ = await resumePendingStops()
         CalendarSharingInvitationRouter.shared.register(store: self)
         await synchronizeAll()
     }
 
     func synchronizeOnAppActivation() async {
-        _ = await resumePendingStops()
         await synchronizeAll()
         CalendarSharingInvitationRouter.shared.retryPending()
     }
@@ -257,10 +255,6 @@ final class CalendarSharingStore: ObservableObject {
         for request in requests {
             await waitForOwnedSync(request)
         }
-    }
-
-    func refreshOwnedParticipants() async {
-        await synchronizeAll()
     }
 
     func createSharedCalendar(name: String) async throws -> CalendarSharingInvitation {

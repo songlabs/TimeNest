@@ -11,12 +11,22 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 - Clock-in, clock-out, rest time, transport fee, and hourly-rate records.
 - Work statistics for a selected date range.
 - Public-holiday subscriptions and ICS synchronization for Japan, China, Taiwan, Korea, and the United States.
-- Optional CloudKit calendar sharing with read-only recipients and separate switches for events, shifts, and work records. Memos, notifications, voice content, hourly rates, pay, and transport fees are not shared.
+- Optional CloudKit calendar sharing with read-only recipients. Events, shifts, and work records in a shared calendar are synchronized automatically; memos, notifications, voice-input content, hourly rates, pay, and transport fees are not shared.
 - Japanese, Simplified Chinese, Traditional Chinese, English, and Korean UI resources, plus a system-language mode.
 - Light, dark, and system appearance settings.
 - A calendar banner-ad container backed by Google Mobile Ads.
 
 The first release is ad-supported and includes a one-time Apple In-App Purchase to remove ads. Unpurchased users see banner ads after the required consent flow permits ad requests; purchased users do not create or reserve space for the banner. Debug builds use Google's official test identifiers. Release builds require advertising to be enabled with approved production App and Banner IDs; missing, placeholder, malformed, or Google test IDs fail the Release build.
+
+## Shared Calendars
+
+- Open the calendar chooser from the icon at the top left. TimeNest displays either My Calendar or one selected shared calendar; the checkmark identifies the current selection.
+- Creating, renaming, inviting people to, accepting, refreshing, stopping, leaving, or deleting a shared calendar requires access to the user's Apple iCloud account and CloudKit. A recipient device must also be able to use iCloud to accept an invitation.
+- Recipients have read-only access. They can view shared events, shifts, and work records but cannot create, edit, move, or delete the owner's shared content.
+- Events, shifts, and work records assigned to an owned shared calendar are currently synchronized automatically. The current implementation does not expose per-category sharing switches.
+- Event titles and times, shift display data, and work-record clock-in, clock-out, and break times may enter the shared zone. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift-template settings, app settings, and Remove Ads purchase state do not.
+- Holidays are not synchronized through CloudKit. A shared calendar uses the recipient device's enabled holiday regions and local holiday cache.
+- When an owner stops sharing or deletes a shared calendar, recipients lose access. Leaving a received share removes it from that recipient's TimeNest data without changing the owner's calendar. CloudKit changes may require a short refresh before they appear.
 
 ## Technology
 
@@ -158,7 +168,7 @@ Before submission, confirm:
 - Verify month/week/day navigation, event editing, memo voice input permissions, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
 - Verify all five app languages, system-language mode, week-start settings, and light/dark appearance.
 - Verify offline behavior and invalid or unavailable ICS sources.
-- Verify CloudKit sharing on two physical devices, including invitation acceptance, recipient read-only behavior, content switches, name updates, stopping/leaving a share, and excluded private fields.
+- Verify CloudKit sharing on two physical devices, including invitation acceptance, recipient read-only behavior, automatic event/shift/work-record synchronization, name updates, stopping/leaving a share, recipient-local holidays, and excluded private fields.
 
 Release-preparation documents:
 

@@ -340,6 +340,7 @@
 "help.category.views" = "月、週、日視圖";
 "help.category.holidays" = "節假日與休息日";
 "help.category.shifts" = "班次與工作記錄";
+"help.category.sharing" = "共享日曆";
 "help.category.ads" = "廣告";
 "help.category.privacy" = "資料與隱私";
 
@@ -382,6 +383,19 @@
 "help.shifts.statistics.answer" = "工作統計會根據已記錄的上班時間、下班時間、休息時間、時薪和交通費計算。基本規則是：工作時間 = 下班時間 - 上班時間 - 休息時間；薪資 = 工作時間 × 時薪；合計 = 薪資 + 交通費。";
 "help.shifts.statistics_missing.question" = "為什麼統計結果沒有顯示？";
 "help.shifts.statistics_missing.answer" = "請確認目標期間內已經儲存了上班和下班記錄，並且時薪等必要資訊已輸入。只有班次本身不會自動產生薪資統計。";
+
+"help.sharing.create.question" = "如何建立或編輯共享日曆？";
+"help.sharing.create.answer" = "點擊行事曆左上角的圖示開啟日曆選擇頁面，然後選擇「建立共享日曆」。輸入名稱並點擊「建立」後，系統會開啟 iCloud 共享頁面。建立後可透過鉛筆按鈕修改名稱，並透過「新增成員」傳送邀請。";
+"help.sharing.accept.question" = "如何接受共享邀請？";
+"help.sharing.accept.answer" = "請在已登入 iCloud 的裝置上開啟邀請連結並接受共享。無法使用 iCloud 或 CloudKit 的裝置可能無法接受邀請。接受或重新整理後，資料可能需要一點時間才會顯示。";
+"help.sharing.switch.question" = "如何切換顯示的日曆？";
+"help.sharing.switch.answer" = "點擊行事曆左上角的圖示，選擇「我的日曆」或一個共享日曆。勾選符號表示目前正在顯示的日曆。每次只能顯示一個日曆。";
+"help.sharing.read_only_holidays.question" = "可以編輯共享日曆嗎？節假日如何顯示？";
+"help.sharing.read_only_holidays.answer" = "接收方只能查看共享的行程、班次和工作記錄，不能編輯。節假日不會透過 CloudKit 共享，而是依接收方裝置已啟用的地區和本機快取顯示。";
+"help.sharing.content.question" = "哪些內容會共享，哪些不會？";
+"help.sharing.content.answer" = "目前會自動共享該共享日曆中的行程、班次和工作記錄，暫時無法按類別個別關閉。行程標題和時間、工作記錄中的上班時間、下班時間與休息時間會共享。備忘、提醒與通知、語音輸入內容、時薪、薪資、交通費、班次範本、設定以及移除廣告的購買狀態不會共享。";
+"help.sharing.stop.question" = "停止或刪除共享後會怎樣？";
+"help.sharing.stop.answer" = "擁有者停止共享或刪除共享日曆後，接收方將無法再查看該日曆。接收方退出共享只會將它從自己的裝置列表中移除，不會影響擁有者的資料。若變更尚未顯示，請在日曆選擇頁面重新整理。";
 
 "help.ads.about.question" = "關於廣告";
 "help.ads.about.answer" = "當同意流程允許請求廣告時，TimeNest 可能會顯示廣告。你可以在設定中透過一次性購買移除廣告，也可以透過「恢復購買」確認 Apple 購買狀態。";
@@ -432,12 +446,10 @@
 "calendar_sharing.create_calendar" = "建立共享日曆";
 "calendar_sharing.no_shared_calendars" = "目前沒有共享日曆";
 "calendar_sharing.read_only" = "僅供檢視";
-"calendar_sharing.owner_read_only_format" = "%1$@ · %2$@";
 "calendar_sharing.calendar_name" = "日曆名稱";
 "calendar_sharing.edit_calendar" = "編輯共享日曆";
 "calendar_sharing.delete_calendar" = "刪除共享日曆";
 "calendar_sharing.invite_people" = "邀請對象";
-"calendar_sharing.add_invitee" = "新增邀請對象";
 "calendar_sharing.invite_after_creation" = "建立共享日曆後將開啟 iCloud 系統共享畫面。";
 "calendar_sharing.create_action" = "建立";
 "calendar_sharing.save_action" = "儲存";
@@ -447,19 +459,11 @@
 "calendar_sharing.delete_confirmation_title" = "要刪除共享日曆嗎？";
 "calendar_sharing.delete_confirmation_message" = "刪除此日曆後，受邀成員將無法繼續檢視。";
 "calendar_sharing.received_details" = "共享日曆詳細資訊";
-"calendar_sharing.start" = "開始共享";
-"calendar_sharing.stop" = "停止共享";
 "calendar_sharing.leave" = "退出共享";
 "calendar_sharing.retry" = "重試";
 "calendar_sharing.add_people" = "新增成員";
 "calendar_sharing.shared_people" = "共享中的使用者";
-"calendar_sharing.no_participants" = "目前尚無參與者";
-"calendar_sharing.participant_info_unavailable" = "無法取得參與者資訊";
 "calendar_sharing.invitation.preparing" = "正在準備共享邀請";
-"calendar_sharing.invitation.message" = "邀請你加入 TimeNest 共享日曆。";
-"calendar_sharing.privacy_note" = "可在共享設定中選擇共享內容。備忘錄、通知、時薪與薪資資訊不會被共享。";
-"calendar_sharing.required_fields" = "請輸入日曆名稱。";
-"calendar_sharing.stop_confirmation" = "停止共享後，所有參與者都將失去存取權限。";
 "calendar_sharing.leave_confirmation" = "此共享日曆將從 TimeNest 移除，不會影響建立者的資料。";
 "calendar_sharing.unknown_person" = "參與者";
 "calendar_sharing.unknown_calendar" = "共享日曆";

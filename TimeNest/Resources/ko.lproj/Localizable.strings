@@ -340,6 +340,7 @@
 "help.category.views" = "월・주・일 보기";
 "help.category.holidays" = "공휴일・휴일";
 "help.category.shifts" = "근무와 출퇴근 기록";
+"help.category.sharing" = "공유 캘린더";
 "help.category.ads" = "광고";
 "help.category.privacy" = "데이터 및 개인정보";
 
@@ -382,6 +383,19 @@
 "help.shifts.statistics.answer" = "근무 통계는 기록된 출근 시간, 퇴근 시간, 휴게 시간, 시급 및 교통비를 기준으로 계산합니다. 기본 계산식은 근무 시간 = 퇴근 시간 - 출근 시간 - 휴게 시간, 급여 = 근무 시간 × 시급, 합계 = 급여 + 교통비입니다.";
 "help.shifts.statistics_missing.question" = "통계 결과가 표시되지 않는 이유는?";
 "help.shifts.statistics_missing.answer" = "선택한 기간에 출근과 퇴근 기록이 저장되어 있고 시급 등 필요한 정보가 입력되어 있는지 확인하세요. 근무 일정만으로는 급여 통계가 자동 생성되지 않습니다.";
+
+"help.sharing.create.question" = "공유 캘린더를 만들거나 편집하려면?";
+"help.sharing.create.answer" = "캘린더 왼쪽 위 아이콘을 누르고 공유 캘린더 만들기를 선택하세요. 이름을 입력하고 만들기를 누르면 iCloud 공유 화면이 열립니다. 만든 뒤에는 연필 버튼으로 이름을 바꾸고 사람 추가에서 초대를 보낼 수 있습니다.";
+"help.sharing.accept.question" = "공유 초대를 수락하려면?";
+"help.sharing.accept.answer" = "iCloud에 로그인한 기기에서 초대 링크를 열고 공유를 수락하세요. iCloud 또는 CloudKit을 사용할 수 없는 기기에서는 초대를 수락하지 못할 수 있습니다. 수락하거나 새로고침한 데이터가 표시되기까지 잠시 걸릴 수 있습니다.";
+"help.sharing.switch.question" = "표시할 캘린더를 전환하려면?";
+"help.sharing.switch.answer" = "캘린더 왼쪽 위 아이콘을 누르고 내 캘린더 또는 공유 캘린더 하나를 선택하세요. 체크 표시는 현재 표시 중인 캘린더를 뜻합니다. 한 번에 하나의 캘린더만 표시됩니다.";
+"help.sharing.read_only_holidays.question" = "공유 캘린더를 편집할 수 있나요? 공휴일은 어떻게 표시되나요?";
+"help.sharing.read_only_holidays.answer" = "받는 사람은 공유된 일정, 근무 및 출퇴근 기록을 볼 수 있지만 편집할 수는 없습니다. 공휴일은 CloudKit으로 공유되지 않으며 받는 사람의 기기에서 활성화한 지역과 로컬 캐시에 따라 표시됩니다.";
+"help.sharing.content.question" = "공유되는 내용과 공유되지 않는 내용은?";
+"help.sharing.content.answer" = "현재 해당 공유 캘린더의 일정, 근무 및 출퇴근 기록은 자동으로 공유되며 종류별로 끌 수 없습니다. 일정 제목과 시간, 출퇴근 기록의 출근・퇴근 및 휴게 시간은 공유됩니다. 메모, 미리 알림과 알림, 음성 입력 내용, 시급, 급여, 교통비, 근무 템플릿, 설정 및 광고 제거 구입 상태는 공유되지 않습니다.";
+"help.sharing.stop.question" = "공유를 중단하거나 삭제하면 어떻게 되나요?";
+"help.sharing.stop.answer" = "소유자가 공유를 중단하거나 공유 캘린더를 삭제하면 받는 사람은 더 이상 해당 캘린더를 볼 수 없습니다. 받는 사람이 공유에서 나가면 자신의 기기 목록에서만 제거되며 소유자의 데이터에는 영향이 없습니다. 변경 내용이 보이지 않으면 캘린더 선택 화면에서 새로고침하세요.";
 
 "help.ads.about.question" = "광고 안내";
 "help.ads.about.answer" = "동의 흐름에서 광고 요청이 허용되면 TimeNest에 광고가 표시될 수 있습니다. 설정에서 일회성 구입으로 광고를 제거할 수 있고, 구입 복원으로 Apple 구입 상태를 확인할 수 있습니다.";
@@ -432,12 +446,10 @@
 "calendar_sharing.create_calendar" = "공유 캘린더 만들기";
 "calendar_sharing.no_shared_calendars" = "공유 캘린더가 없습니다";
 "calendar_sharing.read_only" = "보기 전용";
-"calendar_sharing.owner_read_only_format" = "%1$@ · %2$@";
 "calendar_sharing.calendar_name" = "캘린더 이름";
 "calendar_sharing.edit_calendar" = "공유 캘린더 편집";
 "calendar_sharing.delete_calendar" = "공유 캘린더 삭제";
 "calendar_sharing.invite_people" = "초대할 사람";
-"calendar_sharing.add_invitee" = "초대할 사람 추가";
 "calendar_sharing.invite_after_creation" = "공유 캘린더를 만든 후 iCloud 공유 화면이 열립니다.";
 "calendar_sharing.create_action" = "만들기";
 "calendar_sharing.save_action" = "저장";
@@ -447,19 +459,11 @@
 "calendar_sharing.delete_confirmation_title" = "공유 캘린더를 삭제할까요?";
 "calendar_sharing.delete_confirmation_message" = "이 캘린더를 삭제하면 초대한 구성원이 더 이상 볼 수 없습니다.";
 "calendar_sharing.received_details" = "공유 캘린더 상세 정보";
-"calendar_sharing.start" = "공유 시작";
-"calendar_sharing.stop" = "공유 중단";
 "calendar_sharing.leave" = "공유 나가기";
 "calendar_sharing.retry" = "다시 시도";
 "calendar_sharing.add_people" = "사람 추가";
 "calendar_sharing.shared_people" = "공유 중인 사람";
-"calendar_sharing.no_participants" = "아직 참여자가 없습니다";
-"calendar_sharing.participant_info_unavailable" = "참여자 정보를 가져올 수 없습니다";
 "calendar_sharing.invitation.preparing" = "공유 초대 준비 중";
-"calendar_sharing.invitation.message" = "TimeNest 공유 캘린더에 초대합니다.";
-"calendar_sharing.privacy_note" = "공유 설정에서 공유할 콘텐츠를 선택할 수 있습니다. 메모, 알림, 시급 및 급여 정보는 공유되지 않습니다.";
-"calendar_sharing.required_fields" = "캘린더 이름을 입력해 주세요.";
-"calendar_sharing.stop_confirmation" = "공유를 중단하면 모든 참여자가 접근 권한을 잃습니다.";
 "calendar_sharing.leave_confirmation" = "이 공유 캘린더를 TimeNest에서 제거합니다. 만든 사람의 데이터에는 영향을 주지 않습니다.";
 "calendar_sharing.unknown_person" = "참여자";
 "calendar_sharing.unknown_calendar" = "공유 캘린더";

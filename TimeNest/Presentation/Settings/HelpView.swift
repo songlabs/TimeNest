@@ -22,6 +22,7 @@ private enum HelpFAQCategory: String, CaseIterable, Identifiable, Hashable {
     case views
     case holidays
     case shifts
+    case sharing
     case ads
     case privacy
 
@@ -33,6 +34,7 @@ private enum HelpFAQCategory: String, CaseIterable, Identifiable, Hashable {
         case .views: .helpCategoryViews
         case .holidays: .helpCategoryHolidays
         case .shifts: .helpCategoryShifts
+        case .sharing: .helpCategorySharing
         case .ads: .helpCategoryAds
         case .privacy: .helpCategoryPrivacy
         }
@@ -44,6 +46,7 @@ private enum HelpFAQCategory: String, CaseIterable, Identifiable, Hashable {
         case .views: "rectangle.3.group"
         case .holidays: "calendar.badge.exclamationmark"
         case .shifts: "clock.badge.checkmark"
+        case .sharing: "person.2.fill"
         case .ads: "rectangle.badge.checkmark"
         case .privacy: "lock.shield"
         }
@@ -80,6 +83,18 @@ private enum HelpFAQCategory: String, CaseIterable, Identifiable, Hashable {
                 HelpFAQItem(questionKey: .helpShiftsOvernightQuestion, answerKey: .helpShiftsOvernightAnswer),
                 HelpFAQItem(questionKey: .helpShiftsStatisticsQuestion, answerKey: .helpShiftsStatisticsAnswer),
                 HelpFAQItem(questionKey: .helpShiftsStatisticsMissingQuestion, answerKey: .helpShiftsStatisticsMissingAnswer)
+            ]
+        case .sharing:
+            [
+                HelpFAQItem(questionKey: .helpSharingCreateQuestion, answerKey: .helpSharingCreateAnswer),
+                HelpFAQItem(questionKey: .helpSharingAcceptQuestion, answerKey: .helpSharingAcceptAnswer),
+                HelpFAQItem(questionKey: .helpSharingSwitchQuestion, answerKey: .helpSharingSwitchAnswer),
+                HelpFAQItem(
+                    questionKey: .helpSharingReadOnlyHolidaysQuestion,
+                    answerKey: .helpSharingReadOnlyHolidaysAnswer
+                ),
+                HelpFAQItem(questionKey: .helpSharingContentQuestion, answerKey: .helpSharingContentAnswer),
+                HelpFAQItem(questionKey: .helpSharingStopQuestion, answerKey: .helpSharingStopAnswer)
             ]
         case .ads:
             [

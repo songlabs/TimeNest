@@ -90,8 +90,6 @@ public enum TimeNestStrings: Sendable {
     }
 
     public enum CalendarSharing: Sendable {
-      /// Add People to Invite
-      public static let addInvitee = TimeNestStrings.tr("Localizable", "calendar_sharing.add_invitee")
       /// Add People
       public static let addPeople = TimeNestStrings.tr("Localizable", "calendar_sharing.add_people")
       /// Calendar Name
@@ -124,28 +122,16 @@ public enum TimeNestStrings: Sendable {
       public static let leaveConfirmation = TimeNestStrings.tr("Localizable", "calendar_sharing.leave_confirmation")
       /// My Calendar
       public static let myCalendar = TimeNestStrings.tr("Localizable", "calendar_sharing.my_calendar")
-      /// No participants yet
-      public static let noParticipants = TimeNestStrings.tr("Localizable", "calendar_sharing.no_participants")
       /// No shared calendars
       public static let noSharedCalendars = TimeNestStrings.tr("Localizable", "calendar_sharing.no_shared_calendars")
       /// Shared Calendars
       public static let ownedCalendars = TimeNestStrings.tr("Localizable", "calendar_sharing.owned_calendars")
       /// Owner
       public static let owner = TimeNestStrings.tr("Localizable", "calendar_sharing.owner")
-      /// %1$@ · %2$@
-      public static func ownerReadOnlyFormat(_ p1: Any, _ p2: Any) -> String {
-        return TimeNestStrings.tr("Localizable", "calendar_sharing.owner_read_only_format",String(describing: p1), String(describing: p2))
-      }
-      /// Participant information couldn’t be retrieved
-      public static let participantInfoUnavailable = TimeNestStrings.tr("Localizable", "calendar_sharing.participant_info_unavailable")
-      /// Choose the shared content in sharing settings. Memos, notifications, hourly rates, and pay information are not shared.
-      public static let privacyNote = TimeNestStrings.tr("Localizable", "calendar_sharing.privacy_note")
       /// View Only
       public static let readOnly = TimeNestStrings.tr("Localizable", "calendar_sharing.read_only")
       /// Shared Calendar Details
       public static let receivedDetails = TimeNestStrings.tr("Localizable", "calendar_sharing.received_details")
-      /// Enter a calendar name.
-      public static let requiredFields = TimeNestStrings.tr("Localizable", "calendar_sharing.required_fields")
       /// Retry
       public static let retry = TimeNestStrings.tr("Localizable", "calendar_sharing.retry")
       /// Save
@@ -154,16 +140,10 @@ public enum TimeNestStrings: Sendable {
       public static let selectCalendar = TimeNestStrings.tr("Localizable", "calendar_sharing.select_calendar")
       /// People You Share With
       public static let sharedPeople = TimeNestStrings.tr("Localizable", "calendar_sharing.shared_people")
-      /// Start Sharing
-      public static let start = TimeNestStrings.tr("Localizable", "calendar_sharing.start")
       /// %1$@ · View Only
       public static func statusFormat(_ p1: Any) -> String {
         return TimeNestStrings.tr("Localizable", "calendar_sharing.status_format",String(describing: p1))
       }
-      /// Stop Sharing
-      public static let stop = TimeNestStrings.tr("Localizable", "calendar_sharing.stop")
-      /// If you stop sharing, all participants will lose access.
-      public static let stopConfirmation = TimeNestStrings.tr("Localizable", "calendar_sharing.stop_confirmation")
       /// Shared Calendar
       public static let unknownCalendar = TimeNestStrings.tr("Localizable", "calendar_sharing.unknown_calendar")
       /// Participant
@@ -216,8 +196,6 @@ public enum TimeNestStrings: Sendable {
       }
 
       public enum Invitation: Sendable {
-        /// You’re invited to a shared TimeNest calendar.
-        public static let message = TimeNestStrings.tr("Localizable", "calendar_sharing.invitation.message")
         /// Preparing Sharing Invitation
         public static let preparing = TimeNestStrings.tr("Localizable", "calendar_sharing.invitation.preparing")
       }
@@ -423,7 +401,7 @@ public enum TimeNestStrings: Sendable {
       public static let title = TimeNestStrings.tr("Localizable", "help.title")
 
       public enum Ads: Sendable {
-      
+
         public enum About: Sendable {
           /// TimeNest may display ads when the consent flow permits ad requests. Use Remove Ads in Settings for a one-time purchase, and Restore Purchases to check the Apple purchase state.
           public static let answer = TimeNestStrings.tr("Localizable", "help.ads.about.answer")
@@ -441,6 +419,8 @@ public enum TimeNestStrings: Sendable {
         public static let holidays = TimeNestStrings.tr("Localizable", "help.category.holidays")
         /// Data and Privacy
         public static let privacy = TimeNestStrings.tr("Localizable", "help.category.privacy")
+        /// Shared Calendars
+        public static let sharing = TimeNestStrings.tr("Localizable", "help.category.sharing")
         /// Shifts and Work Records
         public static let shifts = TimeNestStrings.tr("Localizable", "help.category.shifts")
         /// Month, Week, and Day Views
@@ -545,6 +525,51 @@ public enum TimeNestStrings: Sendable {
           public static let answer = TimeNestStrings.tr("Localizable", "help.privacy.storage.answer")
           /// Where is my data stored?
           public static let question = TimeNestStrings.tr("Localizable", "help.privacy.storage.question")
+        }
+      }
+
+      public enum Sharing: Sendable {
+
+        public enum Accept: Sendable {
+          /// Open the invitation link on a device signed in to iCloud and accept the share. A device without usable iCloud or CloudKit access may not be able to accept it. Accepted or refreshed data can take a short time to appear.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.sharing.accept.answer")
+          /// How do I accept a sharing invitation?
+          public static let question = TimeNestStrings.tr("Localizable", "help.sharing.accept.question")
+        }
+
+        public enum Content: Sendable {
+          /// Events, shifts, and work records in that shared calendar are currently shared automatically and cannot be disabled by category. Event titles and times, plus work-record clock-in, clock-out, and break times, are shared. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift templates, settings, and Remove Ads purchase state are not shared.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.sharing.content.answer")
+          /// What is and is not shared?
+          public static let question = TimeNestStrings.tr("Localizable", "help.sharing.content.question")
+        }
+
+        public enum Create: Sendable {
+          /// Tap the calendar icon at the top left, then choose Create Shared Calendar. Enter a name and tap Create to open the iCloud sharing sheet. After creation, use the pencil button to rename it and Add People to send another invitation.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.sharing.create.answer")
+          /// How do I create or edit a shared calendar?
+          public static let question = TimeNestStrings.tr("Localizable", "help.sharing.create.question")
+        }
+
+        public enum ReadOnlyHolidays: Sendable {
+          /// Recipients can view shared events, shifts, and work records but cannot edit them. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.sharing.read_only_holidays.answer")
+          /// Can I edit a shared calendar, and how are holidays shown?
+          public static let question = TimeNestStrings.tr("Localizable", "help.sharing.read_only_holidays.question")
+        }
+
+        public enum Stop: Sendable {
+          /// When the owner stops sharing or deletes the shared calendar, recipients can no longer view it. Leaving a share only removes it from the recipient's device and does not affect the owner's data. If a change has not appeared yet, refresh from the calendar chooser.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.sharing.stop.answer")
+          /// What happens when sharing is stopped or deleted?
+          public static let question = TimeNestStrings.tr("Localizable", "help.sharing.stop.question")
+        }
+
+        public enum Switch: Sendable {
+          /// Tap the calendar icon at the top left and choose My Calendar or one shared calendar. The checkmark identifies the calendar currently displayed. Only one calendar is displayed at a time.
+          public static let answer = TimeNestStrings.tr("Localizable", "help.sharing.switch.answer")
+          /// How do I switch the displayed calendar?
+          public static let question = TimeNestStrings.tr("Localizable", "help.sharing.switch.question")
         }
       }
 

@@ -27,7 +27,6 @@ struct CalendarSelectionRowActions: Equatable {
     let showsDelete: Bool
     let showsReceivedDetails: Bool
     let actionsAreEnabled: Bool
-    let usesOverflowMenu = false
 
     init(calendar: TimeNestCalendar) {
         showsEdit = calendar.kind == .sharedOwned
@@ -283,6 +282,9 @@ struct CalendarSelectionView: View {
                     NavigationStack {
                         ReceivedSharedCalendarDetailView(calendarID: calendarID)
                     }
+                    .calendarSharingPresentation(
+                        height: CalendarSharingPresentationLayout.height()
+                    )
                 }
             }
             .environmentObject(sharingStore)
@@ -459,6 +461,42 @@ private struct CalendarSharingPrimaryActionLabel: View {
     }
 }
 
+private struct CalendarSharingFormActionBar: View {
+    let cancelTitle: String
+    let primaryTitle: String
+    let isPrimaryEnabled: Bool
+    let isWorking: Bool
+    let onCancel: () -> Void
+    let onPrimary: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Button(action: onCancel) {
+                Text(cancelTitle)
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .disabled(isWorking)
+
+            Button(action: onPrimary) {
+                CalendarSharingPrimaryActionLabel(
+                    title: primaryTitle,
+                    isWorking: isWorking
+                )
+                .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(ShiftCalendarColors.accentYellow)
+            .disabled(!isPrimaryEnabled || isWorking)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
+    }
+}
+
 @MainActor
 private struct CreateSharedCalendarView: View {
     @EnvironmentObject private var sharingStore: CalendarSharingStore
@@ -469,53 +507,43 @@ private struct CreateSharedCalendarView: View {
     @State private var invitation: CalendarSharingInvitation?
     @State private var errorMessage: String?
 
+    private var canSubmit: Bool {
+        CalendarSharingFormValidation.hasRequiredName(name)
+    }
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section(localization.localized(.calendarSharingCalendarName)) {
-                    TextField(localization.localized(.calendarSharingCalendarName), text: $name)
-                        .textInputAutocapitalization(.sentences)
-                }
+            VStack(spacing: 0) {
+                Form {
+                    Section(localization.localized(.calendarSharingCalendarName)) {
+                        TextField(localization.localized(.calendarSharingCalendarName), text: $name)
+                            .textInputAutocapitalization(.sentences)
+                    }
 
-                Section {
-                    Button {
-                        Task { await create() }
-                    } label: {
+                    Section {
                         Label(
-                            localization.localized(.calendarSharingAddInvitee),
+                            localization.localized(.calendarSharingInviteAfterCreation),
                             systemImage: "person.badge.plus"
                         )
-                        .foregroundStyle(ShiftCalendarColors.primaryBlue)
+                        .foregroundStyle(.secondary)
+                    } header: {
+                        Text(localization.localized(.calendarSharingInvitePeople))
+                    } footer: {
+                        Text(localization.localized(.calendarSharingContentPrivacyNote))
                     }
-                    .disabled(!CalendarSharingFormValidation.hasRequiredName(name) || isWorking)
-                } header: {
-                    Text(localization.localized(.calendarSharingInvitePeople))
-                } footer: {
-                    Text(localization.localized(.calendarSharingInviteAfterCreation))
                 }
 
-                Section {
-                    Button {
-                        Task { await create() }
-                    } label: {
-                        CalendarSharingPrimaryActionLabel(
-                            title: localization.localized(.calendarSharingCreateAction),
-                            isWorking: isWorking
-                        )
-                    }
-                    .disabled(!CalendarSharingFormValidation.hasRequiredName(name) || isWorking)
-                    .listRowBackground(ShiftCalendarColors.accentYellow)
-                } footer: {
-                    Text(localization.localized(.calendarSharingContentPrivacyNote))
-                }
+                CalendarSharingFormActionBar(
+                    cancelTitle: localization.localized(.cancel),
+                    primaryTitle: localization.localized(.calendarSharingCreateAction),
+                    isPrimaryEnabled: canSubmit,
+                    isWorking: isWorking,
+                    onCancel: { dismiss() },
+                    onPrimary: { Task { await create() } }
+                )
             }
             .navigationTitle(localization.localized(.calendarSharingCreateCalendar))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(localization.localized(.cancel)) { dismiss() }
-                }
-            }
         }
         .calendarSharingPresentation(height: CalendarSharingPresentationLayout.height())
         .sheet(item: $invitation) { item in
@@ -577,87 +605,81 @@ private struct OwnedSharedCalendarDetailView: View {
         sharingStore.ownedDescriptor(id: calendarID)
     }
 
-    var body: some View {
-        Form {
-            Section(localization.localized(.calendarSharingCalendarName)) {
-                TextField(localization.localized(.calendarSharingCalendarName), text: $name)
-                    .textInputAutocapitalization(.sentences)
-            }
+    private var canSubmit: Bool {
+        CalendarSharingFormValidation.hasRequiredName(name)
+            && !sharingStore.isStopping(calendarID: calendarID)
+    }
 
-            Section(localization.localized(.calendarSharingSharedPeople)) {
-                HStack {
-                    Image(systemName: "person.crop.circle.fill")
-                        .foregroundStyle(ShiftCalendarColors.primaryBlue)
-                    Text(localization.localized(.calendarSharingYou))
-                    Spacer()
-                    Text(localization.localized(.calendarSharingOwner))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+    var body: some View {
+        VStack(spacing: 0) {
+            Form {
+                Section(localization.localized(.calendarSharingCalendarName)) {
+                    TextField(localization.localized(.calendarSharingCalendarName), text: $name)
+                        .textInputAutocapitalization(.sentences)
                 }
 
-                let participants = sharingStore.participants(for: calendarID)
-                if !participants.isEmpty {
-                    ForEach(participants) { participant in
-                        HStack {
-                            Image(systemName: "person.crop.circle.fill")
-                                .foregroundStyle(ShiftCalendarColors.primaryBlue)
-                            VStack(alignment: .leading) {
-                                Text(participant.resolvedDisplayName(
-                                    fallback: localization.localized(.calendarSharingUnknownPerson)
-                                ))
-                                Text(localization.localized(
-                                    participant.isAccepted
-                                        ? .calendarSharingReadOnly
-                                        : .calendarSharingInvitationPending
-                                ))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if !participant.isAccepted {
-                                Button(localization.localized(.calendarSharingRetry)) {
-                                    Task {
-                                        await retryPendingInvitationRemoval(participant)
-                                    }
+                Section(localization.localized(.calendarSharingSharedPeople)) {
+                    HStack {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(ShiftCalendarColors.primaryBlue)
+                        Text(localization.localized(.calendarSharingYou))
+                        Spacer()
+                        Text(localization.localized(.calendarSharingOwner))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    let participants = sharingStore.participants(for: calendarID)
+                    if !participants.isEmpty {
+                        ForEach(participants) { participant in
+                            HStack {
+                                Image(systemName: "person.crop.circle.fill")
+                                    .foregroundStyle(ShiftCalendarColors.primaryBlue)
+                                VStack(alignment: .leading) {
+                                    Text(participant.resolvedDisplayName(
+                                        fallback: localization.localized(.calendarSharingUnknownPerson)
+                                    ))
+                                    Text(localization.localized(
+                                        participant.isAccepted
+                                            ? .calendarSharingReadOnly
+                                            : .calendarSharingInvitationPending
+                                    ))
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
                                 }
-                                .buttonStyle(.borderless)
-                                .disabled(isWorking)
+                                Spacer()
+                                if !participant.isAccepted {
+                                    Button(localization.localized(.calendarSharingRetry)) {
+                                        Task {
+                                            await retryPendingInvitationRemoval(participant)
+                                        }
+                                    }
+                                    .buttonStyle(.borderless)
+                                    .disabled(isWorking)
+                                }
                             }
                         }
                     }
+                    Button {
+                        Task { await invite() }
+                    } label: {
+                        Label(localization.localized(.calendarSharingAddPeople), systemImage: "person.badge.plus")
+                    }
+                    .disabled(isWorking || sharingStore.isStopping(calendarID: calendarID))
                 }
-                Button {
-                    Task { await invite() }
-                } label: {
-                    Label(localization.localized(.calendarSharingAddPeople), systemImage: "person.badge.plus")
-                }
-                .disabled(isWorking || sharingStore.isStopping(calendarID: calendarID))
             }
 
-            Section {
-                Button {
-                    Task { await rename() }
-                } label: {
-                    CalendarSharingPrimaryActionLabel(
-                        title: localization.localized(.calendarSharingSaveAction),
-                        isWorking: isWorking
-                    )
-                }
-                .disabled(
-                    !CalendarSharingFormValidation.hasRequiredName(name)
-                        || isWorking
-                        || sharingStore.isStopping(calendarID: calendarID)
-                )
-                .listRowBackground(ShiftCalendarColors.accentYellow)
-            }
+            CalendarSharingFormActionBar(
+                cancelTitle: localization.localized(.cancel),
+                primaryTitle: localization.localized(.calendarSharingSaveAction),
+                isPrimaryEnabled: canSubmit,
+                isWorking: isWorking,
+                onCancel: { dismiss() },
+                onPrimary: { Task { await rename() } }
+            )
         }
         .navigationTitle(localization.localized(.calendarSharingEditCalendar))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button(localization.localized(.cancel)) { dismiss() }
-            }
-        }
         .onAppear { name = descriptor?.calendarName ?? "" }
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(

@@ -340,6 +340,7 @@
 "help.category.views" = "月・週・日表示";
 "help.category.holidays" = "祝日・休日";
 "help.category.shifts" = "シフトと勤務記録";
+"help.category.sharing" = "共有カレンダー";
 "help.category.ads" = "広告";
 "help.category.privacy" = "データとプライバシー";
 
@@ -382,6 +383,19 @@
 "help.shifts.statistics.answer" = "勤務統計は、記録した出勤時刻、退勤時刻、休憩時間、時給、交通費をもとに計算します。基本式は「勤務時間 = 退勤時刻 - 出勤時刻 - 休憩時間」「給与 = 勤務時間 × 時給」「合計 = 給与 + 交通費」です。";
 "help.shifts.statistics_missing.question" = "統計結果が表示されないのはなぜですか？";
 "help.shifts.statistics_missing.answer" = "対象期間内に出勤記録と退勤記録が保存され、時給などの必要な情報が入力されているか確認してください。シフトだけでは給与統計は自動作成されません。";
+
+"help.sharing.create.question" = "共有カレンダーを作成・編集するには？";
+"help.sharing.create.answer" = "カレンダー左上のアイコンからカレンダー選択画面を開き、「共有カレンダーを作成」を選びます。名前を入力して「作成する」をタップすると、iCloud の共有画面が開きます。作成後は鉛筆ボタンで名前を編集し、「メンバーを追加」から招待を送れます。";
+"help.sharing.accept.question" = "共有の招待を受け取るには？";
+"help.sharing.accept.answer" = "iCloud にサインインした端末で招待リンクを開き、共有を承認します。iCloud または CloudKit を利用できない端末では、招待を受け取れないことがあります。承認や更新の反映には少し時間がかかる場合があります。";
+"help.sharing.switch.question" = "表示するカレンダーを切り替えるには？";
+"help.sharing.switch.answer" = "カレンダー左上のアイコンをタップし、「マイカレンダー」または共有カレンダーを選びます。チェックマークは現在表示中のカレンダーを示します。一度に表示できるのは1つのカレンダーです。";
+"help.sharing.read_only_holidays.question" = "共有カレンダーを編集できますか？祝日はどう表示されますか？";
+"help.sharing.read_only_holidays.answer" = "受信側は共有された予定、シフト、勤務記録を閲覧できますが、編集はできません。祝日は CloudKit では共有されず、受信側の端末で有効にしている地域とローカルキャッシュに基づいて表示されます。";
+"help.sharing.content.question" = "共有される内容と共有されない内容は？";
+"help.sharing.content.answer" = "現在は、その共有カレンダー内の予定、シフト、勤務記録が自動的に共有され、種類ごとに個別にオフにはできません。予定のタイトルと日時、勤務記録の出退勤時刻と休憩時間は共有されます。メモ、リマインダーや通知、音声入力の内容、時給、給与、交通費、シフトテンプレート、設定、広告削除の購入状態は共有されません。";
+"help.sharing.stop.question" = "共有を停止・削除した場合は？";
+"help.sharing.stop.answer" = "所有者が共有を停止または共有カレンダーを削除すると、受信側はそのカレンダーを表示できなくなります。受信側が共有から退出した場合は、その端末の一覧から削除されますが、所有者のデータには影響しません。反映されない場合はカレンダー選択画面で更新してください。";
 
 "help.ads.about.question" = "広告について";
 "help.ads.about.answer" = "TimeNest では、同意フローで広告リクエストが許可された場合に広告が表示されることがあります。設定の「広告を削除」から一度きりの購入で広告を非表示にでき、「購入を復元」で Apple の購入状態を確認できます。";
@@ -432,12 +446,10 @@
 "calendar_sharing.create_calendar" = "共有カレンダーを作成";
 "calendar_sharing.no_shared_calendars" = "共有カレンダーはありません";
 "calendar_sharing.read_only" = "閲覧のみ";
-"calendar_sharing.owner_read_only_format" = "%1$@・%2$@";
 "calendar_sharing.calendar_name" = "カレンダー名";
 "calendar_sharing.edit_calendar" = "共有カレンダーを編集";
 "calendar_sharing.delete_calendar" = "共有カレンダーを削除";
 "calendar_sharing.invite_people" = "招待する人";
-"calendar_sharing.add_invitee" = "招待する人を追加";
 "calendar_sharing.invite_after_creation" = "共有カレンダーを作成した後、iCloudの共有画面が開きます。";
 "calendar_sharing.create_action" = "作成する";
 "calendar_sharing.save_action" = "保存する";
@@ -447,19 +459,11 @@
 "calendar_sharing.delete_confirmation_title" = "共有カレンダーを削除しますか？";
 "calendar_sharing.delete_confirmation_message" = "このカレンダーを削除すると、招待したメンバーは閲覧できなくなります。";
 "calendar_sharing.received_details" = "共有カレンダーの詳細";
-"calendar_sharing.start" = "共有を開始";
-"calendar_sharing.stop" = "共有を停止";
 "calendar_sharing.leave" = "共有から退出";
 "calendar_sharing.retry" = "再試行";
 "calendar_sharing.add_people" = "メンバーを追加";
 "calendar_sharing.shared_people" = "共有している人";
-"calendar_sharing.no_participants" = "まだ参加者はいません";
-"calendar_sharing.participant_info_unavailable" = "参加者情報を取得できませんでした";
 "calendar_sharing.invitation.preparing" = "共有の招待を準備しています";
-"calendar_sharing.invitation.message" = "TimeNestの共有カレンダーに招待します。";
-"calendar_sharing.privacy_note" = "共有対象は共有設定で選択できます。メモ、通知、時給、給与情報は共有されません。";
-"calendar_sharing.required_fields" = "カレンダー名を入力してください。";
-"calendar_sharing.stop_confirmation" = "共有を停止すると、すべての参加者のアクセスが失われます。";
 "calendar_sharing.leave_confirmation" = "この共有カレンダーをTimeNestから削除します。作成者の予定には影響しません。";
 "calendar_sharing.unknown_person" = "参加者";
 "calendar_sharing.unknown_calendar" = "共有カレンダー";

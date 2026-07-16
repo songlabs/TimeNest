@@ -340,6 +340,7 @@
 "help.category.views" = "Month, Week, and Day Views";
 "help.category.holidays" = "Holidays and Days Off";
 "help.category.shifts" = "Shifts and Work Records";
+"help.category.sharing" = "Shared Calendars";
 "help.category.ads" = "Ads";
 "help.category.privacy" = "Data and Privacy";
 
@@ -382,6 +383,19 @@
 "help.shifts.statistics.answer" = "Work statistics use recorded clock-in and clock-out times, break time, hourly rate, and transport cost. The basic rules are: work time = clock-out - clock-in - break; pay = work time × hourly rate; total = pay + transport cost.";
 "help.shifts.statistics_missing.question" = "Why are no statistics shown?";
 "help.shifts.statistics_missing.answer" = "Check that clock-in and clock-out records were saved within the selected period and that required information such as the hourly rate was entered. A shift alone does not create pay statistics.";
+
+"help.sharing.create.question" = "How do I create or edit a shared calendar?";
+"help.sharing.create.answer" = "Tap the calendar icon at the top left, then choose Create Shared Calendar. Enter a name and tap Create to open the iCloud sharing sheet. After creation, use the pencil button to rename it and Add People to send another invitation.";
+"help.sharing.accept.question" = "How do I accept a sharing invitation?";
+"help.sharing.accept.answer" = "Open the invitation link on a device signed in to iCloud and accept the share. A device without usable iCloud or CloudKit access may not be able to accept it. Accepted or refreshed data can take a short time to appear.";
+"help.sharing.switch.question" = "How do I switch the displayed calendar?";
+"help.sharing.switch.answer" = "Tap the calendar icon at the top left and choose My Calendar or one shared calendar. The checkmark identifies the calendar currently displayed. Only one calendar is displayed at a time.";
+"help.sharing.read_only_holidays.question" = "Can I edit a shared calendar, and how are holidays shown?";
+"help.sharing.read_only_holidays.answer" = "Recipients can view shared events, shifts, and work records but cannot edit them. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.";
+"help.sharing.content.question" = "What is and is not shared?";
+"help.sharing.content.answer" = "Events, shifts, and work records in that shared calendar are currently shared automatically and cannot be disabled by category. Event titles and times, plus work-record clock-in, clock-out, and break times, are shared. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift templates, settings, and Remove Ads purchase state are not shared.";
+"help.sharing.stop.question" = "What happens when sharing is stopped or deleted?";
+"help.sharing.stop.answer" = "When the owner stops sharing or deletes the shared calendar, recipients can no longer view it. Leaving a share only removes it from the recipient's device and does not affect the owner's data. If a change has not appeared yet, refresh from the calendar chooser.";
 
 "help.ads.about.question" = "About ads";
 "help.ads.about.answer" = "TimeNest may display ads when the consent flow permits ad requests. Use Remove Ads in Settings for a one-time purchase, and Restore Purchases to check the Apple purchase state.";
@@ -432,12 +446,10 @@
 "calendar_sharing.create_calendar" = "Create Shared Calendar";
 "calendar_sharing.no_shared_calendars" = "No shared calendars";
 "calendar_sharing.read_only" = "View Only";
-"calendar_sharing.owner_read_only_format" = "%1$@ · %2$@";
 "calendar_sharing.calendar_name" = "Calendar Name";
 "calendar_sharing.edit_calendar" = "Edit Shared Calendar";
 "calendar_sharing.delete_calendar" = "Delete Shared Calendar";
 "calendar_sharing.invite_people" = "People to Invite";
-"calendar_sharing.add_invitee" = "Add People to Invite";
 "calendar_sharing.invite_after_creation" = "The iCloud sharing sheet opens after the calendar is created.";
 "calendar_sharing.create_action" = "Create";
 "calendar_sharing.save_action" = "Save";
@@ -447,19 +459,11 @@
 "calendar_sharing.delete_confirmation_title" = "Delete this shared calendar?";
 "calendar_sharing.delete_confirmation_message" = "Invited members will no longer be able to view this calendar.";
 "calendar_sharing.received_details" = "Shared Calendar Details";
-"calendar_sharing.start" = "Start Sharing";
-"calendar_sharing.stop" = "Stop Sharing";
 "calendar_sharing.leave" = "Leave Share";
 "calendar_sharing.retry" = "Retry";
 "calendar_sharing.add_people" = "Add People";
 "calendar_sharing.shared_people" = "People You Share With";
-"calendar_sharing.no_participants" = "No participants yet";
-"calendar_sharing.participant_info_unavailable" = "Participant information couldn’t be retrieved";
 "calendar_sharing.invitation.preparing" = "Preparing Sharing Invitation";
-"calendar_sharing.invitation.message" = "You’re invited to a shared TimeNest calendar.";
-"calendar_sharing.privacy_note" = "Choose the shared content in sharing settings. Memos, notifications, hourly rates, and pay information are not shared.";
-"calendar_sharing.required_fields" = "Enter a calendar name.";
-"calendar_sharing.stop_confirmation" = "If you stop sharing, all participants will lose access.";
 "calendar_sharing.leave_confirmation" = "This shared calendar will be removed from TimeNest. The owner's data will not be affected.";
 "calendar_sharing.unknown_person" = "Participant";
 "calendar_sharing.unknown_calendar" = "Shared Calendar";

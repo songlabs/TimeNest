@@ -69,7 +69,6 @@ final class CalendarSelectionAndPolicyTests: XCTestCase {
         XCTAssertTrue(actions.showsEdit)
         XCTAssertTrue(actions.showsDelete)
         XCTAssertFalse(actions.showsReceivedDetails)
-        XCTAssertFalse(actions.usesOverflowMenu)
         XCTAssertTrue(actions.actionsAreEnabled)
     }
 
