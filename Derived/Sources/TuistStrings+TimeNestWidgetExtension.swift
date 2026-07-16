@@ -77,6 +77,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
   }
 
   public enum CalendarSharing: Sendable {
+    /// Add People
+    public static let addPeople = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.add_people")
     /// Calendar Name
     public static let calendarName = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.calendar_name")
     /// %1$@ to %2$@
@@ -91,14 +93,14 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let manage = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.manage")
     /// My Calendar
     public static let myCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.my_calendar")
-    /// Manage Invitations and Participants
-    public static let openSystemManagement = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.open_system_management")
+    /// No participants yet
+    public static let noParticipants = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.no_participants")
     /// %1$@ · %2$@
     public static func ownerReadOnlyFormat(_ p1: Any, _ p2: Any) -> String {
       return TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.owner_read_only_format",String(describing: p1), String(describing: p2))
     }
-    /// Participants
-    public static let participants = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.participants")
+    /// Participant information couldn’t be retrieved
+    public static let participantInfoUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.participant_info_unavailable")
     /// Choose the shared content in sharing settings. Memos, notifications, hourly rates, and pay information are not shared.
     public static let privacyNote = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.privacy_note")
     /// View Only
@@ -111,6 +113,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let retry = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.retry")
     /// Choose Calendar
     public static let selectCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.select_calendar")
+    /// People You Share With
+    public static let sharedPeople = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.shared_people")
     /// Shared with %ld people
     public static func sharedWithCount(_ p1: Int) -> String {
       return TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.shared_with_count",p1)
@@ -123,11 +127,11 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     }
     /// Stop Sharing
     public static let stop = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.stop")
-    /// Participants will no longer be able to view this calendar. Your local TimeNest events will not be deleted.
+    /// If you stop sharing, all participants will lose access.
     public static let stopConfirmation = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.stop_confirmation")
     /// Shared Calendar
     public static let unknownCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.unknown_calendar")
-    /// Shared User
+    /// Participant
     public static let unknownPerson = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.unknown_person")
 
     public enum Content: Sendable {
@@ -154,8 +158,12 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       public static let icloudRestricted = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.icloud_restricted")
       /// Sign in to iCloud to use calendar sharing.
       public static let icloudSignInRequired = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.icloud_sign_in_required")
+      /// Couldn't create the sharing invitation. Try again later.
+      public static let invitationCreationFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_creation_failed")
       /// The sharing invitation has not been accepted yet.
       public static let invitationPending = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_pending")
+      /// Couldn't get the sharing link. Try again later.
+      public static let invitationUrlUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_url_unavailable")
       /// The network is unavailable. Check your connection and try again.
       public static let networkUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.network_unavailable")
       /// You do not have permission to access this shared calendar.
@@ -168,6 +176,13 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.title")
       /// Couldn't update sharing settings.
       public static let updateFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.update_failed")
+    }
+
+    public enum Invitation: Sendable {
+      /// You’re invited to a shared TimeNest calendar.
+      public static let message = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.invitation.message")
+      /// Preparing Sharing Invitation
+      public static let preparing = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.invitation.preparing")
     }
 
     public enum Switch: Sendable {

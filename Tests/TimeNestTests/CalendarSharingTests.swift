@@ -328,6 +328,26 @@ final class SharedContentConfigurationTests: XCTestCase {
 }
 
 final class CalendarSharingCloudRecordFactoryTests: XCTestCase {
+    func testOneTimeInvitationAddsUniqueReadOnlyPrivateParticipants() {
+        let share = CalendarSharingCloudRecordFactory.makeZoneWideShare(
+            recordZoneID: CKRecordZone.ID(
+                zoneName: CalendarSharingCloudSchema.zoneName,
+                ownerName: CKCurrentUserDefaultName
+            )
+        )
+
+        let first = OneTimeSharingInvitation.prepare(on: share)
+        let second = OneTimeSharingInvitation.prepare(on: share)
+        let invitees = share.participants.filter { $0.role != .owner }
+
+        XCTAssertEqual(share.publicPermission, .none)
+        XCTAssertEqual(invitees.count, 2)
+        XCTAssertTrue(invitees.allSatisfy { $0.permission == .readOnly })
+        XCTAssertNotEqual(first.participantID, second.participantID)
+        XCTAssertNil(first.url(in: share))
+        XCTAssertNil(second.url(in: share))
+    }
+
     func testContentRecordsUseSharedZoneAndFieldsWithoutHierarchicalParents() {
         let zoneID = CKRecordZone.ID(
             zoneName: CalendarSharingCloudSchema.zoneName,
@@ -591,6 +611,90 @@ final class CalendarSharingCloudRecordFactoryTests: XCTestCase {
 
         XCTAssertEqual(share.recordType, CKRecord.SystemType.share)
         XCTAssertEqual(share.recordID.zoneID, zoneID)
+    }
+}
+
+final class OwnedCalendarParticipantSnapshotAssemblerTests: XCTestCase {
+    func testOwnerPendingAndRemovedParticipantsAreExcluded() {
+        XCTAssertNil(makeSnapshot(role: .owner, status: .accepted))
+        XCTAssertNil(makeSnapshot(role: .privateUser, status: .pending))
+        XCTAssertNil(makeSnapshot(role: .privateUser, status: .removed))
+        XCTAssertNil(makeSnapshot(role: .privateUser, status: .unknown))
+    }
+
+    func testAcceptedParticipantPrefersFormattedName() throws {
+        var name = PersonNameComponents()
+        name.givenName = "A"
+        name.familyName = "Participant"
+
+        let snapshot = try XCTUnwrap(makeSnapshot(
+            status: .accepted,
+            nameComponents: name,
+            emailAddress: "fallback@example.com"
+        ))
+
+        XCTAssertTrue(try XCTUnwrap(snapshot.displayName).contains("A"))
+        XCTAssertFalse(try XCTUnwrap(snapshot.displayName).contains("@"))
+        XCTAssertTrue(snapshot.isAccepted)
+        XCTAssertEqual(snapshot.permission, .readOnly)
+    }
+
+    func testAcceptedParticipantUsesEmailWhenNameIsUnavailable() throws {
+        let snapshot = try XCTUnwrap(makeSnapshot(
+            status: .accepted,
+            emailAddress: "participant@example.com"
+        ))
+
+        XCTAssertEqual(snapshot.displayName, "participant@example.com")
+    }
+
+    func testAcceptedParticipantUsesLocalizedFallbackWhenIdentityIsUnavailable() throws {
+        let snapshot = try XCTUnwrap(makeSnapshot(status: .accepted))
+
+        XCTAssertNil(snapshot.displayName)
+        XCTAssertEqual(snapshot.resolvedDisplayName(fallback: "Participant"), "Participant")
+    }
+
+    func testParticipantSnapshotUsesStableAnonymizedIdentifier() throws {
+        let first = try XCTUnwrap(makeSnapshot(status: .accepted, participantID: "participant-source-id"))
+        let second = try XCTUnwrap(makeSnapshot(status: .accepted, participantID: "participant-source-id"))
+
+        XCTAssertEqual(first.id, second.id)
+        XCTAssertNotEqual(first.id, "participant-source-id")
+    }
+
+    func testPendingOneTimeParticipantIsCountedButNotDisplayed() {
+        let share = CalendarSharingCloudRecordFactory.makeZoneWideShare(
+            recordZoneID: CKRecordZone.ID(
+                zoneName: CalendarSharingCloudSchema.zoneName,
+                ownerName: CKCurrentUserDefaultName
+            )
+        )
+        _ = OneTimeSharingInvitation.prepare(on: share)
+
+        let summary = OwnedCalendarParticipantSnapshotAssembler.make(from: share)
+
+        XCTAssertEqual(summary.pendingCount, 1)
+        XCTAssertTrue(summary.snapshots.isEmpty)
+        XCTAssertEqual(summary.acceptedCount, 0)
+    }
+
+    private func makeSnapshot(
+        role: CKShare.ParticipantRole = .privateUser,
+        status: CKShare.ParticipantAcceptanceStatus,
+        permission: CKShare.ParticipantPermission = .readOnly,
+        nameComponents: PersonNameComponents? = nil,
+        emailAddress: String? = nil,
+        participantID: CKShare.Participant.ID = "test-participant-id"
+    ) -> SharedCalendarParticipantSnapshot? {
+        OwnedCalendarParticipantSnapshotAssembler.makeSnapshot(
+            participantID: participantID,
+            role: role,
+            acceptanceStatus: status,
+            permission: permission,
+            nameComponents: nameComponents,
+            emailAddress: emailAddress
+        )
     }
 }
 
@@ -1601,12 +1705,12 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
         XCTAssertEqual(context.store.syncStatus, .synced)
     }
 
-    func testFirstShareAllowsOneCharacterNamesZeroParticipantsAndPreparesController() async throws {
+    func testFirstShareAllowsOneCharacterNamesAndPreparesActivitySheet() async throws {
         let client = CalendarSharingClientStub()
         let context = try makeStore(client: client, selection: .mine)
         defer { context.cleanup() }
 
-        let share = try await context.store.createShare(displayName: "A", calendarName: "B")
+        let invitationURL = try await context.store.createShare(displayName: "A", calendarName: "B")
 
         XCTAssertEqual(client.createdDisplayName, "A")
         XCTAssertEqual(client.createdCalendarName, "B")
@@ -1618,12 +1722,12 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
         XCTAssertTrue(context.store.receivedCalendars.isEmpty)
         XCTAssertEqual(context.store.ownedCalendar?.participantCount, 0)
         XCTAssertNil(context.store.lastError)
-        XCTAssertEqual(share.recordID, client.createdState.share.recordID)
+        XCTAssertEqual(invitationURL, client.createdInvitationURL)
 
         var presentation = SharingManagementPresentationState()
         presentation.showAlert(.message("stale"))
-        presentation.present(share: share, title: "B")
-        XCTAssertNotNil(presentation.presentedShare)
+        presentation.present(invitationURL: invitationURL)
+        XCTAssertEqual(presentation.presentedInvitation?.url, invitationURL)
         XCTAssertNil(presentation.alertState)
     }
 
@@ -1636,6 +1740,124 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
 
         XCTAssertEqual(client.createdDisplayName, "Shared calendar")
         XCTAssertEqual(client.createdCalendarName, "Shared calendar")
+    }
+
+    func testFirstShareMissingInvitationURLKeepsSavedShareState() async throws {
+        let client = CalendarSharingClientStub()
+        client.createdInvitationURL = nil
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        do {
+            _ = try await context.store.createShare(calendarName: "Shared calendar")
+            XCTFail("Expected the missing invitation URL to be reported")
+        } catch let error as CalendarSharingError {
+            XCTAssertEqual(error, .invitationURLUnavailable)
+        }
+
+        XCTAssertEqual(client.createCallCount, 1)
+        XCTAssertEqual(context.store.ownedCalendar, client.createdState.calendar)
+        XCTAssertEqual(context.store.lastError, .invitationURLUnavailable)
+    }
+
+    func testAddPeopleReusesExistingShareAndReturnsANewInvitationForEachTap() async throws {
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+        _ = try await context.store.createShare(calendarName: "Shared calendar")
+
+        client.additionalInvitationURL = URL(string: "https://example.com/invite/additional-1")!
+        let first = try await context.store.createOwnedInvitation()
+        client.additionalInvitationURL = URL(string: "https://example.com/invite/additional-2")!
+        let second = try await context.store.createOwnedInvitation()
+
+        XCTAssertNotEqual(first, second)
+        XCTAssertEqual(client.createCallCount, 1)
+        XCTAssertEqual(client.invitationCallCount, 2)
+        XCTAssertEqual(context.store.ownedCalendar?.participantCount, 0)
+    }
+
+    func testAddPeopleSaveFailurePreservesExistingShare() async throws {
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+        _ = try await context.store.createShare(calendarName: "Shared calendar")
+        client.invitationError = CKError(.unknownItem)
+
+        do {
+            _ = try await context.store.createOwnedInvitation()
+            XCTFail("Expected invitation creation to fail")
+        } catch let error as CalendarSharingError {
+            XCTAssertEqual(error, .invitationCreationFailed)
+        }
+
+        XCTAssertEqual(client.createCallCount, 1)
+        XCTAssertEqual(client.invitationCallCount, 1)
+        XCTAssertEqual(context.store.ownedCalendar, client.createdState.calendar)
+    }
+
+    func testAddPeopleMissingInvitationURLPreservesExistingShare() async throws {
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+        _ = try await context.store.createShare(calendarName: "Shared calendar")
+        client.additionalInvitationURL = nil
+
+        do {
+            _ = try await context.store.createOwnedInvitation()
+            XCTFail("Expected the missing invitation URL to be reported")
+        } catch let error as CalendarSharingError {
+            XCTAssertEqual(error, .invitationURLUnavailable)
+        }
+
+        XCTAssertEqual(client.createCallCount, 1)
+        XCTAssertEqual(context.store.ownedCalendar?.participantCount, 0)
+    }
+
+    func testConcurrentAddPeopleRequestsUseSingleInvitationMutation() async throws {
+        let client = CalendarSharingClientStub()
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+        _ = try await context.store.createShare(calendarName: "Shared calendar")
+        client.suspendInvitationCreation = true
+
+        let firstTask = Task { try await context.store.createOwnedInvitation() }
+        await client.waitUntilInvitationCreationStarts()
+
+        do {
+            _ = try await context.store.createOwnedInvitation()
+            XCTFail("Expected the concurrent request to be rejected")
+        } catch let error as CalendarSharingError {
+            XCTAssertEqual(error, .invitationCreationFailed)
+        }
+
+        client.resumeInvitationCreation()
+        _ = try await firstTask.value
+        XCTAssertEqual(client.createCallCount, 1)
+        XCTAssertEqual(client.invitationCallCount, 1)
+    }
+
+    func testConcurrentStartSharingRequestsUseSingleShareMutation() async throws {
+        let client = CalendarSharingClientStub()
+        client.suspendShareCreation = true
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        let firstTask = Task {
+            try await context.store.createShare(calendarName: "Shared calendar")
+        }
+        await client.waitUntilShareCreationStarts()
+
+        do {
+            _ = try await context.store.createShare(calendarName: "Shared calendar")
+            XCTFail("Expected the concurrent request to be rejected")
+        } catch let error as CalendarSharingError {
+            XCTAssertEqual(error, .shareCreationFailed)
+        }
+
+        client.resumeShareCreation()
+        _ = try await firstTask.value
+        XCTAssertEqual(client.createCallCount, 1)
     }
 
     @MainActor
@@ -1982,14 +2204,131 @@ final class CalendarSharingStoreRefreshTests: XCTestCase {
         )
     }
 
-    func testErrorPresentationClearsShareToAvoidSheetAlertCompetition() {
+    func testParticipantRefreshPreservesExistingListWhenFetchFails() async throws {
+        let client = CalendarSharingClientStub()
+        let participant = makeParticipant(displayName: "Accepted participant")
+        client.ownedState = makeOwnedState(participants: [participant])
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        await context.store.refreshOwnedParticipants()
+        client.ownedStateError = CalendarSharingError.networkUnavailable
+        await context.store.refreshOwnedParticipants()
+
+        XCTAssertEqual(context.store.ownedParticipants, [participant])
+        XCTAssertTrue(context.store.participantRefreshFailed)
+    }
+
+    func testParticipantRefreshShowsNewAcceptedParticipantAfterNextFetch() async throws {
+        let client = CalendarSharingClientStub()
+        client.ownedState = makeOwnedState(participants: [])
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        await context.store.refreshOwnedParticipants()
+        XCTAssertTrue(context.store.ownedParticipants.isEmpty)
+
+        let participant = makeParticipant(displayName: "New participant")
+        client.ownedState = makeOwnedState(participants: [participant])
+        await context.store.refreshOwnedParticipants()
+
+        XCTAssertEqual(context.store.ownedParticipants, [participant])
+        XCTAssertEqual(context.store.ownedCalendar?.participantCount, 1)
+    }
+
+    func testParticipantRefreshOnlyFetchesOwnedStateWithoutCreatingOrUploading() async throws {
+        let client = CalendarSharingClientStub()
+        client.ownedState = makeOwnedState(participants: [makeParticipant(displayName: nil)])
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        await context.store.refreshOwnedParticipants()
+
+        XCTAssertEqual(client.ownedStateCallCount, 1)
+        XCTAssertEqual(client.createCallCount, 0)
+        XCTAssertEqual(client.invitationCallCount, 0)
+        XCTAssertEqual(client.updateCallCount, 0)
+        XCTAssertTrue(client.synchronizedSnapshots.isEmpty)
+        XCTAssertTrue(client.synchronizedShifts.isEmpty)
+        XCTAssertTrue(client.synchronizedWorkRecords.isEmpty)
+    }
+
+    func testAppActivationWhileParticipantManagementIsActiveUsesLightweightRefresh() async throws {
+        let client = CalendarSharingClientStub()
+        client.ownedState = makeOwnedState(participants: [makeParticipant(displayName: nil)])
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+        context.store.setParticipantManagementActive(true)
+
+        await context.store.synchronizeOnAppActivation()
+
+        XCTAssertEqual(client.ownedStateCallCount, 1)
+        XCTAssertEqual(client.createCallCount, 0)
+        XCTAssertEqual(client.updateCallCount, 0)
+        XCTAssertTrue(client.synchronizedSnapshots.isEmpty)
+        XCTAssertTrue(client.synchronizedShifts.isEmpty)
+        XCTAssertTrue(client.synchronizedWorkRecords.isEmpty)
+    }
+
+    func testConcurrentParticipantRefreshesUseSingleOwnedStateFetch() async throws {
+        let client = CalendarSharingClientStub()
+        client.ownedState = makeOwnedState(participants: [])
+        client.suspendOwnedStateFetch = true
+        let context = try makeStore(client: client, selection: .mine)
+        defer { context.cleanup() }
+
+        let firstTask = Task { await context.store.refreshOwnedParticipants() }
+        await client.waitUntilOwnedStateFetchStarts()
+        await context.store.refreshOwnedParticipants()
+
+        XCTAssertEqual(client.ownedStateCallCount, 1)
+        client.resumeOwnedStateFetch()
+        await firstTask.value
+        XCTAssertEqual(client.ownedStateCallCount, 1)
+    }
+
+    func testErrorPresentationClearsInvitationToAvoidSheetAlertCompetition() {
         var presentation = SharingManagementPresentationState()
-        presentation.present(share: CalendarSharingClientStub.makeShare(), title: "Calendar")
+        presentation.present(invitationURL: URL(string: "https://example.com/invite")!)
 
         presentation.showAlert(.message("failure"))
 
-        XCTAssertNil(presentation.presentedShare)
+        XCTAssertNil(presentation.presentedInvitation)
         XCTAssertNotNil(presentation.alertState)
+    }
+
+    func testActivityCancellationDismissesInvitationWithoutError() {
+        var presentation = SharingManagementPresentationState()
+        presentation.present(invitationURL: URL(string: "https://example.com/invite")!)
+
+        presentation.dismissInvitation()
+
+        XCTAssertNil(presentation.presentedInvitation)
+        XCTAssertNil(presentation.alertState)
+    }
+
+    private func makeParticipant(displayName: String?) -> SharedCalendarParticipantSnapshot {
+        SharedCalendarParticipantSnapshot(
+            id: UUID().uuidString,
+            displayName: displayName,
+            isAccepted: true,
+            permission: .readOnly
+        )
+    }
+
+    private func makeOwnedState(
+        participants: [SharedCalendarParticipantSnapshot]
+    ) -> OwnedSharedCalendarCloudState {
+        OwnedSharedCalendarCloudState(
+            calendar: OwnedSharedCalendarDescriptor(
+                displayName: "Owner",
+                calendarName: "Shared calendar",
+                participantCount: participants.count,
+                contentConfiguration: .newShareDefault
+            ),
+            share: CalendarSharingClientStub.makeShare(),
+            participants: participants
+        )
     }
 
     private func makeStore(
@@ -2074,10 +2413,14 @@ private func makeSharingEvent(
 @MainActor
 private final class CalendarSharingClientStub: CalendarSharingClientProtocol {
     var ownedState: OwnedSharedCalendarCloudState?
+    var ownedStateError: Error?
     var receivedResult: Result<[ReceivedSharedCalendarPayload], Error> = .success([])
     var createError: Error?
+    var invitationError: Error?
     var updateError: Error?
     var createCallCount = 0
+    var ownedStateCallCount = 0
+    var invitationCallCount = 0
     var updateCallCount = 0
     var updatedContent: SharedContentConfiguration?
     var createdDisplayName: String?
@@ -2090,6 +2433,11 @@ private final class CalendarSharingClientStub: CalendarSharingClientProtocol {
     var synchronizedShifts: [SharedShiftSnapshot] = []
     var synchronizedWorkRecords: [SharedWorkRecordSnapshot] = []
     var suspendReceivedFetch = false
+    var suspendOwnedStateFetch = false
+    var suspendShareCreation = false
+    var suspendInvitationCreation = false
+    var createdInvitationURL: URL? = URL(string: "https://example.com/invite/first")!
+    var additionalInvitationURL: URL? = URL(string: "https://example.com/invite/additional")!
 
     let createdState = OwnedSharedCalendarCloudState(
         calendar: OwnedSharedCalendarDescriptor(
@@ -2104,9 +2452,29 @@ private final class CalendarSharingClientStub: CalendarSharingClientProtocol {
     private var receivedFetchStarted = false
     private var receivedFetchStartWaiters: [CheckedContinuation<Void, Never>] = []
     private var receivedFetchContinuation: CheckedContinuation<Void, Never>?
+    private var ownedStateFetchStarted = false
+    private var ownedStateFetchStartWaiters: [CheckedContinuation<Void, Never>] = []
+    private var ownedStateFetchContinuation: CheckedContinuation<Void, Never>?
+    private var shareCreationStarted = false
+    private var shareCreationStartWaiters: [CheckedContinuation<Void, Never>] = []
+    private var shareCreationContinuation: CheckedContinuation<Void, Never>?
+    private var invitationCreationStarted = false
+    private var invitationCreationStartWaiters: [CheckedContinuation<Void, Never>] = []
+    private var invitationCreationContinuation: CheckedContinuation<Void, Never>?
 
     func ownedCalendarState() async throws -> OwnedSharedCalendarCloudState? {
-        ownedState
+        ownedStateCallCount += 1
+        ownedStateFetchStarted = true
+        let waiters = ownedStateFetchStartWaiters
+        ownedStateFetchStartWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+        if suspendOwnedStateFetch {
+            await withCheckedContinuation { continuation in
+                ownedStateFetchContinuation = continuation
+            }
+        }
+        if let ownedStateError { throw ownedStateError }
+        return ownedState
     }
 
     func createShare(
@@ -2116,7 +2484,7 @@ private final class CalendarSharingClientStub: CalendarSharingClientProtocol {
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
-    ) async throws -> OwnedSharedCalendarCloudState {
+    ) async throws -> OwnedSharingInvitationResult {
         createCallCount += 1
         createdDisplayName = displayName
         createdCalendarName = calendarName
@@ -2124,13 +2492,46 @@ private final class CalendarSharingClientStub: CalendarSharingClientProtocol {
         createdSnapshots = events
         createdShifts = shifts
         createdWorkRecords = workRecords
+        shareCreationStarted = true
+        let waiters = shareCreationStartWaiters
+        shareCreationStartWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+        if suspendShareCreation {
+            await withCheckedContinuation { continuation in
+                shareCreationContinuation = continuation
+            }
+        }
         if let createError { throw createError }
         ownedState = createdState
-        return createdState
+        return OwnedSharingInvitationResult(
+            state: createdState,
+            invitationURL: createdInvitationURL
+        )
     }
 
-    func ownedShareForPresentation() async throws -> CKShare {
-        try XCTUnwrap(ownedState?.share)
+    func createOwnedInvitation() async throws -> OwnedSharingInvitationResult {
+        invitationCallCount += 1
+        invitationCreationStarted = true
+        let waiters = invitationCreationStartWaiters
+        invitationCreationStartWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+        if suspendInvitationCreation {
+            await withCheckedContinuation { continuation in
+                invitationCreationContinuation = continuation
+            }
+        }
+        if let invitationError { throw invitationError }
+        let currentState = try XCTUnwrap(ownedState)
+        let state = OwnedSharedCalendarCloudState(
+            calendar: currentState.calendar,
+            share: currentState.share,
+            participants: currentState.participants
+        )
+        ownedState = state
+        return OwnedSharingInvitationResult(
+            state: state,
+            invitationURL: additionalInvitationURL
+        )
     }
 
     func synchronizeOwnedContent(
@@ -2158,7 +2559,11 @@ private final class CalendarSharingClientStub: CalendarSharingClientProtocol {
         synchronizedWorkRecords = workRecords
         var calendar = createdState.calendar
         calendar.contentConfiguration = content
-        let state = OwnedSharedCalendarCloudState(calendar: calendar, share: createdState.share)
+        let state = OwnedSharedCalendarCloudState(
+            calendar: calendar,
+            share: createdState.share,
+            participants: createdState.participants
+        )
         ownedState = state
         return state
     }
@@ -2193,10 +2598,49 @@ private final class CalendarSharingClientStub: CalendarSharingClientProtocol {
         }
     }
 
+    func waitUntilOwnedStateFetchStarts() async {
+        guard !ownedStateFetchStarted else { return }
+        await withCheckedContinuation { continuation in
+            ownedStateFetchStartWaiters.append(continuation)
+        }
+    }
+
+    func resumeOwnedStateFetch() {
+        suspendOwnedStateFetch = false
+        ownedStateFetchContinuation?.resume()
+        ownedStateFetchContinuation = nil
+    }
+
     func resumeReceivedFetch() {
         suspendReceivedFetch = false
         receivedFetchContinuation?.resume()
         receivedFetchContinuation = nil
+    }
+
+    func waitUntilShareCreationStarts() async {
+        guard !shareCreationStarted else { return }
+        await withCheckedContinuation { continuation in
+            shareCreationStartWaiters.append(continuation)
+        }
+    }
+
+    func resumeShareCreation() {
+        suspendShareCreation = false
+        shareCreationContinuation?.resume()
+        shareCreationContinuation = nil
+    }
+
+    func waitUntilInvitationCreationStarts() async {
+        guard !invitationCreationStarted else { return }
+        await withCheckedContinuation { continuation in
+            invitationCreationStartWaiters.append(continuation)
+        }
+    }
+
+    func resumeInvitationCreation() {
+        suspendInvitationCreation = false
+        invitationCreationContinuation?.resume()
+        invitationCreationContinuation = nil
     }
 
     static func makeShare() -> CKShare {

@@ -14,6 +14,8 @@ final class CalendarSharingStore: ObservableObject {
     @Published private(set) var selection: CalendarSelection
     @Published private(set) var receivedCalendars: [SharedCalendarDescriptor]
     @Published private(set) var ownedCalendar: OwnedSharedCalendarDescriptor?
+    @Published private(set) var ownedParticipants: [SharedCalendarParticipantSnapshot] = []
+    @Published private(set) var participantRefreshFailed = false
     @Published private(set) var syncStatus: CalendarSharingSyncStatus = .idle
     @Published private(set) var lastError: CalendarSharingError?
     @Published private(set) var revision: Int = 0
@@ -26,6 +28,8 @@ final class CalendarSharingStore: ObservableObject {
     private var shiftsByCalendarID: [String: [SharedShiftSnapshot]]
     private var workRecordsByCalendarID: [String: [SharedWorkRecordSnapshot]]
     private var refreshIsInProgress = false
+    private var participantRefreshIsInProgress = false
+    private var participantManagementIsActive = false
     private var shareCreationIsInProgress = false
     private var refreshCompletionWaiters: [CheckedContinuation<Void, Never>] = []
 
@@ -114,8 +118,22 @@ final class CalendarSharingStore: ObservableObject {
         await synchronizeAll()
     }
 
+    func setParticipantManagementActive(_ isActive: Bool) {
+        participantManagementIsActive = isActive
+    }
+
+    func synchronizeOnAppActivation() async {
+        if participantManagementIsActive {
+            await refreshOwnedParticipants()
+        } else {
+            await synchronizeAll()
+        }
+    }
+
     func synchronizeAll() async {
-        guard !refreshIsInProgress, !shareCreationIsInProgress else {
+        guard !refreshIsInProgress,
+              !participantRefreshIsInProgress,
+              !shareCreationIsInProgress else {
             CalendarSharingDiagnostics.debug(
                 operation: "refresh",
                 stage: "skipped_busy",
@@ -140,7 +158,7 @@ final class CalendarSharingStore: ObservableObject {
             if let ownerState {
                 try await synchronizeOwnedContent(ownerState.calendar.sharedContent)
             }
-            let refreshedOwnedCalendar = try await client.ownedCalendarState()?.calendar
+            let refreshedOwnedState = try await client.ownedCalendarState()
 
             let payloads = try await client.fetchReceivedCalendars()
             let refreshedCalendars = payloads.map(\.calendar)
@@ -154,7 +172,9 @@ final class CalendarSharingStore: ObservableObject {
                 uniqueKeysWithValues: payloads.map { ($0.calendar.id, $0.workRecords) }
             )
 
-            ownedCalendar = refreshedOwnedCalendar
+            ownedCalendar = refreshedOwnedState?.calendar
+            ownedParticipants = refreshedOwnedState?.participants ?? []
+            participantRefreshFailed = false
             receivedCalendars = refreshedCalendars
             eventsByCalendarID = refreshedEvents
             shiftsByCalendarID = refreshedShifts
@@ -188,11 +208,16 @@ final class CalendarSharingStore: ObservableObject {
     }
 
     func synchronizeOwnedEventsIfNeeded() async {
-        guard !refreshIsInProgress, !shareCreationIsInProgress else { return }
+        guard !refreshIsInProgress,
+              !participantRefreshIsInProgress,
+              !shareCreationIsInProgress else { return }
         do {
             guard let state = try await client.ownedCalendarState() else { return }
             try await synchronizeOwnedContent(state.calendar.sharedContent)
-            ownedCalendar = try await client.ownedCalendarState()?.calendar
+            let refreshedState = try await client.ownedCalendarState()
+            ownedCalendar = refreshedState?.calendar
+            ownedParticipants = refreshedState?.participants ?? []
+            participantRefreshFailed = false
             lastError = nil
             persistCache()
         } catch is CancellationError {
@@ -206,11 +231,46 @@ final class CalendarSharingStore: ObservableObject {
         }
     }
 
+    func refreshOwnedParticipants() async {
+        guard !participantRefreshIsInProgress,
+              !refreshIsInProgress,
+              !shareCreationIsInProgress else {
+            CalendarSharingDiagnostics.debug(
+                operation: "refreshOwnedParticipants",
+                stage: "skipped_busy",
+                database: "private"
+            )
+            return
+        }
+        participantRefreshIsInProgress = true
+        defer { finishParticipantRefresh() }
+
+        do {
+            let state = try await client.ownedCalendarState()
+            ownedCalendar = state?.calendar
+            ownedParticipants = state?.participants ?? []
+            participantRefreshFailed = false
+            persistCache()
+            revision &+= 1
+        } catch is CancellationError {
+            return
+        } catch {
+            participantRefreshFailed = true
+            CalendarSharingDiagnostics.error(
+                operation: "refreshOwnedParticipants",
+                stage: "failed",
+                database: "private",
+                error: error,
+                details: "preservedCount=\(ownedParticipants.count)"
+            )
+        }
+    }
+
     func createShare(
         displayName: String? = nil,
         calendarName: String,
         content: SharedContentConfiguration = .newShareDefault
-    ) async throws -> CKShare {
+    ) async throws -> URL {
         guard content.hasSelectedContent else {
             throw CalendarSharingError.contentSelectionRequired
         }
@@ -241,7 +301,7 @@ final class CalendarSharingStore: ObservableObject {
 
         do {
             let snapshots = try await localSharedContentSnapshots()
-            let state = try await client.createShare(
+            let result = try await client.createShare(
                 displayName: internalDisplayName,
                 calendarName: trimmedCalendarName,
                 content: content,
@@ -251,7 +311,9 @@ final class CalendarSharingStore: ObservableObject {
             )
             selection = .mine
             selectionPersistence.save(.mine)
-            ownedCalendar = state.calendar
+            ownedCalendar = result.state.calendar
+            ownedParticipants = result.state.participants
+            participantRefreshFailed = false
             lastError = nil
             syncStatus = .synced
             persistCache()
@@ -262,7 +324,10 @@ final class CalendarSharingStore: ObservableObject {
                 database: "private",
                 details: "selectedSourceBefore=\(selectedSourceBefore) selectedSourceAfter=\(selectionKind) fallback=false shareSaved=true"
             )
-            return state.share
+            guard let invitationURL = result.invitationURL else {
+                throw CalendarSharingError.invitationURLUnavailable
+            }
+            return invitationURL
         } catch is CancellationError {
             CalendarSharingDiagnostics.debug(
                 operation: "startSharing",
@@ -307,6 +372,8 @@ final class CalendarSharingStore: ObservableObject {
                 workRecords: snapshots.workRecords
             )
             ownedCalendar = state.calendar
+            ownedParticipants = state.participants
+            participantRefreshFailed = false
             syncStatus = .synced
             persistCache()
             revision &+= 1
@@ -325,13 +392,51 @@ final class CalendarSharingStore: ObservableObject {
         }
     }
 
-    func ownedShareForPresentation() async throws -> CKShare {
-        try await client.ownedShareForPresentation()
+    func createOwnedInvitation() async throws -> URL {
+        await waitForRefreshToFinish()
+        guard ownedCalendar != nil else {
+            throw CalendarSharingError.shareUnavailable
+        }
+        guard !shareCreationIsInProgress else {
+            throw CalendarSharingError.invitationCreationFailed
+        }
+        shareCreationIsInProgress = true
+        defer { shareCreationIsInProgress = false }
+        syncStatus = .syncing
+        lastError = nil
+
+        do {
+            let result = try await client.createOwnedInvitation()
+            ownedCalendar = result.state.calendar
+            ownedParticipants = result.state.participants
+            participantRefreshFailed = false
+            persistCache()
+            syncStatus = .synced
+            revision &+= 1
+            guard let invitationURL = result.invitationURL else {
+                throw CalendarSharingError.invitationURLUnavailable
+            }
+            return invitationURL
+        } catch is CancellationError {
+            syncStatus = .idle
+            throw CancellationError()
+        } catch let error as CalendarSharingError {
+            lastError = error
+            syncStatus = .failed
+            throw error
+        } catch {
+            let mapped = CalendarSharingErrorMapper.map(error, context: .creatingInvitation)
+            lastError = mapped
+            syncStatus = .failed
+            throw mapped
+        }
     }
 
     func stopOwnedSharing() async throws {
         try await client.stopOwnedSharing(plan: OwnedSharingStopPlan())
         ownedCalendar = nil
+        ownedParticipants = []
+        participantRefreshFailed = false
         persistCache()
     }
 
@@ -455,7 +560,7 @@ final class CalendarSharingStore: ObservableObject {
     }
 
     private func waitForRefreshToFinish() async {
-        while refreshIsInProgress {
+        while refreshIsInProgress || participantRefreshIsInProgress {
             await withCheckedContinuation { continuation in
                 refreshCompletionWaiters.append(continuation)
             }
@@ -464,6 +569,15 @@ final class CalendarSharingStore: ObservableObject {
 
     private func finishRefresh() {
         refreshIsInProgress = false
+        resumeRefreshCompletionWaiters()
+    }
+
+    private func finishParticipantRefresh() {
+        participantRefreshIsInProgress = false
+        resumeRefreshCompletionWaiters()
+    }
+
+    private func resumeRefreshCompletionWaiters() {
         let waiters = refreshCompletionWaiters
         refreshCompletionWaiters.removeAll()
         waiters.forEach { $0.resume() }

@@ -1,4 +1,3 @@
-import CloudKit
 import SwiftUI
 import UIKit
 
@@ -173,17 +172,22 @@ struct CalendarSharingManagementView: View {
     @State private var calendarName = ""
     @State private var sharingContent = SharedContentConfiguration.newShareDefault
     @State private var isWorking = false
+    @State private var isPreparingInvitation = false
     @State private var presentationState = SharingManagementPresentationState()
 
     var body: some View {
         Form {
-            if let ownedCalendar = sharingStore.ownedCalendar {
-                ownedSharingSection(ownedCalendar)
-            } else {
-                createSharingSection
-            }
+            calendarNameSection
 
             sharingContentSection(isExistingShare: sharingStore.ownedCalendar != nil)
+
+            if sharingStore.ownedCalendar == nil {
+                startSharingSection
+            } else {
+                participantsSection
+                addPeopleSection
+                stopSharingSection
+            }
 
             if !sharingStore.receivedCalendars.isEmpty {
                 receivedSharingSection
@@ -203,25 +207,35 @@ struct CalendarSharingManagementView: View {
         .navigationBarTitleDisplayMode(.inline)
         .disabled(isWorking)
         .overlay {
-            if isWorking {
+            if isWorking && !isPreparingInvitation {
                 ProgressView()
             }
         }
         .onAppear {
+            sharingStore.setParticipantManagementActive(true)
             if let ownedCalendar = sharingStore.ownedCalendar {
                 sharingContent = ownedCalendar.sharedContent
             }
         }
+        .onDisappear {
+            sharingStore.setParticipantManagementActive(false)
+        }
+        .task {
+            await sharingStore.refreshOwnedParticipants()
+        }
         .onChange(of: sharingStore.ownedCalendar) { _, calendar in
             sharingContent = calendar?.sharedContent ?? .newShareDefault
         }
-        .sheet(item: $presentationState.presentedShare, onDismiss: {
-            Task { await sharingStore.synchronizeAll() }
-        }) { item in
-            CloudSharingControllerView(
-                share: item.share,
-                title: item.title,
-                onChanged: { Task { await sharingStore.synchronizeAll() } }
+        .sheet(item: $presentationState.presentedInvitation) { item in
+            SharingInvitationActivityView(
+                activityItems: [
+                    localization.localized(.calendarSharingInvitationMessage),
+                    item.url
+                ],
+                onFinished: {
+                    presentationState.dismissInvitation()
+                    Task { await sharingStore.refreshOwnedParticipants() }
+                }
             )
         }
         .alert(item: $presentationState.alertState) { state in
@@ -254,9 +268,15 @@ struct CalendarSharingManagementView: View {
         }
     }
 
-    private var createSharingSection: some View {
+    private var calendarNameSection: some View {
         Section {
-            TextField(localization.localized(.calendarSharingCalendarName), text: $calendarName)
+            if let ownedCalendar = sharingStore.ownedCalendar {
+                Text(ownedCalendar.calendarName)
+            } else {
+                TextField(localization.localized(.calendarSharingCalendarName), text: $calendarName)
+            }
+        } header: {
+            Text(localization.localized(.calendarSharingCalendarName))
         }
     }
 
@@ -288,11 +308,6 @@ struct CalendarSharingManagementView: View {
                     }
                     .disabled(!sharingContent.hasSelectedContent)
                 }
-            } else {
-                Button(localization.localized(.calendarSharingStart)) {
-                    Task { await createSharing() }
-                }
-                .disabled(!sharingContent.hasSelectedContent)
             }
         } header: {
             Text(localization.localized(.calendarSharingContentTitle))
@@ -301,24 +316,128 @@ struct CalendarSharingManagementView: View {
         }
     }
 
-    @ViewBuilder
-    private func ownedSharingSection(_ calendar: OwnedSharedCalendarDescriptor) -> some View {
-        Section(localization.localized(.calendarSharingMyCalendar)) {
-            LabeledContent(
-                localization.localized(.calendarSharingCalendarName),
-                value: calendar.calendarName
-            )
-            LabeledContent(
-                localization.localized(.calendarSharingParticipants),
-                value: String(calendar.participantCount)
-            )
-            Button(localization.localized(.calendarSharingOpenSystemManagement)) {
-                Task { await openOwnedShare() }
+    private var startSharingSection: some View {
+        Section {
+            Button {
+                Task { await createSharing() }
+            } label: {
+                invitationButtonLabel(
+                    title: localization.localized(.calendarSharingStart)
+                )
             }
+            .buttonStyle(.plain)
+            .background(ShiftCalendarColors.accentYellow)
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: TimeNestTheme.controlCornerRadius,
+                    style: .continuous
+                )
+            )
+            .opacity(sharingContent.hasSelectedContent ? 1 : 0.45)
+            .disabled(!sharingContent.hasSelectedContent)
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    private var addPeopleSection: some View {
+        Section {
+            Button {
+                Task { await createAdditionalInvitation() }
+            } label: {
+                invitationButtonLabel(
+                    title: localization.localized(.calendarSharingAddPeople),
+                    systemImage: "person.badge.plus"
+                )
+            }
+            .buttonStyle(.plain)
+            .background(ShiftCalendarColors.accentYellow)
+            .clipShape(
+                RoundedRectangle(
+                    cornerRadius: TimeNestTheme.controlCornerRadius,
+                    style: .continuous
+                )
+            )
+            .listRowInsets(EdgeInsets())
+            .listRowBackground(Color.clear)
+        }
+    }
+
+    private var participantsSection: some View {
+        Section {
+            if sharingStore.ownedParticipants.isEmpty {
+                Text(
+                    localization.localized(
+                        sharingStore.participantRefreshFailed
+                            ? .calendarSharingParticipantInfoUnavailable
+                            : .calendarSharingNoParticipants
+                    )
+                )
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            } else {
+                ForEach(sharingStore.ownedParticipants) { participant in
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 38))
+                            .foregroundStyle(ShiftCalendarColors.primaryBlue.opacity(0.72))
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(
+                                participant.resolvedDisplayName(
+                                    fallback: localization.localized(.calendarSharingUnknownPerson)
+                                )
+                            )
+                            Text(localization.localized(.calendarSharingReadOnly))
+                                .font(.footnote)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                }
+
+                if sharingStore.participantRefreshFailed {
+                    Text(localization.localized(.calendarSharingParticipantInfoUnavailable))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text(localization.localized(.calendarSharingSharedPeople))
+        }
+    }
+
+    private var stopSharingSection: some View {
+        Section {
             Button(localization.localized(.calendarSharingStop), role: .destructive) {
                 presentationState.showAlert(.confirmStop)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
+        } footer: {
+            Text(localization.localized(.calendarSharingStopConfirmation))
         }
+    }
+
+    @ViewBuilder
+    private func invitationButtonLabel(title: String, systemImage: String? = nil) -> some View {
+        HStack(spacing: 8) {
+            if isPreparingInvitation {
+                ProgressView()
+                    .tint(.black.opacity(0.82))
+            } else if let systemImage {
+                Image(systemName: systemImage)
+            }
+            Text(
+                isPreparingInvitation
+                    ? localization.localized(.calendarSharingInvitationPreparing)
+                    : title
+            )
+        }
+        .font(.headline)
+        .foregroundStyle(.black.opacity(0.82))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 13)
+        .contentShape(Rectangle())
     }
 
     private var receivedSharingSection: some View {
@@ -354,18 +473,22 @@ struct CalendarSharingManagementView: View {
             return
         }
         isWorking = true
-        defer { isWorking = false }
+        isPreparingInvitation = true
+        defer {
+            isWorking = false
+            isPreparingInvitation = false
+        }
         do {
-            let share = try await sharingStore.createShare(
+            let invitationURL = try await sharingStore.createShare(
                 calendarName: normalizedCalendarName,
                 content: sharingContent
             )
-            presentationState.present(share: share, title: normalizedCalendarName)
+            presentationState.present(invitationURL: invitationURL)
             CalendarSharingDiagnostics.debug(
                 operation: "startSharing",
-                stage: "controller_ready",
+                stage: "invitation_ready",
                 database: "private",
-                details: "selectedSource=mine sharingControllerReady=true"
+                details: "selectedSource=mine invitationReady=true"
             )
         } catch is CancellationError {
             return
@@ -389,14 +512,16 @@ struct CalendarSharingManagementView: View {
         }
     }
 
-    private func openOwnedShare() async {
+    private func createAdditionalInvitation() async {
         isWorking = true
-        defer { isWorking = false }
+        isPreparingInvitation = true
+        defer {
+            isWorking = false
+            isPreparingInvitation = false
+        }
         do {
-            let share = try await sharingStore.ownedShareForPresentation()
-            let title = sharingStore.ownedCalendar?.calendarName
-                ?? localization.localized(.calendarSharingUnknownCalendar)
-            presentationState.present(share: share, title: title)
+            let invitationURL = try await sharingStore.createOwnedInvitation()
+            presentationState.present(invitationURL: invitationURL)
         } catch is CancellationError {
             return
         } catch {
@@ -504,10 +629,9 @@ struct ReadOnlySharedCalendarDetailView: View {
     }
 }
 
-struct PresentedCloudShare: Identifiable {
+struct PresentedSharingInvitation: Identifiable {
     let id = UUID()
-    let share: CKShare
-    let title: String
+    let url: URL
 }
 
 enum SharingManagementAlert: Identifiable {
@@ -525,70 +649,62 @@ enum SharingManagementAlert: Identifiable {
 }
 
 struct SharingManagementPresentationState {
-    var presentedShare: PresentedCloudShare?
+    var presentedInvitation: PresentedSharingInvitation?
     var alertState: SharingManagementAlert?
 
-    mutating func present(share: CKShare, title: String) {
+    mutating func present(invitationURL: URL) {
         alertState = nil
-        presentedShare = PresentedCloudShare(share: share, title: title)
+        presentedInvitation = PresentedSharingInvitation(url: invitationURL)
+    }
+
+    mutating func dismissInvitation() {
+        presentedInvitation = nil
     }
 
     mutating func showAlert(_ alert: SharingManagementAlert) {
-        presentedShare = nil
+        presentedInvitation = nil
         alertState = alert
     }
 }
 
-private struct CloudSharingControllerView: UIViewControllerRepresentable {
-    let share: CKShare
-    let title: String
-    let onChanged: () -> Void
+private struct SharingInvitationActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let onFinished: () -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(title: title, onChanged: onChanged)
+        Coordinator(onFinished: onFinished)
     }
 
-    func makeUIViewController(context: Context) -> UICloudSharingController {
-        let controller = UICloudSharingController(share: share, container: CKContainer.default())
-        controller.availablePermissions = [.allowPrivate, .allowReadOnly]
-        controller.delegate = context.coordinator
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        controller.completionWithItemsHandler = { _, _, _, _ in
+            Task { @MainActor in
+                context.coordinator.onFinished()
+            }
+        }
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = controller.view
+            popover.sourceRect = CGRect(
+                x: controller.view.bounds.midX,
+                y: controller.view.bounds.midY,
+                width: 0,
+                height: 0
+            )
+            popover.permittedArrowDirections = []
+        }
         return controller
     }
 
-    func updateUIViewController(_ uiViewController: UICloudSharingController, context: Context) {}
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 
-    final class Coordinator: NSObject, UICloudSharingControllerDelegate {
-        let title: String
-        let onChanged: () -> Void
+    final class Coordinator {
+        let onFinished: () -> Void
 
-        init(title: String, onChanged: @escaping () -> Void) {
-            self.title = title
-            self.onChanged = onChanged
-        }
-
-        func itemTitle(for csc: UICloudSharingController) -> String? {
-            title
-        }
-
-        func cloudSharingController(
-            _ csc: UICloudSharingController,
-            failedToSaveShareWithError error: Error
-        ) {
-            CalendarSharingDiagnostics.error(
-                operation: "sharingController",
-                stage: "save_failed",
-                database: "private",
-                error: error
-            )
-            onChanged()
-        }
-
-        func cloudSharingControllerDidSaveShare(_ csc: UICloudSharingController) {
-            onChanged()
-        }
-
-        func cloudSharingControllerDidStopSharing(_ csc: UICloudSharingController) {
-            onChanged()
+        init(onFinished: @escaping () -> Void) {
+            self.onFinished = onFinished
         }
     }
 }

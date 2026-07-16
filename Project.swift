@@ -14,7 +14,7 @@ let project = Project(
             destinations: .iOS,
             product: .app,
             bundleId: "com.song.TimeNest",
-            deploymentTargets: .iOS("17.0"),
+            deploymentTargets: .iOS("18.0"),
             infoPlist: .file(path: "TimeNest/Info.plist"),
             sources: ["TimeNest/**"],
             resources: [
@@ -78,7 +78,7 @@ let project = Project(
             destinations: .iOS,
             product: .appExtension,
             bundleId: "com.song.TimeNest.TimeNestWidgetExtension",
-            deploymentTargets: .iOS("17.0"),
+            deploymentTargets: .iOS("18.0"),
             infoPlist: .extendingDefault(with: [
                 "CFBundleDisplayName": "TimeNest",
                 "CFBundleShortVersionString": "$(MARKETING_VERSION)",
@@ -115,7 +115,7 @@ let project = Project(
             destinations: .iOS,
             product: .unitTests,
             bundleId: "com.song.TimeNestTests",
-            deploymentTargets: .iOS("17.0"),
+            deploymentTargets: .iOS("18.0"),
             infoPlist: .default,
             sources: ["Tests/TimeNestTests/**"],
             dependencies: [.target(name: "TimeNest")]

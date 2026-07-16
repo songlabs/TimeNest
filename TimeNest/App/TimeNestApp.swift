@@ -143,7 +143,7 @@ struct TimeNestApp: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             guard newPhase == .active else { return }
-            Task { await calendarSharingStore.synchronizeAll() }
+            Task { await calendarSharingStore.synchronizeOnAppActivation() }
         }
     }
 

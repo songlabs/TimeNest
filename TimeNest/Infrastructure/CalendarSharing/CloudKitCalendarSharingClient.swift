@@ -1,4 +1,5 @@
 import CloudKit
+import CryptoKit
 import Foundation
 import OSLog
 
@@ -133,7 +134,7 @@ enum ReceivedSharedCalendarPayloadAssembler {
 
     private static func participantCount(in share: CKShare) -> Int {
         share.participants.filter {
-            $0.role != .owner && $0.acceptanceStatus != .removed
+            $0.role != .owner && $0.acceptanceStatus == .accepted
         }.count
     }
 }
@@ -141,6 +142,183 @@ enum ReceivedSharedCalendarPayloadAssembler {
 struct OwnedSharedCalendarCloudState {
     let calendar: OwnedSharedCalendarDescriptor
     let share: CKShare
+    let participants: [SharedCalendarParticipantSnapshot]
+
+    init(
+        calendar: OwnedSharedCalendarDescriptor,
+        share: CKShare,
+        participants: [SharedCalendarParticipantSnapshot] = []
+    ) {
+        self.calendar = calendar
+        self.share = share
+        self.participants = participants
+    }
+}
+
+struct OwnedSharingInvitationResult {
+    let state: OwnedSharedCalendarCloudState
+    let invitationURL: URL?
+}
+
+struct OneTimeSharingInvitation {
+    let participantID: CKShare.Participant.ID
+
+    static func prepare(on share: CKShare) -> OneTimeSharingInvitation {
+        share.publicPermission = .none
+        let participant = CKShare.Participant.oneTimeURLParticipant()
+        participant.permission = .readOnly
+        share.addParticipant(participant)
+        return OneTimeSharingInvitation(participantID: participant.participantID)
+    }
+
+    func url(in savedShare: CKShare) -> URL? {
+        // The Objective-C API is available on iOS 18, while this SDK's refined
+        // Swift convenience is iOS 26-only. Use the iOS 18 raw imported selector.
+        savedShare.__oneTimeURL(forParticipantID: participantID)
+    }
+}
+
+struct OwnedCalendarParticipantSummary {
+    struct Diagnostic: Equatable {
+        let role: String
+        let acceptanceStatus: String
+        let hasName: Bool
+        let hasEmail: Bool
+    }
+
+    let snapshots: [SharedCalendarParticipantSnapshot]
+    let participantCount: Int
+    let acceptedCount: Int
+    let pendingCount: Int
+    let diagnostics: [Diagnostic]
+}
+
+enum OwnedCalendarParticipantSnapshotAssembler {
+    static func make(from share: CKShare) -> OwnedCalendarParticipantSummary {
+        var snapshots: [SharedCalendarParticipantSnapshot] = []
+        var acceptedCount = 0
+        var pendingCount = 0
+        var diagnostics: [OwnedCalendarParticipantSummary.Diagnostic] = []
+
+        for participant in share.participants {
+            let name = formattedName(participant.userIdentity.nameComponents)
+            let email = normalized(participant.userIdentity.lookupInfo?.emailAddress)
+            diagnostics.append(
+                .init(
+                    role: diagnosticRole(participant.role),
+                    acceptanceStatus: diagnosticAcceptanceStatus(participant.acceptanceStatus),
+                    hasName: name != nil,
+                    hasEmail: email != nil
+                )
+            )
+
+            guard participant.role != .owner else { continue }
+            switch participant.acceptanceStatus {
+            case .accepted:
+                acceptedCount += 1
+            case .pending:
+                pendingCount += 1
+            case .unknown, .removed:
+                continue
+            @unknown default:
+                continue
+            }
+
+            guard let snapshot = makeSnapshot(
+                participantID: participant.participantID,
+                role: participant.role,
+                acceptanceStatus: participant.acceptanceStatus,
+                permission: participant.permission,
+                nameComponents: participant.userIdentity.nameComponents,
+                emailAddress: participant.userIdentity.lookupInfo?.emailAddress
+            ) else {
+                continue
+            }
+            snapshots.append(snapshot)
+        }
+
+        return OwnedCalendarParticipantSummary(
+            snapshots: snapshots,
+            participantCount: share.participants.count,
+            acceptedCount: acceptedCount,
+            pendingCount: pendingCount,
+            diagnostics: diagnostics
+        )
+    }
+
+    static func makeSnapshot(
+        participantID: CKShare.Participant.ID,
+        role: CKShare.ParticipantRole,
+        acceptanceStatus: CKShare.ParticipantAcceptanceStatus,
+        permission: CKShare.ParticipantPermission,
+        nameComponents: PersonNameComponents?,
+        emailAddress: String?
+    ) -> SharedCalendarParticipantSnapshot? {
+        guard role != .owner, acceptanceStatus == .accepted else { return nil }
+        return SharedCalendarParticipantSnapshot(
+            id: anonymizedID(participantID),
+            displayName: formattedName(nameComponents) ?? normalized(emailAddress),
+            isAccepted: true,
+            permission: snapshotPermission(permission)
+        )
+    }
+
+    private static func anonymizedID(_ participantID: CKShare.Participant.ID) -> String {
+        SHA256.hash(data: Data(participantID.utf8))
+            .prefix(16)
+            .map { String(format: "%02x", $0) }
+            .joined()
+    }
+
+    private static func formattedName(_ components: PersonNameComponents?) -> String? {
+        guard let components else { return nil }
+        return normalized(
+            PersonNameComponentsFormatter.localizedString(
+                from: components,
+                style: .default,
+                options: []
+            )
+        )
+    }
+
+    private static func normalized(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else {
+            return nil
+        }
+        return value
+    }
+
+    private static func snapshotPermission(
+        _ permission: CKShare.ParticipantPermission
+    ) -> SharedCalendarParticipantPermission {
+        switch permission {
+        case .unknown: .unknown
+        case .none: .none
+        case .readOnly: .readOnly
+        case .readWrite: .readWrite
+        @unknown default: .unknown
+        }
+    }
+
+    private static func diagnosticRole(_ role: CKShare.ParticipantRole) -> String {
+        if role == .owner { return "owner" }
+        if role == .privateUser { return "privateUser" }
+        if role == .publicUser { return "publicUser" }
+        return "unknown"
+    }
+
+    private static func diagnosticAcceptanceStatus(
+        _ status: CKShare.ParticipantAcceptanceStatus
+    ) -> String {
+        switch status {
+        case .accepted: "accepted"
+        case .pending: "pending"
+        case .removed: "removed"
+        case .unknown: "unknown"
+        @unknown default: "unknown"
+        }
+    }
 }
 
 struct CalendarSharingContentReconciliationPlan {
@@ -225,8 +403,8 @@ protocol CalendarSharingClientProtocol {
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
-    ) async throws -> OwnedSharedCalendarCloudState
-    func ownedShareForPresentation() async throws -> CKShare
+    ) async throws -> OwnedSharingInvitationResult
+    func createOwnedInvitation() async throws -> OwnedSharingInvitationResult
     func synchronizeOwnedContent(
         content: SharedContentConfiguration,
         events: [SharedEventSnapshot],
@@ -248,6 +426,7 @@ protocol CalendarSharingClientProtocol {
 enum CalendarSharingErrorContext: Equatable {
     case general
     case creatingShare
+    case creatingInvitation
 }
 
 enum CalendarSharingDiagnostics {
@@ -584,7 +763,7 @@ enum CalendarSharingErrorMapper {
     ) -> CalendarSharingError {
         let codes = cloudErrors(in: error).map(\.code)
         guard !codes.isEmpty else {
-            return context == .creatingShare ? .shareCreationFailed : .syncFailed
+            return fallbackError(for: context)
         }
 
         if codes.contains(.missingEntitlement) || codes.contains(.badContainer)
@@ -609,7 +788,7 @@ enum CalendarSharingErrorMapper {
         if codes.contains(.permissionFailure) {
             return .permissionDenied
         }
-        return context == .creatingShare ? .shareCreationFailed : .syncFailed
+        return fallbackError(for: context)
     }
 
     static func map(
@@ -629,7 +808,20 @@ enum CalendarSharingErrorMapper {
         case .permissionFailure:
             return .permissionDenied
         default:
-            return context == .creatingShare ? .shareCreationFailed : .syncFailed
+            return fallbackError(for: context)
+        }
+    }
+
+    private static func fallbackError(
+        for context: CalendarSharingErrorContext
+    ) -> CalendarSharingError {
+        switch context {
+        case .general:
+            .syncFailed
+        case .creatingShare:
+            .shareCreationFailed
+        case .creatingInvitation:
+            .invitationCreationFailed
         }
     }
 
@@ -805,17 +997,39 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                     database: "private",
                     details: "rootSaved=false shareSaved=false"
                 )
+                CalendarSharingDiagnostics.debug(
+                    operation: "refreshOwnedParticipants",
+                    stage: "completed",
+                    database: "private",
+                    details: "participantCount=0 acceptedCount=0 pendingCount=0 displayableCount=0"
+                )
                 return nil
             }
             let names = CalendarSharingCloudSchema.compatibleNames(from: calendarRecord)
+            let participantSummary = OwnedCalendarParticipantSnapshotAssembler.make(from: share)
             let state = OwnedSharedCalendarCloudState(
                 calendar: OwnedSharedCalendarDescriptor(
                     displayName: names.displayName ?? "",
                     calendarName: names.calendarName ?? "",
-                    participantCount: participantCount(in: share),
+                    participantCount: participantSummary.snapshots.count,
                     contentConfiguration: CalendarSharingCloudSchema.contentConfiguration(from: calendarRecord)
                 ),
-                share: share
+                share: share,
+                participants: participantSummary.snapshots
+            )
+            for diagnostic in participantSummary.diagnostics {
+                CalendarSharingDiagnostics.debug(
+                    operation: "refreshOwnedParticipants",
+                    stage: "participant",
+                    database: "private",
+                    details: "role=\(diagnostic.role) acceptanceStatus=\(diagnostic.acceptanceStatus) hasName=\(diagnostic.hasName) hasEmail=\(diagnostic.hasEmail)"
+                )
+            }
+            CalendarSharingDiagnostics.debug(
+                operation: "refreshOwnedParticipants",
+                stage: "completed",
+                database: "private",
+                details: "participantCount=\(participantSummary.participantCount) acceptedCount=\(participantSummary.acceptedCount) pendingCount=\(participantSummary.pendingCount) displayableCount=\(participantSummary.snapshots.count)"
             )
             CalendarSharingDiagnostics.debug(
                 operation: "refreshOwnedCalendar",
@@ -845,7 +1059,7 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
-    ) async throws -> OwnedSharedCalendarCloudState {
+    ) async throws -> OwnedSharingInvitationResult {
         guard content.hasSelectedContent else {
             throw CalendarSharingError.contentSelectionRequired
         }
@@ -913,6 +1127,7 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                 participant.permission = .readOnly
             }
             share[CKShare.SystemFieldKey.title] = calendarName as CKRecordValue
+            let invitation = OneTimeSharingInvitation.prepare(on: share)
 
             let result = try await privateDatabase.modifyRecords(
                 saving: [share],
@@ -924,14 +1139,16 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
             guard let saved = try result.saveResults[share.recordID]?.get() as? CKShare else {
                 throw CalendarSharingError.shareCreationFailed
             }
+            let participantSummary = OwnedCalendarParticipantSnapshotAssembler.make(from: saved)
             let state = OwnedSharedCalendarCloudState(
                 calendar: OwnedSharedCalendarDescriptor(
                     displayName: internalDisplayName,
                     calendarName: calendarName,
-                    participantCount: participantCount(in: saved),
+                    participantCount: participantSummary.snapshots.count,
                     contentConfiguration: content
                 ),
-                share: saved
+                share: saved,
+                participants: participantSummary.snapshots
             )
             CalendarSharingDiagnostics.debug(
                 operation: "createShare",
@@ -939,7 +1156,10 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                 database: "private",
                 details: "shareSaved=true participantCount=\(state.calendar.participantCount)"
             )
-            return state
+            return OwnedSharingInvitationResult(
+                state: state,
+                invitationURL: invitation.url(in: saved)
+            )
         } catch let error as CalendarSharingError {
             throw error
         } catch {
@@ -956,11 +1176,63 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         }
     }
 
-    func ownedShareForPresentation() async throws -> CKShare {
-        guard let state = try await ownedCalendarState() else {
-            throw CalendarSharingError.syncFailed
+    func createOwnedInvitation() async throws -> OwnedSharingInvitationResult {
+        try await verifyAccountAvailability()
+        guard let currentState = try await ownedCalendarState() else {
+            throw CalendarSharingError.shareUnavailable
         }
-        return state.share
+
+        let stage = "save_share"
+        do {
+            let share = currentState.share
+            share.publicPermission = .none
+            for participant in share.participants where participant.role != .owner {
+                participant.permission = .readOnly
+            }
+            let invitation = OneTimeSharingInvitation.prepare(on: share)
+            let result = try await privateDatabase.modifyRecords(
+                saving: [share],
+                deleting: [],
+                savePolicy: .changedKeys,
+                atomically: true
+            )
+            try validate(result.saveResults)
+            guard let saved = try result.saveResults[share.recordID]?.get() as? CKShare else {
+                throw CalendarSharingError.invitationCreationFailed
+            }
+
+            var calendar = currentState.calendar
+            let participantSummary = OwnedCalendarParticipantSnapshotAssembler.make(from: saved)
+            calendar.participantCount = participantSummary.snapshots.count
+            let state = OwnedSharedCalendarCloudState(
+                calendar: calendar,
+                share: saved,
+                participants: participantSummary.snapshots
+            )
+            CalendarSharingDiagnostics.debug(
+                operation: "createInvitation",
+                stage: stage,
+                database: "private",
+                details: "shareSaved=true participantCount=\(state.calendar.participantCount)"
+            )
+            return OwnedSharingInvitationResult(
+                state: state,
+                invitationURL: invitation.url(in: saved)
+            )
+        } catch let error as CalendarSharingError {
+            throw error
+        } catch {
+            if CalendarSharingErrorMapper.isCancellation(error) {
+                throw CancellationError()
+            }
+            CalendarSharingDiagnostics.error(
+                operation: "createInvitation",
+                stage: stage,
+                database: "private",
+                error: error
+            )
+            throw CalendarSharingErrorMapper.map(error, context: .creatingInvitation)
+        }
     }
 
     func synchronizeOwnedContent(
@@ -1043,7 +1315,11 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
 
             var calendar = currentState.calendar
             calendar.contentConfiguration = content
-            return OwnedSharedCalendarCloudState(calendar: calendar, share: currentState.share)
+            return OwnedSharedCalendarCloudState(
+                calendar: calendar,
+                share: currentState.share,
+                participants: currentState.participants
+            )
         } catch let error as CalendarSharingError {
             throw error
         } catch {
@@ -1535,12 +1811,6 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
 
     private func sharedWorkRecordID(_ id: UUID, zoneID: CKRecordZone.ID) -> CKRecord.ID {
         CKRecord.ID(recordName: "work-\(id.uuidString.lowercased())", zoneID: zoneID)
-    }
-
-    private func participantCount(in share: CKShare) -> Int {
-        share.participants.filter {
-            $0.role != .owner && $0.acceptanceStatus != .removed
-        }.count
     }
 
     private func validate<Key, Value>(_ results: [Key: Result<Value, Error>]) throws {

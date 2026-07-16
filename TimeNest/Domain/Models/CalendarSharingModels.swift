@@ -99,6 +99,28 @@ struct OwnedSharedCalendarDescriptor: Codable, Hashable {
     }
 }
 
+enum SharedCalendarParticipantPermission: Equatable {
+    case unknown
+    case none
+    case readOnly
+    case readWrite
+}
+
+struct SharedCalendarParticipantSnapshot: Identifiable, Equatable {
+    let id: String
+    let displayName: String?
+    let isAccepted: Bool
+    let permission: SharedCalendarParticipantPermission
+
+    func resolvedDisplayName(fallback: String) -> String {
+        guard let displayName = displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !displayName.isEmpty else {
+            return fallback
+        }
+        return displayName
+    }
+}
+
 struct SharedContentConfiguration: Codable, Equatable, Hashable {
     static let currentSchemaVersion = 2
 
@@ -538,6 +560,8 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
     case iCloudRestricted
     case networkUnavailable
     case invitationPending
+    case invitationCreationFailed
+    case invitationURLUnavailable
     case shareCreationFailed
     case shareUnavailable
     case permissionDenied
@@ -554,6 +578,10 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingNetworkUnavailable)
         case .invitationPending:
             LocalizationManager.shared.localized(.calendarSharingInvitationPending)
+        case .invitationCreationFailed:
+            LocalizationManager.shared.localized(.calendarSharingInvitationCreationFailed)
+        case .invitationURLUnavailable:
+            LocalizationManager.shared.localized(.calendarSharingInvitationURLUnavailable)
         case .shareCreationFailed:
             LocalizationManager.shared.localized(.calendarSharingCreationFailed)
         case .shareUnavailable:
