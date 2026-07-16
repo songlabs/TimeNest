@@ -129,6 +129,7 @@
 		ED55F5AA8BA20313B0D4A40D /* ReminderStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2112727B74951811FF87468E /* ReminderStep.swift */; };
 		F070011046E45E3F7915ACCD /* ShiftTimeTemplateID.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */; };
 		F1A3E93C2FB56723E63925D5 /* AppStoreSharedCalendarScreenshotScenes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81284C7724C0DA30DA537B0B /* AppStoreSharedCalendarScreenshotScenes.swift */; };
+		F55C65C9DF69E6F2E2B6515B /* WidgetSetupUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA2A6C2D4741DB6809B96C2 /* WidgetSetupUITests.swift */; };
 		F6926445027ACF53819DE6D7 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D916BD562FD27692278BE08C /* SettingsView.swift */; };
 		F8DA7139680EDB332AE1B2E6 /* SwiftDataReminderEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1B26128BDCDE6FD0907625F /* SwiftDataReminderEntity.swift */; };
 		FB7C124BB79025D299359E52 /* TuistStrings+TimeNestWidgetExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 628806BD83D5701C69BE9FE7 /* TuistStrings+TimeNestWidgetExtension.swift */; };
@@ -150,9 +151,26 @@
 			remoteGlobalIDString = 2225269E6F32DE4DDE7D53EC;
 			remoteInfo = TimeNest;
 		};
+		DFD41D0943AD4597E37B7D51 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 6A6959C8840239CBDDE58058 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2225269E6F32DE4DDE7D53EC;
+			remoteInfo = TimeNest;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		0C381B40ACDC8E82EAFAFB6C /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3254E66F182087A499CBBEF7 /* Embed Frameworks */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -228,6 +246,7 @@
 		3671B3DFE68C094CACAAE047 /* Holiday.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Holiday.swift; sourceTree = "<group>"; };
 		36FD11D57EE56D99975E5266 /* YearMonthPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YearMonthPickerView.swift; sourceTree = "<group>"; };
 		375A1C42A512ADA3DFDB2AC4 /* TimeNestExportFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestExportFile.swift; sourceTree = "<group>"; };
+		37973577268BB1024693289A /* TimeNestScreenshotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeNestScreenshotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3812DA86CFA7341C6005EADC /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
 		3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftTimeTemplateID.swift; sourceTree = "<group>"; };
 		40CE646EF687AB7A7AA103A5 /* TimeNestWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimeNestWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -261,6 +280,7 @@
 		81284C7724C0DA30DA537B0B /* AppStoreSharedCalendarScreenshotScenes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppStoreSharedCalendarScreenshotScenes.swift; sourceTree = "<group>"; };
 		859200B953D65910745C1393 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		86D32FB2CE7ACD239BD9C9FC /* TimeNestTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestTheme.swift; sourceTree = "<group>"; };
+		875E48F4496DB7BFBD6E97F2 /* TimeNestScreenshotUITests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimeNestScreenshotUITests-Info.plist"; sourceTree = "<group>"; };
 		8766BACE67A7E6BF321F82A9 /* MonthCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarViewModel.swift; sourceTree = "<group>"; };
 		8B51DA1C9AD758069AA378EC /* SpeechMemoRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechMemoRecognitionService.swift; sourceTree = "<group>"; };
 		8F719FA6BB1CF0D06E842DAA /* HolidaySourceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySourceSettingsView.swift; sourceTree = "<group>"; };
@@ -285,6 +305,7 @@
 		B2B79C74CDC902B76AD477B0 /* CalendarStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStyles.swift; sourceTree = "<group>"; };
 		B39DBADCC8DFAC83240E7052 /* TimeNestFileImportUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileImportUseCase.swift; sourceTree = "<group>"; };
 		B88C62841639AC38F232A51D /* WeekdayHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayHeaderView.swift; sourceTree = "<group>"; };
+		BBA2A6C2D4741DB6809B96C2 /* WidgetSetupUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSetupUITests.swift; sourceTree = "<group>"; };
 		BBEF5120F75D73162FE7EDC5 /* EventCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventCategory.swift; sourceTree = "<group>"; };
 		BDFA6A3E0D35F63848D80E52 /* TimeNestTests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimeNestTests-Info.plist"; sourceTree = "<group>"; };
 		BF164A3A542847D9266063B7 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -351,6 +372,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		81ED7872A32CD5DCF6198ED8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		A135D58E01550A74D1667A17 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -364,6 +392,7 @@
 		0603B6D65CD6CE953868EB76 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				66FB57ED3993391839800170 /* TimeNestScreenshotUITests */,
 				F6BD5D04B1BB0D3C97747325 /* TimeNestTests */,
 			);
 			path = Tests;
@@ -552,6 +581,7 @@
 		5976D0D42CBF9972A0EA77EE /* InfoPlists */ = {
 			isa = PBXGroup;
 			children = (
+				875E48F4496DB7BFBD6E97F2 /* TimeNestScreenshotUITests-Info.plist */,
 				BDFA6A3E0D35F63848D80E52 /* TimeNestTests-Info.plist */,
 				6963FA366BAEA21BAA85D4A3 /* TimeNestWidgetExtension-Info.plist */,
 			);
@@ -568,6 +598,14 @@
 				628806BD83D5701C69BE9FE7 /* TuistStrings+TimeNestWidgetExtension.swift */,
 			);
 			path = Sources;
+			sourceTree = "<group>";
+		};
+		66FB57ED3993391839800170 /* TimeNestScreenshotUITests */ = {
+			isa = PBXGroup;
+			children = (
+				BBA2A6C2D4741DB6809B96C2 /* WidgetSetupUITests.swift */,
+			);
+			path = TimeNestScreenshotUITests;
 			sourceTree = "<group>";
 		};
 		74D61C23985F3E88A65D4E5B /* DTO */ = {
@@ -715,6 +753,7 @@
 			isa = PBXGroup;
 			children = (
 				7C1DD313D8600C2F558390F4 /* TimeNest.app */,
+				37973577268BB1024693289A /* TimeNestScreenshotUITests.xctest */,
 				439F0F42610DAABCB1A9BEF8 /* TimeNestTests.xctest */,
 				40CE646EF687AB7A7AA103A5 /* TimeNestWidgetExtension.appex */,
 			);
@@ -856,6 +895,27 @@
 			productReference = 439F0F42610DAABCB1A9BEF8 /* TimeNestTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		7D057CF0D4F70743CF52E6B3 /* TimeNestScreenshotUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 1D0936697EFFA6D1891E77FC /* Build configuration list for PBXNativeTarget "TimeNestScreenshotUITests" */;
+			buildPhases = (
+				36D0FF8DB175D5FD935256B9 /* Sources */,
+				DFE0063ECEEC013F8927B185 /* Resources */,
+				81ED7872A32CD5DCF6198ED8 /* Frameworks */,
+				0C381B40ACDC8E82EAFAFB6C /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				52B616C138F89513682F7079 /* PBXTargetDependency */,
+			);
+			name = TimeNestScreenshotUITests;
+			packageProductDependencies = (
+			);
+			productName = TimeNestScreenshotUITests;
+			productReference = 37973577268BB1024693289A /* TimeNestScreenshotUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 		F417ACF56F3AD1754A4D494A /* TimeNestWidgetExtension */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 7013C236F845B2198553FADC /* Build configuration list for PBXNativeTarget "TimeNestWidgetExtension" */;
@@ -887,6 +947,9 @@
 					6D6670E3FD1E0F27727D23A9 = {
 						TestTargetID = 2225269E6F32DE4DDE7D53EC;
 					};
+					7D057CF0D4F70743CF52E6B3 = {
+						TestTargetID = 2225269E6F32DE4DDE7D53EC;
+					};
 				};
 			};
 			buildConfigurationList = DBFA16F0102D09E51528942D /* Build configuration list for PBXProject "TimeNest" */;
@@ -910,6 +973,7 @@
 			projectRoot = "";
 			targets = (
 				2225269E6F32DE4DDE7D53EC /* TimeNest */,
+				7D057CF0D4F70743CF52E6B3 /* TimeNestScreenshotUITests */,
 				6D6670E3FD1E0F27727D23A9 /* TimeNestTests */,
 				F417ACF56F3AD1754A4D494A /* TimeNestWidgetExtension */,
 			);
@@ -943,6 +1007,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DFE0063ECEEC013F8927B185 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
@@ -968,6 +1039,14 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		36D0FF8DB175D5FD935256B9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F55C65C9DF69E6F2E2B6515B /* WidgetSetupUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		87017F18F3241A3FDEEA1ABE /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1111,6 +1190,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		52B616C138F89513682F7079 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TimeNest;
+			target = 2225269E6F32DE4DDE7D53EC /* TimeNest */;
+			targetProxy = DFD41D0943AD4597E37B7D51 /* PBXContainerItemProxy */;
+		};
 		87008AA570AC5D1F79FB0C13 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = TimeNest;
@@ -1203,6 +1288,36 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		0937F6586E47E8C827E7981F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = JCABFH9F66;
+				INFOPLIST_FILE = "Derived/InfoPlists/TimeNestScreenshotUITests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNestScreenshotUITests;
+				PRODUCT_NAME = TimeNestScreenshotUITests;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TimeNest;
 			};
 			name = Release;
 		};
@@ -1400,6 +1515,37 @@
 			};
 			name = Release;
 		};
+		CDACBC463DECFC829EA4A9DF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				DEVELOPMENT_TEAM = JCABFH9F66;
+				INFOPLIST_FILE = "Derived/InfoPlists/TimeNestScreenshotUITests-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.song.TimeNestScreenshotUITests;
+				PRODUCT_NAME = TimeNestScreenshotUITests;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = YES;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DEBUG";
+				SWIFT_COMPILATION_MODE = singlefile;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = TimeNest;
+			};
+			name = Debug;
+		};
 		CEFD87B728DE8C5C070264F1 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1495,6 +1641,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		1D0936697EFFA6D1891E77FC /* Build configuration list for PBXNativeTarget "TimeNestScreenshotUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CDACBC463DECFC829EA4A9DF /* Debug */,
+				0937F6586E47E8C827E7981F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		45A8629EDF2B751356C8B129 /* Build configuration list for PBXNativeTarget "TimeNestTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

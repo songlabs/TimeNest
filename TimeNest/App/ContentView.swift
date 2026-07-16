@@ -40,6 +40,7 @@ enum AppStoreScreenshotScene: String, CaseIterable {
     case monthView = "month_view"
     case weekView = "week_view"
     case dayView = "day_view"
+    case holidayView = "holiday_view"
     case dayDetail = "day_detail"
     case eventEditor = "event_editor"
     case workRecord = "work_record"
@@ -78,7 +79,19 @@ enum AppStoreScreenshotMode {
         defaults.set("ja", forKey: "preferredLanguageCode")
         defaults.set("light", forKey: "themeMode")
         defaults.set("sunday", forKey: "weekStart")
+        configureShiftTemplates(in: defaults)
         LocalizationManager.shared.setLanguage(.ja)
+    }
+
+    private static func configureShiftTemplates(in defaults: UserDefaults) {
+        let earlyShiftID = UUID(uuidString: "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")!
+        let prefix = "shiftTime.custom.\(earlyShiftID.uuidString)"
+        defaults.set(earlyShiftID.uuidString, forKey: "\(prefix).id")
+        defaults.set("早番", forKey: "\(prefix).displayName")
+        defaults.set("#B8E3F5", forKey: "\(prefix).colorHex")
+        defaults.set("07:00", forKey: "\(prefix).start")
+        defaults.set("15:00", forKey: "\(prefix).end")
+        defaults.set(true, forKey: "\(prefix).enabled")
     }
 }
 
@@ -101,6 +114,17 @@ struct AppStoreScreenshotRootView: View {
                 AppStoreScreenshotCalendarSceneView(mode: .week)
             case .dayView:
                 AppStoreScreenshotCalendarSceneView(mode: .day)
+            case .holidayView:
+                AppStoreScreenshotCalendarSceneView(
+                    mode: .month,
+                    selectedDate: AppStoreScreenshotSampleData.date(
+                        year: 2026,
+                        month: 7,
+                        day: 20,
+                        hour: 9,
+                        minute: 0
+                    )
+                )
             case .dayDetail:
                 AppStoreScreenshotDayDetailView()
             case .eventEditor:
@@ -108,7 +132,9 @@ struct AppStoreScreenshotRootView: View {
             case .workRecord:
                 AppStoreScreenshotWorkRecordEditorView()
             case .shiftRecord:
-                AppStoreScreenshotShiftSceneView()
+                NavigationStack {
+                    ShiftTimeSettingsView()
+                }
             case .help:
                 HelpView()
                     .environmentObject(localization)
@@ -141,6 +167,15 @@ private struct AppStoreScreenshotCalendarSceneView: View {
     @EnvironmentObject private var localization: LocalizationManager
 
     let mode: CalendarViewMode
+    let selectedDate: Date
+
+    init(
+        mode: CalendarViewMode,
+        selectedDate: Date = AppStoreScreenshotSampleData.selectedDate
+    ) {
+        self.mode = mode
+        self.selectedDate = selectedDate
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -173,9 +208,9 @@ private struct AppStoreScreenshotCalendarSceneView: View {
     private var title: String {
         switch mode {
         case .month, .week:
-            return LocalizationManager.shared.monthTitle(for: AppStoreScreenshotSampleData.selectedDate)
+            return LocalizationManager.shared.monthTitle(for: selectedDate)
         case .day:
-            return LocalizationManager.shared.dayTitle(for: AppStoreScreenshotSampleData.selectedDate)
+            return LocalizationManager.shared.dayTitle(for: selectedDate)
         }
     }
 
@@ -185,7 +220,7 @@ private struct AppStoreScreenshotCalendarSceneView: View {
         case .month:
             AppStoreScreenshotMonthGridView(
                 cells: AppStoreScreenshotSampleData.monthCells(),
-                selectedDate: AppStoreScreenshotSampleData.selectedDateOnly
+                selectedDate: DateOnly(from: selectedDate) ?? AppStoreScreenshotSampleData.selectedDateOnly
             )
         case .week:
             WeekCalendarView(

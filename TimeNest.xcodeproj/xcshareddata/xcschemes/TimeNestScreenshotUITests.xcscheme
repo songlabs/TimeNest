@@ -34,34 +34,6 @@
                ReferencedContainer = "container:TimeNest.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "6D6670E3FD1E0F27727D23A9"
-               BuildableName = "TimeNestTests.xctest"
-               BlueprintName = "TimeNestTests"
-               ReferencedContainer = "container:TimeNest.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-         <BuildActionEntry
-            buildForTesting = "YES"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "YES"
-            buildForAnalyzing = "YES">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "F417ACF56F3AD1754A4D494A"
-               BuildableName = "TimeNestWidgetExtension.appex"
-               BlueprintName = "TimeNestWidgetExtension"
-               ReferencedContainer = "container:TimeNest.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -78,17 +50,6 @@
                BlueprintIdentifier = "7D057CF0D4F70743CF52E6B3"
                BuildableName = "TimeNestScreenshotUITests.xctest"
                BlueprintName = "TimeNestScreenshotUITests"
-               ReferencedContainer = "container:TimeNest.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO"
-            parallelizable = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "6D6670E3FD1E0F27727D23A9"
-               BuildableName = "TimeNestTests.xctest"
-               BlueprintName = "TimeNestTests"
                ReferencedContainer = "container:TimeNest.xcodeproj">
             </BuildableReference>
          </TestableReference>
