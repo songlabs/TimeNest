@@ -18,6 +18,7 @@ enum SwiftDataEventMapper {
 
     static func update(_ entity: SwiftDataCalendarEventEntity, from event: CalendarEvent) {
         entity.id = event.id
+        entity.calendarID = event.calendarID
         entity.title = event.title
         entity.note = event.note
         entity.startDate = event.startDate
@@ -65,6 +66,7 @@ enum SwiftDataEventMapper {
     static func makeDomainModel(from entity: SwiftDataCalendarEventEntity) -> CalendarEvent {
         CalendarEvent(
             id: entity.id,
+            calendarID: entity.calendarID ?? TimeNestCalendar.personalID,
             title: entity.title,
             note: entity.note,
             startDate: entity.startDate,

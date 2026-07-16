@@ -2,6 +2,31 @@ import Foundation
 import SwiftData
 import SwiftUI
 
+struct ModelContainerPreparation {
+    let container: ModelContainer
+    let legacyMigrationOutcome: LegacyStoreMigrator.Outcome
+}
+
+enum AppDataStartupState: Equatable {
+    case ready
+    case legacyStoreMigrationFailed
+    case calendarDataMigrationFailed
+
+    static func resolve(
+        legacyOutcome: LegacyStoreMigrator.Outcome,
+        calendarMigrationFailed: Bool
+    ) -> AppDataStartupState {
+        guard legacyOutcome.allowsWritableAppStartup else {
+            return .legacyStoreMigrationFailed
+        }
+        return calendarMigrationFailed ? .calendarDataMigrationFailed : .ready
+    }
+
+    var blocksWritableUI: Bool {
+        self == .legacyStoreMigrationFailed
+    }
+}
+
 @main
 struct TimeNestApp: App {
     @UIApplicationDelegateAdaptor(TimeNestAppDelegate.self) private var appDelegate
@@ -11,10 +36,12 @@ struct TimeNestApp: App {
 
     private let modelContainer: ModelContainer
     private let eventRepository: EventRepository
+    private let calendarRepository: CalendarRepository
     private let reminderRepository: ReminderRepository
     private let reminderScheduler: ReminderScheduling = NoopReminderScheduler()
     private let holidayProvider: HolidayProviding = BundleHolidayProvider()
     private let notificationScheduler: LocalNotificationScheduling = LocalNotificationService()
+    private let dataStartupState: AppDataStartupState
 
     private let eventUseCase: EventUseCase
     private let reminderUseCase: ReminderUseCase
@@ -27,21 +54,48 @@ struct TimeNestApp: App {
     init() {
         let schema = Schema([
             SwiftDataCalendarEventEntity.self,
-            SwiftDataReminderEntity.self
+            SwiftDataReminderEntity.self,
+            SwiftDataCalendarEntity.self
         ])
+        let modelPreparation: ModelContainerPreparation
         do {
-            modelContainer = try Self.makeModelContainer(schema: schema)
+            modelPreparation = try Self.makeModelContainer(schema: schema)
+            modelContainer = modelPreparation.container
         } catch {
             fatalError("Failed to create SwiftData ModelContainer: \(error)")
         }
+        var calendarMigrationFailed = false
+        if modelPreparation.legacyMigrationOutcome.allowsWritableAppStartup {
+            do {
+                let migrationResult = try CalendarDataMigrator.migrate(
+                    container: modelContainer,
+                    personalCalendarName: LocalizationManager.shared.localized(.calendarSharingMyCalendar)
+                )
+                Self.debugLog(
+                    "Calendar migration v\(CalendarDataMigrator.currentVersion): "
+                        + "createdPersonal=\(migrationResult.createdPersonalCalendar), "
+                        + "migratedEvents=\(migrationResult.migratedEventCount)"
+                )
+            } catch {
+                calendarMigrationFailed = true
+                Self.debugLog("Calendar migration failed without deleting source data: \(error)")
+            }
+        }
+        dataStartupState = AppDataStartupState.resolve(
+            legacyOutcome: modelPreparation.legacyMigrationOutcome,
+            calendarMigrationFailed: calendarMigrationFailed
+        )
 
         let eventRepository = SwiftDataEventRepository(modelContainer: modelContainer)
+        let calendarRepository = SwiftDataCalendarRepository(modelContainer: modelContainer)
         let reminderRepository = SwiftDataReminderRepository(modelContainer: modelContainer)
         self.eventRepository = eventRepository
+        self.calendarRepository = calendarRepository
         self.reminderRepository = reminderRepository
         let eventUseCase = EventUseCase(
             repository: eventRepository,
-            notificationScheduler: notificationScheduler
+            notificationScheduler: notificationScheduler,
+            calendarRepository: calendarRepository
         )
         self.eventUseCase = eventUseCase
         let reminderUseCase = ReminderUseCase(
@@ -77,7 +131,11 @@ struct TimeNestApp: App {
         self.widgetSnapshotCoordinator = snapshotCoordinator
         let calendarSharingStore = CalendarSharingStore(
             client: CloudKitCalendarSharingClient(),
-            eventUseCase: eventUseCase
+            eventUseCase: eventUseCase,
+            calendarRepository: calendarRepository,
+            initialMigrationError: calendarMigrationFailed
+                ? .calendarDataMigrationFailed
+                : nil
         )
         _calendarSharingStore = StateObject(wrappedValue: calendarSharingStore)
         eventUseCase.onEventsChanged = {
@@ -113,41 +171,73 @@ struct TimeNestApp: App {
     }
 
     private var productionRootView: some View {
-        ContentView(
-            calendarDisplayUseCase: calendarDisplayUseCase,
-            eventUseCase: eventUseCase,
-            holidaySubscriptionManager: holidaySubscriptionManager,
-            calendarSharingStore: calendarSharingStore
-        )
+        Group {
+            if dataStartupState.blocksWritableUI {
+                LegacyStoreMigrationFailureView()
+            } else {
+                ContentView(
+                    calendarDisplayUseCase: calendarDisplayUseCase,
+                    eventUseCase: eventUseCase,
+                    holidaySubscriptionManager: holidaySubscriptionManager,
+                    calendarSharingStore: calendarSharingStore
+                )
+                .task {
+                    await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
+                }
+                .task {
+                    RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
+                    let isAdsRemoved = await RemoveAdsPurchaseManager.shared.refreshPurchasedState(
+                        context: "app startup"
+                    )
+                    if !isAdsRemoved {
+                        AdConsentManager.shared.requestConsentInfoIfNeeded()
+                    }
+                }
+                .task {
+                    await widgetSnapshotCoordinator.refresh()
+                }
+                .task {
+                    await calendarSharingStore.start()
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    guard newPhase == .active else { return }
+                    Task { await calendarSharingStore.synchronizeOnAppActivation() }
+                }
+            }
+        }
         .preferredColorScheme(preferredColorScheme)
         .environmentObject(LocalizationManager.shared)
         .environmentObject(calendarSharingStore)
         .modelContainer(modelContainer)
-        .task {
-            await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
-        }
-        .task {
-            RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
-            let isAdsRemoved = await RemoveAdsPurchaseManager.shared.refreshPurchasedState(
-                context: "app startup"
-            )
-            if !isAdsRemoved {
-                AdConsentManager.shared.requestConsentInfoIfNeeded()
+        .overlay {
+            if calendarSharingStore.isAcceptingInvitation {
+                ZStack {
+                    Color.black.opacity(0.18).ignoresSafeArea()
+                    ProgressView(
+                        LocalizationManager.shared.localized(.calendarSharingInvitationPreparing)
+                    )
+                    .padding(20)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                }
+                .allowsHitTesting(true)
             }
         }
-        .task {
-            await widgetSnapshotCoordinator.refresh()
-        }
-        .task {
-            await calendarSharingStore.start()
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active else { return }
-            Task { await calendarSharingStore.synchronizeOnAppActivation() }
+        .alert(
+            LocalizationManager.shared.localized(.calendarSharingErrorTitle),
+            isPresented: Binding(
+                get: { calendarSharingStore.invitationAcceptanceError != nil },
+                set: { if !$0 { calendarSharingStore.clearInvitationAcceptanceError() } }
+            )
+        ) {
+            Button(LocalizationManager.shared.localized(.ok)) {
+                calendarSharingStore.clearInvitationAcceptanceError()
+            }
+        } message: {
+            Text(calendarSharingStore.invitationAcceptanceError?.localizedDescription ?? "")
         }
     }
 
-    private static func makeModelContainer(schema: Schema) throws -> ModelContainer {
+    static func makeModelContainer(schema: Schema) throws -> ModelContainerPreparation {
         let appGroupID = LegacyStoreMigrator.appGroupIdentifier
         guard let appGroupURL = FileManager.default.containerURL(
             forSecurityApplicationGroupIdentifier: appGroupID
@@ -193,7 +283,10 @@ struct TimeNestApp: App {
             markerURL: markerURL
         )
         debugLog(preparation.outcome.logSummary)
-        return preparation.container
+        return ModelContainerPreparation(
+            container: preparation.container,
+            legacyMigrationOutcome: preparation.outcome
+        )
     }
 
     private static func debugLog(_ message: @autoclosure () -> String) {
@@ -211,6 +304,23 @@ struct TimeNestApp: App {
         default:
             return nil
         }
+    }
+}
+
+private struct LegacyStoreMigrationFailureView: View {
+    @EnvironmentObject private var localization: LocalizationManager
+
+    var body: some View {
+        VStack(spacing: 18) {
+            Image(systemName: "externaldrive.badge.exclamationmark")
+                .font(.system(size: 44))
+                .foregroundStyle(.orange)
+            Text(localization.localized(.calendarSharingLegacyStoreMigrationFailed))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 28)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemGroupedBackground))
     }
 }
 

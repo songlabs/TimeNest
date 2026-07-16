@@ -101,6 +101,9 @@ struct MonthCalendarView: View {
                 await viewModel.reloadMonth()
             }
         }
+        .onChange(of: calendarSharingStore.revision) { _, _ in
+            Task { await viewModel.reloadMonth() }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .widgetCalendarDateRequested)) { notification in
             guard let date = notification.object as? Date else { return }
             Task {
@@ -158,7 +161,7 @@ struct MonthCalendarView: View {
                             await viewModel.deleteEvent(id: eventID)
                         }
                     },
-                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                         try await viewModel.createEvent(
                             title: title,
                             note: note,
@@ -167,10 +170,11 @@ struct MonthCalendarView: View {
                             isAllDay: isAllDay,
                             reminderOffsetMinutes: reminderOffsetMinutes,
                             shiftTemplateID: shiftTemplateID,
-                            workInfo: workInfo
+                            workInfo: workInfo,
+                            calendarID: calendarID
                         )
                     },
-                    onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                    onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                         try await viewModel.updateEvent(
                             id: eventID,
                             title: title,
@@ -180,9 +184,12 @@ struct MonthCalendarView: View {
                             isAllDay: isAllDay,
                             reminderOffsetMinutes: reminderOffsetMinutes,
                             shiftTemplateID: shiftTemplateID,
-                            workInfo: workInfo
+                            workInfo: workInfo,
+                            calendarID: calendarID
                         )
-                    }
+                    },
+                    availableCalendars: calendarSharingStore.writableCalendars,
+                    initialCalendarID: calendarSharingStore.selection.calendarID
                 )
             }
         }
@@ -194,7 +201,9 @@ struct MonthCalendarView: View {
                 existingEvents: viewModel.selectedDayCell?.events ?? [],
                 initialEntryKind: .event,
                 showsEntryKindPicker: true,
-                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                availableCalendars: calendarSharingStore.writableCalendars,
+                initialCalendarID: calendarSharingStore.selection.calendarID,
+                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                     try await viewModel.createEvent(
                         title: title,
                         note: note,
@@ -203,7 +212,8 @@ struct MonthCalendarView: View {
                         isAllDay: isAllDay,
                         reminderOffsetMinutes: reminderOffsetMinutes,
                         shiftTemplateID: shiftTemplateID,
-                        workInfo: workInfo
+                        workInfo: workInfo,
+                        calendarID: calendarID
                     )
                 }
             )
@@ -617,22 +627,17 @@ struct MonthCalendarView: View {
     }
 
     private var calendarAvatarInitial: String? {
-        guard let calendar = calendarSharingStore.selectedSharedCalendar else { return nil }
+        let calendar = calendarSharingStore.selectedCalendar
+        guard calendar.kind != .personal else { return nil }
         return CalendarAvatarInitial.make(
-            displayName: calendar.displayName,
-            fallback: localization.localized(.calendarSharingUnknownPerson)
+            displayName: calendar.name,
+            fallback: localization.localized(.calendarSharingUnknownCalendar)
         )
     }
 
     private var sharedCalendarStatusText: String? {
-        guard let calendar = calendarSharingStore.selectedSharedCalendar else { return nil }
-        return String(
-            format: localization.localized(.calendarSharingStatusFormat),
-            locale: localization.currentLocale,
-            calendar.resolvedDisplayName(
-                fallback: localization.localized(.calendarSharingUnknownPerson)
-            )
-        )
+        guard calendarSharingStore.selectedCalendar.kind == .sharedReceived else { return nil }
+        return localization.localized(.calendarSharingReadOnly)
     }
 
     private func presentReadOnlyDetailIfNeeded(for cell: CalendarDayCell) {

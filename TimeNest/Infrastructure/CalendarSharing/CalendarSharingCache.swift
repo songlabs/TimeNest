@@ -1,38 +1,34 @@
 import Foundation
 
 struct CalendarSharingCacheData: Codable {
-    static let currentVersion = 2
+    static let currentVersion = 3
 
     var version: Int
     var receivedCalendars: [SharedCalendarDescriptor]
-    var eventsByCalendarID: [String: [SharedEventSnapshot]]
-    var shiftsByCalendarID: [String: [SharedShiftSnapshot]]
-    var workRecordsByCalendarID: [String: [SharedWorkRecordSnapshot]]
-    var ownedCalendar: OwnedSharedCalendarDescriptor?
+    var eventsByCalendarID: [UUID: [SharedEventSnapshot]]
+    var shiftsByCalendarID: [UUID: [SharedShiftSnapshot]]
+    var workRecordsByCalendarID: [UUID: [SharedWorkRecordSnapshot]]
 
     static let empty = CalendarSharingCacheData(
         version: currentVersion,
         receivedCalendars: [],
         eventsByCalendarID: [:],
         shiftsByCalendarID: [:],
-        workRecordsByCalendarID: [:],
-        ownedCalendar: nil
+        workRecordsByCalendarID: [:]
     )
 
     init(
         version: Int = currentVersion,
         receivedCalendars: [SharedCalendarDescriptor],
-        eventsByCalendarID: [String: [SharedEventSnapshot]],
-        shiftsByCalendarID: [String: [SharedShiftSnapshot]] = [:],
-        workRecordsByCalendarID: [String: [SharedWorkRecordSnapshot]] = [:],
-        ownedCalendar: OwnedSharedCalendarDescriptor?
+        eventsByCalendarID: [UUID: [SharedEventSnapshot]],
+        shiftsByCalendarID: [UUID: [SharedShiftSnapshot]] = [:],
+        workRecordsByCalendarID: [UUID: [SharedWorkRecordSnapshot]] = [:]
     ) {
         self.version = version
         self.receivedCalendars = receivedCalendars
         self.eventsByCalendarID = eventsByCalendarID
         self.shiftsByCalendarID = shiftsByCalendarID
         self.workRecordsByCalendarID = workRecordsByCalendarID
-        self.ownedCalendar = ownedCalendar
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -41,7 +37,6 @@ struct CalendarSharingCacheData: Codable {
         case eventsByCalendarID
         case shiftsByCalendarID
         case workRecordsByCalendarID
-        case ownedCalendar
     }
 
     init(from decoder: Decoder) throws {
@@ -52,21 +47,17 @@ struct CalendarSharingCacheData: Codable {
             forKey: .receivedCalendars
         ) ?? []
         eventsByCalendarID = try container.decodeIfPresent(
-            [String: [SharedEventSnapshot]].self,
+            [UUID: [SharedEventSnapshot]].self,
             forKey: .eventsByCalendarID
         ) ?? [:]
         shiftsByCalendarID = try container.decodeIfPresent(
-            [String: [SharedShiftSnapshot]].self,
+            [UUID: [SharedShiftSnapshot]].self,
             forKey: .shiftsByCalendarID
         ) ?? [:]
         workRecordsByCalendarID = try container.decodeIfPresent(
-            [String: [SharedWorkRecordSnapshot]].self,
+            [UUID: [SharedWorkRecordSnapshot]].self,
             forKey: .workRecordsByCalendarID
         ) ?? [:]
-        ownedCalendar = try container.decodeIfPresent(
-            OwnedSharedCalendarDescriptor.self,
-            forKey: .ownedCalendar
-        )
     }
 }
 

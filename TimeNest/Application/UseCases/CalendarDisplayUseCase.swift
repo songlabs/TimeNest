@@ -15,7 +15,12 @@ class CalendarDisplayUseCase {
         self.eventUseCase = eventUseCase
     }
 
-    func monthGrid(year: Int, month: Int, setting: CalendarDisplaySetting) async throws -> MonthGrid {
+    func monthGrid(
+        year: Int,
+        month: Int,
+        setting: CalendarDisplaySetting,
+        calendarID: UUID = TimeNestCalendar.personalID
+    ) async throws -> MonthGrid {
         
         // 使用 Gregorian calendar 确保日期计算使用西历
         let calendar = Calendar(identifier: .gregorian)
@@ -55,7 +60,10 @@ class CalendarDisplayUseCase {
         // 按实际月历网格取事件，确保相邻月份日期和跨月周完整。
         let monthStart = calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? firstDayOfMonth
         let gridInterval = DateInterval(start: gridStartDate, end: gridEndDate)
-        let occurrences = try await eventUseCase.occurrences(in: gridInterval)
+        let occurrences = try await eventUseCase.occurrences(
+            in: gridInterval,
+            calendarID: calendarID
+        )
         let occurrencesByDate = Dictionary(grouping: occurrences, by: { $0.occurrenceDate.id })
 
         let firstDate = DateOnly(from: monthStart) ?? DateOnly(year: year, month: month, day: 1)

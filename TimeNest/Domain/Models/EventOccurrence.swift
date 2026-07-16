@@ -3,6 +3,7 @@ import Foundation
 struct EventOccurrence: Identifiable, Hashable {
     let id: String
     let eventID: UUID
+    let calendarID: UUID
     let occurrenceDate: DateOnly
     let startDate: Date
     let endDate: Date
@@ -20,6 +21,7 @@ struct EventOccurrence: Identifiable, Hashable {
     init(
         id: String,
         eventID: UUID,
+        calendarID: UUID = TimeNestCalendar.personalID,
         occurrenceDate: DateOnly,
         startDate: Date,
         endDate: Date,
@@ -35,6 +37,7 @@ struct EventOccurrence: Identifiable, Hashable {
     ) {
         self.id = id
         self.eventID = eventID
+        self.calendarID = calendarID
         self.occurrenceDate = occurrenceDate
         self.startDate = startDate
         self.endDate = endDate

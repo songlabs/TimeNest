@@ -1,12 +1,14 @@
 import Foundation
 
 enum CalendarSelection: Codable, Equatable, Hashable {
-    case mine
-    case shared(String)
+    case calendar(UUID)
 
-    var sharedCalendarID: String? {
-        guard case .shared(let id) = self else { return nil }
-        return id
+    static var mine: CalendarSelection { .calendar(TimeNestCalendar.personalID) }
+
+    var calendarID: UUID {
+        switch self {
+        case .calendar(let id): id
+        }
     }
 }
 
@@ -29,8 +31,8 @@ struct CalendarSelectionPersistence {
         return stored
     }
 
-    func load(validSharedCalendarIDs: Set<String>) -> CalendarSelection {
-        Self.resolved(load(), validSharedCalendarIDs: validSharedCalendarIDs)
+    func load(validCalendarIDs: Set<UUID>) -> CalendarSelection {
+        Self.resolved(load(), validCalendarIDs: validCalendarIDs)
     }
 
     func save(_ selection: CalendarSelection) {
@@ -40,44 +42,27 @@ struct CalendarSelectionPersistence {
 
     static func resolved(
         _ selection: CalendarSelection,
-        validSharedCalendarIDs: Set<String>
+        validCalendarIDs: Set<UUID>
     ) -> CalendarSelection {
-        guard case .shared(let id) = selection,
-              validSharedCalendarIDs.contains(id) else {
-            return .mine
-        }
-        return .shared(id)
+        validCalendarIDs.contains(selection.calendarID) ? selection : .mine
     }
 }
 
 struct SharedCalendarDescriptor: Codable, Identifiable, Hashable {
-    let id: String
+    let id: UUID
     let zoneName: String
     let ownerName: String
-    var displayName: String?
-    var calendarName: String?
+    var calendarName: String
     var participantCount: Int
-    var contentConfiguration: SharedContentConfiguration? = nil
-
-    var sharedContent: SharedContentConfiguration {
-        contentConfiguration ?? .legacyDefault
-    }
-
-    func resolvedDisplayName(fallback: String) -> String {
-        Self.nonempty(displayName) ?? Self.nonempty(calendarName) ?? fallback
-    }
+    let kind: TimeNestCalendarKind
+    var rootRecordName: String
+    var shareRecordName: String
 
     func resolvedCalendarName(fallback: String) -> String {
-        Self.nonempty(calendarName) ?? Self.nonempty(displayName) ?? fallback
+        Self.nonempty(calendarName) ?? fallback
     }
 
-    var distinctDisplayName: String? {
-        guard let displayName = Self.nonempty(displayName) else { return nil }
-        let calendarName = Self.nonempty(calendarName) ?? displayName
-        return displayName.localizedCaseInsensitiveCompare(calendarName) == .orderedSame
-            ? nil
-            : displayName
-    }
+    var isReadOnly: Bool { kind == .sharedReceived }
 
     private static func nonempty(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -89,14 +74,13 @@ struct SharedCalendarDescriptor: Codable, Identifiable, Hashable {
 }
 
 struct OwnedSharedCalendarDescriptor: Codable, Hashable {
-    var displayName: String
+    let id: UUID
+    let zoneName: String
+    let ownerName: String
     var calendarName: String
     var participantCount: Int
-    var contentConfiguration: SharedContentConfiguration? = nil
-
-    var sharedContent: SharedContentConfiguration {
-        contentConfiguration ?? .legacyDefault
-    }
+    var rootRecordName: String
+    var shareRecordName: String
 }
 
 enum SharedCalendarParticipantPermission: Equatable {
@@ -111,6 +95,21 @@ struct SharedCalendarParticipantSnapshot: Identifiable, Equatable {
     let displayName: String?
     let isAccepted: Bool
     let permission: SharedCalendarParticipantPermission
+    let revocationToken: String?
+
+    init(
+        id: String,
+        displayName: String?,
+        isAccepted: Bool,
+        permission: SharedCalendarParticipantPermission,
+        revocationToken: String? = nil
+    ) {
+        self.id = id
+        self.displayName = displayName
+        self.isAccepted = isAccepted
+        self.permission = permission
+        self.revocationToken = revocationToken
+    }
 
     func resolvedDisplayName(fallback: String) -> String {
         guard let displayName = displayName?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -119,33 +118,6 @@ struct SharedCalendarParticipantSnapshot: Identifiable, Equatable {
         }
         return displayName
     }
-}
-
-struct SharedContentConfiguration: Codable, Equatable, Hashable {
-    static let currentSchemaVersion = 2
-
-    var sharesEvents: Bool
-    var sharesShifts: Bool
-    var sharesWorkRecords: Bool
-    var schemaVersion: Int
-
-    var hasSelectedContent: Bool {
-        sharesEvents || sharesShifts || sharesWorkRecords
-    }
-
-    static let newShareDefault = SharedContentConfiguration(
-        sharesEvents: true,
-        sharesShifts: true,
-        sharesWorkRecords: false,
-        schemaVersion: currentSchemaVersion
-    )
-
-    static let legacyDefault = SharedContentConfiguration(
-        sharesEvents: true,
-        sharesShifts: false,
-        sharesWorkRecords: false,
-        schemaVersion: 1
-    )
 }
 
 /// A deliberately small transfer object. Deletions are synchronized by deleting the
@@ -532,12 +504,12 @@ enum SharedWorkRecordMapper {
 }
 
 struct CalendarAccessPolicy: Equatable {
-    let selection: CalendarSelection
+    let selectedCalendar: TimeNestCalendar
 
-    var isReadOnly: Bool { selection.sharedCalendarID != nil }
-    var canCreate: Bool { !isReadOnly }
-    var canEdit: Bool { !isReadOnly }
-    var canDelete: Bool { !isReadOnly }
+    var isReadOnly: Bool { !selectedCalendar.canEditContent }
+    var canCreate: Bool { selectedCalendar.canEditContent }
+    var canEdit: Bool { selectedCalendar.canEditContent }
+    var canDelete: Bool { selectedCalendar.canEditContent }
     var showsAddButton: Bool { canCreate }
 }
 
@@ -549,23 +521,22 @@ enum CalendarAvatarInitial {
     }
 }
 
-struct OwnedSharingStopPlan: Equatable {
-    let deletesShareRecord = true
-    let deletesRecordZone = false
-    let deletesLocalEvents = false
-}
-
 enum CalendarSharingError: Error, Equatable, LocalizedError {
     case noICloudAccount
     case iCloudRestricted
     case networkUnavailable
     case invitationPending
+    case invitationInvalid
+    case invitationRevoked
     case invitationCreationFailed
     case invitationURLUnavailable
     case shareCreationFailed
     case shareUnavailable
     case permissionDenied
-    case contentSelectionRequired
+    case cloudEnvironmentMismatch
+    case receivedCalendarRefreshFailed
+    case calendarDataMigrationFailed
+    case invitationCancellationFailed
     case syncFailed
 
     var errorDescription: String? {
@@ -578,6 +549,10 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingNetworkUnavailable)
         case .invitationPending:
             LocalizationManager.shared.localized(.calendarSharingInvitationPending)
+        case .invitationInvalid:
+            LocalizationManager.shared.localized(.calendarSharingInvitationInvalid)
+        case .invitationRevoked:
+            LocalizationManager.shared.localized(.calendarSharingInvitationRevoked)
         case .invitationCreationFailed:
             LocalizationManager.shared.localized(.calendarSharingInvitationCreationFailed)
         case .invitationURLUnavailable:
@@ -588,8 +563,14 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingShareUnavailable)
         case .permissionDenied:
             LocalizationManager.shared.localized(.calendarSharingPermissionDenied)
-        case .contentSelectionRequired:
-            LocalizationManager.shared.localized(.calendarSharingContentSelectionRequired)
+        case .cloudEnvironmentMismatch:
+            LocalizationManager.shared.localized(.calendarSharingCloudEnvironmentMismatch)
+        case .receivedCalendarRefreshFailed:
+            LocalizationManager.shared.localized(.calendarSharingReceivedCalendarRefreshFailed)
+        case .calendarDataMigrationFailed:
+            LocalizationManager.shared.localized(.calendarSharingDataMigrationFailed)
+        case .invitationCancellationFailed:
+            LocalizationManager.shared.localized(.calendarSharingInvitationCancellationFailed)
         case .syncFailed:
             LocalizationManager.shared.localized(.calendarSharingSyncFailed)
         }

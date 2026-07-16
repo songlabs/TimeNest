@@ -16,20 +16,24 @@ enum EventUseCaseError: Error, LocalizedError {
 
 class EventUseCase {
     private let repository: EventRepository
+    private let calendarRepository: (any CalendarRepository)?
     private let notificationScheduler: LocalNotificationScheduling?
     var onEventsChanged: (() -> Void)?
 
     init(
         repository: EventRepository,
-        notificationScheduler: LocalNotificationScheduling? = nil
+        notificationScheduler: LocalNotificationScheduling? = nil,
+        calendarRepository: (any CalendarRepository)? = nil
     ) {
         self.repository = repository
         self.notificationScheduler = notificationScheduler
+        self.calendarRepository = calendarRepository
     }
 
     @discardableResult
     func createEvent(_ event: CalendarEvent) async throws -> EventNotificationScheduleResult {
         try validate(event)
+        try await validateWriteAccess(calendarID: event.calendarID)
         var eventToSave = event
         let notificationResult = await scheduleNotification(for: eventToSave)
         eventToSave.notificationID = notificationResult.notificationID
@@ -41,6 +45,7 @@ class EventUseCase {
     @discardableResult
     func updateEvent(_ event: CalendarEvent) async throws -> EventNotificationScheduleResult {
         try validate(event)
+        try await validateWriteAccess(calendarID: event.calendarID)
         guard let oldEvent = try await repository.event(id: event.id) else {
             throw EventUseCaseError.eventNotFound
         }
@@ -57,23 +62,75 @@ class EventUseCase {
     }
 
     func deleteEvent(id: UUID) async throws {
-        if let notificationID = try await repository.event(id: id)?.notificationID {
+        let event = try await repository.event(id: id)
+        if let event {
+            try await validateWriteAccess(calendarID: event.calendarID)
+        }
+        if let notificationID = event?.notificationID {
             notificationScheduler?.cancelNotification(id: notificationID)
         }
         try await repository.delete(id: id)
         onEventsChanged?()
     }
 
-    func events(in range: DateInterval) async throws -> [CalendarEvent] {
-        try await repository.events(in: range)
+    func events(
+        in range: DateInterval,
+        calendarID: UUID = TimeNestCalendar.personalID
+    ) async throws -> [CalendarEvent] {
+        try await repository.events(in: range).filter { $0.calendarID == calendarID }
     }
 
     func event(id: UUID) async throws -> CalendarEvent? {
         try await repository.event(id: id)
     }
 
-    func occurrences(in range: DateInterval) async throws -> [EventOccurrence] {
-        let events = try await repository.events(in: range)
+    func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
+        try await validateWriteAccess(calendarID: sourceCalendarID)
+        try await validateWriteAccess(calendarID: targetCalendarID)
+        try await performReassignment(from: sourceCalendarID, to: targetCalendarID)
+    }
+
+    func reassignEventsForStoppingOwnedCalendar(
+        from sourceCalendarID: UUID,
+        to targetCalendarID: UUID
+    ) async throws {
+        try await validateWriteAccess(calendarID: targetCalendarID)
+        guard let calendarRepository,
+              let source = try await calendarRepository.calendar(id: sourceCalendarID),
+              source.kind == .sharedOwned,
+              source.stopPhase.isStopping else {
+            throw CalendarSharingError.permissionDenied
+        }
+        try await performReassignment(from: sourceCalendarID, to: targetCalendarID)
+    }
+
+    private func performReassignment(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
+        try await repository.reassignEvents(
+            from: sourceCalendarID,
+            to: targetCalendarID
+        )
+        onEventsChanged?()
+    }
+
+    private func validateWriteAccess(calendarID: UUID) async throws {
+        guard let calendarRepository else { return }
+        if let calendar = try await calendarRepository.calendar(id: calendarID) {
+            guard calendar.canEditContent else {
+                throw CalendarSharingError.permissionDenied
+            }
+            return
+        }
+        // Migration fallback: personal rows remain usable even if the calendar bootstrap must retry.
+        guard calendarID == TimeNestCalendar.personalID else {
+            throw CalendarSharingError.permissionDenied
+        }
+    }
+
+    func occurrences(
+        in range: DateInterval,
+        calendarID: UUID = TimeNestCalendar.personalID
+    ) async throws -> [EventOccurrence] {
+        let events = try await repository.events(in: range).filter { $0.calendarID == calendarID }
         let calendar = Calendar(identifier: .gregorian)
 
         return events.flatMap { event -> [EventOccurrence] in
@@ -111,6 +168,7 @@ class EventUseCase {
         return EventOccurrence(
             id: "\(event.id)-\(dateOnly.id)",
             eventID: event.id,
+            calendarID: event.calendarID,
             occurrenceDate: dateOnly,
             startDate: event.startDate,
             endDate: event.endDate,

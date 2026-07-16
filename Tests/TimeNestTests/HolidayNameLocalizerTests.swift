@@ -1586,6 +1586,9 @@ final class HolidayNameLocalizerTests: XCTestCase {
         return CalendarSharingStore(
             client: CloudKitCalendarSharingClient(),
             eventUseCase: eventUseCase,
+            calendarRepository: InMemoryCalendarRepository(
+                calendars: [.personal(name: "My Calendar")]
+            ),
             cache: CalendarSharingCache(fileURL: cacheURL),
             selectionPersistence: CalendarSelectionPersistence(
                 defaults: defaults,

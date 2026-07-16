@@ -30,4 +30,13 @@ actor InMemoryEventRepository: EventRepository {
     func event(id: UUID) async throws -> CalendarEvent? {
         events[id]
     }
+
+    func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
+        let now = Date()
+        for (id, var event) in events where event.calendarID == sourceCalendarID {
+            event.calendarID = targetCalendarID
+            event.updatedAt = now
+            events[id] = event
+        }
+    }
 }

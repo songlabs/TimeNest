@@ -126,7 +126,7 @@ struct AppStoreScreenshotRootView: View {
                 AppStoreScreenshotSharedReadOnlyDetailView()
             case .sharedSwitcher:
                 AppStoreScreenshotSharedCalendarSelectionView(
-                    selection: .shared(AppStoreScreenshotSharedCalendarData.calendarID)
+                    selection: .calendar(AppStoreScreenshotSharedCalendarData.calendarID)
                 )
             }
         }
@@ -373,8 +373,8 @@ private struct AppStoreScreenshotDayDetailView: View {
         DayDetailView(
             cell: AppStoreScreenshotSampleData.dayCell(),
             onDeleteEvent: { _ in },
-            onCreateEvent: { _, _, _, _, _, _, _, _ in .noReminder },
-            onUpdateEvent: { _, _, _, _, _, _, _, _, _ in .noReminder }
+            onCreateEvent: { _, _, _, _, _, _, _, _, _ in .noReminder },
+            onUpdateEvent: { _, _, _, _, _, _, _, _, _, _ in .noReminder }
         )
         .environmentObject(localization)
     }
@@ -396,7 +396,7 @@ private struct AppStoreScreenshotEventEditorView: View {
                 initialReminderOffsetMinutes: 10
             ),
             existingEvents: AppStoreScreenshotSampleData.dayCell().events,
-            onSave: { _, _, _, _, _, _, _, _ in .noReminder }
+            onSave: { _, _, _, _, _, _, _, _, _ in .noReminder }
         )
     }
 }
@@ -409,8 +409,8 @@ private struct AppStoreScreenshotWorkRecordEditorView: View {
             isPresented: $isPresented,
             mode: .edit(AppStoreScreenshotSampleData.workRecordInitialSession),
             existingEvents: AppStoreScreenshotSampleData.dayCell().events,
-            onCreateEvent: { _, _, _, _, _, _, _, _ in .noReminder },
-            onUpdateEvent: { _, _, _, _, _, _, _, _, _ in .noReminder }
+            onCreateEvent: { _, _, _, _, _, _, _, _, _ in .noReminder },
+            onUpdateEvent: { _, _, _, _, _, _, _, _, _, _ in .noReminder }
         )
     }
 }
@@ -619,7 +619,8 @@ private enum AppStoreScreenshotSampleData {
             transportFee: 500,
             hourlyRate: 1200,
             workSessionId: workSessionID,
-            isWorkOutTimeSet: true
+            isWorkOutTimeSet: true,
+            calendarID: TimeNestCalendar.personalID
         )
     }
 

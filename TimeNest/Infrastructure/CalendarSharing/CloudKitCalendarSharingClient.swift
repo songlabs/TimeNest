@@ -14,9 +14,7 @@ struct SharedZoneRecordCollection {
     private(set) var recordsByID: [CKRecord.ID: CKRecord] = [:]
 
     mutating func apply(_ records: [CKRecord]) {
-        for record in records {
-            recordsByID[record.recordID] = record
-        }
+        records.forEach { recordsByID[$0.recordID] = $0 }
     }
 
     mutating func remove(_ recordID: CKRecord.ID) {
@@ -35,44 +33,36 @@ enum ReceivedSharedCalendarPayloadAssembler {
         zoneID: CKRecordZone.ID,
         records: SharedZoneRecordCollection
     ) -> ReceivedSharedCalendarPayload? {
-        guard let calendarRecord = records.records(
+        guard let root = records.records(
             ofType: CalendarSharingCloudSchema.calendarRecordType
-        ).first else {
+        ).first,
+        let calendar = CalendarSharingCloudSchema.receivedDescriptor(
+            from: root,
+            zoneID: zoneID,
+            participantCount: (records.records(ofType: CKRecord.SystemType.share).first as? CKShare)
+                .map(participantCount(in:)) ?? 0
+        ) else {
             return nil
         }
-        let content = CalendarSharingCloudSchema.contentConfiguration(from: calendarRecord)
-        let share = records.records(ofType: CKRecord.SystemType.share).first as? CKShare
-        let names = CalendarSharingCloudSchema.compatibleNames(from: calendarRecord)
 
         return ReceivedSharedCalendarPayload(
-            calendar: SharedCalendarDescriptor(
-                id: CalendarSharingCloudSchema.identity(for: zoneID),
-                zoneName: zoneID.zoneName,
-                ownerName: zoneID.ownerName,
-                displayName: names.displayName,
-                calendarName: names.calendarName,
-                participantCount: share.map(participantCount(in:)) ?? 0,
-                contentConfiguration: content
-            ),
-            events: content.sharesEvents
-                ? records.records(ofType: CalendarSharingCloudSchema.eventRecordType).compactMap(decodeEvent)
-                : [],
-            shifts: content.sharesShifts
-                ? records.records(ofType: CalendarSharingCloudSchema.shiftRecordType).compactMap(decodeShift)
-                : [],
-            workRecords: content.sharesWorkRecords
-                ? records.records(ofType: CalendarSharingCloudSchema.workRecordType).compactMap(decodeWorkRecord)
-                : []
+            calendar: calendar,
+            events: records.records(ofType: CalendarSharingCloudSchema.eventRecordType)
+                .compactMap(decodeEvent),
+            shifts: records.records(ofType: CalendarSharingCloudSchema.shiftRecordType)
+                .compactMap(decodeShift),
+            workRecords: records.records(ofType: CalendarSharingCloudSchema.workRecordType)
+                .compactMap(decodeWorkRecord)
         )
     }
 
-    private static func decodeEvent(_ record: CKRecord) -> SharedEventSnapshot? {
+    static func decodeEvent(_ record: CKRecord) -> SharedEventSnapshot? {
         guard let idValue = record[CalendarSharingCloudSchema.EventField.eventID] as? String,
               let id = UUID(uuidString: idValue),
               let title = record[CalendarSharingCloudSchema.EventField.title] as? String,
               let startDate = record[CalendarSharingCloudSchema.EventField.startDate] as? Date,
               let endDate = record[CalendarSharingCloudSchema.EventField.endDate] as? Date,
-              let allDayNumber = record[CalendarSharingCloudSchema.EventField.isAllDay] as? NSNumber,
+              let allDay = record[CalendarSharingCloudSchema.EventField.isAllDay] as? NSNumber,
               let updatedAt = record[CalendarSharingCloudSchema.EventField.updatedAt] as? Date else {
             return nil
         }
@@ -81,12 +71,12 @@ enum ReceivedSharedCalendarPayloadAssembler {
             title: title,
             startDate: startDate,
             endDate: endDate,
-            isAllDay: allDayNumber.boolValue,
+            isAllDay: allDay.boolValue,
             updatedAt: updatedAt
         )
     }
 
-    private static func decodeShift(_ record: CKRecord) -> SharedShiftSnapshot? {
+    static func decodeShift(_ record: CKRecord) -> SharedShiftSnapshot? {
         guard let idValue = record[CalendarSharingCloudSchema.ShiftField.shiftID] as? String,
               let id = UUID(uuidString: idValue),
               let registeredDate = record[CalendarSharingCloudSchema.ShiftField.registeredDate] as? Date,
@@ -110,7 +100,7 @@ enum ReceivedSharedCalendarPayloadAssembler {
         )
     }
 
-    private static func decodeWorkRecord(_ record: CKRecord) -> SharedWorkRecordSnapshot? {
+    static func decodeWorkRecord(_ record: CKRecord) -> SharedWorkRecordSnapshot? {
         guard let idValue = record[CalendarSharingCloudSchema.WorkRecordField.workRecordID] as? String,
               let id = UUID(uuidString: idValue),
               let workDate = record[CalendarSharingCloudSchema.WorkRecordField.workDate] as? Date,
@@ -143,21 +133,40 @@ struct OwnedSharedCalendarCloudState {
     let calendar: OwnedSharedCalendarDescriptor
     let share: CKShare
     let participants: [SharedCalendarParticipantSnapshot]
-
-    init(
-        calendar: OwnedSharedCalendarDescriptor,
-        share: CKShare,
-        participants: [SharedCalendarParticipantSnapshot] = []
-    ) {
-        self.calendar = calendar
-        self.share = share
-        self.participants = participants
-    }
 }
 
 struct OwnedSharingInvitationResult {
     let state: OwnedSharedCalendarCloudState
     let invitationURL: URL?
+    let participantID: CKShare.Participant.ID
+}
+
+enum OwnedSharingInvitationResultFactory {
+    static func make(
+        state: OwnedSharedCalendarCloudState,
+        invitation: OneTimeSharingInvitation,
+        resolveURL: (CKShare, CKShare.Participant.ID) -> URL? = {
+            $0.__oneTimeURL(forParticipantID: $1)
+        }
+    ) -> OwnedSharingInvitationResult {
+        OwnedSharingInvitationResult(
+            state: state,
+            invitationURL: resolveURL(state.share, invitation.participantID),
+            participantID: invitation.participantID
+        )
+    }
+}
+
+struct CalendarSharingInvitation: Identifiable {
+    let id: String
+    let calendarID: UUID
+    let url: URL
+}
+
+enum SharingInvitationActivityOutcome: Equatable {
+    case completed
+    case cancelled
+    case activityError
 }
 
 struct OneTimeSharingInvitation {
@@ -172,172 +181,53 @@ struct OneTimeSharingInvitation {
     }
 
     func url(in savedShare: CKShare) -> URL? {
-        // The Objective-C API is available on iOS 18, while this SDK's refined
-        // Swift convenience is iOS 26-only. Use the iOS 18 raw imported selector.
         savedShare.__oneTimeURL(forParticipantID: participantID)
     }
 }
 
-struct OwnedCalendarParticipantSummary {
-    struct Diagnostic: Equatable {
-        let role: String
-        let acceptanceStatus: String
-        let hasName: Bool
-        let hasEmail: Bool
-    }
-
-    let snapshots: [SharedCalendarParticipantSnapshot]
-    let participantCount: Int
-    let acceptedCount: Int
-    let pendingCount: Int
-    let diagnostics: [Diagnostic]
-}
-
 enum OwnedCalendarParticipantSnapshotAssembler {
-    static func make(from share: CKShare) -> OwnedCalendarParticipantSummary {
-        var snapshots: [SharedCalendarParticipantSnapshot] = []
-        var acceptedCount = 0
-        var pendingCount = 0
-        var diagnostics: [OwnedCalendarParticipantSummary.Diagnostic] = []
-
-        for participant in share.participants {
-            let name = formattedName(participant.userIdentity.nameComponents)
-            let email = normalized(participant.userIdentity.lookupInfo?.emailAddress)
-            diagnostics.append(
-                .init(
-                    role: diagnosticRole(participant.role),
-                    acceptanceStatus: diagnosticAcceptanceStatus(participant.acceptanceStatus),
-                    hasName: name != nil,
-                    hasEmail: email != nil
+    static func make(from share: CKShare) -> [SharedCalendarParticipantSnapshot] {
+        share.participants.compactMap { participant in
+            guard participant.role != .owner else { return nil }
+            let name = participant.userIdentity.nameComponents.map {
+                PersonNameComponentsFormatter.localizedString(
+                    from: $0,
+                    style: .default,
+                    options: []
                 )
+            }
+            let email = participant.userIdentity.lookupInfo?.emailAddress
+            let isAccepted = participant.acceptanceStatus == .accepted
+            return SharedCalendarParticipantSnapshot(
+                id: participantSnapshotID(participant.participantID),
+                displayName: normalized(name) ?? normalized(email),
+                isAccepted: isAccepted,
+                permission: permission(participant.permission),
+                revocationToken: isAccepted ? nil : participant.participantID
             )
-
-            guard participant.role != .owner else { continue }
-            switch participant.acceptanceStatus {
-            case .accepted:
-                acceptedCount += 1
-            case .pending:
-                pendingCount += 1
-            case .unknown, .removed:
-                continue
-            @unknown default:
-                continue
-            }
-
-            guard let snapshot = makeSnapshot(
-                participantID: participant.participantID,
-                role: participant.role,
-                acceptanceStatus: participant.acceptanceStatus,
-                permission: participant.permission,
-                nameComponents: participant.userIdentity.nameComponents,
-                emailAddress: participant.userIdentity.lookupInfo?.emailAddress
-            ) else {
-                continue
-            }
-            snapshots.append(snapshot)
         }
-
-        return OwnedCalendarParticipantSummary(
-            snapshots: snapshots,
-            participantCount: share.participants.count,
-            acceptedCount: acceptedCount,
-            pendingCount: pendingCount,
-            diagnostics: diagnostics
-        )
     }
 
-    static func makeSnapshot(
-        participantID: CKShare.Participant.ID,
-        role: CKShare.ParticipantRole,
-        acceptanceStatus: CKShare.ParticipantAcceptanceStatus,
-        permission: CKShare.ParticipantPermission,
-        nameComponents: PersonNameComponents?,
-        emailAddress: String?
-    ) -> SharedCalendarParticipantSnapshot? {
-        guard role != .owner, acceptanceStatus == .accepted else { return nil }
-        return SharedCalendarParticipantSnapshot(
-            id: anonymizedID(participantID),
-            displayName: formattedName(nameComponents) ?? normalized(emailAddress),
-            isAccepted: true,
-            permission: snapshotPermission(permission)
-        )
-    }
-
-    private static func anonymizedID(_ participantID: CKShare.Participant.ID) -> String {
+    static func participantSnapshotID(_ participantID: CKShare.Participant.ID) -> String {
         SHA256.hash(data: Data(participantID.utf8))
-            .prefix(16)
-            .map { String(format: "%02x", $0) }
-            .joined()
-    }
-
-    private static func formattedName(_ components: PersonNameComponents?) -> String? {
-        guard let components else { return nil }
-        return normalized(
-            PersonNameComponentsFormatter.localizedString(
-                from: components,
-                style: .default,
-                options: []
-            )
-        )
+            .prefix(16).map { String(format: "%02x", $0) }.joined()
     }
 
     private static func normalized(_ value: String?) -> String? {
-        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !value.isEmpty else {
-            return nil
-        }
-        return value
+        let value = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value?.isEmpty == false ? value : nil
     }
 
-    private static func snapshotPermission(
-        _ permission: CKShare.ParticipantPermission
+    private static func permission(
+        _ value: CKShare.ParticipantPermission
     ) -> SharedCalendarParticipantPermission {
-        switch permission {
+        switch value {
         case .unknown: .unknown
         case .none: .none
         case .readOnly: .readOnly
         case .readWrite: .readWrite
         @unknown default: .unknown
         }
-    }
-
-    private static func diagnosticRole(_ role: CKShare.ParticipantRole) -> String {
-        if role == .owner { return "owner" }
-        if role == .privateUser { return "privateUser" }
-        if role == .publicUser { return "publicUser" }
-        return "unknown"
-    }
-
-    private static func diagnosticAcceptanceStatus(
-        _ status: CKShare.ParticipantAcceptanceStatus
-    ) -> String {
-        switch status {
-        case .accepted: "accepted"
-        case .pending: "pending"
-        case .removed: "removed"
-        case .unknown: "unknown"
-        @unknown default: "unknown"
-        }
-    }
-}
-
-struct CalendarSharingContentReconciliationPlan {
-    let content: SharedContentConfiguration
-
-    var deletesAllEventRecords: Bool { !content.sharesEvents }
-    var deletesAllShiftRecords: Bool { !content.sharesShifts }
-    var deletesAllWorkRecords: Bool { !content.sharesWorkRecords }
-
-    func eventsToSave(_ snapshots: [SharedEventSnapshot]) -> [SharedEventSnapshot] {
-        content.sharesEvents ? snapshots : []
-    }
-
-    func shiftsToSave(_ snapshots: [SharedShiftSnapshot]) -> [SharedShiftSnapshot] {
-        content.sharesShifts ? snapshots : []
-    }
-
-    func workRecordsToSave(_ snapshots: [SharedWorkRecordSnapshot]) -> [SharedWorkRecordSnapshot] {
-        content.sharesWorkRecords ? snapshots : []
     }
 }
 
@@ -356,77 +246,199 @@ struct CalendarSharingContentRecordPlan {
         makeRecord: (Snapshot, CKRecord.ID, CKRecord?) -> CKRecord
     ) {
         self.recordType = recordType
-
-        var latestSnapshotByID: [CKRecord.ID: Snapshot] = [:]
-        for snapshot in snapshots {
-            latestSnapshotByID[recordID(snapshot)] = snapshot
-        }
-        let existingByID = Dictionary(
-            uniqueKeysWithValues: existingRecords.map { ($0.recordID, $0) }
+        let snapshotsByID = Dictionary(
+            snapshots.map { (recordID($0), $0) },
+            uniquingKeysWith: { _, latest in latest }
         )
-        let desiredRecordIDs = Set(latestSnapshotByID.keys)
+        let existingByID = Dictionary(
+            existingRecords.map { ($0.recordID, $0) },
+            uniquingKeysWith: { _, latest in latest }
+        )
+        let desiredIDs = Set(snapshotsByID.keys)
 
-        legacyRecordIDsToDelete = existingRecords
-            .filter { $0.parent != nil }
-            .map(\.recordID)
-            .sorted { $0.recordName < $1.recordName }
+        legacyRecordIDsToDelete = existingRecords.filter { $0.parent != nil }.map(\.recordID)
         ordinaryRecordIDsToDelete = existingRecords
-            .filter { $0.parent == nil && !desiredRecordIDs.contains($0.recordID) }
+            .filter { $0.parent == nil && !desiredIDs.contains($0.recordID) }
             .map(\.recordID)
-            .sorted { $0.recordName < $1.recordName }
+        recordsToRecreate = desiredIDs.compactMap { id in
+            guard existingByID[id]?.parent != nil, let snapshot = snapshotsByID[id] else { return nil }
+            return makeRecord(snapshot, id, nil)
+        }
+        recordsToSave = desiredIDs.compactMap { id in
+            guard existingByID[id]?.parent == nil, let snapshot = snapshotsByID[id] else { return nil }
+            return makeRecord(snapshot, id, existingByID[id])
+        }
+    }
+}
 
-        var recreatedRecords: [CKRecord] = []
-        var savedRecords: [CKRecord] = []
-        for desiredRecordID in desiredRecordIDs.sorted(by: { $0.recordName < $1.recordName }) {
-            guard let snapshot = latestSnapshotByID[desiredRecordID] else { continue }
-            let existingRecord = existingByID[desiredRecordID]
-            if existingRecord?.parent != nil {
-                // A legacy hierarchical relationship cannot be reliably removed by a
-                // changed-keys update. Recreate from a fresh instance after deletion.
-                recreatedRecords.append(makeRecord(snapshot, desiredRecordID, nil))
-            } else {
-                savedRecords.append(makeRecord(snapshot, desiredRecordID, existingRecord))
+@MainActor
+protocol CalendarSharingContentRecordDatabase {
+    func save(_ records: [CKRecord]) async throws
+    func delete(_ recordIDs: [CKRecord.ID]) async throws
+}
+
+@MainActor
+private struct CloudKitContentRecordDatabase: CalendarSharingContentRecordDatabase {
+    let database: CKDatabase
+
+    func save(_ records: [CKRecord]) async throws {
+        var pending = records
+        var attempt = 0
+        while !pending.isEmpty {
+            attempt += 1
+            do {
+                let result = try await database.modifyRecords(
+                    saving: pending,
+                    deleting: [],
+                    savePolicy: .changedKeys,
+                    atomically: false
+                )
+                let pendingByID = Dictionary(uniqueKeysWithValues: pending.map { ($0.recordID, $0) })
+                var retry: [CKRecord] = []
+                for (recordID, result) in result.saveResults {
+                    do {
+                        _ = try result.get()
+                    } catch where CalendarSharingErrorMapper.isRetryable(error) && attempt < 3 {
+                        if let record = pendingByID[recordID] { retry.append(record) }
+                    } catch {
+                        throw error
+                    }
+                }
+                pending = retry
+            } catch where CalendarSharingErrorMapper.isRetryable(error) && attempt < 3 {
+                // Retry the still-pending batch. CloudKit operations are idempotent by Record ID.
+            }
+            if !pending.isEmpty {
+                try await Task.sleep(for: .milliseconds(250 * attempt))
             }
         }
-        recordsToRecreate = recreatedRecords
-        recordsToSave = savedRecords
+    }
+
+    func delete(_ recordIDs: [CKRecord.ID]) async throws {
+        var pending = recordIDs
+        var attempt = 0
+        while !pending.isEmpty {
+            attempt += 1
+            do {
+                let result = try await database.modifyRecords(
+                    saving: [],
+                    deleting: pending,
+                    savePolicy: .ifServerRecordUnchanged,
+                    atomically: false
+                )
+                var retry: [CKRecord.ID] = []
+                for (recordID, result) in result.deleteResults {
+                    do {
+                        _ = try result.get()
+                    } catch let error as CKError where error.code == .unknownItem {
+                        continue
+                    } catch where CalendarSharingErrorMapper.isRetryable(error) && attempt < 3 {
+                        retry.append(recordID)
+                    } catch {
+                        throw error
+                    }
+                }
+                pending = retry
+            } catch where CalendarSharingErrorMapper.isRetryable(error) && attempt < 3 {
+                // Retry the still-pending IDs.
+            }
+            if !pending.isEmpty {
+                try await Task.sleep(for: .milliseconds(250 * attempt))
+            }
+        }
+    }
+}
+
+@MainActor
+struct CalendarSharingContentRecordPlanExecutor {
+    let database: any CalendarSharingContentRecordDatabase
+
+    func execute(_ plan: CalendarSharingContentRecordPlan) async throws {
+        for batch in plan.legacyRecordIDsToDelete.chunked(maxCount: 200) {
+            try await database.delete(batch)
+        }
+        for batch in plan.recordsToRecreate.chunked(maxCount: 200) {
+            try await database.save(batch)
+        }
+        for batch in plan.recordsToSave.chunked(maxCount: 200) {
+            try await database.save(batch)
+        }
+        for batch in plan.ordinaryRecordIDsToDelete.chunked(maxCount: 200) {
+            try await database.delete(batch)
+        }
     }
 }
 
 @MainActor
 protocol CalendarSharingClientProtocol {
-    func ownedCalendarState() async throws -> OwnedSharedCalendarCloudState?
+    func fetchOwnedCalendars() async throws -> [OwnedSharedCalendarCloudState]
     func createShare(
-        displayName: String,
+        calendarID: UUID,
         calendarName: String,
-        content: SharedContentConfiguration,
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
     ) async throws -> OwnedSharingInvitationResult
-    func createOwnedInvitation() async throws -> OwnedSharingInvitationResult
+    func createInvitation(for calendar: OwnedSharedCalendarDescriptor) async throws -> OwnedSharingInvitationResult
+    func revokePendingInvitation(
+        for calendar: OwnedSharedCalendarDescriptor,
+        participantID: CKShare.Participant.ID
+    ) async throws -> OwnedSharedCalendarCloudState
     func synchronizeOwnedContent(
-        content: SharedContentConfiguration,
+        calendar: OwnedSharedCalendarDescriptor,
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
     ) async throws
-    func updateOwnedSharing(
-        content: SharedContentConfiguration,
-        events: [SharedEventSnapshot],
-        shifts: [SharedShiftSnapshot],
-        workRecords: [SharedWorkRecordSnapshot]
-    ) async throws -> OwnedSharedCalendarCloudState
+    func renameOwnedCalendar(_ calendar: OwnedSharedCalendarDescriptor, name: String) async throws
     func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload]
-    func accept(metadata: CKShare.Metadata) async throws -> String
+    func accept(metadata: any CalendarSharingShareMetadata) async throws -> String
     func leaveSharedCalendar(_ calendar: SharedCalendarDescriptor) async throws
-    func stopOwnedSharing(plan: OwnedSharingStopPlan) async throws
+    func stopOwnedSharing(_ calendar: OwnedSharedCalendarDescriptor) async throws
+}
+
+protocol CalendarSharingShareMetadata {
+    var containerIdentifier: String { get }
+    var participantStatus: CKShare.ParticipantAcceptanceStatus { get }
+    var share: CKShare { get }
+}
+
+extension CKShare.Metadata: CalendarSharingShareMetadata {}
+
+enum CalendarSharingContainerValidator {
+    static func validate(
+        metadataContainerIdentifier: String,
+        configuredContainerIdentifier: String?
+    ) throws {
+        guard let configuredContainerIdentifier,
+              metadataContainerIdentifier == configuredContainerIdentifier else {
+            throw CalendarSharingError.cloudEnvironmentMismatch
+        }
+    }
+}
+
+enum CalendarSharingParticipantStatusValidator {
+    static func error(
+        for status: CKShare.ParticipantAcceptanceStatus
+    ) -> CalendarSharingError? {
+        switch status {
+        case .accepted, .pending:
+            nil
+        case .removed:
+            .invitationRevoked
+        case .unknown:
+            .invitationInvalid
+        @unknown default:
+            .invitationInvalid
+        }
+    }
 }
 
 enum CalendarSharingErrorContext: Equatable {
     case general
     case creatingShare
     case creatingInvitation
+    case acceptingInvitation
 }
 
 enum CalendarSharingDiagnostics {
@@ -459,56 +471,61 @@ enum CalendarSharingDiagnostics {
         details: @autoclosure () -> String = ""
     ) {
 #if DEBUG
-        let errorDetails = CalendarSharingErrorMapper.diagnosticSummary(error)
-        let contextualDetails = details()
+        let detailText = details()
+        let errorText = CalendarSharingErrorMapper.diagnosticSummary(error)
         logger.error(
-            "operation=\(operation, privacy: .public) stage=\(stage, privacy: .public) database=\(database, privacy: .public) \(contextualDetails, privacy: .public) \(errorDetails, privacy: .public)"
+            "operation=\(operation, privacy: .public) stage=\(stage, privacy: .public) database=\(database, privacy: .public) \(detailText, privacy: .public) \(errorText, privacy: .public)"
         )
 #endif
     }
 
-    static func contentRecordStageSucceeded(
-        stage: String,
-        recordType: CKRecord.RecordType,
-        count: Int
-    ) {
-#if DEBUG
-        logger.debug(
-            "stage=\(stage, privacy: .public) recordType=\(recordType, privacy: .public) count=\(count) result=success"
-        )
-#endif
+    static func identifierHash(_ value: String) -> String {
+        SHA256.hash(data: Data(value.utf8))
+            .prefix(8)
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
-    static func contentRecordStageFailed(
-        stage: String,
-        recordType: CKRecord.RecordType,
-        count: Int,
-        error: Error
-    ) {
-#if DEBUG
-        let nsError = error as NSError
-        logger.error(
-            "stage=\(stage, privacy: .public) recordType=\(recordType, privacy: .public) count=\(count) result=failure errorDomain=\(nsError.domain, privacy: .public) errorCode=\(nsError.code)"
+    static func recordHash(_ recordID: CKRecord.ID) -> String {
+        return identifierHash(
+            [
+                recordID.recordName,
+                recordID.zoneID.zoneName,
+                recordID.zoneID.ownerName
+            ].joined(separator: "|")
         )
-#endif
+    }
+
+    static func metadataHash(_ metadata: any CalendarSharingShareMetadata) -> String {
+        let participantIDs = metadata.share.participants
+            .map(\.participantID)
+            .sorted()
+            .joined(separator: "|")
+        return identifierHash(
+            [
+                metadata.containerIdentifier,
+                metadata.share.recordID.recordName,
+                metadata.share.recordID.zoneID.zoneName,
+                metadata.share.recordID.zoneID.ownerName,
+                participantIDs
+            ].joined(separator: "|")
+        )
     }
 }
 
 enum CalendarSharingCloudSchema {
-    static let zoneName = "TimeNestSharedCalendar"
+    static let zoneNamePrefix = "TimeNestSharedCalendar."
     static let calendarRecordType = "SharedCalendar"
     static let eventRecordType = "SharedEvent"
     static let shiftRecordType = "SharedShift"
     static let workRecordType = "SharedWorkRecord"
     static let calendarRecordName = "calendar"
+    static let schemaVersion = 3
 
     enum CalendarField {
-        static let displayName = "displayName"
+        static let calendarID = "calendarID"
         static let calendarName = "calendarName"
         static let updatedAt = "updatedAt"
-        static let sharesEvents = "sharesEvents"
-        static let sharesShifts = "sharesShifts"
-        static let sharesWorkRecords = "sharesWorkRecords"
         static let schemaVersion = "schemaVersion"
     }
 
@@ -542,40 +559,47 @@ enum CalendarSharingCloudSchema {
         static let updatedAt = "updatedAt"
     }
 
-    static func contentConfiguration(from record: CKRecord) -> SharedContentConfiguration {
-        SharedContentConfiguration(
-            sharesEvents: (record[CalendarField.sharesEvents] as? NSNumber)?.boolValue ?? true,
-            sharesShifts: (record[CalendarField.sharesShifts] as? NSNumber)?.boolValue ?? false,
-            sharesWorkRecords: (record[CalendarField.sharesWorkRecords] as? NSNumber)?.boolValue ?? false,
-            schemaVersion: (record[CalendarField.schemaVersion] as? NSNumber)?.intValue ?? 1
+    static func zoneName(for calendarID: UUID) -> String {
+        zoneNamePrefix + calendarID.uuidString.lowercased()
+    }
+
+    static func calendarID(from zoneName: String) -> UUID? {
+        guard zoneName.hasPrefix(zoneNamePrefix) else { return nil }
+        return UUID(uuidString: String(zoneName.dropFirst(zoneNamePrefix.count)))
+    }
+
+    static func apply(calendarID: UUID, name: String, to record: CKRecord) {
+        record[CalendarField.calendarID] = calendarID.uuidString as CKRecordValue
+        record[CalendarField.calendarName] = name as CKRecordValue
+        record[CalendarField.updatedAt] = Date() as CKRecordValue
+        record[CalendarField.schemaVersion] = NSNumber(value: schemaVersion)
+    }
+
+    static func receivedDescriptor(
+        from root: CKRecord,
+        zoneID: CKRecordZone.ID,
+        participantCount: Int
+    ) -> SharedCalendarDescriptor? {
+        guard let idValue = root[CalendarField.calendarID] as? String,
+              let id = UUID(uuidString: idValue),
+              let name = normalizedName(root[CalendarField.calendarName] as? String) else {
+            return nil
+        }
+        return SharedCalendarDescriptor(
+            id: id,
+            zoneName: zoneID.zoneName,
+            ownerName: zoneID.ownerName,
+            calendarName: name,
+            participantCount: participantCount,
+            kind: .sharedReceived,
+            rootRecordName: root.recordID.recordName,
+            shareRecordName: CKRecordNameZoneWideShare
         )
     }
 
-    static func apply(_ content: SharedContentConfiguration, to record: CKRecord) {
-        record[CalendarField.sharesEvents] = NSNumber(value: content.sharesEvents)
-        record[CalendarField.sharesShifts] = NSNumber(value: content.sharesShifts)
-        record[CalendarField.sharesWorkRecords] = NSNumber(value: content.sharesWorkRecords)
-        record[CalendarField.schemaVersion] = NSNumber(value: content.schemaVersion)
-    }
-
-    static func compatibleNames(from record: CKRecord) -> (displayName: String?, calendarName: String?) {
-        let storedDisplayName = normalizedName(record[CalendarField.displayName] as? String)
-        let storedCalendarName = normalizedName(record[CalendarField.calendarName] as? String)
-        let calendarName = storedCalendarName ?? storedDisplayName
-        let displayName = storedDisplayName ?? calendarName
-        return (displayName, calendarName)
-    }
-
     static func normalizedName(_ value: String?) -> String? {
-        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !value.isEmpty else {
-            return nil
-        }
-        return value
-    }
-
-    static func identity(for zoneID: CKRecordZone.ID) -> String {
-        Data("\(zoneID.ownerName)\u{1F}\(zoneID.zoneName)".utf8).base64EncodedString()
+        let value = value?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value?.isEmpty == false ? value : nil
     }
 }
 
@@ -585,10 +609,10 @@ enum CalendarSharingCloudRecordFactory {
         recordID: CKRecord.ID,
         existingRecord: CKRecord? = nil
     ) -> CKRecord {
-        let record = makeContentRecord(
-            recordType: CalendarSharingCloudSchema.eventRecordType,
-            recordID: recordID,
-            existingRecord: existingRecord
+        let record = contentRecord(
+            type: CalendarSharingCloudSchema.eventRecordType,
+            id: recordID,
+            existing: existingRecord
         )
         record[CalendarSharingCloudSchema.EventField.eventID] = snapshot.id.uuidString as CKRecordValue
         record[CalendarSharingCloudSchema.EventField.title] = snapshot.title as CKRecordValue
@@ -604,10 +628,10 @@ enum CalendarSharingCloudRecordFactory {
         recordID: CKRecord.ID,
         existingRecord: CKRecord? = nil
     ) -> CKRecord {
-        let record = makeContentRecord(
-            recordType: CalendarSharingCloudSchema.shiftRecordType,
-            recordID: recordID,
-            existingRecord: existingRecord
+        let record = contentRecord(
+            type: CalendarSharingCloudSchema.shiftRecordType,
+            id: recordID,
+            existing: existingRecord
         )
         record[CalendarSharingCloudSchema.ShiftField.shiftID] = snapshot.id.uuidString as CKRecordValue
         record[CalendarSharingCloudSchema.ShiftField.registeredDate] = snapshot.registeredDate as CKRecordValue
@@ -625,10 +649,10 @@ enum CalendarSharingCloudRecordFactory {
         recordID: CKRecord.ID,
         existingRecord: CKRecord? = nil
     ) -> CKRecord {
-        let record = makeContentRecord(
-            recordType: CalendarSharingCloudSchema.workRecordType,
-            recordID: recordID,
-            existingRecord: existingRecord
+        let record = contentRecord(
+            type: CalendarSharingCloudSchema.workRecordType,
+            id: recordID,
+            existing: existingRecord
         )
         record[CalendarSharingCloudSchema.WorkRecordField.workRecordID] = snapshot.id.uuidString as CKRecordValue
         record[CalendarSharingCloudSchema.WorkRecordField.workDate] = snapshot.workDate as CKRecordValue
@@ -644,115 +668,18 @@ enum CalendarSharingCloudRecordFactory {
         CKShare(recordZoneID: recordZoneID)
     }
 
-    private static func makeContentRecord(
-        recordType: CKRecord.RecordType,
-        recordID: CKRecord.ID,
-        existingRecord: CKRecord?
+    private static func contentRecord(
+        type: CKRecord.RecordType,
+        id: CKRecord.ID,
+        existing: CKRecord?
     ) -> CKRecord {
-        guard let existingRecord,
-              existingRecord.parent == nil,
-              existingRecord.recordID == recordID,
-              existingRecord.recordType == recordType else {
-            return CKRecord(recordType: recordType, recordID: recordID)
+        guard let existing,
+              existing.recordID == id,
+              existing.recordType == type,
+              existing.parent == nil else {
+            return CKRecord(recordType: type, recordID: id)
         }
-        return existingRecord
-    }
-}
-
-@MainActor
-protocol CalendarSharingContentRecordDatabase {
-    func save(_ records: [CKRecord]) async throws
-    func delete(_ recordIDs: [CKRecord.ID]) async throws
-}
-
-@MainActor
-private struct CloudKitContentRecordDatabase: CalendarSharingContentRecordDatabase {
-    let database: CKDatabase
-
-    func save(_ records: [CKRecord]) async throws {
-        let result = try await database.modifyRecords(
-            saving: records,
-            deleting: [],
-            savePolicy: .changedKeys,
-            atomically: false
-        )
-        try validate(result.saveResults)
-    }
-
-    func delete(_ recordIDs: [CKRecord.ID]) async throws {
-        let result = try await database.modifyRecords(
-            saving: [],
-            deleting: recordIDs,
-            savePolicy: .ifServerRecordUnchanged,
-            atomically: false
-        )
-        try validate(result.deleteResults)
-    }
-
-    private func validate<Key, Value>(_ results: [Key: Result<Value, Error>]) throws {
-        for result in results.values {
-            _ = try result.get()
-        }
-    }
-}
-
-@MainActor
-struct CalendarSharingContentRecordPlanExecutor {
-    let database: any CalendarSharingContentRecordDatabase
-
-    func execute(
-        _ plan: CalendarSharingContentRecordPlan,
-        migrationStageName: String
-    ) async throws {
-        try await migrate(
-            stage: "migrate_\(migrationStageName)_delete",
-            recordType: plan.recordType,
-            count: plan.legacyRecordIDsToDelete.count
-        ) {
-            for batch in plan.legacyRecordIDsToDelete.chunked(maxCount: 200) {
-                try await database.delete(batch)
-            }
-        }
-        try await migrate(
-            stage: "migrate_\(migrationStageName)_recreate",
-            recordType: plan.recordType,
-            count: plan.recordsToRecreate.count
-        ) {
-            for batch in plan.recordsToRecreate.chunked(maxCount: 200) {
-                try await database.save(batch)
-            }
-        }
-        for batch in plan.recordsToSave.chunked(maxCount: 200) {
-            try await database.save(batch)
-        }
-        for batch in plan.ordinaryRecordIDsToDelete.chunked(maxCount: 200) {
-            try await database.delete(batch)
-        }
-    }
-
-    private func migrate(
-        stage: String,
-        recordType: CKRecord.RecordType,
-        count: Int,
-        operation: () async throws -> Void
-    ) async throws {
-        guard count > 0 else { return }
-        do {
-            try await operation()
-            CalendarSharingDiagnostics.contentRecordStageSucceeded(
-                stage: stage,
-                recordType: recordType,
-                count: count
-            )
-        } catch {
-            CalendarSharingDiagnostics.contentRecordStageFailed(
-                stage: stage,
-                recordType: recordType,
-                count: count,
-                error: error
-            )
-            throw error
-        }
+        return existing
     }
 }
 
@@ -762,66 +689,21 @@ enum CalendarSharingErrorMapper {
         context: CalendarSharingErrorContext = .general
     ) -> CalendarSharingError {
         let codes = cloudErrors(in: error).map(\.code)
-        guard !codes.isEmpty else {
-            return fallbackError(for: context)
-        }
-
+        if codes.contains(.notAuthenticated) { return .noICloudAccount }
         if codes.contains(.missingEntitlement) || codes.contains(.badContainer)
-            || codes.contains(.managedAccountRestricted) {
-            return .iCloudRestricted
+            || codes.contains(.managedAccountRestricted) { return .iCloudRestricted }
+        if codes.contains(.permissionFailure) { return .permissionDenied }
+        if codes.contains(.participantMayNeedVerification) { return .invitationPending }
+        if codes.contains(where: retryableCodes.contains) { return .networkUnavailable }
+        if context == .acceptingInvitation,
+           codes.contains(where: { $0 == .unknownItem || $0 == .userDeletedZone || $0 == .zoneNotFound }) {
+            return .invitationRevoked
         }
-        if codes.contains(.notAuthenticated) {
-            return .noICloudAccount
-        }
-        if codes.contains(.accountTemporarilyUnavailable)
-            || codes.contains(.networkUnavailable)
-            || codes.contains(.networkFailure)
-            || codes.contains(.serviceUnavailable)
-            || codes.contains(.requestRateLimited)
-            || codes.contains(.zoneBusy)
-            || codes.contains(.serverResponseLost) {
-            return .networkUnavailable
-        }
-        if codes.contains(.participantMayNeedVerification) {
-            return .invitationPending
-        }
-        if codes.contains(.permissionFailure) {
-            return .permissionDenied
-        }
-        return fallbackError(for: context)
-    }
-
-    static func map(
-        code: CKError.Code,
-        context: CalendarSharingErrorContext = .general
-    ) -> CalendarSharingError {
-        switch code {
-        case .notAuthenticated:
-            return .noICloudAccount
-        case .managedAccountRestricted, .missingEntitlement, .badContainer:
-            return .iCloudRestricted
-        case .accountTemporarilyUnavailable, .networkUnavailable, .networkFailure, .serviceUnavailable,
-             .requestRateLimited, .zoneBusy, .serverResponseLost:
-            return .networkUnavailable
-        case .participantMayNeedVerification:
-            return .invitationPending
-        case .permissionFailure:
-            return .permissionDenied
-        default:
-            return fallbackError(for: context)
-        }
-    }
-
-    private static func fallbackError(
-        for context: CalendarSharingErrorContext
-    ) -> CalendarSharingError {
         switch context {
-        case .general:
-            .syncFailed
-        case .creatingShare:
-            .shareCreationFailed
-        case .creatingInvitation:
-            .invitationCreationFailed
+        case .general: return .syncFailed
+        case .creatingShare: return .shareCreationFailed
+        case .creatingInvitation: return .invitationCreationFailed
+        case .acceptingInvitation: return .syncFailed
         }
     }
 
@@ -829,107 +711,42 @@ enum CalendarSharingErrorMapper {
         error is CancellationError || cloudErrors(in: error).contains { $0.code == .operationCancelled }
     }
 
+    static func isRetryable(_ error: Error) -> Bool {
+        cloudErrors(in: error).contains { retryableCodes.contains($0.code) }
+    }
+
     static func isMissingOrInaccessibleSharedZone(_ error: Error) -> Bool {
-        let leafCodes = cloudErrors(in: error)
-            .map(\.code)
-            .filter { $0 != .partialFailure }
-        guard !leafCodes.isEmpty else { return false }
-        return leafCodes.allSatisfy {
-            $0 == .unknownItem || $0 == .userDeletedZone
-        }
-    }
-
-    static func shouldTreatMissingQueriedRecordTypeAsEmpty(_ error: Error) -> Bool {
-        let leafCodes = cloudErrors(in: error)
-            .map(\.code)
-            .filter { $0 != .partialFailure }
-        return !leafCodes.isEmpty && leafCodes.allSatisfy { $0 == .unknownItem }
-    }
-
-    static func cloudErrorCodeSummary(_ error: Error) -> String {
-        let codes = cloudErrors(in: error).map {
-            "\(cloudErrorCodeName($0.code))(\($0.code.rawValue))"
-        }
-        return codes.isEmpty ? "none" : Array(Set(codes)).sorted().joined(separator: ",")
+        let codes = cloudErrors(in: error).map(\.code).filter { $0 != .partialFailure }
+        return !codes.isEmpty && codes.allSatisfy { $0 == .unknownItem || $0 == .userDeletedZone || $0 == .zoneNotFound }
     }
 
     static func cloudErrorCodes(in error: Error) -> [CKError.Code] {
         cloudErrors(in: error).map(\.code)
     }
 
-    static func cloudErrorCodeName(_ code: CKError.Code) -> String {
-        switch code {
-        case .internalError: "internalError"
-        case .partialFailure: "partialFailure"
-        case .networkUnavailable: "networkUnavailable"
-        case .networkFailure: "networkFailure"
-        case .badContainer: "badContainer"
-        case .serviceUnavailable: "serviceUnavailable"
-        case .requestRateLimited: "requestRateLimited"
-        case .missingEntitlement: "missingEntitlement"
-        case .notAuthenticated: "notAuthenticated"
-        case .permissionFailure: "permissionFailure"
-        case .unknownItem: "unknownItem"
-        case .invalidArguments: "invalidArguments"
-        case .resultsTruncated: "resultsTruncated"
-        case .serverRecordChanged: "serverRecordChanged"
-        case .serverRejectedRequest: "serverRejectedRequest"
-        case .assetFileNotFound: "assetFileNotFound"
-        case .assetFileModified: "assetFileModified"
-        case .incompatibleVersion: "incompatibleVersion"
-        case .constraintViolation: "constraintViolation"
-        case .operationCancelled: "operationCancelled"
-        case .changeTokenExpired: "changeTokenExpired"
-        case .batchRequestFailed: "batchRequestFailed"
-        case .zoneBusy: "zoneBusy"
-        case .badDatabase: "badDatabase"
-        case .quotaExceeded: "quotaExceeded"
-        case .zoneNotFound: "zoneNotFound"
-        case .limitExceeded: "limitExceeded"
-        case .userDeletedZone: "userDeletedZone"
-        case .tooManyParticipants: "tooManyParticipants"
-        case .alreadyShared: "alreadyShared"
-        case .referenceViolation: "referenceViolation"
-        case .managedAccountRestricted: "managedAccountRestricted"
-        case .participantMayNeedVerification: "participantMayNeedVerification"
-        case .serverResponseLost: "serverResponseLost"
-        case .assetNotAvailable: "assetNotAvailable"
-        case .accountTemporarilyUnavailable: "accountTemporarilyUnavailable"
-        case .participantAlreadyInvited: "participantAlreadyInvited"
-        @unknown default: "unknown"
-        }
-    }
-
-    static func diagnosticSummary(_ error: Error) -> String {
-        let cloudErrors = cloudErrors(in: error)
-        let rootDomain = (error as NSError).domain
-        let domains = Set(cloudErrors.map { ($0 as NSError).domain })
-        let leafCodes = cloudErrors
-            .filter { $0.code != .partialFailure }
-            .map { "\(cloudErrorCodeName($0.code))(\($0.code.rawValue))" }
-        return [
-            "errorDomain=\(rootDomain)",
-            "errorDomains=\(domains.sorted().joined(separator: ","))",
-            "ckErrorCodes=\(cloudErrorCodeSummary(error))",
-            "leafErrorCodes=\(leafCodes.isEmpty ? "none" : Array(Set(leafCodes)).sorted().joined(separator: ","))",
-            "serverMessage=omitted"
-        ].joined(separator: " ")
-    }
-
     static func shouldRestartZoneChangesFromBeginning(_ error: Error, alreadyRetried: Bool) -> Bool {
         !alreadyRetried && cloudErrorCodes(in: error).contains(.changeTokenExpired)
     }
 
+    static func diagnosticSummary(_ error: Error) -> String {
+        let nsError = error as NSError
+        let codes = Set(cloudErrorCodes(in: error).map(\.rawValue)).sorted()
+        return "errorDomain=\(nsError.domain) errorCode=\(nsError.code) ckErrorCodes=\(codes) serverMessage=omitted"
+    }
+
+    private static let retryableCodes: Set<CKError.Code> = [
+        .accountTemporarilyUnavailable, .networkUnavailable, .networkFailure,
+        .serviceUnavailable, .requestRateLimited, .zoneBusy, .serverResponseLost
+    ]
+
     private static func cloudErrors(in error: Error) -> [CKError] {
         guard let cloudError = error as? CKError else { return [] }
         guard cloudError.code == .partialFailure,
-              let partialErrors = cloudError.userInfo[CKPartialErrorsByItemIDKey]
-                as? [AnyHashable: Error] else {
+              let partial = cloudError.userInfo[CKPartialErrorsByItemIDKey] as? [AnyHashable: Error] else {
             return [cloudError]
         }
-        return [cloudError] + partialErrors.values.flatMap(cloudErrors(in:))
+        return [cloudError] + partial.values.flatMap(cloudErrors(in:))
     }
-
 }
 
 @MainActor
@@ -942,881 +759,516 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         self.container = container
     }
 
-    func verifyAccountAvailability() async throws {
-        do {
-            let status = try await container.accountStatus()
-            CalendarSharingDiagnostics.debug(
-                operation: "accountStatus",
-                stage: "completed",
-                database: "container",
-                details: "accountStatus=\(accountStatusName(status))"
-            )
-            switch status {
-            case .available:
-                return
-            case .noAccount:
-                throw CalendarSharingError.noICloudAccount
-            case .temporarilyUnavailable, .couldNotDetermine:
-                throw CalendarSharingError.networkUnavailable
-            case .restricted:
-                throw CalendarSharingError.iCloudRestricted
-            @unknown default:
-                throw CalendarSharingError.syncFailed
-            }
-        } catch let error as CalendarSharingError {
-            throw error
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            CalendarSharingDiagnostics.error(
-                operation: "accountStatus",
-                stage: "failed",
-                database: "container",
-                error: error
-            )
-            throw CalendarSharingErrorMapper.map(error)
-        }
-    }
-
-    func ownedCalendarState() async throws -> OwnedSharedCalendarCloudState? {
+    func fetchOwnedCalendars() async throws -> [OwnedSharedCalendarCloudState] {
         try await verifyAccountAvailability()
-        let zoneID = ownedZoneID
-        let calendarID = CKRecord.ID(
-            recordName: CalendarSharingCloudSchema.calendarRecordName,
-            zoneID: zoneID
-        )
-        let shareID = CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: zoneID)
-
-        do {
-            guard let calendarRecord = try await optionalRecord(calendarID, database: privateDatabase),
-                  let share = try await optionalRecord(shareID, database: privateDatabase) as? CKShare else {
-                CalendarSharingDiagnostics.debug(
-                    operation: "refreshOwnedCalendar",
-                    stage: "completed",
-                    database: "private",
-                    details: "rootSaved=false shareSaved=false"
-                )
-                CalendarSharingDiagnostics.debug(
-                    operation: "refreshOwnedParticipants",
-                    stage: "completed",
-                    database: "private",
-                    details: "participantCount=0 acceptedCount=0 pendingCount=0 displayableCount=0"
-                )
-                return nil
+        let zones = try await privateDatabase.allRecordZones()
+        var states: [OwnedSharedCalendarCloudState] = []
+        for zone in zones where CalendarSharingCloudSchema.calendarID(from: zone.zoneID.zoneName) != nil {
+            if let state = try await ownedState(zoneID: zone.zoneID) {
+                states.append(state)
             }
-            let names = CalendarSharingCloudSchema.compatibleNames(from: calendarRecord)
-            let participantSummary = OwnedCalendarParticipantSnapshotAssembler.make(from: share)
-            let state = OwnedSharedCalendarCloudState(
-                calendar: OwnedSharedCalendarDescriptor(
-                    displayName: names.displayName ?? "",
-                    calendarName: names.calendarName ?? "",
-                    participantCount: participantSummary.snapshots.count,
-                    contentConfiguration: CalendarSharingCloudSchema.contentConfiguration(from: calendarRecord)
-                ),
-                share: share,
-                participants: participantSummary.snapshots
-            )
-            for diagnostic in participantSummary.diagnostics {
-                CalendarSharingDiagnostics.debug(
-                    operation: "refreshOwnedParticipants",
-                    stage: "participant",
-                    database: "private",
-                    details: "role=\(diagnostic.role) acceptanceStatus=\(diagnostic.acceptanceStatus) hasName=\(diagnostic.hasName) hasEmail=\(diagnostic.hasEmail)"
-                )
-            }
-            CalendarSharingDiagnostics.debug(
-                operation: "refreshOwnedParticipants",
-                stage: "completed",
-                database: "private",
-                details: "participantCount=\(participantSummary.participantCount) acceptedCount=\(participantSummary.acceptedCount) pendingCount=\(participantSummary.pendingCount) displayableCount=\(participantSummary.snapshots.count)"
-            )
-            CalendarSharingDiagnostics.debug(
-                operation: "refreshOwnedCalendar",
-                stage: "completed",
-                database: "private",
-                details: "rootSaved=true shareSaved=true"
-            )
-            return state
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            CalendarSharingDiagnostics.error(
-                operation: "refreshOwnedCalendar",
-                stage: "fetch_records",
-                database: "private",
-                error: error
-            )
-            throw CalendarSharingErrorMapper.map(error)
+        }
+        return states.sorted {
+            $0.calendar.calendarName.localizedCaseInsensitiveCompare($1.calendar.calendarName) == .orderedAscending
         }
     }
 
     func createShare(
-        displayName: String,
+        calendarID: UUID,
         calendarName: String,
-        content: SharedContentConfiguration,
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
     ) async throws -> OwnedSharingInvitationResult {
-        guard content.hasSelectedContent else {
-            throw CalendarSharingError.contentSelectionRequired
-        }
         try await verifyAccountAvailability()
-        var stage = "ensure_zone"
+        let zoneID = ownedZoneID(calendarID: calendarID)
         do {
-            try await ensureOwnedZone()
-            CalendarSharingDiagnostics.debug(
-                operation: "createShare",
-                stage: stage,
-                database: "private",
-                details: "zoneReady=true"
-            )
-
-            stage = "save_root"
-            let calendarID = CKRecord.ID(
+            try await ensureZone(zoneID)
+            let rootID = CKRecord.ID(
                 recordName: CalendarSharingCloudSchema.calendarRecordName,
-                zoneID: ownedZoneID
+                zoneID: zoneID
             )
-            let calendarRecord = try await optionalRecord(calendarID, database: privateDatabase)
-                ?? CKRecord(recordType: CalendarSharingCloudSchema.calendarRecordType, recordID: calendarID)
-            let existingDisplayName = CalendarSharingCloudSchema.normalizedName(
-                calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] as? String
+            let root = CKRecord(
+                recordType: CalendarSharingCloudSchema.calendarRecordType,
+                recordID: rootID
             )
-            let internalDisplayName = existingDisplayName ?? displayName
-            calendarRecord[CalendarSharingCloudSchema.CalendarField.displayName] = internalDisplayName as CKRecordValue
-            calendarRecord[CalendarSharingCloudSchema.CalendarField.calendarName] = calendarName as CKRecordValue
-            calendarRecord[CalendarSharingCloudSchema.CalendarField.updatedAt] = Date() as CKRecordValue
-            CalendarSharingCloudSchema.apply(content, to: calendarRecord)
-
-            let calendarResult = try await privateDatabase.modifyRecords(
-                saving: [calendarRecord],
-                deleting: [],
-                savePolicy: .changedKeys,
-                atomically: true
-            )
-            try validate(calendarResult.saveResults)
-            CalendarSharingDiagnostics.debug(
-                operation: "createShare",
-                stage: stage,
-                database: "private",
-                details: "rootSaved=true"
-            )
-
-            stage = "save_content"
-            try await replaceOwnedContent(
-                content: content,
+            CalendarSharingCloudSchema.apply(calendarID: calendarID, name: calendarName, to: root)
+            _ = try await save([root], in: privateDatabase, atomically: true)
+            try await replaceContent(
+                zoneID: zoneID,
                 events: events,
                 shifts: shifts,
                 workRecords: workRecords
             )
-            CalendarSharingDiagnostics.debug(
-                operation: "createShare",
-                stage: stage,
-                database: "private",
-                details: "events=\(events.count) shifts=\(shifts.count) workRecords=\(workRecords.count)"
-            )
 
-            stage = "save_share"
-            let shareID = CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: ownedZoneID)
-            let share = (try await optionalRecord(shareID, database: privateDatabase) as? CKShare)
-                ?? CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: ownedZoneID)
-            share.publicPermission = .none
-            for participant in share.participants where participant.role != .owner {
-                participant.permission = .readOnly
-            }
+            let share = CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: zoneID)
             share[CKShare.SystemFieldKey.title] = calendarName as CKRecordValue
             let invitation = OneTimeSharingInvitation.prepare(on: share)
-
-            let result = try await privateDatabase.modifyRecords(
-                saving: [share],
-                deleting: [],
-                savePolicy: .changedKeys,
-                atomically: true
+            CalendarSharingDiagnostics.debug(
+                operation: "invite",
+                stage: "participant-created",
+                database: "private",
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(calendarID.uuidString)) "
+                    + "zoneHash=\(CalendarSharingDiagnostics.identifierHash(zoneID.zoneName)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(share.recordID)) "
+                    + "participantHash=\(CalendarSharingDiagnostics.identifierHash(invitation.participantID))"
             )
-            try validate(result.saveResults)
-            guard let saved = try result.saveResults[share.recordID]?.get() as? CKShare else {
+            _ = try await save([share], in: privateDatabase, atomically: true)
+            CalendarSharingDiagnostics.debug(
+                operation: "invite",
+                stage: "share-saved",
+                database: "private",
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(calendarID.uuidString)) "
+                    + "zoneHash=\(CalendarSharingDiagnostics.identifierHash(zoneID.zoneName)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(share.recordID))"
+            )
+            guard let state = try await ownedState(zoneID: zoneID) else {
                 throw CalendarSharingError.shareCreationFailed
             }
-            let participantSummary = OwnedCalendarParticipantSnapshotAssembler.make(from: saved)
-            let state = OwnedSharedCalendarCloudState(
-                calendar: OwnedSharedCalendarDescriptor(
-                    displayName: internalDisplayName,
-                    calendarName: calendarName,
-                    participantCount: participantSummary.snapshots.count,
-                    contentConfiguration: content
-                ),
-                share: saved,
-                participants: participantSummary.snapshots
+            let result = OwnedSharingInvitationResultFactory.make(
+                state: state,
+                invitation: invitation
             )
             CalendarSharingDiagnostics.debug(
-                operation: "createShare",
-                stage: stage,
+                operation: "invite",
+                stage: "share-refetched",
                 database: "private",
-                details: "shareSaved=true participantCount=\(state.calendar.participantCount)"
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(calendarID.uuidString)) "
+                    + "zoneHash=\(CalendarSharingDiagnostics.identifierHash(zoneID.zoneName)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(state.share.recordID)) "
+                    + "participantHash=\(CalendarSharingDiagnostics.identifierHash(invitation.participantID)) "
+                    + "shareURLAvailable=\(result.invitationURL != nil)"
             )
-            return OwnedSharingInvitationResult(
-                state: state,
-                invitationURL: invitation.url(in: saved)
-            )
-        } catch let error as CalendarSharingError {
-            throw error
+            return result
         } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            CalendarSharingDiagnostics.error(
-                operation: "createShare",
-                stage: stage,
-                database: "private",
-                error: error
-            )
+            try? await deleteZone(zoneID)
+            if CalendarSharingErrorMapper.isCancellation(error) { throw CancellationError() }
+            if let error = error as? CalendarSharingError { throw error }
             throw CalendarSharingErrorMapper.map(error, context: .creatingShare)
         }
     }
 
-    func createOwnedInvitation() async throws -> OwnedSharingInvitationResult {
+    func createInvitation(
+        for calendar: OwnedSharedCalendarDescriptor
+    ) async throws -> OwnedSharingInvitationResult {
         try await verifyAccountAvailability()
-        guard let currentState = try await ownedCalendarState() else {
-            throw CalendarSharingError.shareUnavailable
-        }
-
-        let stage = "save_share"
+        let zoneID = CKRecordZone.ID(zoneName: calendar.zoneName, ownerName: calendar.ownerName)
+        let shareID = CKRecord.ID(recordName: calendar.shareRecordName, zoneID: zoneID)
         do {
-            let share = currentState.share
-            share.publicPermission = .none
-            for participant in share.participants where participant.role != .owner {
-                participant.permission = .readOnly
+            guard let share = try await optionalRecord(shareID, database: privateDatabase) as? CKShare else {
+                throw CalendarSharingError.shareUnavailable
             }
-            let invitation = OneTimeSharingInvitation.prepare(on: share)
-            let result = try await privateDatabase.modifyRecords(
-                saving: [share],
-                deleting: [],
-                savePolicy: .changedKeys,
-                atomically: true
+            CalendarSharingDiagnostics.debug(
+                operation: "invite",
+                stage: "share-fetched",
+                database: "private",
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(calendar.id.uuidString)) "
+                    + "zoneHash=\(CalendarSharingDiagnostics.identifierHash(zoneID.zoneName)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(share.recordID))"
             )
-            try validate(result.saveResults)
-            guard let saved = try result.saveResults[share.recordID]?.get() as? CKShare else {
-                throw CalendarSharingError.invitationCreationFailed
+            let invitation = OneTimeSharingInvitation.prepare(on: share)
+            CalendarSharingDiagnostics.debug(
+                operation: "invite",
+                stage: "participant-created",
+                database: "private",
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(calendar.id.uuidString)) "
+                    + "zoneHash=\(CalendarSharingDiagnostics.identifierHash(zoneID.zoneName)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(share.recordID)) "
+                    + "participantHash=\(CalendarSharingDiagnostics.identifierHash(invitation.participantID))"
+            )
+            _ = try await save([share], in: privateDatabase, atomically: true)
+            CalendarSharingDiagnostics.debug(
+                operation: "invite",
+                stage: "share-saved",
+                database: "private",
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(calendar.id.uuidString)) "
+                    + "zoneHash=\(CalendarSharingDiagnostics.identifierHash(zoneID.zoneName)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(share.recordID))"
+            )
+            guard let state = try await ownedState(zoneID: zoneID) else {
+                throw CalendarSharingError.shareUnavailable
             }
-
-            var calendar = currentState.calendar
-            let participantSummary = OwnedCalendarParticipantSnapshotAssembler.make(from: saved)
-            calendar.participantCount = participantSummary.snapshots.count
-            let state = OwnedSharedCalendarCloudState(
-                calendar: calendar,
-                share: saved,
-                participants: participantSummary.snapshots
+            let result = OwnedSharingInvitationResultFactory.make(
+                state: state,
+                invitation: invitation
             )
             CalendarSharingDiagnostics.debug(
-                operation: "createInvitation",
-                stage: stage,
+                operation: "invite",
+                stage: "share-refetched",
                 database: "private",
-                details: "shareSaved=true participantCount=\(state.calendar.participantCount)"
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(calendar.id.uuidString)) "
+                    + "zoneHash=\(CalendarSharingDiagnostics.identifierHash(zoneID.zoneName)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(state.share.recordID)) "
+                    + "participantHash=\(CalendarSharingDiagnostics.identifierHash(invitation.participantID)) "
+                    + "shareURLAvailable=\(result.invitationURL != nil)"
             )
-            return OwnedSharingInvitationResult(
-                state: state,
-                invitationURL: invitation.url(in: saved)
-            )
-        } catch let error as CalendarSharingError {
-            throw error
+            return result
         } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            CalendarSharingDiagnostics.error(
-                operation: "createInvitation",
-                stage: stage,
-                database: "private",
-                error: error
-            )
+            if let error = error as? CalendarSharingError { throw error }
             throw CalendarSharingErrorMapper.map(error, context: .creatingInvitation)
         }
     }
 
     func synchronizeOwnedContent(
-        content: SharedContentConfiguration,
+        calendar: OwnedSharedCalendarDescriptor,
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
     ) async throws {
         try await verifyAccountAvailability()
-        guard try await ownedCalendarState() != nil else { return }
-
-        do {
-            try await replaceOwnedContent(
-                content: content,
-                events: events,
-                shifts: shifts,
-                workRecords: workRecords
-            )
-            CalendarSharingDiagnostics.debug(
-                operation: "synchronizeOwnedContent",
-                stage: "completed",
-                database: "private",
-                details: "events=\(events.count) shifts=\(shifts.count) workRecords=\(workRecords.count)"
-            )
-        } catch let error as CalendarSharingError {
-            throw error
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            CalendarSharingDiagnostics.error(
-                operation: "synchronizeOwnedContent",
-                stage: "save_content",
-                database: "private",
-                error: error
-            )
-            throw CalendarSharingErrorMapper.map(error)
-        }
+        let zoneID = CKRecordZone.ID(zoneName: calendar.zoneName, ownerName: calendar.ownerName)
+        try await replaceContent(
+            zoneID: zoneID,
+            events: events,
+            shifts: shifts,
+            workRecords: workRecords
+        )
     }
 
-    func updateOwnedSharing(
-        content: SharedContentConfiguration,
-        events: [SharedEventSnapshot],
-        shifts: [SharedShiftSnapshot],
-        workRecords: [SharedWorkRecordSnapshot]
+    func revokePendingInvitation(
+        for calendar: OwnedSharedCalendarDescriptor,
+        participantID: CKShare.Participant.ID
     ) async throws -> OwnedSharedCalendarCloudState {
-        guard content.hasSelectedContent else {
-            throw CalendarSharingError.contentSelectionRequired
-        }
-        try await verifyAccountAvailability()
-        guard let currentState = try await ownedCalendarState() else {
+        let zoneID = CKRecordZone.ID(zoneName: calendar.zoneName, ownerName: calendar.ownerName)
+        let shareID = CKRecord.ID(recordName: calendar.shareRecordName, zoneID: zoneID)
+        guard let share = try await optionalRecord(shareID, database: privateDatabase) as? CKShare else {
             throw CalendarSharingError.shareUnavailable
         }
-
-        do {
-            // Content records are reconciled before the root flags become visible to recipients.
-            // If a partial deletion fails, the saved configuration and local data stay unchanged.
-            try await replaceOwnedContent(
-                content: content,
-                events: events,
-                shifts: shifts,
-                workRecords: workRecords
-            )
-            let calendarID = CKRecord.ID(
-                recordName: CalendarSharingCloudSchema.calendarRecordName,
-                zoneID: ownedZoneID
-            )
-            guard let calendarRecord = try await optionalRecord(calendarID, database: privateDatabase) else {
+        guard let participant = share.participants.first(where: {
+            $0.participantID == participantID && $0.role != .owner
+        }) else {
+            guard let state = try await ownedState(zoneID: zoneID) else {
                 throw CalendarSharingError.shareUnavailable
             }
-            CalendarSharingCloudSchema.apply(content, to: calendarRecord)
-            calendarRecord[CalendarSharingCloudSchema.CalendarField.updatedAt] = Date() as CKRecordValue
-            let result = try await privateDatabase.modifyRecords(
-                saving: [calendarRecord],
-                deleting: [],
-                savePolicy: .changedKeys,
-                atomically: true
-            )
-            try validate(result.saveResults)
-
-            var calendar = currentState.calendar
-            calendar.contentConfiguration = content
-            return OwnedSharedCalendarCloudState(
-                calendar: calendar,
-                share: currentState.share,
-                participants: currentState.participants
-            )
-        } catch let error as CalendarSharingError {
-            throw error
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            CalendarSharingDiagnostics.error(
-                operation: "updateOwnedSharing",
-                stage: "reconcile_content",
-                database: "private",
-                error: error
-            )
-            throw CalendarSharingErrorMapper.map(error)
+            return state
         }
+        guard participant.acceptanceStatus != .accepted else {
+            throw CalendarSharingError.permissionDenied
+        }
+        share.removeParticipant(participant)
+        _ = try await save([share], in: privateDatabase, atomically: true)
+        guard let state = try await ownedState(zoneID: zoneID) else {
+            throw CalendarSharingError.shareUnavailable
+        }
+        return state
+    }
+
+    func renameOwnedCalendar(
+        _ calendar: OwnedSharedCalendarDescriptor,
+        name: String
+    ) async throws {
+        let zoneID = CKRecordZone.ID(zoneName: calendar.zoneName, ownerName: calendar.ownerName)
+        let rootID = CKRecord.ID(recordName: calendar.rootRecordName, zoneID: zoneID)
+        guard let root = try await optionalRecord(rootID, database: privateDatabase) else {
+            throw CalendarSharingError.shareUnavailable
+        }
+        CalendarSharingCloudSchema.apply(calendarID: calendar.id, name: name, to: root)
+        let shareID = CKRecord.ID(recordName: calendar.shareRecordName, zoneID: zoneID)
+        let share = try await optionalRecord(shareID, database: privateDatabase) as? CKShare
+        share?[CKShare.SystemFieldKey.title] = name as CKRecordValue
+        _ = try await save([root] + (share.map { [$0] } ?? []), in: privateDatabase, atomically: true)
     }
 
     func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload] {
         try await verifyAccountAvailability()
-        do {
-            let zones: [CKRecordZone]
-            CalendarSharingDiagnostics.debug(
-                operation: "refreshSharedCalendars",
-                stage: "fetch_zones_started",
-                database: "shared"
-            )
+        let zones = try await sharedDatabase.allRecordZones()
+        var payloads: [ReceivedSharedCalendarPayload] = []
+        for zone in zones where zone.zoneID.zoneName != CKRecordZone.default().zoneID.zoneName {
             do {
-                zones = try await sharedDatabase.allRecordZones()
-                CalendarSharingDiagnostics.debug(
-                    operation: "refreshSharedCalendars",
-                    stage: "fetch_zones_completed",
-                    database: "shared",
-                    details: "sharedZoneCount=\(zones.count)"
+                let records = try await allRecordsFromZoneChanges(
+                    zoneID: zone.zoneID,
+                    database: sharedDatabase
                 )
-            } catch {
-                CalendarSharingDiagnostics.error(
-                    operation: "refreshSharedCalendars",
-                    stage: "fetch_zones_failed",
-                    database: "shared",
-                    error: error
-                )
-                throw error
-            }
-            var payloads: [ReceivedSharedCalendarPayload] = []
-
-            for zone in zones where zone.zoneID.zoneName != CKRecordZone.default().zoneID.zoneName {
-                do {
-                    let records = try await allSharedRecordsFromZoneChanges(zoneID: zone.zoneID)
-                    logSharedRecordClassification(records, zoneID: zone.zoneID)
-                    guard let payload = ReceivedSharedCalendarPayloadAssembler.makePayload(
-                        zoneID: zone.zoneID,
-                        records: records
-                    ) else {
-                        CalendarSharingDiagnostics.debug(
-                            operation: "refreshSharedCalendars",
-                            stage: "fetch_shared_calendar_failed",
-                            database: "shared",
-                            details: "recordType=\(CalendarSharingCloudSchema.calendarRecordType) recordCount=0 zone=\(zone.zoneID.zoneName) reason=missing_root"
-                        )
-                        throw CalendarSharingError.syncFailed
-                    }
+                if let payload = ReceivedSharedCalendarPayloadAssembler.makePayload(
+                    zoneID: zone.zoneID,
+                    records: records
+                ) {
                     payloads.append(payload)
-                } catch {
-                    if CalendarSharingErrorMapper.isMissingOrInaccessibleSharedZone(error)
-                        || CalendarSharingErrorMapper.cloudErrorCodes(in: error).contains(.zoneNotFound) {
-                        CalendarSharingDiagnostics.error(
-                            operation: "refreshSharedCalendars",
-                            stage: "skip_unavailable_zone",
-                            database: "shared",
-                            error: error,
-                            details: "zone=\(zone.zoneID.zoneName)"
-                        )
-                        continue
-                    }
-                    throw error
                 }
+            } catch where CalendarSharingErrorMapper.isMissingOrInaccessibleSharedZone(error) {
+                continue
             }
-
-            let sortedPayloads = payloads.sorted {
-                ($0.calendar.calendarName ?? "").localizedCaseInsensitiveCompare($1.calendar.calendarName ?? "") == .orderedAscending
-            }
-            CalendarSharingDiagnostics.debug(
-                operation: "refreshSharedCalendars",
-                stage: "completed",
-                database: "shared",
-                details: "receivedCount=\(sortedPayloads.count)"
-            )
-            return sortedPayloads
-        } catch let error as CalendarSharingError {
-            throw error
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            CalendarSharingDiagnostics.error(
-                operation: "refreshSharedCalendars",
-                stage: "failed",
-                database: "shared",
-                error: error
-            )
-            throw CalendarSharingErrorMapper.map(error)
+        }
+        return payloads.sorted {
+            $0.calendar.calendarName.localizedCaseInsensitiveCompare($1.calendar.calendarName) == .orderedAscending
         }
     }
 
-    func accept(metadata: CKShare.Metadata) async throws -> String {
+    func accept(metadata: any CalendarSharingShareMetadata) async throws -> String {
+        let containerIdentifierMatched = metadata.containerIdentifier == container.containerIdentifier
+        CalendarSharingDiagnostics.debug(
+            operation: "acceptShare",
+            stage: "metadata-validated",
+            database: "shared",
+            details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
+                + "containerIdentifierMatched=\(containerIdentifierMatched) "
+                + "shareHash=\(CalendarSharingDiagnostics.recordHash(metadata.share.recordID))"
+        )
+        do {
+            try CalendarSharingContainerValidator.validate(
+                metadataContainerIdentifier: metadata.containerIdentifier,
+                configuredContainerIdentifier: container.containerIdentifier
+            )
+        } catch {
+            CalendarSharingDiagnostics.error(
+                operation: "acceptShare",
+                stage: "container-mismatch",
+                database: "shared",
+                error: error,
+                details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
+                    + "containerIdentifierMatched=false"
+            )
+            throw error
+        }
+        if let statusError = CalendarSharingParticipantStatusValidator.error(
+            for: metadata.participantStatus
+        ) {
+            CalendarSharingDiagnostics.debug(
+                operation: "acceptShare",
+                stage: "metadata-rejected",
+                database: "shared",
+                details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
+                    + "shareHash=\(CalendarSharingDiagnostics.recordHash(metadata.share.recordID)) "
+                    + "reason=\(String(describing: statusError))"
+            )
+            throw statusError
+        }
+
         try await verifyAccountAvailability()
-        let calendarID = CalendarSharingCloudSchema.identity(for: metadata.share.recordID.zoneID)
+        let shareHash = CalendarSharingDiagnostics.recordHash(metadata.share.recordID)
         switch metadata.participantStatus {
         case .accepted:
-            return calendarID
-        case .removed:
-            throw CalendarSharingError.shareUnavailable
-        case .unknown:
-            throw CalendarSharingError.invitationPending
+            CalendarSharingDiagnostics.debug(
+                operation: "acceptShare",
+                stage: "already-accepted",
+                database: "shared",
+                details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
+                    + "shareHash=\(shareHash)"
+            )
+            return metadata.share.recordID.zoneID.zoneName
         case .pending:
-            break
+            guard let cloudKitMetadata = metadata as? CKShare.Metadata else {
+                throw CalendarSharingError.invitationInvalid
+            }
+            let acceptanceContainer = CKContainer(identifier: metadata.containerIdentifier)
+            CalendarSharingDiagnostics.debug(
+                operation: "acceptShare",
+                stage: "accept-started",
+                database: "shared",
+                details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
+                    + "shareHash=\(shareHash)"
+            )
+            do {
+                let results = try await acceptanceContainer.accept([cloudKitMetadata])
+                guard let result = results[cloudKitMetadata] else {
+                    throw CalendarSharingError.invitationInvalid
+                }
+                let acceptedShare = try result.get()
+                CalendarSharingDiagnostics.debug(
+                    operation: "acceptShare",
+                    stage: "accept-completed",
+                    database: "shared",
+                    details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
+                        + "shareHash=\(CalendarSharingDiagnostics.recordHash(acceptedShare.recordID))"
+                )
+                return acceptedShare.recordID.zoneID.zoneName
+            } catch let error as CalendarSharingError {
+                throw error
+            } catch {
+                throw CalendarSharingErrorMapper.map(error, context: .acceptingInvitation)
+            }
+        case .removed:
+            throw CalendarSharingError.invitationRevoked
+        case .unknown:
+            throw CalendarSharingError.invitationInvalid
         @unknown default:
-            throw CalendarSharingError.invitationPending
-        }
-        do {
-            let results = try await container.accept([metadata])
-            guard let result = results[metadata] else {
-                throw CalendarSharingError.invitationPending
-            }
-            let share = try result.get()
-            return CalendarSharingCloudSchema.identity(for: share.recordID.zoneID)
-        } catch let error as CalendarSharingError {
-            throw error
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            throw CalendarSharingErrorMapper.map(error)
+            throw CalendarSharingError.invitationInvalid
         }
     }
 
     func leaveSharedCalendar(_ calendar: SharedCalendarDescriptor) async throws {
-        try await verifyAccountAvailability()
         let zoneID = CKRecordZone.ID(zoneName: calendar.zoneName, ownerName: calendar.ownerName)
+        let shareID = CKRecord.ID(recordName: calendar.shareRecordName, zoneID: zoneID)
+        let result = try await sharedDatabase.modifyRecords(
+            saving: [],
+            deleting: [shareID],
+            savePolicy: .ifServerRecordUnchanged,
+            atomically: true
+        )
+        try validate(result.deleteResults)
+    }
+
+    func stopOwnedSharing(_ calendar: OwnedSharedCalendarDescriptor) async throws {
+        let zoneID = CKRecordZone.ID(zoneName: calendar.zoneName, ownerName: calendar.ownerName)
+        do {
+            try await deleteZone(zoneID)
+        } catch where CalendarSharingErrorMapper.isMissingOrInaccessibleSharedZone(error) {
+            // Idempotent success is intentionally limited to the persisted stopping workflow.
+        }
+    }
+
+    private func ownedState(zoneID: CKRecordZone.ID) async throws -> OwnedSharedCalendarCloudState? {
+        guard let calendarID = CalendarSharingCloudSchema.calendarID(from: zoneID.zoneName) else {
+            return nil
+        }
+        let rootID = CKRecord.ID(recordName: CalendarSharingCloudSchema.calendarRecordName, zoneID: zoneID)
         let shareID = CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: zoneID)
-        do {
-            let result = try await sharedDatabase.modifyRecords(
-                saving: [],
-                deleting: [shareID],
-                savePolicy: .ifServerRecordUnchanged,
-                atomically: true
-            )
-            try validate(result.deleteResults)
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            throw CalendarSharingErrorMapper.map(error)
+        guard let root = try await optionalRecord(rootID, database: privateDatabase),
+              let share = try await optionalRecord(shareID, database: privateDatabase) as? CKShare,
+              let name = CalendarSharingCloudSchema.normalizedName(
+                root[CalendarSharingCloudSchema.CalendarField.calendarName] as? String
+              ) else {
+            return nil
         }
-    }
-
-    func stopOwnedSharing(plan: OwnedSharingStopPlan = OwnedSharingStopPlan()) async throws {
-        precondition(plan.deletesShareRecord && !plan.deletesRecordZone && !plan.deletesLocalEvents)
-        try await verifyAccountAvailability()
-        let shareID = CKRecord.ID(recordName: CKRecordNameZoneWideShare, zoneID: ownedZoneID)
-        do {
-            let result = try await privateDatabase.modifyRecords(
-                saving: [],
-                deleting: [shareID],
-                savePolicy: .ifServerRecordUnchanged,
-                atomically: true
-            )
-            try validate(result.deleteResults)
-        } catch {
-            if CalendarSharingErrorMapper.isCancellation(error) {
-                throw CancellationError()
-            }
-            throw CalendarSharingErrorMapper.map(error)
-        }
-    }
-
-    private var ownedZoneID: CKRecordZone.ID {
-        CKRecordZone.ID(
-            zoneName: CalendarSharingCloudSchema.zoneName,
-            ownerName: CKCurrentUserDefaultName
+        let participants = OwnedCalendarParticipantSnapshotAssembler.make(from: share)
+        return OwnedSharedCalendarCloudState(
+            calendar: OwnedSharedCalendarDescriptor(
+                id: calendarID,
+                zoneName: zoneID.zoneName,
+                ownerName: zoneID.ownerName,
+                calendarName: name,
+                participantCount: participants.count,
+                rootRecordName: root.recordID.recordName,
+                shareRecordName: share.recordID.recordName
+            ),
+            share: share,
+            participants: participants
         )
     }
 
-    private func ensureOwnedZone() async throws {
-        let zones = try await privateDatabase.allRecordZones()
-        if zones.contains(where: { $0.zoneID == ownedZoneID }) {
-            return
-        }
-        let zone = CKRecordZone(zoneID: ownedZoneID)
-        let result = try await privateDatabase.modifyRecordZones(saving: [zone], deleting: [])
-        try validate(result.saveResults)
-    }
-
-    private func replaceOwnedContent(
-        content: SharedContentConfiguration,
+    private func replaceContent(
+        zoneID: CKRecordZone.ID,
         events: [SharedEventSnapshot],
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
     ) async throws {
-        let plan = CalendarSharingContentReconciliationPlan(content: content)
-        let existingRecords = try await allRecordsFromZoneChanges(
-            zoneID: ownedZoneID,
-            database: privateDatabase,
-            operation: "reconcileOwnedContent"
-        )
-        try await saveContentRecords(
-            stage: "save_events",
-            recordType: CalendarSharingCloudSchema.eventRecordType,
-            count: plan.eventsToSave(events).count
-        ) {
-            try await replaceOwnedEventRecords(
-                plan.eventsToSave(events),
-                existingRecords: existingRecords.records(
-                    ofType: CalendarSharingCloudSchema.eventRecordType
-                )
-            )
-        }
-        try await saveContentRecords(
-            stage: "save_shifts",
-            recordType: CalendarSharingCloudSchema.shiftRecordType,
-            count: plan.shiftsToSave(shifts).count
-        ) {
-            try await replaceOwnedShiftRecords(
-                plan.shiftsToSave(shifts),
-                existingRecords: existingRecords.records(
-                    ofType: CalendarSharingCloudSchema.shiftRecordType
-                )
-            )
-        }
-        try await saveContentRecords(
-            stage: "save_work_records",
-            recordType: CalendarSharingCloudSchema.workRecordType,
-            count: plan.workRecordsToSave(workRecords).count
-        ) {
-            try await replaceOwnedWorkRecords(
-                plan.workRecordsToSave(workRecords),
-                existingRecords: existingRecords.records(
-                    ofType: CalendarSharingCloudSchema.workRecordType
-                )
-            )
-        }
-    }
-
-    private func saveContentRecords(
-        stage: String,
-        recordType: CKRecord.RecordType,
-        count: Int,
-        operation: () async throws -> Void
-    ) async throws {
-        do {
-            try await operation()
-            CalendarSharingDiagnostics.contentRecordStageSucceeded(
-                stage: stage,
-                recordType: recordType,
-                count: count
-            )
-        } catch {
-            CalendarSharingDiagnostics.contentRecordStageFailed(
-                stage: stage,
-                recordType: recordType,
-                count: count,
-                error: error
-            )
-            throw error
-        }
-    }
-
-    private func replaceOwnedEventRecords(
-        _ snapshots: [SharedEventSnapshot],
-        existingRecords: [CKRecord]
-    ) async throws {
-        try await replaceOwnedRecords(
-            snapshots,
-            recordType: CalendarSharingCloudSchema.eventRecordType,
-            migrationStageName: "events",
-            existingRecords: existingRecords,
-            recordID: { [ownedZoneID] snapshot in
-                sharedEventRecordID(snapshot.id, zoneID: ownedZoneID)
-            },
-            makeRecord: { snapshot, recordID, existingRecord in
-                CalendarSharingCloudRecordFactory.makeEventRecord(
-                    snapshot: snapshot,
-                    recordID: recordID,
-                    existingRecord: existingRecord
-                )
-            }
-        )
-    }
-
-    private func replaceOwnedShiftRecords(
-        _ snapshots: [SharedShiftSnapshot],
-        existingRecords: [CKRecord]
-    ) async throws {
-        try await replaceOwnedRecords(
-            snapshots,
-            recordType: CalendarSharingCloudSchema.shiftRecordType,
-            migrationStageName: "shifts",
-            existingRecords: existingRecords,
-            recordID: { [ownedZoneID] snapshot in
-                sharedShiftRecordID(snapshot.id, zoneID: ownedZoneID)
-            },
-            makeRecord: { snapshot, recordID, existingRecord in
-                CalendarSharingCloudRecordFactory.makeShiftRecord(
-                    snapshot: snapshot,
-                    recordID: recordID,
-                    existingRecord: existingRecord
-                )
-            }
-        )
-    }
-
-    private func replaceOwnedWorkRecords(
-        _ snapshots: [SharedWorkRecordSnapshot],
-        existingRecords: [CKRecord]
-    ) async throws {
-        try await replaceOwnedRecords(
-            snapshots,
-            recordType: CalendarSharingCloudSchema.workRecordType,
-            migrationStageName: "work_records",
-            existingRecords: existingRecords,
-            recordID: { [ownedZoneID] snapshot in
-                sharedWorkRecordID(snapshot.id, zoneID: ownedZoneID)
-            },
-            makeRecord: { snapshot, recordID, existingRecord in
-                CalendarSharingCloudRecordFactory.makeWorkRecord(
-                    snapshot: snapshot,
-                    recordID: recordID,
-                    existingRecord: existingRecord
-                )
-            }
-        )
-    }
-
-    private func replaceOwnedRecords<Snapshot>(
-        _ snapshots: [Snapshot],
-        recordType: CKRecord.RecordType,
-        migrationStageName: String,
-        existingRecords: [CKRecord],
-        recordID: (Snapshot) -> CKRecord.ID,
-        makeRecord: (Snapshot, CKRecord.ID, CKRecord?) -> CKRecord
-    ) async throws {
-        let plan = CalendarSharingContentRecordPlan(
-            recordType: recordType,
-            existingRecords: existingRecords,
-            snapshots: snapshots,
-            recordID: recordID,
-            makeRecord: makeRecord
+        let records = try await allRecordsFromZoneChanges(
+            zoneID: zoneID,
+            database: privateDatabase
         )
         let executor = CalendarSharingContentRecordPlanExecutor(
             database: CloudKitContentRecordDatabase(database: privateDatabase)
         )
-        try await executor.execute(plan, migrationStageName: migrationStageName)
-    }
-
-    private func accountStatusName(_ status: CKAccountStatus) -> String {
-        switch status {
-        case .available: "available"
-        case .noAccount: "noAccount"
-        case .restricted: "restricted"
-        case .couldNotDetermine: "couldNotDetermine"
-        case .temporarilyUnavailable: "temporarilyUnavailable"
-        @unknown default: "unknown"
-        }
-    }
-
-    private func optionalRecord(_ id: CKRecord.ID, database: CKDatabase) async throws -> CKRecord? {
-        do {
-            let results = try await database.records(for: [id])
-            guard let result = results[id] else { return nil }
-            return try result.get()
-        } catch let error as CKError where error.code == .unknownItem || error.code == .zoneNotFound {
-            return nil
-        }
-    }
-
-    private func allSharedRecordsFromZoneChanges(
-        zoneID: CKRecordZone.ID
-    ) async throws -> SharedZoneRecordCollection {
-        try await allRecordsFromZoneChanges(
-            zoneID: zoneID,
-            database: sharedDatabase,
-            operation: "refreshSharedCalendars"
+        try await executor.execute(
+            CalendarSharingContentRecordPlan(
+                recordType: CalendarSharingCloudSchema.eventRecordType,
+                existingRecords: records.records(ofType: CalendarSharingCloudSchema.eventRecordType),
+                snapshots: events,
+                recordID: { CKRecord.ID(recordName: "event-\($0.id.uuidString.lowercased())", zoneID: zoneID) },
+                makeRecord: CalendarSharingCloudRecordFactory.makeEventRecord
+            )
+        )
+        try await executor.execute(
+            CalendarSharingContentRecordPlan(
+                recordType: CalendarSharingCloudSchema.shiftRecordType,
+                existingRecords: records.records(ofType: CalendarSharingCloudSchema.shiftRecordType),
+                snapshots: shifts,
+                recordID: { CKRecord.ID(recordName: "shift-\($0.id.uuidString.lowercased())", zoneID: zoneID) },
+                makeRecord: CalendarSharingCloudRecordFactory.makeShiftRecord
+            )
+        )
+        try await executor.execute(
+            CalendarSharingContentRecordPlan(
+                recordType: CalendarSharingCloudSchema.workRecordType,
+                existingRecords: records.records(ofType: CalendarSharingCloudSchema.workRecordType),
+                snapshots: workRecords,
+                recordID: { CKRecord.ID(recordName: "work-\($0.id.uuidString.lowercased())", zoneID: zoneID) },
+                makeRecord: CalendarSharingCloudRecordFactory.makeWorkRecord
+            )
         )
     }
 
     private func allRecordsFromZoneChanges(
         zoneID: CKRecordZone.ID,
-        database: CKDatabase,
-        operation: String
+        database: CKDatabase
     ) async throws -> SharedZoneRecordCollection {
-        var records = SharedZoneRecordCollection()
-        var changeToken: CKServerChangeToken?
-        var restartedAfterExpiredToken = false
-        let databaseName = database.databaseScope == .shared ? "shared" : "private"
-
-        CalendarSharingDiagnostics.debug(
-            operation: operation,
-            stage: "fetch_zone_changes_started",
-            database: databaseName,
-            details: "zone=\(zoneID.zoneName) previousToken=false"
-        )
-
+        var collection = SharedZoneRecordCollection()
+        var token: CKServerChangeToken?
+        var restarted = false
         while true {
             do {
                 let response = try await database.recordZoneChanges(
                     inZoneWith: zoneID,
-                    since: changeToken
+                    since: token
                 )
-                let changedRecords = try response.modificationResultsByID.values.map {
-                    try $0.get().record
-                }
-                records.apply(changedRecords)
-                for deletion in response.deletions {
-                    records.remove(deletion.recordID)
-                }
-                changeToken = response.changeToken
-
-                CalendarSharingDiagnostics.debug(
-                    operation: operation,
-                    stage: "fetch_zone_changes_completed",
-                    database: databaseName,
-                    details: "zone=\(zoneID.zoneName) changed=\(changedRecords.count) deleted=\(response.deletions.count) recordCount=\(records.recordsByID.count) moreComing=\(response.moreComing)"
-                )
-                if !response.moreComing {
-                    return records
-                }
+                collection.apply(try response.modificationResultsByID.values.map { try $0.get().record })
+                response.deletions.forEach { collection.remove($0.recordID) }
+                token = response.changeToken
+                if !response.moreComing { return collection }
             } catch {
                 if CalendarSharingErrorMapper.shouldRestartZoneChangesFromBeginning(
                     error,
-                    alreadyRetried: restartedAfterExpiredToken
+                    alreadyRetried: restarted
                 ) {
-                    restartedAfterExpiredToken = true
-                    changeToken = nil
-                    records = SharedZoneRecordCollection()
-                    CalendarSharingDiagnostics.error(
-                        operation: operation,
-                        stage: "fetch_zone_changes_restart",
-                        database: databaseName,
-                        error: error,
-                        details: "zone=\(zoneID.zoneName) restartFromBeginning=true"
-                    )
+                    restarted = true
+                    token = nil
+                    collection = SharedZoneRecordCollection()
                     continue
                 }
-                CalendarSharingDiagnostics.error(
-                    operation: operation,
-                    stage: "fetch_zone_changes_failed",
-                    database: databaseName,
-                    error: error,
-                    details: "zone=\(zoneID.zoneName)"
-                )
                 throw error
             }
         }
     }
 
-    private func logSharedRecordClassification(
-        _ records: SharedZoneRecordCollection,
-        zoneID: CKRecordZone.ID
-    ) {
-        let stages: [(String, CKRecord.RecordType)] = [
-            ("fetch_shared_calendar", CalendarSharingCloudSchema.calendarRecordType),
-            ("fetch_shared_events", CalendarSharingCloudSchema.eventRecordType),
-            ("fetch_shared_shifts", CalendarSharingCloudSchema.shiftRecordType),
-            ("fetch_shared_work_records", CalendarSharingCloudSchema.workRecordType),
-            ("fetch_zone_share", CKRecord.SystemType.share)
-        ]
-        for (stage, recordType) in stages {
-            CalendarSharingDiagnostics.debug(
-                operation: "refreshSharedCalendars",
-                stage: "\(stage)_started",
-                database: "shared",
-                details: "recordType=\(recordType) zone=\(zoneID.zoneName)"
-            )
-            CalendarSharingDiagnostics.debug(
-                operation: "refreshSharedCalendars",
-                stage: "\(stage)_completed",
-                database: "shared",
-                details: "recordType=\(recordType) recordCount=\(records.records(ofType: recordType).count) zone=\(zoneID.zoneName)"
-            )
+    private func verifyAccountAvailability() async throws {
+        switch try await container.accountStatus() {
+        case .available: return
+        case .noAccount: throw CalendarSharingError.noICloudAccount
+        case .restricted: throw CalendarSharingError.iCloudRestricted
+        case .temporarilyUnavailable, .couldNotDetermine:
+            throw CalendarSharingError.networkUnavailable
+        @unknown default: throw CalendarSharingError.syncFailed
         }
     }
 
-    private func sharedEventRecordID(_ id: UUID, zoneID: CKRecordZone.ID) -> CKRecord.ID {
-        CKRecord.ID(recordName: "event-\(id.uuidString.lowercased())", zoneID: zoneID)
+    private func ownedZoneID(calendarID: UUID) -> CKRecordZone.ID {
+        CKRecordZone.ID(
+            zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
+            ownerName: CKCurrentUserDefaultName
+        )
     }
 
-    private func sharedShiftRecordID(_ id: UUID, zoneID: CKRecordZone.ID) -> CKRecord.ID {
-        CKRecord.ID(recordName: "shift-\(id.uuidString.lowercased())", zoneID: zoneID)
+    private func ensureZone(_ zoneID: CKRecordZone.ID) async throws {
+        let zones = try await privateDatabase.allRecordZones()
+        guard !zones.contains(where: { $0.zoneID == zoneID }) else { return }
+        let result = try await privateDatabase.modifyRecordZones(
+            saving: [CKRecordZone(zoneID: zoneID)],
+            deleting: []
+        )
+        try validate(result.saveResults)
     }
 
-    private func sharedWorkRecordID(_ id: UUID, zoneID: CKRecordZone.ID) -> CKRecord.ID {
-        CKRecord.ID(recordName: "work-\(id.uuidString.lowercased())", zoneID: zoneID)
+    private func deleteZone(_ zoneID: CKRecordZone.ID) async throws {
+        let result = try await privateDatabase.modifyRecordZones(saving: [], deleting: [zoneID])
+        try validate(result.deleteResults)
+    }
+
+    private func save(
+        _ records: [CKRecord],
+        in database: CKDatabase,
+        atomically: Bool
+    ) async throws -> [CKRecord] {
+        let result = try await database.modifyRecords(
+            saving: records,
+            deleting: [],
+            savePolicy: .changedKeys,
+            atomically: atomically
+        )
+        try validate(result.saveResults)
+        return try result.saveResults.values.map { try $0.get() }
+    }
+
+    private func optionalRecord(_ id: CKRecord.ID, database: CKDatabase) async throws -> CKRecord? {
+        do {
+            let results = try await database.records(for: [id])
+            return try results[id]?.get()
+        } catch let error as CKError where error.code == .unknownItem || error.code == .zoneNotFound {
+            return nil
+        }
     }
 
     private func validate<Key, Value>(_ results: [Key: Result<Value, Error>]) throws {
-        for result in results.values {
-            _ = try result.get()
-        }
+        for result in results.values { _ = try result.get() }
     }
 }
 

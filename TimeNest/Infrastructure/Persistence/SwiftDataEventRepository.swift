@@ -53,6 +53,27 @@ actor SwiftDataEventRepository: EventRepository {
         }
     }
 
+    func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
+        do {
+            let descriptor = FetchDescriptor<SwiftDataCalendarEventEntity>(
+                predicate: #Predicate { $0.calendarID == sourceCalendarID }
+            )
+            let entities = try modelContext.fetch(descriptor)
+            let now = Date()
+            entities.forEach {
+                $0.calendarID = targetCalendarID
+                $0.updatedAt = now
+            }
+            if !entities.isEmpty {
+                try modelContext.save()
+            }
+        } catch {
+            modelContext.rollback()
+            SwiftDataRepositoryLogger.log("reassign calendar events", error: error)
+            throw error
+        }
+    }
+
     private func save(_ event: CalendarEvent, operation: String) throws {
         do {
             if let existingEntity = try entity(id: event.id) {

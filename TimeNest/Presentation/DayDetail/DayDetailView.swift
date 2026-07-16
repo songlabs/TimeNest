@@ -17,8 +17,10 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
-    let onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
-    let onUpdateEvent: (UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
+    let onCreateEvent: EventEditorSaveAction
+    let onUpdateEvent: EventEditorUpdateAction
+    var availableCalendars: [TimeNestCalendar] = []
+    var initialCalendarID: UUID = TimeNestCalendar.personalID
 
     @State private var editingEvent: EditingEvent?
     @State private var showingAddEntry: Bool = false
@@ -56,8 +58,10 @@ struct DayDetailView: View {
                 existingEvents: cell.events,
                 initialEntryKind: addEntryInitialKind,
                 showsEntryKindPicker: true,
-                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
+                availableCalendars: availableCalendars,
+                initialCalendarID: initialCalendarID,
+                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
+                    try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
                 }
             )
         }
@@ -76,8 +80,10 @@ struct DayDetailView: View {
                     initialShiftTemplateID: event.shiftTemplateID
                 ),
                 existingEvents: cell.events,
-                onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo in
-                    try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo)
+                availableCalendars: availableCalendars,
+                initialCalendarID: event.calendarID,
+                onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo, calendarID in
+                    try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo, calendarID)
                 }
             )
         }
@@ -86,11 +92,13 @@ struct DayDetailView: View {
                 isPresented: workRecordEditingPresentationBinding,
                 mode: .edit(session),
                 existingEvents: cell.events,
-                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
+                availableCalendars: availableCalendars,
+                initialCalendarID: session.calendarID,
+                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
+                    try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
                 },
-                onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await onUpdateEvent(eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
+                onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
+                    try await onUpdateEvent(eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
                 }
             )
         }
@@ -262,6 +270,7 @@ struct DayDetailView: View {
 private struct EditingEvent: Identifiable {
     let id: String
     let eventID: UUID
+    let calendarID: UUID
     let title: String
     let note: String?
     let startDate: Date
@@ -274,6 +283,7 @@ private struct EditingEvent: Identifiable {
     init(_ event: EventOccurrence) {
         id = event.id
         eventID = event.eventID
+        calendarID = event.calendarID
         title = event.title
         note = event.note
         startDate = event.startDate
@@ -365,8 +375,13 @@ struct WorkRecordDisplaySession: Identifiable {
             transportFee: sourceWorkInfo?.transportFee,
             hourlyRate: sourceWorkInfo?.hourlyRate,
             workSessionId: workSessionId ?? clockIn?.workInfo?.workSessionId ?? clockOut?.workInfo?.workSessionId,
-            isWorkOutTimeSet: clockOut?.isWorkOutTimeSet ?? false
+            isWorkOutTimeSet: clockOut?.isWorkOutTimeSet ?? false,
+            calendarID: calendarID
         )
+    }
+
+    var calendarID: UUID {
+        clockIn?.calendarID ?? clockOut?.calendarID ?? TimeNestCalendar.personalID
     }
 
     func displayTitle(defaultTitle: String) -> String {

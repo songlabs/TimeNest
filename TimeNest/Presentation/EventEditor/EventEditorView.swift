@@ -151,16 +151,34 @@ enum EventEditorMode {
     )
 }
 
+typealias EventEditorSaveAction = (
+    String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?, UUID
+) async throws -> EventNotificationScheduleResult
+
+typealias EventEditorUpdateAction = (
+    UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?, UUID
+) async throws -> EventNotificationScheduleResult
+
+typealias WorkRecordEventCreateAction = (
+    String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo, UUID
+) async throws -> EventNotificationScheduleResult
+
+typealias WorkRecordEventUpdateAction = (
+    UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo, UUID
+) async throws -> EventNotificationScheduleResult
+
 struct EventEditorView: View {
     @Environment(\.localization) private var localization
     @Environment(\.openURL) private var openURL
     @Binding var isPresented: Bool
     let mode: EventEditorMode
     let existingEvents: [EventOccurrence]
-    var onSave: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
+    var onSave: EventEditorSaveAction
     private let showsEntryKindPicker: Bool
+    private let availableCalendars: [TimeNestCalendar]
 
     @State private var selectedEntryKind: EntryEditorKind
+    @State private var selectedCalendarID: UUID
     @State private var title: String
     @State private var note: String
     @State private var startDate: Date
@@ -212,12 +230,16 @@ struct EventEditorView: View {
         existingEvents: [EventOccurrence] = [],
         initialEntryKind: EntryEditorKind = .event,
         showsEntryKindPicker: Bool = false,
-        onSave: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?) async throws -> EventNotificationScheduleResult
+        availableCalendars: [TimeNestCalendar] = [],
+        initialCalendarID: UUID = TimeNestCalendar.personalID,
+        onSave: @escaping EventEditorSaveAction
     ) {
         _isPresented = isPresented
         self.mode = mode
         self.existingEvents = existingEvents
         self.onSave = onSave
+        self.availableCalendars = availableCalendars
+        _selectedCalendarID = State(initialValue: initialCalendarID)
         let isCreateMode: Bool
         switch mode {
         case .create:
@@ -293,6 +315,12 @@ struct EventEditorView: View {
 
                     ScrollView {
                         VStack(spacing: EventEditorStyle.sectionSpacing) {
+                            if !availableCalendars.isEmpty {
+                                CalendarAssignmentEditorSection(
+                                    calendars: availableCalendars,
+                                    selectedCalendarID: $selectedCalendarID
+                                )
+                            }
                             if showsEntryKindPicker {
                                 entryKindPicker
                             }
@@ -884,7 +912,17 @@ struct EventEditorView: View {
         do {
             let saveContext = normalizedSaveContext()
             let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
-            let notificationResult = try await onSave(normalizedEventTitle(), trimmedNote.isEmpty ? nil : trimmedNote, saveContext.dates.start, saveContext.dates.end, isAllDay, reminderOffsetMinutes, selectedShiftTemplateID, saveContext.workInfo)
+            let notificationResult = try await onSave(
+                normalizedEventTitle(),
+                trimmedNote.isEmpty ? nil : trimmedNote,
+                saveContext.dates.start,
+                saveContext.dates.end,
+                isAllDay,
+                reminderOffsetMinutes,
+                selectedShiftTemplateID,
+                saveContext.workInfo,
+                selectedCalendarID
+            )
             saving = false
             if let alert = NotificationSaveAlert(result: notificationResult) {
                 pendingNotificationSaveAlert = alert
@@ -907,7 +945,17 @@ struct EventEditorView: View {
                 context: workRecordSaveContext,
                 defaultTitle: localization.localized(.workRecordDefaultTitle),
                 onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await onSave(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo)
+                    try await onSave(
+                        title,
+                        note,
+                        startDate,
+                        endDate,
+                        isAllDay,
+                        reminderOffsetMinutes,
+                        shiftTemplateID,
+                        workInfo,
+                        selectedCalendarID
+                    )
                 },
                 onUpdateEvent: nil
             )
@@ -1224,6 +1272,7 @@ struct WorkRecordEditorInitialSession: Identifiable, Hashable {
     let hourlyRate: Int?
     let workSessionId: UUID?
     let isWorkOutTimeSet: Bool
+    let calendarID: UUID
 
     var id: String {
         if let workSessionId {
@@ -1243,7 +1292,7 @@ enum WorkRecordEditorMode {
     case edit(WorkRecordEditorInitialSession)
 }
 
-private struct WorkRecordEditorSaveContext {
+struct WorkRecordEditorSaveContext {
     let title: String
     let workDate: Date
     let workInDate: Date
@@ -1256,7 +1305,7 @@ private struct WorkRecordEditorSaveContext {
     let editInitialSession: WorkRecordEditorInitialSession?
 }
 
-private enum WorkRecordEditorSaveLogic {
+enum WorkRecordEditorSaveLogic {
     @discardableResult
     static func save(
         context: WorkRecordEditorSaveContext,
@@ -1381,11 +1430,13 @@ struct WorkRecordEditorView: View {
     @Binding var isPresented: Bool
     let mode: WorkRecordEditorMode
     let existingEvents: [EventOccurrence]
-    let onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult
-    var onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)?
+    let onCreateEvent: WorkRecordEventCreateAction
+    var onUpdateEvent: WorkRecordEventUpdateAction?
     var onSaved: (() -> Void)?
+    private let availableCalendars: [TimeNestCalendar]
 
     @State private var workDate: Date
+    @State private var selectedCalendarID: UUID
     @State private var workInDate: Date
     @State private var workOutDate: Date
     @State private var restTime: Double
@@ -1405,13 +1456,17 @@ struct WorkRecordEditorView: View {
         isPresented: Binding<Bool>,
         mode: WorkRecordEditorMode,
         existingEvents: [EventOccurrence] = [],
-        onCreateEvent: @escaping (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult,
-        onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)? = nil,
+        availableCalendars: [TimeNestCalendar] = [],
+        initialCalendarID: UUID = TimeNestCalendar.personalID,
+        onCreateEvent: @escaping WorkRecordEventCreateAction,
+        onUpdateEvent: WorkRecordEventUpdateAction? = nil,
         onSaved: (() -> Void)? = nil
     ) {
         _isPresented = isPresented
         self.mode = mode
         self.existingEvents = existingEvents
+        self.availableCalendars = availableCalendars
+        _selectedCalendarID = State(initialValue: initialCalendarID)
         self.onCreateEvent = onCreateEvent
         self.onUpdateEvent = onUpdateEvent
         self.onSaved = onSaved
@@ -1451,6 +1506,12 @@ struct WorkRecordEditorView: View {
 
                     ScrollView {
                         VStack(spacing: EventEditorStyle.sectionSpacing) {
+                            if !availableCalendars.isEmpty {
+                                CalendarAssignmentEditorSection(
+                                    calendars: availableCalendars,
+                                    selectedCalendarID: $selectedCalendarID
+                                )
+                            }
                             TitleInputSection(
                                 title: $workTitle,
                                 placeholder: localization.localized(.editorTitle),
@@ -1646,8 +1707,35 @@ struct WorkRecordEditorView: View {
             try await WorkRecordEditorSaveLogic.save(
                 context: workRecordSaveContext,
                 defaultTitle: localization.localized(.workRecordDefaultTitle),
-                onCreateEvent: onCreateEvent,
-                onUpdateEvent: onUpdateEvent
+                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                    try await onCreateEvent(
+                        title,
+                        note,
+                        startDate,
+                        endDate,
+                        isAllDay,
+                        reminderOffsetMinutes,
+                        shiftTemplateID,
+                        workInfo,
+                        selectedCalendarID
+                    )
+                },
+                onUpdateEvent: onUpdateEvent.map { update in
+                    { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
+                        try await update(
+                            eventID,
+                            title,
+                            note,
+                            startDate,
+                            endDate,
+                            isAllDay,
+                            reminderOffsetMinutes,
+                            shiftTemplateID,
+                            workInfo,
+                            selectedCalendarID
+                        )
+                    }
+                }
             )
             saving = false
             isPresented = false
@@ -2686,5 +2774,36 @@ private extension WorkInfoSection {
         let hour = Int(hours)
         let minute = Int((hours - Double(hour)) * 60)
         return String(format: "%d:%02d", hour, minute)
+    }
+}
+
+private struct CalendarAssignmentEditorSection: View {
+    @Environment(\.localization) private var localization
+    let calendars: [TimeNestCalendar]
+    @Binding var selectedCalendarID: UUID
+
+    var body: some View {
+        HStack {
+            Label(
+                localization.localized(.calendarSharingSelectCalendar),
+                systemImage: "calendar"
+            )
+            .foregroundStyle(EventEditorStyle.primaryText)
+            Spacer()
+            Picker("", selection: $selectedCalendarID) {
+                ForEach(calendars) { calendar in
+                    Text(calendar.name).tag(calendar.id)
+                }
+            }
+            .labelsHidden()
+        }
+        .padding(EventEditorStyle.cardPadding)
+        .background(EventEditorStyle.cardBackground)
+        .clipShape(
+            RoundedRectangle(
+                cornerRadius: EventEditorStyle.cardCornerRadius,
+                style: .continuous
+            )
+        )
     }
 }

@@ -1,4 +1,5 @@
 #if DEBUG
+import CloudKit
 import SwiftUI
 
 @MainActor
@@ -31,11 +32,9 @@ struct AppStoreScreenshotSharedCalendarManagementView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            CalendarSharingManagementView()
-                .environmentObject(sharingStore)
-                .environmentObject(localization)
-        }
+        CalendarSelectionView()
+            .environmentObject(sharingStore)
+            .environmentObject(localization)
     }
 }
 
@@ -197,7 +196,7 @@ private struct AppStoreScreenshotSharedGridLines: View {
 
 @MainActor
 enum AppStoreScreenshotSharedCalendarData {
-    static let calendarID = "screenshot-shared-calendar"
+    static let calendarID = UUID(uuidString: "99999999-9999-9999-9999-999999999999")!
     static let calendarName = "家族の予定"
     static let ownerDisplayName = "共有メンバー"
     static let selectedDateOnly = DateOnly(year: 2026, month: 7, day: 14)
@@ -251,7 +250,7 @@ enum AppStoreScreenshotSharedCalendarData {
     }
 
     static func makeStore(selection: CalendarSelection) -> CalendarSharingStore {
-        let sceneKey = selection.sharedCalendarID == nil ? "manage" : "switcher"
+        let sceneKey = selection.calendarID == TimeNestCalendar.personalID ? "manage" : "switcher"
         let suiteName = "TimeNest.AppStore.SharedCalendar.\(sceneKey)"
         let defaults = UserDefaults(suiteName: suiteName) ?? .standard
         defaults.removePersistentDomain(forName: suiteName)
@@ -265,33 +264,48 @@ enum AppStoreScreenshotSharedCalendarData {
             receivedCalendars: [receivedCalendar],
             eventsByCalendarID: [calendarID: eventSnapshots],
             shiftsByCalendarID: [calendarID: shiftSnapshots],
-            workRecordsByCalendarID: [:],
-            ownedCalendar: OwnedSharedCalendarDescriptor(
-                displayName: calendarName,
-                calendarName: calendarName,
-                participantCount: 2,
-                contentConfiguration: .newShareDefault
-            )
+            workRecordsByCalendarID: [:]
         ))
 
         let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let now = Date()
+        let initialCalendars = [
+            TimeNestCalendar.personal(
+                name: LocalizationManager.shared.localized(.calendarSharingMyCalendar),
+                now: now
+            ),
+            TimeNestCalendar(
+                id: calendarID,
+                name: calendarName,
+                kind: .sharedReceived,
+                zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
+                ownerName: "screenshot-owner",
+                rootRecordName: CalendarSharingCloudSchema.calendarRecordName,
+                shareRecordName: CKRecordNameZoneWideShare,
+                createdAt: now,
+                updatedAt: now
+            )
+        ]
         return CalendarSharingStore(
             client: CloudKitCalendarSharingClient(),
             eventUseCase: eventUseCase,
+            calendarRepository: InMemoryCalendarRepository(calendars: initialCalendars),
             cache: cache,
-            selectionPersistence: persistence
+            selectionPersistence: persistence,
+            initialCalendars: initialCalendars
         )
     }
 
     private static var receivedCalendar: SharedCalendarDescriptor {
         SharedCalendarDescriptor(
             id: calendarID,
-            zoneName: CalendarSharingCloudSchema.zoneName,
+            zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
             ownerName: "screenshot-owner",
-            displayName: ownerDisplayName,
             calendarName: calendarName,
             participantCount: 1,
-            contentConfiguration: .newShareDefault
+            kind: .sharedReceived,
+            rootRecordName: CalendarSharingCloudSchema.calendarRecordName,
+            shareRecordName: CKRecordNameZoneWideShare
         )
     }
 

@@ -60,6 +60,7 @@ struct WorkInfo: Codable, Hashable {
 
 struct CalendarEvent: Identifiable, Codable, Hashable {
     let id: UUID
+    var calendarID: UUID
     var title: String
     var note: String?
     var startDate: Date
@@ -78,6 +79,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
 
     init(
         id: UUID,
+        calendarID: UUID = TimeNestCalendar.personalID,
         title: String,
         note: String?,
         startDate: Date,
@@ -95,6 +97,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         workInfo: WorkInfo? = nil
     ) {
         self.id = id
+        self.calendarID = calendarID
         self.title = title
         self.note = note
         self.startDate = startDate
@@ -114,6 +117,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case calendarID
         case title
         case note
         case startDate
@@ -134,6 +138,8 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
+        calendarID = try container.decodeIfPresent(UUID.self, forKey: .calendarID)
+            ?? TimeNestCalendar.personalID
         title = try container.decode(String.self, forKey: .title)
         note = try container.decodeIfPresent(String.self, forKey: .note)
         startDate = try container.decode(Date.self, forKey: .startDate)

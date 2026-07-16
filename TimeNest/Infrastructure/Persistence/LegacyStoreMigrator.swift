@@ -6,7 +6,9 @@ import SwiftData
 enum LegacyStoreMigrator {
     static let appGroupIdentifier = WidgetSnapshotStore.appGroupIdentifier
     static let storeFileName = "TimeNest.store"
-    static let markerFileName = ".legacy-store-migration-v1.complete"
+    // v2 intentionally invalidates the legacy v1 marker: the previous flow could write v1
+    // after seeing destination rows without proving that the legacy source was imported.
+    static let markerFileName = ".legacy-store-migration-v2.complete"
 
     struct Preparation {
         let container: ModelContainer
@@ -16,9 +18,12 @@ enum LegacyStoreMigrator {
     enum Outcome: Equatable {
         case legacyStoreMissing
         case alreadyCompleted
-        case destinationHasData(eventCount: Int, reminderCount: Int)
         case migrated(eventCount: Int, reminderCount: Int)
         case failed
+
+        var allowsWritableAppStartup: Bool {
+            self != .failed
+        }
 
         var logSummary: String {
             switch self {
@@ -26,12 +31,10 @@ enum LegacyStoreMigrator {
                 "Legacy store is absent; no migration was needed."
             case .alreadyCompleted:
                 "Legacy store migration already completed."
-            case .destinationHasData(let eventCount, let reminderCount):
-                "Current store already has data; legacy import was skipped (events: \(eventCount), reminders: \(reminderCount))."
             case .migrated(let eventCount, let reminderCount):
                 "Legacy store migration completed (events: \(eventCount), reminders: \(reminderCount))."
             case .failed:
-                "Legacy store migration failed; the legacy store was preserved and the current store remains available."
+                "Legacy store migration failed; the legacy store was preserved and writable app startup is blocked."
             }
         }
     }
@@ -101,23 +104,17 @@ enum LegacyStoreMigrator {
         destinationContext.autosaveEnabled = false
 
         do {
+            guard fileManager.fileExists(atPath: legacyStoreURL.path) else {
+                writeMarkerIfPossible(to: markerURL)
+                return .legacyStoreMissing
+            }
+
             let destinationEvents = try destinationContext.fetch(
                 FetchDescriptor<SwiftDataCalendarEventEntity>()
             )
             let destinationReminders = try destinationContext.fetch(
                 FetchDescriptor<SwiftDataReminderEntity>()
             )
-            if !destinationEvents.isEmpty || !destinationReminders.isEmpty {
-                writeMarkerIfPossible(to: markerURL)
-                return .destinationHasData(
-                    eventCount: destinationEvents.count,
-                    reminderCount: destinationReminders.count
-                )
-            }
-
-            guard fileManager.fileExists(atPath: legacyStoreURL.path) else {
-                return .legacyStoreMissing
-            }
 
             let legacyConfiguration = ModelConfiguration(
                 "TimeNest",
@@ -138,32 +135,36 @@ enum LegacyStoreMigrator {
                 FetchDescriptor<SwiftDataReminderEntity>()
             )
 
-            for entity in legacyEvents {
+            let destinationEventIDs = Set(destinationEvents.map(\.id))
+            let destinationReminderIDs = Set(destinationReminders.map(\.id))
+            for entity in legacyEvents where !destinationEventIDs.contains(entity.id) {
                 destinationContext.insert(copyEvent(entity))
             }
-            for entity in legacyReminders {
+            for entity in legacyReminders where !destinationReminderIDs.contains(entity.id) {
                 destinationContext.insert(copyReminder(entity))
             }
 
             try beforeSave?()
             try destinationContext.save()
 
-            let migratedEventCount = try destinationContext.fetch(
+            let migratedEvents = try destinationContext.fetch(
                 FetchDescriptor<SwiftDataCalendarEventEntity>()
-            ).count
-            let migratedReminderCount = try destinationContext.fetch(
+            )
+            let migratedReminders = try destinationContext.fetch(
                 FetchDescriptor<SwiftDataReminderEntity>()
-            ).count
-            guard migratedEventCount == legacyEvents.count,
-                  migratedReminderCount == legacyReminders.count,
+            )
+            let migratedEventIDs = Set(migratedEvents.map(\.id))
+            let migratedReminderIDs = Set(migratedReminders.map(\.id))
+            guard Set(legacyEvents.map(\.id)).isSubset(of: migratedEventIDs),
+                  Set(legacyReminders.map(\.id)).isSubset(of: migratedReminderIDs),
                   fileManager.fileExists(atPath: destinationStoreURL.path) else {
                 throw MigrationError.validationFailed
             }
 
             writeMarkerIfPossible(to: markerURL)
             return .migrated(
-                eventCount: migratedEventCount,
-                reminderCount: migratedReminderCount
+                eventCount: legacyEvents.count,
+                reminderCount: legacyReminders.count
             )
         } catch {
             destinationContext.rollback()
@@ -179,7 +180,7 @@ enum LegacyStoreMigrator {
             try Data("completed".utf8).write(to: markerURL, options: .atomic)
         } catch {
             logger.error(
-                "Legacy migration marker could not be written; destination data state will still prevent duplicate import."
+                "Legacy migration marker could not be written; the next launch will retry the ID-based idempotent merge."
             )
         }
     }
@@ -197,6 +198,7 @@ enum LegacyStoreMigrator {
             createdAt: source.createdAt,
             updatedAt: source.updatedAt
         )
+        copy.calendarID = source.calendarID
         copy.note = source.note
         copy.categoryID = source.categoryID
         copy.reminderTemplateID = source.reminderTemplateID

@@ -77,24 +77,48 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
   }
 
   public enum CalendarSharing: Sendable {
+    /// Add People to Invite
+    public static let addInvitee = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.add_invitee")
     /// Add People
     public static let addPeople = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.add_people")
     /// Calendar Name
     public static let calendarName = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.calendar_name")
+    /// Create
+    public static let createAction = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.create_action")
+    /// Create Shared Calendar
+    public static let createCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.create_calendar")
     /// %1$@ to %2$@
     public static func dateRangeFormat(_ p1: Any, _ p2: Any) -> String {
       return TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.date_range_format",String(describing: p1), String(describing: p2))
     }
+    /// Delete
+    public static let deleteAction = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.delete_action")
+    /// Delete Shared Calendar
+    public static let deleteCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.delete_calendar")
+    /// Invited members will no longer be able to view this calendar.
+    public static let deleteConfirmationMessage = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.delete_confirmation_message")
+    /// Delete this shared calendar?
+    public static let deleteConfirmationTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.delete_confirmation_title")
+    /// Edit Shared Calendar
+    public static let editCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.edit_calendar")
+    /// The iCloud sharing sheet opens after the calendar is created.
+    public static let inviteAfterCreation = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.invite_after_creation")
+    /// People to Invite
+    public static let invitePeople = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.invite_people")
     /// Leave Share
     public static let leave = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.leave")
     /// This shared calendar will be removed from TimeNest. The owner's data will not be affected.
     public static let leaveConfirmation = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.leave_confirmation")
-    /// Manage Shared Calendars
-    public static let manage = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.manage")
     /// My Calendar
     public static let myCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.my_calendar")
     /// No participants yet
     public static let noParticipants = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.no_participants")
+    /// No shared calendars
+    public static let noSharedCalendars = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.no_shared_calendars")
+    /// Shared Calendars
+    public static let ownedCalendars = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.owned_calendars")
+    /// Owner
+    public static let owner = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.owner")
     /// %1$@ · %2$@
     public static func ownerReadOnlyFormat(_ p1: Any, _ p2: Any) -> String {
       return TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.owner_read_only_format",String(describing: p1), String(describing: p2))
@@ -105,20 +129,18 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let privacyNote = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.privacy_note")
     /// View Only
     public static let readOnly = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.read_only")
-    /// Shared with Me
-    public static let receivedCalendars = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.received_calendars")
+    /// Shared Calendar Details
+    public static let receivedDetails = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.received_details")
     /// Enter a calendar name.
     public static let requiredFields = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.required_fields")
     /// Retry
     public static let retry = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.retry")
+    /// Save
+    public static let saveAction = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.save_action")
     /// Choose Calendar
     public static let selectCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.select_calendar")
     /// People You Share With
     public static let sharedPeople = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.shared_people")
-    /// Shared with %ld people
-    public static func sharedWithCount(_ p1: Int) -> String {
-      return TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.shared_with_count",p1)
-    }
     /// Start Sharing
     public static let start = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.start")
     /// %1$@ · View Only
@@ -133,49 +155,51 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let unknownCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.unknown_calendar")
     /// Participant
     public static let unknownPerson = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.unknown_person")
+    /// You
+    public static let you = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.you")
 
     public enum Content: Sendable {
-      /// Events
-      public static let events = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.content.events")
-      /// Memos, notifications, hourly rates, and pay information are not shared. Recipients have read-only access.
+      /// Events, shifts, and work records in this calendar are shared automatically. Memos, notifications, hourly rates, transport costs, and pay information are not shared. Recipients have read-only access.
       public static let privacyNote = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.content.privacy_note")
-      /// Select at least one type of content to share.
-      public static let selectionRequired = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.content.selection_required")
-      /// Shifts
-      public static let shifts = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.content.shifts")
-      /// Content to Share
-      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.content.title")
-      /// Update Sharing Settings
-      public static let update = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.content.update")
-      /// Work Records
-      public static let workRecords = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.content.work_records")
     }
 
     public enum Error: Sendable {
+      /// This invitation belongs to a different TimeNest iCloud container or build environment.
+      public static let cloudEnvironmentMismatch = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.cloud_environment_mismatch")
       /// Sharing could not be started. Try again later.
       public static let creationFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.creation_failed")
+      /// Calendar data could not be migrated. The original data was not deleted. Restart the app to try again.
+      public static let dataMigrationFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.data_migration_failed")
       /// iCloud sharing is not available on this device.
       public static let icloudRestricted = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.icloud_restricted")
       /// Sign in to iCloud to use calendar sharing.
       public static let icloudSignInRequired = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.icloud_sign_in_required")
+      /// The unused invitation could not be removed. It remains visible below so you can retry.
+      public static let invitationCancellationFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_cancellation_failed")
       /// Couldn't create the sharing invitation. Try again later.
       public static let invitationCreationFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_creation_failed")
+      /// This sharing invitation is invalid or can no longer be opened.
+      public static let invitationInvalid = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_invalid")
       /// The sharing invitation has not been accepted yet.
       public static let invitationPending = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_pending")
+      /// The owner revoked this sharing invitation.
+      public static let invitationRevoked = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_revoked")
       /// Couldn't get the sharing link. Try again later.
       public static let invitationUrlUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.invitation_url_unavailable")
+      /// Your existing data could not be moved to the current storage location. The original data is still safe. Close and reopen the app to retry; editing is disabled until migration succeeds.
+      public static let legacyStoreMigrationFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.legacy_store_migration_failed")
       /// The network is unavailable. Check your connection and try again.
       public static let networkUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.network_unavailable")
       /// You do not have permission to access this shared calendar.
       public static let permissionDenied = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.permission_denied")
+      /// The invitation was accepted, but the shared calendar could not be refreshed. TimeNest will retry when it becomes active.
+      public static let receivedCalendarRefreshFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.received_calendar_refresh_failed")
       /// This shared calendar is no longer available. TimeNest returned to My Calendar.
       public static let shareUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.share_unavailable")
       /// Calendar sync failed. Try again later.
       public static let syncFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.sync_failed")
       /// Sharing Error
       public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.title")
-      /// Couldn't update sharing settings.
-      public static let updateFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.update_failed")
     }
 
     public enum Invitation: Sendable {

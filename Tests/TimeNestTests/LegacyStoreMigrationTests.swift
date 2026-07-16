@@ -19,7 +19,7 @@ final class LegacyStoreMigrationTests: XCTestCase {
         )
         legacyStoreURL = directoryURL.appendingPathComponent("legacy.store")
         destinationStoreURL = directoryURL.appendingPathComponent("current.store")
-        markerURL = directoryURL.appendingPathComponent("migration.complete")
+        markerURL = directoryURL.appendingPathComponent(LegacyStoreMigrator.markerFileName)
     }
 
     override func tearDownWithError() throws {
@@ -34,6 +34,7 @@ final class LegacyStoreMigrationTests: XCTestCase {
 
         XCTAssertEqual(preparation.outcome, .legacyStoreMissing)
         XCTAssertTrue(FileManager.default.fileExists(atPath: destinationStoreURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: markerURL.path))
         XCTAssertEqual(try eventEntities(in: preparation.container).count, 0)
     }
 
@@ -57,9 +58,9 @@ final class LegacyStoreMigrationTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: markerURL.path))
     }
 
-    func testExistingDestinationDataIsNeverOverwrittenOrMerged() throws {
+    func testExistingDestinationDataIsPreservedWhileMissingLegacyRowsAreMerged() throws {
         let legacy = try makeContainer(at: legacyStoreURL)
-        _ = try insertLegacyFixtures(into: legacy)
+        let expected = try insertLegacyFixtures(into: legacy)
         let destination = try makeContainer(at: destinationStoreURL)
         let existingID = UUID(uuidString: "AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE")!
         try insertEvent(id: existingID, title: "Current", into: destination)
@@ -69,10 +70,11 @@ final class LegacyStoreMigrationTests: XCTestCase {
 
         XCTAssertEqual(
             preparation.outcome,
-            .destinationHasData(eventCount: 1, reminderCount: 0)
+            .migrated(eventCount: expected.eventCount, reminderCount: expected.reminderCount)
         )
-        XCTAssertEqual(events.map(\.id), [existingID])
+        XCTAssertEqual(Set(events.map(\.id)), expected.eventIDs.union([existingID]))
         XCTAssertTrue(FileManager.default.fileExists(atPath: legacyStoreURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: markerURL.path))
     }
 
     func testCompletedMigrationDoesNotImportTwice() throws {
@@ -91,6 +93,33 @@ final class LegacyStoreMigrationTests: XCTestCase {
         XCTAssertEqual(try reminderEntities(in: second.container).count, expected.reminderCount)
     }
 
+    func testLegacyV1MarkerCannotSkipSourceAndIsReplacedByValidatedV2Marker() throws {
+        let legacy = try makeContainer(at: legacyStoreURL)
+        let expected = try insertLegacyFixtures(into: legacy)
+        let destination = try makeContainer(at: destinationStoreURL)
+        let currentID = UUID(uuidString: "CCCCCCCC-DDDD-EEEE-FFFF-AAAAAAAAAAAA")!
+        try insertEvent(id: currentID, title: "Current", into: destination)
+        let legacyV1Marker = directoryURL.appendingPathComponent(
+            ".legacy-store-migration-v1.complete"
+        )
+        try Data("completed".utf8).write(to: legacyV1Marker)
+
+        let preparation = try prepareMigration()
+        let events = try eventEntities(in: preparation.container)
+
+        XCTAssertEqual(
+            preparation.outcome,
+            .migrated(eventCount: expected.eventCount, reminderCount: expected.reminderCount)
+        )
+        XCTAssertEqual(Set(events.map(\.id)), expected.eventIDs.union([currentID]))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacyV1Marker.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: markerURL.path))
+        XCTAssertEqual(
+            LegacyStoreMigrator.markerFileName,
+            ".legacy-store-migration-v2.complete"
+        )
+    }
+
     func testFailureBeforeSaveLeavesLegacyIntactAndDestinationEmpty() throws {
         let legacy = try makeContainer(at: legacyStoreURL)
         let expected = try insertLegacyFixtures(into: legacy)
@@ -105,6 +134,72 @@ final class LegacyStoreMigrationTests: XCTestCase {
         XCTAssertEqual(try eventEntities(in: legacy).count, expected.eventCount)
         XCTAssertEqual(try reminderEntities(in: legacy).count, expected.reminderCount)
         XCTAssertFalse(FileManager.default.fileExists(atPath: markerURL.path))
+    }
+
+    func testFailureBlocksWritableStartupAndDoesNotMasqueradeAsCalendarMigrationFailure() {
+        XCTAssertEqual(
+            AppDataStartupState.resolve(
+                legacyOutcome: .failed,
+                calendarMigrationFailed: false
+            ),
+            .legacyStoreMigrationFailed
+        )
+        XCTAssertTrue(
+            AppDataStartupState.resolve(
+                legacyOutcome: .failed,
+                calendarMigrationFailed: true
+            ).blocksWritableUI
+        )
+        XCTAssertEqual(
+            AppDataStartupState.resolve(
+                legacyOutcome: .legacyStoreMissing,
+                calendarMigrationFailed: true
+            ),
+            .calendarDataMigrationFailed
+        )
+    }
+
+    func testFailureThenDestinationWriteStillRetriesAndMergesLegacySource() throws {
+        let legacy = try makeContainer(at: legacyStoreURL)
+        let expected = try insertLegacyFixtures(into: legacy)
+        let first = try prepareMigration {
+            throw InjectedFailure.beforeSave
+        }
+        let newID = UUID(uuidString: "BBBBBBBB-CCCC-DDDD-EEEE-FFFFFFFFFFFF")!
+        try insertEvent(id: newID, title: "New destination row", into: first.container)
+
+        let retried = try prepareMigration()
+        let events = try eventEntities(in: retried.container)
+
+        XCTAssertEqual(
+            retried.outcome,
+            .migrated(eventCount: expected.eventCount, reminderCount: expected.reminderCount)
+        )
+        XCTAssertEqual(Set(events.map(\.id)), expected.eventIDs.union([newID]))
+        XCTAssertEqual(events.filter { expected.eventIDs.contains($0.id) }.count, expected.eventCount)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacyStoreURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: markerURL.path))
+    }
+
+    func testFailureThenRetryImportsLegacyRowsOnlyOnce() throws {
+        let legacy = try makeContainer(at: legacyStoreURL)
+        let expected = try insertLegacyFixtures(into: legacy)
+        let failed = try prepareMigration {
+            throw InjectedFailure.beforeSave
+        }
+        XCTAssertEqual(failed.outcome, .failed)
+
+        let succeeded = try prepareMigration()
+        let completed = try prepareMigration()
+
+        XCTAssertEqual(
+            succeeded.outcome,
+            .migrated(eventCount: expected.eventCount, reminderCount: expected.reminderCount)
+        )
+        XCTAssertEqual(completed.outcome, .alreadyCompleted)
+        XCTAssertEqual(try eventEntities(in: completed.container).count, expected.eventCount)
+        XCTAssertEqual(try reminderEntities(in: completed.container).count, expected.reminderCount)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacyStoreURL.path))
     }
 
     func testAppStoreAndWidgetSnapshotRemainInTheSameAppGroupContainer() {
@@ -122,10 +217,60 @@ final class LegacyStoreMigrationTests: XCTestCase {
         XCTAssertEqual(WidgetSnapshotStore.fileName, "widget-snapshot.json")
     }
 
+    func testCalendarMigrationCreatesPersonalCalendarForNewInstall() throws {
+        let container = try makeContainer(at: destinationStoreURL)
+
+        let result = try CalendarDataMigrator.migrate(
+            container: container,
+            personalCalendarName: "My Calendar"
+        )
+        let calendars = try ModelContext(container).fetch(
+            FetchDescriptor<SwiftDataCalendarEntity>()
+        )
+
+        XCTAssertTrue(result.createdPersonalCalendar)
+        XCTAssertEqual(result.migratedEventCount, 0)
+        XCTAssertEqual(calendars.map(\.id), [TimeNestCalendar.personalID])
+        XCTAssertEqual(calendars.first?.kindRawValue, TimeNestCalendarKind.personal.rawValue)
+    }
+
+    func testCalendarMigrationBackfillsEveryLegacyBusinessRowWithoutDeletingData() throws {
+        let container = try makeContainer(at: destinationStoreURL)
+        let context = ModelContext(container)
+        let appointment = makeEvent(id: UUID(), title: "Appointment", start: Date())
+        let shift = makeEvent(id: UUID(), title: "Shift", start: Date())
+        shift.shiftTemplateKind = "day"
+        let work = makeEvent(id: UUID(), title: "Clock In", start: Date())
+        work.hasWorkInfo = true
+        work.workDate = Date()
+        context.insert(appointment)
+        context.insert(shift)
+        context.insert(work)
+        try context.save()
+
+        let result = try CalendarDataMigrator.migrate(
+            container: container,
+            personalCalendarName: "My Calendar"
+        )
+        let migrated = try eventEntities(in: container)
+
+        XCTAssertEqual(result.migratedEventCount, 3)
+        XCTAssertEqual(migrated.count, 3)
+        XCTAssertTrue(migrated.allSatisfy { $0.calendarID == TimeNestCalendar.personalID })
+
+        let second = try CalendarDataMigrator.migrate(
+            container: container,
+            personalCalendarName: "My Calendar"
+        )
+        XCTAssertEqual(second.migratedEventCount, 0)
+        XCTAssertEqual(try eventEntities(in: container).count, 3)
+    }
+
     private var schema: Schema {
         Schema([
             SwiftDataCalendarEventEntity.self,
-            SwiftDataReminderEntity.self
+            SwiftDataReminderEntity.self,
+            SwiftDataCalendarEntity.self
         ])
     }
 
