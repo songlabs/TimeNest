@@ -399,6 +399,23 @@ struct CalendarSelectionView: View {
     }
 }
 
+private struct CalendarSharingPrimaryActionLabel: View {
+    let title: String
+    let isWorking: Bool
+
+    var body: some View {
+        HStack {
+            Spacer()
+            if isWorking { ProgressView() }
+            Text(title)
+                .fontWeight(.semibold)
+            Spacer()
+        }
+        .foregroundStyle(.black.opacity(0.82))
+        .padding(.vertical, 6)
+    }
+}
+
 @MainActor
 private struct CreateSharedCalendarView: View {
     @EnvironmentObject private var sharingStore: CalendarSharingStore
@@ -438,15 +455,10 @@ private struct CreateSharedCalendarView: View {
                     Button {
                         Task { await create() }
                     } label: {
-                        HStack {
-                            Spacer()
-                            if isWorking { ProgressView() }
-                            Text(localization.localized(.calendarSharingCreateAction))
-                                .fontWeight(.semibold)
-                            Spacer()
-                        }
-                        .foregroundStyle(.black.opacity(0.82))
-                        .padding(.vertical, 6)
+                        CalendarSharingPrimaryActionLabel(
+                            title: localization.localized(.calendarSharingCreateAction),
+                            isWorking: isWorking
+                        )
                     }
                     .disabled(!CalendarSharingFormValidation.hasRequiredName(name) || isWorking)
                     .listRowBackground(ShiftCalendarColors.accentYellow)
@@ -510,6 +522,7 @@ private struct CreateSharedCalendarView: View {
 private struct OwnedSharedCalendarDetailView: View {
     @EnvironmentObject private var sharingStore: CalendarSharingStore
     @EnvironmentObject private var localization: LocalizationManager
+    @Environment(\.dismiss) private var dismiss
     let calendarID: UUID
     @State private var name = ""
     @State private var invitation: CalendarSharingInvitation?
@@ -524,25 +537,7 @@ private struct OwnedSharedCalendarDetailView: View {
         Form {
             Section(localization.localized(.calendarSharingCalendarName)) {
                 TextField(localization.localized(.calendarSharingCalendarName), text: $name)
-                Button {
-                    Task { await rename() }
-                } label: {
-                    HStack {
-                        Spacer()
-                        if isWorking { ProgressView() }
-                        Text(localization.localized(.calendarSharingSaveAction))
-                            .fontWeight(.semibold)
-                        Spacer()
-                    }
-                    .foregroundStyle(.black.opacity(0.82))
-                    .padding(.vertical, 6)
-                }
-                .disabled(
-                    !CalendarSharingFormValidation.hasRequiredName(name)
-                        || isWorking
-                        || sharingStore.isStopping(calendarID: calendarID)
-                )
-                .listRowBackground(ShiftCalendarColors.accentYellow)
+                    .textInputAutocapitalization(.sentences)
             }
 
             Section(localization.localized(.calendarSharingSharedPeople)) {
@@ -594,9 +589,31 @@ private struct OwnedSharedCalendarDetailView: View {
                 }
                 .disabled(isWorking || sharingStore.isStopping(calendarID: calendarID))
             }
+
+            Section {
+                Button {
+                    Task { await rename() }
+                } label: {
+                    CalendarSharingPrimaryActionLabel(
+                        title: localization.localized(.calendarSharingSaveAction),
+                        isWorking: isWorking
+                    )
+                }
+                .disabled(
+                    !CalendarSharingFormValidation.hasRequiredName(name)
+                        || isWorking
+                        || sharingStore.isStopping(calendarID: calendarID)
+                )
+                .listRowBackground(ShiftCalendarColors.accentYellow)
+            }
         }
         .navigationTitle(localization.localized(.calendarSharingEditCalendar))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(localization.localized(.cancel)) { dismiss() }
+            }
+        }
         .onAppear { name = descriptor?.calendarName ?? "" }
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(
