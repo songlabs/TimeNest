@@ -175,6 +175,9 @@ final class TimeNestAppDelegate: NSObject, UIApplicationDelegate {
         let containerHash = CKContainer.default().containerIdentifier.map(
             CalendarSharingDiagnostics.identifierHash
         ) ?? "unavailable"
+        let ckSharingSupported = Bundle.main.object(
+            forInfoDictionaryKey: "CKSharingSupported"
+        ) as? Bool ?? false
 #if DEBUG
         let environment = "development"
 #else
@@ -186,8 +189,19 @@ final class TimeNestAppDelegate: NSObject, UIApplicationDelegate {
             database: "configuration",
             details: "bundleHash=\(bundleHash) containerHash=\(containerHash) "
                 + "environment=\(environment) environmentSource=buildConfiguration "
-                + "acceptHandlerRegistered=true"
+                + "ckSharingSupported=\(ckSharingSupported) "
+                + "acceptHandlerRegistered=true "
+                + "systemRegistrationComplete=\(ckSharingSupported)"
         )
+        if !ckSharingSupported {
+            CalendarSharingDiagnostics.error(
+                operation: "cloudConfiguration",
+                stage: "invalid-configuration",
+                database: "configuration",
+                error: CloudSharingSystemRegistrationError.ckSharingUnsupported,
+                details: "ckSharingSupported=false systemRegistrationComplete=false"
+            )
+        }
         return true
     }
 
@@ -218,4 +232,8 @@ final class TimeNestAppDelegate: NSObject, UIApplicationDelegate {
     ) {
         CalendarSharingInvitationRouter.shared.receive(cloudKitShareMetadata, source: .app)
     }
+}
+
+private enum CloudSharingSystemRegistrationError: Error {
+    case ckSharingUnsupported
 }

@@ -225,7 +225,7 @@ class MonthCalendarViewModel: ObservableObject {
                 date: day.date,
                 dayText: day.dayText,
                 weekdayText: day.weekdayText,
-                holidays: [],
+                holidays: day.holidays,
                 events: occurrencesByDate[day.date.id] ?? [],
                 isToday: day.isToday,
                 isWeekend: day.isWeekend,

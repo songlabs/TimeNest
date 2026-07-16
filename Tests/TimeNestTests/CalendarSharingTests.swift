@@ -1,4 +1,5 @@
 import CloudKit
+import UIKit
 import XCTest
 @testable import TimeNest
 
@@ -404,10 +405,21 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
 
 @MainActor
 final class CalendarSharingAcceptanceCoordinatorTests: XCTestCase {
+    func testBuiltHostBundleEnablesCloudKitSharingSystemRegistration() {
+        XCTAssertEqual(
+            Bundle.main.object(forInfoDictionaryKey: "CKSharingSupported") as? Bool,
+            true
+        )
+    }
+
     func testMainWindowSceneConfigurationRegistersCloudKitSceneDelegate() {
         let configuration = TimeNestAppDelegate.sceneConfiguration(for: .windowApplication)
 
         XCTAssertTrue(configuration.delegateClass === TimeNestSceneDelegate.self)
+    }
+
+    func testSharedCalendarSymbolExistsOnSupportedIOSRuntime() {
+        XCTAssertNotNil(UIImage(systemName: "person.2.fill"))
     }
 
     func testTerminatedLaunchMetadataWaitsForStoreRegistration() async {
@@ -616,6 +628,111 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(store.calendar(id: received.id)?.kind, .sharedReceived)
         XCTAssertEqual(store.calendars.filter { $0.id == received.id }.count, 1)
         XCTAssertNil(store.invitationAcceptanceError)
+    }
+
+    func testReceivedCalendarRetainsLocalHolidaysAcrossMonthWeekAndDayData() async throws {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let holidayDate = DateOnly(year: 2026, month: 7, day: 20)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let sharedEventStart = try XCTUnwrap(calendar.date(from: DateComponents(
+            year: 2026,
+            month: 7,
+            day: 20,
+            hour: 10
+        )))
+        let sharedEventID = UUID()
+        let basePayload = makeReceivedPayload(calendar: received)
+        let client = MockCalendarSharingClient()
+        client.receivedPayloads = [
+            ReceivedSharedCalendarPayload(
+                calendar: basePayload.calendar,
+                events: [
+                    SharedEventSnapshot(
+                        id: sharedEventID,
+                        title: "Shared appointment",
+                        startDate: sharedEventStart,
+                        endDate: sharedEventStart.addingTimeInterval(3_600),
+                        isAllDay: false,
+                        updatedAt: sharedEventStart
+                    )
+                ],
+                shifts: [],
+                workRecords: []
+            )
+        ]
+        let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            eventUseCase: eventUseCase
+        )
+        await store.synchronizeAll()
+        store.select(.calendar(received.id))
+
+        let holidayCache = InMemoryHolidayEventCacheRepository(events: [
+            HolidayEvent(
+                id: "japan-2026-07-20",
+                region: .japan,
+                date: holidayDate,
+                name: "海の日",
+                sourceURL: "https://example.invalid/japan.ics",
+                importedAt: sharedEventStart
+            )
+        ])
+        let defaults = UserDefaults(
+            suiteName: "CalendarSharingHolidayTests-\(UUID().uuidString)"
+        )!
+        let subscriptionManager = HolidaySubscriptionManager(
+            cacheRepository: holidayCache,
+            userDefaults: defaults
+        )
+        let calendarDisplayUseCase = CalendarDisplayUseCase(
+            holidayUseCase: HolidayUseCase(cacheRepository: holidayCache),
+            localizationUseCase: CalendarLocalizationUseCase(),
+            eventUseCase: eventUseCase
+        )
+        let viewModel = MonthCalendarViewModel(
+            calendarDisplayUseCase: calendarDisplayUseCase,
+            eventUseCase: eventUseCase,
+            calendarSharingStore: store,
+            subscriptionManager: subscriptionManager
+        )
+        viewModel.selectedDate = sharedEventStart
+
+        await viewModel.reloadMonth()
+
+        let monthCell = try XCTUnwrap(
+            viewModel.grid?.days.first { $0.date == holidayDate }
+        )
+        XCTAssertEqual(monthCell.holidays.map(\.localizedNames.ja), ["海の日"])
+        XCTAssertEqual(monthCell.holidays.map(\.localizedNames.zhHans), ["海の日"])
+        XCTAssertEqual(monthCell.events.map(\.eventID), [sharedEventID])
+        XCTAssertEqual(
+            viewModel.weekCells.first { $0.date == holidayDate }?.holidays.map(\.id),
+            ["japan-2026-07-20"]
+        )
+        XCTAssertEqual(viewModel.dayCell?.holidays.map(\.id), ["japan-2026-07-20"])
+
+        let japanSubscription = try XCTUnwrap(
+            subscriptionManager.subscriptions.first { $0.region == .japan }
+        )
+        try subscriptionManager.disable(subscription: japanSubscription)
+        let hiddenHolidayViewModel = MonthCalendarViewModel(
+            calendarDisplayUseCase: calendarDisplayUseCase,
+            eventUseCase: eventUseCase,
+            calendarSharingStore: store,
+            subscriptionManager: subscriptionManager
+        )
+        hiddenHolidayViewModel.selectedDate = sharedEventStart
+
+        await hiddenHolidayViewModel.reloadMonth()
+
+        let hiddenHolidayCell = try XCTUnwrap(
+            hiddenHolidayViewModel.grid?.days.first { $0.date == holidayDate }
+        )
+        XCTAssertTrue(hiddenHolidayCell.holidays.isEmpty)
+        XCTAssertEqual(hiddenHolidayCell.events.map(\.eventID), [sharedEventID])
     }
 
     func testAcceptFailureDoesNotCreateFakeReceivedCalendar() async {

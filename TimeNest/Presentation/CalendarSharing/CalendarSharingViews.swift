@@ -267,7 +267,7 @@ struct CalendarSelectionView: View {
                     Image(
                         systemName: calendar.kind == .personal
                             ? "calendar"
-                            : "calendar.badge.person.crop"
+                            : "person.2.fill"
                     )
                     .foregroundStyle(ShiftCalendarColors.primaryBlue)
                     VStack(alignment: .leading, spacing: 2) {
