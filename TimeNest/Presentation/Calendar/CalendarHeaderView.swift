@@ -59,7 +59,6 @@ struct CalendarHeaderView: View {
     private var unifiedHeaderView: some View {
         HStack(spacing: 0) {
             calendarSelectionButton
-                .frame(width: 44)
 
             HStack(spacing: 6) {
                 navigationButton(icon: "chevron.left", action: onPrevious)
@@ -93,7 +92,6 @@ struct CalendarHeaderView: View {
             .frame(maxWidth: .infinity, alignment: .center)
 
             moreMenu
-                .frame(width: 44)
         }
     }
 
@@ -110,7 +108,11 @@ struct CalendarHeaderView: View {
                     .clipShape(Circle())
                     .offset(x: 2, y: 2)
             }
-            .frame(width: 44, height: 44)
+            .frame(
+                width: ShiftCalendarLayout.headerHeight,
+                height: ShiftCalendarLayout.headerHeight,
+                alignment: .center
+            )
             .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -167,6 +169,11 @@ struct CalendarHeaderView: View {
                 .frame(width: 36, height: 36)
                 .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
                 .clipShape(Circle())
+                .frame(
+                    width: ShiftCalendarLayout.headerHeight,
+                    height: ShiftCalendarLayout.headerHeight,
+                    alignment: .center
+                )
         }
         .buttonStyle(PlainButtonStyle())
         .accessibilityLabel(Text(localization.localized(.moreMenu)))

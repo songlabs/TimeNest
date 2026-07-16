@@ -128,6 +128,17 @@ struct CalendarSelectionActionState: Equatable {
     }
 }
 
+private enum CalendarSelectionLayout {
+    static let compactHeight: CGFloat = 380
+    static let additionalCalendarRowHeight: CGFloat = 60
+    static let errorSectionHeight: CGFloat = 96
+    static let maximumHeight: CGFloat = 520
+    static let maximumHeightRatio: CGFloat = 0.6
+    static let actionSpacing: CGFloat = 8
+    static let actionButtonHeight: CGFloat = 44
+    static let actionButtonHorizontalPadding: CGFloat = 2
+}
+
 @MainActor
 struct CalendarSelectionView: View {
     @EnvironmentObject private var sharingStore: CalendarSharingStore
@@ -142,6 +153,19 @@ struct CalendarSelectionView: View {
 
     private var received: [TimeNestCalendar] {
         sharingStore.calendars.filter { $0.kind == .sharedReceived }
+    }
+
+    private var presentationHeight: CGFloat {
+        let sharedCalendarRowCount = max(owned.count + received.count, 1)
+        let additionalCalendarRows = max(sharedCalendarRowCount - 1, 0)
+        let desiredHeight = CalendarSelectionLayout.compactHeight
+            + CGFloat(additionalCalendarRows) * CalendarSelectionLayout.additionalCalendarRowHeight
+            + (sharingStore.lastError == nil ? 0 : CalendarSelectionLayout.errorSectionHeight)
+        let maximumHeight = min(
+            CalendarSelectionLayout.maximumHeight,
+            UIScreen.main.bounds.height * CalendarSelectionLayout.maximumHeightRatio
+        )
+        return min(desiredHeight, maximumHeight)
     }
 
     var body: some View {
@@ -206,7 +230,10 @@ struct CalendarSelectionView: View {
                 }
             }
         }
-        .frame(minWidth: 320, minHeight: 430)
+        .frame(minWidth: 320)
+        .frame(height: presentationHeight)
+        .presentationDetents([.height(presentationHeight)])
+        .presentationContentInteraction(.scrolls)
         .sheet(isPresented: $actionState.isCreating) {
             CreateSharedCalendarView()
                 .environmentObject(sharingStore)
@@ -257,7 +284,7 @@ struct CalendarSelectionView: View {
 
     private func calendarRow(_ calendar: TimeNestCalendar) -> some View {
         let actions = CalendarSelectionRowActions(calendar: calendar)
-        return HStack(spacing: 2) {
+        return HStack(spacing: CalendarSelectionLayout.actionSpacing) {
             Button {
                 guard let calendarID = actionState.handle(.select, for: calendar) else { return }
                 sharingStore.select(.calendar(calendarID))
@@ -280,7 +307,8 @@ struct CalendarSelectionView: View {
                         }
                     }
                     Spacer()
-                    if sharingStore.selection.calendarID == calendar.id {
+                    if calendar.kind != .sharedOwned,
+                       sharingStore.selection.calendarID == calendar.id {
                         Image(systemName: "checkmark")
                             .fontWeight(.semibold)
                             .foregroundStyle(ShiftCalendarColors.primaryBlue)
@@ -308,7 +336,8 @@ struct CalendarSelectionView: View {
                 if sharingStore.isStopping(calendarID: calendar.id)
                     || actionState.deletionInProgressID == calendar.id {
                     ProgressView()
-                        .frame(width: 44, height: 44)
+                        .frame(height: CalendarSelectionLayout.actionButtonHeight)
+                        .padding(.horizontal, CalendarSelectionLayout.actionButtonHorizontalPadding)
                         .accessibilityLabel(localization.localized(
                             CalendarSelectionAccessibilityLabels.delete
                         ))
@@ -351,7 +380,8 @@ struct CalendarSelectionView: View {
             Image(systemName: systemImage)
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(color)
-                .frame(width: 44, height: 44)
+                .frame(height: CalendarSelectionLayout.actionButtonHeight)
+                .padding(.horizontal, CalendarSelectionLayout.actionButtonHorizontalPadding)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
