@@ -128,12 +128,47 @@ struct CalendarSelectionActionState: Equatable {
     }
 }
 
-private enum CalendarSelectionLayout {
-    static let compactHeight: CGFloat = 380
-    static let additionalCalendarRowHeight: CGFloat = 60
-    static let errorSectionHeight: CGFloat = 96
+private enum CalendarSharingPresentationLayout {
+    static let baseHeight: CGFloat = 380
+    static let additionalRowHeight: CGFloat = 60
     static let maximumHeight: CGFloat = 520
     static let maximumHeightRatio: CGFloat = 0.6
+
+    static func height(
+        additionalRowCount: Int = 0,
+        additionalHeight: CGFloat = 0
+    ) -> CGFloat {
+        let desiredHeight = baseHeight
+            + CGFloat(max(additionalRowCount, 0)) * additionalRowHeight
+            + additionalHeight
+        let availableMaximumHeight = min(
+            maximumHeight,
+            UIScreen.main.bounds.height * maximumHeightRatio
+        )
+        return min(desiredHeight, availableMaximumHeight)
+    }
+}
+
+private struct CalendarSharingPresentationModifier: ViewModifier {
+    let height: CGFloat
+
+    func body(content: Content) -> some View {
+        content
+            .frame(minWidth: 320)
+            .frame(height: height)
+            .presentationDetents([.height(height)])
+            .presentationContentInteraction(.scrolls)
+    }
+}
+
+private extension View {
+    func calendarSharingPresentation(height: CGFloat) -> some View {
+        modifier(CalendarSharingPresentationModifier(height: height))
+    }
+}
+
+private enum CalendarSelectionLayout {
+    static let errorSectionHeight: CGFloat = 96
     static let actionSpacing: CGFloat = 8
     static let actionButtonHeight: CGFloat = 44
     static let actionButtonHorizontalPadding: CGFloat = 2
@@ -158,14 +193,12 @@ struct CalendarSelectionView: View {
     private var presentationHeight: CGFloat {
         let sharedCalendarRowCount = max(owned.count + received.count, 1)
         let additionalCalendarRows = max(sharedCalendarRowCount - 1, 0)
-        let desiredHeight = CalendarSelectionLayout.compactHeight
-            + CGFloat(additionalCalendarRows) * CalendarSelectionLayout.additionalCalendarRowHeight
-            + (sharingStore.lastError == nil ? 0 : CalendarSelectionLayout.errorSectionHeight)
-        let maximumHeight = min(
-            CalendarSelectionLayout.maximumHeight,
-            UIScreen.main.bounds.height * CalendarSelectionLayout.maximumHeightRatio
+        return CalendarSharingPresentationLayout.height(
+            additionalRowCount: additionalCalendarRows,
+            additionalHeight: sharingStore.lastError == nil
+                ? 0
+                : CalendarSelectionLayout.errorSectionHeight
         )
-        return min(desiredHeight, maximumHeight)
     }
 
     var body: some View {
@@ -230,22 +263,26 @@ struct CalendarSelectionView: View {
                 }
             }
         }
-        .frame(minWidth: 320)
-        .frame(height: presentationHeight)
-        .presentationDetents([.height(presentationHeight)])
-        .presentationContentInteraction(.scrolls)
+        .calendarSharingPresentation(height: presentationHeight)
         .sheet(isPresented: $actionState.isCreating) {
             CreateSharedCalendarView()
                 .environmentObject(sharingStore)
                 .environmentObject(localization)
         }
         .sheet(item: $actionState.route) { route in
-            NavigationStack {
+            Group {
                 switch route {
                 case .edit(let calendarID):
-                    OwnedSharedCalendarDetailView(calendarID: calendarID)
+                    NavigationStack {
+                        OwnedSharedCalendarDetailView(calendarID: calendarID)
+                    }
+                    .calendarSharingPresentation(
+                        height: editPresentationHeight(calendarID: calendarID)
+                    )
                 case .receivedDetails(let calendarID):
-                    ReceivedSharedCalendarDetailView(calendarID: calendarID)
+                    NavigationStack {
+                        ReceivedSharedCalendarDetailView(calendarID: calendarID)
+                    }
                 }
             }
             .environmentObject(sharingStore)
@@ -280,6 +317,13 @@ struct CalendarSelectionView: View {
         } message: {
             Text(errorMessage ?? "")
         }
+    }
+
+    private func editPresentationHeight(calendarID: UUID) -> CGFloat {
+        let participantCount = sharingStore.participants(for: calendarID).count
+        return CalendarSharingPresentationLayout.height(
+            additionalRowCount: max(participantCount - 1, 0)
+        )
     }
 
     private func calendarRow(_ calendar: TimeNestCalendar) -> some View {
@@ -474,6 +518,7 @@ private struct CreateSharedCalendarView: View {
                 }
             }
         }
+        .calendarSharingPresentation(height: CalendarSharingPresentationLayout.height())
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(
                 invitation: item,
