@@ -127,24 +127,34 @@ struct CalendarSelectionActionState: Equatable {
     }
 }
 
+@MainActor
 private enum CalendarSharingPresentationLayout {
-    static let baseHeight: CGFloat = 380
-    static let additionalRowHeight: CGFloat = 60
-    static let maximumHeight: CGFloat = 520
-    static let maximumHeightRatio: CGFloat = 0.6
+    static let heightRatio: CGFloat = 0.60
+    static let minimumHeight: CGFloat = 380
+    static let maximumHeight: CGFloat = 620
+    static let receivedDetailsHeight: CGFloat = 380
 
-    static func height(
-        additionalRowCount: Int = 0,
-        additionalHeight: CGFloat = 0
-    ) -> CGFloat {
-        let desiredHeight = baseHeight
-            + CGFloat(max(additionalRowCount, 0)) * additionalRowHeight
-            + additionalHeight
-        let availableMaximumHeight = min(
-            maximumHeight,
-            UIScreen.main.bounds.height * maximumHeightRatio
-        )
-        return min(desiredHeight, availableMaximumHeight)
+    static func sharedPopupHeight() -> CGFloat {
+        let availableHeight = availableDisplayHeight()
+        guard availableHeight > 0 else { return minimumHeight }
+
+        let preferredHeight = availableHeight * heightRatio
+        let lowerBound = min(minimumHeight, availableHeight)
+        let upperBound = min(maximumHeight, availableHeight)
+        return min(max(preferredHeight, lowerBound), upperBound)
+    }
+
+    private static func availableDisplayHeight() -> CGFloat {
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        guard let scene = scenes.first(where: { $0.activationState == .foregroundActive })
+            ?? scenes.first else {
+            return 0
+        }
+
+        let window = scene.windows.first(where: \.isKeyWindow) ?? scene.windows.first
+        let containerHeight = window?.bounds.height ?? scene.screen.bounds.height
+        let safeAreaInsets = window?.safeAreaInsets ?? .zero
+        return max(containerHeight - safeAreaInsets.top - safeAreaInsets.bottom, 0)
     }
 }
 
@@ -160,14 +170,20 @@ private struct CalendarSharingPresentationModifier: ViewModifier {
     }
 }
 
+@MainActor
 private extension View {
+    func calendarSharingPresentation() -> some View {
+        modifier(CalendarSharingPresentationModifier(
+            height: CalendarSharingPresentationLayout.sharedPopupHeight()
+        ))
+    }
+
     func calendarSharingPresentation(height: CGFloat) -> some View {
         modifier(CalendarSharingPresentationModifier(height: height))
     }
 }
 
 private enum CalendarSelectionLayout {
-    static let errorSectionHeight: CGFloat = 96
     static let actionSpacing: CGFloat = 8
     static let actionButtonHeight: CGFloat = 44
     static let actionButtonHorizontalPadding: CGFloat = 2
@@ -187,17 +203,6 @@ struct CalendarSelectionView: View {
 
     private var received: [TimeNestCalendar] {
         sharingStore.calendars.filter { $0.kind == .sharedReceived }
-    }
-
-    private var presentationHeight: CGFloat {
-        let sharedCalendarRowCount = max(owned.count + received.count, 1)
-        let additionalCalendarRows = max(sharedCalendarRowCount - 1, 0)
-        return CalendarSharingPresentationLayout.height(
-            additionalRowCount: additionalCalendarRows,
-            additionalHeight: sharingStore.lastError == nil
-                ? 0
-                : CalendarSelectionLayout.errorSectionHeight
-        )
     }
 
     var body: some View {
@@ -262,7 +267,7 @@ struct CalendarSelectionView: View {
                 }
             }
         }
-        .calendarSharingPresentation(height: presentationHeight)
+        .calendarSharingPresentation()
         .sheet(isPresented: $actionState.isCreating) {
             CreateSharedCalendarView()
                 .environmentObject(sharingStore)
@@ -275,15 +280,13 @@ struct CalendarSelectionView: View {
                     NavigationStack {
                         OwnedSharedCalendarDetailView(calendarID: calendarID)
                     }
-                    .calendarSharingPresentation(
-                        height: editPresentationHeight(calendarID: calendarID)
-                    )
+                    .calendarSharingPresentation()
                 case .receivedDetails(let calendarID):
                     NavigationStack {
                         ReceivedSharedCalendarDetailView(calendarID: calendarID)
                     }
                     .calendarSharingPresentation(
-                        height: CalendarSharingPresentationLayout.height()
+                        height: CalendarSharingPresentationLayout.receivedDetailsHeight
                     )
                 }
             }
@@ -319,13 +322,6 @@ struct CalendarSelectionView: View {
         } message: {
             Text(errorMessage ?? "")
         }
-    }
-
-    private func editPresentationHeight(calendarID: UUID) -> CGFloat {
-        let participantCount = sharingStore.participants(for: calendarID).count
-        return CalendarSharingPresentationLayout.height(
-            additionalRowCount: max(participantCount - 1, 0)
-        )
     }
 
     private func calendarRow(_ calendar: TimeNestCalendar) -> some View {
@@ -461,39 +457,25 @@ private struct CalendarSharingPrimaryActionLabel: View {
     }
 }
 
-private struct CalendarSharingFormActionBar: View {
-    let cancelTitle: String
-    let primaryTitle: String
-    let isPrimaryEnabled: Bool
+private struct CalendarSharingPrimaryActionButton: View {
+    let title: String
+    let isEnabled: Bool
     let isWorking: Bool
-    let onCancel: () -> Void
-    let onPrimary: () -> Void
+    let action: () -> Void
 
     var body: some View {
-        HStack(spacing: 12) {
-            Button(action: onCancel) {
-                Text(cancelTitle)
-                    .fontWeight(.semibold)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.bordered)
-            .disabled(isWorking)
-
-            Button(action: onPrimary) {
-                CalendarSharingPrimaryActionLabel(
-                    title: primaryTitle,
-                    isWorking: isWorking
-                )
-                .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(ShiftCalendarColors.accentYellow)
-            .disabled(!isPrimaryEnabled || isWorking)
+        Button(action: action) {
+            CalendarSharingPrimaryActionLabel(
+                title: title,
+                isWorking: isWorking
+            )
+            .frame(maxWidth: .infinity, minHeight: 44)
         }
+        .buttonStyle(.borderedProminent)
+        .tint(ShiftCalendarColors.accentYellow)
+        .disabled(!isEnabled || isWorking)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.bar)
-        .overlay(alignment: .top) { Divider() }
     }
 }
 
@@ -533,19 +515,23 @@ private struct CreateSharedCalendarView: View {
                     }
                 }
 
-                CalendarSharingFormActionBar(
-                    cancelTitle: localization.localized(.cancel),
-                    primaryTitle: localization.localized(.calendarSharingCreateAction),
-                    isPrimaryEnabled: canSubmit,
+                CalendarSharingPrimaryActionButton(
+                    title: localization.localized(.calendarSharingCreateAction),
+                    isEnabled: canSubmit,
                     isWorking: isWorking,
-                    onCancel: { dismiss() },
-                    onPrimary: { Task { await create() } }
+                    action: { Task { await create() } }
                 )
             }
             .navigationTitle(localization.localized(.calendarSharingCreateCalendar))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localization.localized(.cancel)) { dismiss() }
+                        .disabled(isWorking)
+                }
+            }
         }
-        .calendarSharingPresentation(height: CalendarSharingPresentationLayout.height())
+        .calendarSharingPresentation()
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(
                 invitation: item,
@@ -669,17 +655,21 @@ private struct OwnedSharedCalendarDetailView: View {
                 }
             }
 
-            CalendarSharingFormActionBar(
-                cancelTitle: localization.localized(.cancel),
-                primaryTitle: localization.localized(.calendarSharingSaveAction),
-                isPrimaryEnabled: canSubmit,
+            CalendarSharingPrimaryActionButton(
+                title: localization.localized(.calendarSharingSaveAction),
+                isEnabled: canSubmit,
                 isWorking: isWorking,
-                onCancel: { dismiss() },
-                onPrimary: { Task { await rename() } }
+                action: { Task { await rename() } }
             )
         }
         .navigationTitle(localization.localized(.calendarSharingEditCalendar))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(localization.localized(.cancel)) { dismiss() }
+                    .disabled(isWorking)
+            }
+        }
         .onAppear { name = descriptor?.calendarName ?? "" }
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(
