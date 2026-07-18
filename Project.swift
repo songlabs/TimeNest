@@ -1,7 +1,7 @@
 import ProjectDescription
 
 let marketingVersion = "1.3"
-let buildNumber = "6"
+let buildNumber = "8"
 
 let project = Project(
     name: "TimeNest",

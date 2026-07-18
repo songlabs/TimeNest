@@ -446,11 +446,15 @@
 "calendar_sharing.create_calendar" = "创建共享日历";
 "calendar_sharing.no_shared_calendars" = "暂无共享日历";
 "calendar_sharing.read_only" = "仅查看";
-"calendar_sharing.calendar_name" = "日历名称";
+"calendar_sharing.calendar_name" = "共享日历名称";
+"calendar_sharing.default_calendar_name" = "我的共享日历";
+"calendar_sharing.default_name_with_owner" = "%@的共享日历";
+"calendar_sharing.shared_by_owner" = "由 %@ 共享";
+"calendar_sharing.shared_by_icloud_user" = "由 iCloud 用户共享";
 "calendar_sharing.edit_calendar" = "编辑共享日历";
 "calendar_sharing.delete_calendar" = "删除共享日历";
 "calendar_sharing.invite_people" = "邀请对象";
-"calendar_sharing.invite_after_creation" = "创建共享日历后将打开 iCloud 系统共享界面。";
+"calendar_sharing.invite_after_creation" = "创建共享日历后，\n可从 iCloud 共享界面邀请联系人。";
 "calendar_sharing.create_action" = "创建";
 "calendar_sharing.save_action" = "保存";
 "calendar_sharing.delete_action" = "删除";
@@ -495,6 +499,7 @@
 "calendar_sharing.error.invitation_creation_failed" = "无法创建共享邀请，请稍后重试。";
 "calendar_sharing.error.invitation_cancellation_failed" = "无法撤销未使用的邀请。该邀请仍会显示在下方，可再次尝试清理。";
 "calendar_sharing.error.invitation_url_unavailable" = "无法获取共享链接，请稍后重试。";
+"calendar_sharing.error.invitation_activity_failed" = "共享日历已创建，但未能在共享界面中完成邀请。你可以稍后从共享日历编辑界面再次邀请。";
 "calendar_sharing.error.creation_failed" = "无法开始共享，请稍后重试。";
 "calendar_sharing.error.share_unavailable" = "此共享日历已不可用，已返回我的日历。";
 "calendar_sharing.error.permission_denied" = "你没有访问此共享日历的权限。";

@@ -446,11 +446,15 @@
 "calendar_sharing.create_calendar" = "Create Shared Calendar";
 "calendar_sharing.no_shared_calendars" = "No shared calendars";
 "calendar_sharing.read_only" = "View Only";
-"calendar_sharing.calendar_name" = "Calendar Name";
+"calendar_sharing.calendar_name" = "Shared Calendar Name";
+"calendar_sharing.default_calendar_name" = "My Shared Calendar";
+"calendar_sharing.default_name_with_owner" = "%@'s Shared Calendar";
+"calendar_sharing.shared_by_owner" = "Shared by %@";
+"calendar_sharing.shared_by_icloud_user" = "Shared by an iCloud user";
 "calendar_sharing.edit_calendar" = "Edit Shared Calendar";
 "calendar_sharing.delete_calendar" = "Delete Shared Calendar";
 "calendar_sharing.invite_people" = "People to Invite";
-"calendar_sharing.invite_after_creation" = "The iCloud sharing sheet opens after the calendar is created.";
+"calendar_sharing.invite_after_creation" = "After creating the shared calendar,\nyou can invite people from the iCloud sharing sheet.";
 "calendar_sharing.create_action" = "Create";
 "calendar_sharing.save_action" = "Save";
 "calendar_sharing.delete_action" = "Delete";
@@ -495,6 +499,7 @@
 "calendar_sharing.error.invitation_creation_failed" = "Couldn't create the sharing invitation. Try again later.";
 "calendar_sharing.error.invitation_cancellation_failed" = "The unused invitation could not be removed. It remains visible below so you can retry.";
 "calendar_sharing.error.invitation_url_unavailable" = "Couldn't get the sharing link. Try again later.";
+"calendar_sharing.error.invitation_activity_failed" = "The shared calendar was created, but the invitation could not be completed in the sharing sheet. You can invite again from Edit Shared Calendar.";
 "calendar_sharing.error.creation_failed" = "Sharing could not be started. Try again later.";
 "calendar_sharing.error.share_unavailable" = "This shared calendar is no longer available. TimeNest returned to My Calendar.";
 "calendar_sharing.error.permission_denied" = "You do not have permission to access this shared calendar.";

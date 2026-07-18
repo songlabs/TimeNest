@@ -3,6 +3,54 @@ import CryptoKit
 import Foundation
 import OSLog
 
+enum CalendarSharingPersonNameFormatter {
+    static func displayName(
+        from components: PersonNameComponents?,
+        locale: Locale = .current
+    ) -> String? {
+        guard let components else { return nil }
+        let formatter = PersonNameComponentsFormatter()
+        formatter.locale = locale
+        formatter.style = .default
+        let value = formatter.string(from: components)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.isEmpty ? nil : value
+    }
+}
+
+@MainActor
+struct CloudKitCurrentUserDisplayNameProvider {
+    private let fetchNameComponents: () async throws -> PersonNameComponents?
+
+    init(container: CKContainer) {
+        fetchNameComponents = {
+            let recordID = try await container.userRecordID()
+            let participant = try await container.shareParticipant(forUserRecordID: recordID)
+            return participant.userIdentity.nameComponents
+        }
+    }
+
+    init(fetchNameComponents: @escaping () async throws -> PersonNameComponents?) {
+        self.fetchNameComponents = fetchNameComponents
+    }
+
+    func displayName(locale: Locale = .current) async -> String? {
+        do {
+            return CalendarSharingPersonNameFormatter.displayName(
+                from: try await fetchNameComponents(),
+                locale: locale
+            )
+        } catch {
+            return nil
+        }
+    }
+}
+
+struct AcceptedSharedCalendarCloudResult {
+    let zoneName: String
+    let ownerDisplayName: String?
+}
+
 struct ReceivedSharedCalendarPayload {
     let calendar: SharedCalendarDescriptor
     let events: [SharedEventSnapshot]
@@ -33,14 +81,17 @@ enum ReceivedSharedCalendarPayloadAssembler {
         zoneID: CKRecordZone.ID,
         records: SharedZoneRecordCollection
     ) -> ReceivedSharedCalendarPayload? {
+        let share = records.records(ofType: CKRecord.SystemType.share).first as? CKShare
         guard let root = records.records(
             ofType: CalendarSharingCloudSchema.calendarRecordType
         ).first,
         let calendar = CalendarSharingCloudSchema.receivedDescriptor(
             from: root,
             zoneID: zoneID,
-            participantCount: (records.records(ofType: CKRecord.SystemType.share).first as? CKShare)
-                .map(participantCount(in:)) ?? 0
+            ownerDisplayName: CalendarSharingPersonNameFormatter.displayName(
+                from: share?.owner.userIdentity.nameComponents
+            ),
+            participantCount: share.map(participantCount(in:)) ?? 0
         ) else {
             return nil
         }
@@ -189,13 +240,9 @@ enum OwnedCalendarParticipantSnapshotAssembler {
     static func make(from share: CKShare) -> [SharedCalendarParticipantSnapshot] {
         share.participants.compactMap { participant in
             guard participant.role != .owner else { return nil }
-            let name = participant.userIdentity.nameComponents.map {
-                PersonNameComponentsFormatter.localizedString(
-                    from: $0,
-                    style: .default,
-                    options: []
-                )
-            }
+            let name = CalendarSharingPersonNameFormatter.displayName(
+                from: participant.userIdentity.nameComponents
+            )
             let email = participant.userIdentity.lookupInfo?.emailAddress
             let isAccepted = participant.acceptanceStatus == .accepted
             return SharedCalendarParticipantSnapshot(
@@ -371,6 +418,7 @@ struct CalendarSharingContentRecordPlanExecutor {
 
 @MainActor
 protocol CalendarSharingClientProtocol {
+    func currentUserDisplayName() async -> String?
     func fetchShareMetadata(
         from url: URL
     ) async throws -> any CalendarSharingShareMetadata
@@ -395,7 +443,9 @@ protocol CalendarSharingClientProtocol {
     ) async throws
     func renameOwnedCalendar(_ calendar: OwnedSharedCalendarDescriptor, name: String) async throws
     func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload]
-    func accept(metadata: any CalendarSharingShareMetadata) async throws -> String
+    func accept(
+        metadata: any CalendarSharingShareMetadata
+    ) async throws -> AcceptedSharedCalendarCloudResult
     func leaveSharedCalendar(_ calendar: SharedCalendarDescriptor) async throws
     func stopOwnedSharing(_ calendar: OwnedSharedCalendarDescriptor) async throws
 }
@@ -404,9 +454,14 @@ protocol CalendarSharingShareMetadata {
     var containerIdentifier: String { get }
     var participantStatus: CKShare.ParticipantAcceptanceStatus { get }
     var share: CKShare { get }
+    var ownerNameComponents: PersonNameComponents? { get }
 }
 
-extension CKShare.Metadata: CalendarSharingShareMetadata {}
+extension CKShare.Metadata: CalendarSharingShareMetadata {
+    var ownerNameComponents: PersonNameComponents? {
+        ownerIdentity.nameComponents
+    }
+}
 
 enum CalendarSharingContainerValidator {
     static func validate(
@@ -586,6 +641,7 @@ enum CalendarSharingCloudSchema {
     static func receivedDescriptor(
         from root: CKRecord,
         zoneID: CKRecordZone.ID,
+        ownerDisplayName: String?,
         participantCount: Int
     ) -> SharedCalendarDescriptor? {
         guard let idValue = root[CalendarField.calendarID] as? String,
@@ -597,6 +653,7 @@ enum CalendarSharingCloudSchema {
             id: id,
             zoneName: zoneID.zoneName,
             ownerName: zoneID.ownerName,
+            ownerDisplayName: ownerDisplayName,
             calendarName: name,
             participantCount: participantCount,
             kind: .sharedReceived,
@@ -793,11 +850,26 @@ enum CalendarSharingErrorMapper {
 @MainActor
 final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
     let container: CKContainer
+    private let currentUserDisplayNameProvider: CloudKitCurrentUserDisplayNameProvider
     private var privateDatabase: CKDatabase { container.privateCloudDatabase }
     private var sharedDatabase: CKDatabase { container.sharedCloudDatabase }
 
     init(container: CKContainer = .default()) {
         self.container = container
+        currentUserDisplayNameProvider = CloudKitCurrentUserDisplayNameProvider(
+            container: container
+        )
+    }
+
+    func currentUserDisplayName() async -> String? {
+        let displayName = await currentUserDisplayNameProvider.displayName()
+        CalendarSharingDiagnostics.debug(
+            operation: "currentUserDisplayName",
+            stage: "completed",
+            database: "container",
+            details: "result=\(displayName == nil ? "unavailable" : "available")"
+        )
+        return displayName
     }
 
     func fetchShareMetadata(
@@ -1088,7 +1160,9 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         }
     }
 
-    func accept(metadata: any CalendarSharingShareMetadata) async throws -> String {
+    func accept(
+        metadata: any CalendarSharingShareMetadata
+    ) async throws -> AcceptedSharedCalendarCloudResult {
         let containerIdentifierMatched = metadata.containerIdentifier == container.containerIdentifier
         CalendarSharingDiagnostics.debug(
             operation: "acceptShare",
@@ -1130,6 +1204,9 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
 
         try await verifyAccountAvailability()
         let shareHash = CalendarSharingDiagnostics.recordHash(metadata.share.recordID)
+        let ownerDisplayName = CalendarSharingPersonNameFormatter.displayName(
+            from: metadata.ownerNameComponents
+        )
         switch metadata.participantStatus {
         case .accepted:
             CalendarSharingDiagnostics.debug(
@@ -1139,7 +1216,10 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                 details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
                     + "shareHash=\(shareHash)"
             )
-            return metadata.share.recordID.zoneID.zoneName
+            return AcceptedSharedCalendarCloudResult(
+                zoneName: metadata.share.recordID.zoneID.zoneName,
+                ownerDisplayName: ownerDisplayName
+            )
         case .pending:
             guard let cloudKitMetadata = metadata as? CKShare.Metadata else {
                 throw CalendarSharingError.invitationInvalid
@@ -1165,7 +1245,10 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
                     details: "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata)) "
                         + "shareHash=\(CalendarSharingDiagnostics.recordHash(acceptedShare.recordID))"
                 )
-                return acceptedShare.recordID.zoneID.zoneName
+                return AcceptedSharedCalendarCloudResult(
+                    zoneName: acceptedShare.recordID.zoneID.zoneName,
+                    ownerDisplayName: ownerDisplayName
+                )
             } catch let error as CalendarSharingError {
                 throw error
             } catch {

@@ -446,11 +446,15 @@
 "calendar_sharing.create_calendar" = "共有カレンダーを作成";
 "calendar_sharing.no_shared_calendars" = "共有カレンダーはありません";
 "calendar_sharing.read_only" = "閲覧のみ";
-"calendar_sharing.calendar_name" = "カレンダー名";
+"calendar_sharing.calendar_name" = "共有カレンダー名";
+"calendar_sharing.default_calendar_name" = "マイ共有カレンダー";
+"calendar_sharing.default_name_with_owner" = "%@の共有カレンダー";
+"calendar_sharing.shared_by_owner" = "%@さんから共有";
+"calendar_sharing.shared_by_icloud_user" = "iCloudユーザーから共有";
 "calendar_sharing.edit_calendar" = "共有カレンダーを編集";
 "calendar_sharing.delete_calendar" = "共有カレンダーを削除";
 "calendar_sharing.invite_people" = "招待する人";
-"calendar_sharing.invite_after_creation" = "共有カレンダーを作成した後、iCloudの共有画面が開きます。";
+"calendar_sharing.invite_after_creation" = "共有カレンダーの作成後に、\niCloudの共有画面から招待できます。";
 "calendar_sharing.create_action" = "作成する";
 "calendar_sharing.save_action" = "保存する";
 "calendar_sharing.delete_action" = "削除する";
@@ -495,6 +499,7 @@
 "calendar_sharing.error.invitation_creation_failed" = "共有の招待を作成できませんでした。時間をおいて再試行してください。";
 "calendar_sharing.error.invitation_cancellation_failed" = "未使用の招待を削除できませんでした。下の一覧から再試行できます。";
 "calendar_sharing.error.invitation_url_unavailable" = "共有リンクを取得できませんでした。時間をおいて再試行してください。";
+"calendar_sharing.error.invitation_activity_failed" = "共有カレンダーは作成されましたが、共有画面で招待を完了できませんでした。共有カレンダーの編集画面からもう一度招待できます。";
 "calendar_sharing.error.creation_failed" = "共有を開始できませんでした。時間をおいて再試行してください。";
 "calendar_sharing.error.share_unavailable" = "この共有カレンダーは利用できません。マイカレンダーに戻しました。";
 "calendar_sharing.error.permission_denied" = "この共有カレンダーにアクセスする権限がありません。";

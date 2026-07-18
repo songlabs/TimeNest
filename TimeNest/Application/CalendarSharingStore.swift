@@ -44,7 +44,7 @@ final class CalendarSharingStore: ObservableObject {
     private var refreshIsInProgress = false
     private var refreshWasRequested = false
     private var refreshCompletionWaiters: [CheckedContinuation<Void, Never>] = []
-    private var acceptedMetadataAwaitingRefresh: [String: String] = [:]
+    private var acceptedMetadataAwaitingRefresh: [String: AcceptedSharedCalendarCloudResult] = [:]
     private let initialMigrationError: CalendarSharingError?
     private var syncGenerations: [UUID: Int] = [:]
     private var completedSyncGenerations: [UUID: Int] = [:]
@@ -121,6 +121,14 @@ final class CalendarSharingStore: ObservableObject {
 
     func ownedDescriptor(id: UUID) -> OwnedSharedCalendarDescriptor? {
         ownedCalendars.first { $0.id == id }
+    }
+
+    func receivedDescriptor(id: UUID) -> SharedCalendarDescriptor? {
+        receivedCalendars.first { $0.id == id }
+    }
+
+    func currentUserDisplayName() async -> String? {
+        await client.currentUserDisplayName()
     }
 
     func participants(for calendarID: UUID) -> [SharedCalendarParticipantSnapshot] {
@@ -389,25 +397,35 @@ final class CalendarSharingStore: ObservableObject {
                     + "activityCompleted=true"
             )
             await synchronizeAll()
-        case .cancelled, .activityError:
-            do {
-                try await revokePendingInvitation(
-                    calendarID: invitation.calendarID,
-                    participantSnapshotID: invitation.id
-                )
-                CalendarSharingDiagnostics.debug(
-                    operation: "invite",
-                    stage: "pending-participant-revoked",
-                    database: "private",
-                    details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(invitation.calendarID.uuidString)) "
-                        + "participantHash=\(CalendarSharingDiagnostics.identifierHash(invitation.id)) "
-                        + "activityCompleted=false"
-                )
-                lastError = initialMigrationError
-            } catch {
-                lastError = .invitationCancellationFailed
-                throw CalendarSharingError.invitationCancellationFailed
-            }
+        case .cancelled:
+            try await removeUnusedInvitation(invitation, activityFailed: false)
+        case .activityError:
+            try await removeUnusedInvitation(invitation, activityFailed: true)
+            throw CalendarSharingError.invitationActivityFailed
+        }
+    }
+
+    private func removeUnusedInvitation(
+        _ invitation: CalendarSharingInvitation,
+        activityFailed: Bool
+    ) async throws {
+        do {
+            try await revokePendingInvitation(
+                calendarID: invitation.calendarID,
+                participantSnapshotID: invitation.id
+            )
+            CalendarSharingDiagnostics.debug(
+                operation: "invite",
+                stage: "pending-participant-revoked",
+                database: "private",
+                details: "calendarHash=\(CalendarSharingDiagnostics.identifierHash(invitation.calendarID.uuidString)) "
+                    + "participantHash=\(CalendarSharingDiagnostics.identifierHash(invitation.id)) "
+                    + "activityCompleted=false activityFailed=\(activityFailed)"
+            )
+            lastError = initialMigrationError
+        } catch {
+            lastError = .invitationCancellationFailed
+            throw CalendarSharingError.invitationCancellationFailed
         }
     }
 
@@ -605,10 +623,10 @@ final class CalendarSharingStore: ObservableObject {
         lastError = nil
         defer { isAcceptingInvitation = false }
         let metadataHash = CalendarSharingDiagnostics.metadataHash(metadata)
-        let acceptedZoneName: String
+        let acceptedShare: AcceptedSharedCalendarCloudResult
 
-        if let pendingZoneName = acceptedMetadataAwaitingRefresh[metadataHash] {
-            acceptedZoneName = pendingZoneName
+        if let pendingShare = acceptedMetadataAwaitingRefresh[metadataHash] {
+            acceptedShare = pendingShare
             CalendarSharingDiagnostics.debug(
                 operation: "acceptShare",
                 stage: "accept-skipped-already-completed",
@@ -617,8 +635,8 @@ final class CalendarSharingStore: ObservableObject {
             )
         } else {
             do {
-                acceptedZoneName = try await client.accept(metadata: metadata)
-                acceptedMetadataAwaitingRefresh[metadataHash] = acceptedZoneName
+                acceptedShare = try await client.accept(metadata: metadata)
+                acceptedMetadataAwaitingRefresh[metadataHash] = acceptedShare
             } catch {
                 let mappedError = (error as? CalendarSharingError)
                     ?? CalendarSharingErrorMapper.map(
@@ -648,7 +666,7 @@ final class CalendarSharingStore: ObservableObject {
         )
         do {
             let calendar = try await refreshReceivedCalendar(
-                acceptedZoneName: acceptedZoneName
+                acceptedShare: acceptedShare
             )
             acceptedMetadataAwaitingRefresh[metadataHash] = nil
             select(.calendar(calendar.id))
@@ -698,6 +716,7 @@ final class CalendarSharingStore: ObservableObject {
              .metadataFetchFailed, .invitationContainerMismatch,
              .invitationUnavailable, .permissionDenied,
              .invitationCreationFailed, .invitationURLUnavailable,
+             .invitationActivityFailed,
              .shareCreationFailed, .shareUnavailable,
              .calendarDataMigrationFailed, .invitationCancellationFailed:
             .discarded
@@ -705,11 +724,24 @@ final class CalendarSharingStore: ObservableObject {
     }
 
     private func refreshReceivedCalendar(
-        acceptedZoneName: String
+        acceptedShare: AcceptedSharedCalendarCloudResult
     ) async throws -> SharedCalendarDescriptor {
-        let payloads = try await client.fetchReceivedCalendars()
+        let payloads = try await client.fetchReceivedCalendars().map { payload in
+            guard payload.calendar.zoneName == acceptedShare.zoneName,
+                  acceptedShare.ownerDisplayName != nil else {
+                return payload
+            }
+            var calendar = payload.calendar
+            calendar.ownerDisplayName = acceptedShare.ownerDisplayName
+            return ReceivedSharedCalendarPayload(
+                calendar: calendar,
+                events: payload.events,
+                shifts: payload.shifts,
+                workRecords: payload.workRecords
+            )
+        }
         guard let acceptedPayload = payloads.first(where: {
-            $0.calendar.zoneName == acceptedZoneName
+            $0.calendar.zoneName == acceptedShare.zoneName
         }) else {
             throw CalendarSharingError.receivedCalendarRefreshFailed
         }

@@ -232,6 +232,80 @@ final class CalendarSelectionAndPolicyTests: XCTestCase {
         XCTAssertTrue(CalendarSharingFormValidation.hasRequiredName(" Family "))
     }
 
+    func testCreateNameDraftKeepsUserEditedNameAfterInitialFallback() {
+        var draft = CalendarSharingCreateNameDraft()
+
+        draft.initialize(defaultName: "My Shared Calendar")
+        XCTAssertEqual(draft.value, "My Shared Calendar")
+        XCTAssertTrue(CalendarSharingFormValidation.hasRequiredName(draft.value))
+
+        draft.updateFromUser("Family")
+        XCTAssertFalse(draft.applyResolvedDefaultName("Alice's Shared Calendar"))
+
+        XCTAssertEqual(draft.value, "Family")
+        XCTAssertTrue(draft.hasUserEditedCalendarName)
+        XCTAssertFalse(draft.hasAppliedResolvedDefaultName)
+    }
+
+    func testCreateNameDraftAppliesAvailableOwnerNameOnlyOnce() {
+        var draft = CalendarSharingCreateNameDraft()
+        draft.initialize(defaultName: "My Shared Calendar")
+
+        XCTAssertTrue(draft.applyResolvedDefaultName("Sou's Shared Calendar"))
+        XCTAssertFalse(draft.applyResolvedDefaultName("Other's Shared Calendar"))
+        XCTAssertEqual(draft.value, "Sou's Shared Calendar")
+        XCTAssertTrue(draft.hasAppliedResolvedDefaultName)
+        XCTAssertFalse(draft.hasUserEditedCalendarName)
+    }
+
+    func testCreateNameDraftKeepsFallbackWhenOwnerNameIsUnavailable() {
+        var draft = CalendarSharingCreateNameDraft()
+        draft.initialize(defaultName: "My Shared Calendar")
+
+        XCTAssertEqual(draft.value, "My Shared Calendar")
+        XCTAssertFalse(draft.hasAppliedResolvedDefaultName)
+    }
+
+    func testLocalizedOwnerFormatsCoverAllFiveLanguages() {
+        let cases: [(String, String, String, String)] = [
+            ("ja", "Souの共有カレンダー", "Souさんから共有", "iCloudユーザーから共有"),
+            ("zhHans", "Sou的共享日历", "由 Sou 共享", "由 iCloud 用户共享"),
+            ("zh-Hant", "Sou的共享日曆", "由 Sou 共享", "由 iCloud 使用者共享"),
+            ("enUS", "Sou's Shared Calendar", "Shared by Sou", "Shared by an iCloud user"),
+            ("ko", "Sou의 공유 캘린더", "Sou님이 공유함", "iCloud 사용자가 공유함")
+        ]
+
+        for (languageCode, defaultName, sharedBy, fallback) in cases {
+            let localization = LocalizationManager(savedCode: languageCode)
+            XCTAssertEqual(
+                CalendarSharingLocalizedOwnerText.defaultCalendarName(
+                    ownerDisplayName: "Sou",
+                    format: localization.localized(.calendarSharingDefaultNameWithOwner),
+                    locale: localization.currentLocale
+                ),
+                defaultName
+            )
+            XCTAssertEqual(
+                CalendarSharingLocalizedOwnerText.sharedByText(
+                    ownerDisplayName: "Sou",
+                    format: localization.localized(.calendarSharingSharedByOwner),
+                    fallback: localization.localized(.calendarSharingSharedByICloudUser),
+                    locale: localization.currentLocale
+                ),
+                sharedBy
+            )
+            XCTAssertEqual(
+                CalendarSharingLocalizedOwnerText.sharedByText(
+                    ownerDisplayName: nil,
+                    format: localization.localized(.calendarSharingSharedByOwner),
+                    fallback: localization.localized(.calendarSharingSharedByICloudUser),
+                    locale: localization.currentLocale
+                ),
+                fallback
+            )
+        }
+    }
+
     func testDirectActionAccessibilityLabelsUseRequestedLocalizedKeys() {
         XCTAssertEqual(
             CalendarSelectionAccessibilityLabels.edit,
@@ -249,6 +323,37 @@ final class CalendarSelectionAndPolicyTests: XCTestCase {
 }
 
 final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
+    @MainActor
+    func testCurrentUserDisplayNameProviderFormatsAvailableName() async {
+        var components = PersonNameComponents()
+        components.givenName = " Sou "
+        let provider = CloudKitCurrentUserDisplayNameProvider {
+            components
+        }
+        let displayName = await provider.displayName(
+            locale: Locale(identifier: "en_US")
+        )
+
+        XCTAssertEqual(displayName, "Sou")
+    }
+
+    @MainActor
+    func testCurrentUserDisplayNameProviderSilentlyReturnsNilForFailureOrEmptyName() async {
+        let failingProvider = CloudKitCurrentUserDisplayNameProvider {
+            throw CKError(.notAuthenticated)
+        }
+        var emptyComponents = PersonNameComponents()
+        emptyComponents.givenName = " \n "
+        let emptyProvider = CloudKitCurrentUserDisplayNameProvider {
+            emptyComponents
+        }
+        let failedDisplayName = await failingProvider.displayName()
+        let emptyDisplayName = await emptyProvider.displayName()
+
+        XCTAssertNil(failedDisplayName)
+        XCTAssertNil(emptyDisplayName)
+    }
+
     func testEventSnapshotContainsNoMemoOrNotificationFields() throws {
         let event = makeEvent(
             title: "Appointment",
@@ -494,9 +599,82 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             ReceivedSharedCalendarPayloadAssembler.makePayload(zoneID: zoneID, records: records)
         )
         XCTAssertEqual(payload.calendar.id, calendarID)
+        XCTAssertNil(payload.calendar.ownerDisplayName)
         XCTAssertTrue(payload.events.isEmpty)
         XCTAssertTrue(payload.shifts.isEmpty)
         XCTAssertTrue(payload.workRecords.isEmpty)
+    }
+
+    func testReceivedDescriptorCarriesFormattedShareOwnerNameWithoutCloudRecordField() throws {
+        let calendarID = UUID()
+        let zoneID = CKRecordZone.ID(
+            zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
+            ownerName: "owner"
+        )
+        let root = CKRecord(
+            recordType: CalendarSharingCloudSchema.calendarRecordType,
+            recordID: CKRecord.ID(
+                recordName: CalendarSharingCloudSchema.calendarRecordName,
+                zoneID: zoneID
+            )
+        )
+        CalendarSharingCloudSchema.apply(calendarID: calendarID, name: "Family", to: root)
+        var components = PersonNameComponents()
+        components.givenName = "Sou"
+        let ownerDisplayName = CalendarSharingPersonNameFormatter.displayName(
+            from: components,
+            locale: Locale(identifier: "en_US")
+        )
+
+        let descriptor = try XCTUnwrap(
+            CalendarSharingCloudSchema.receivedDescriptor(
+                from: root,
+                zoneID: zoneID,
+                ownerDisplayName: ownerDisplayName,
+                participantCount: 1
+            )
+        )
+
+        XCTAssertEqual(descriptor.ownerDisplayName, "Sou")
+        XCTAssertNil(root["ownerDisplayName"])
+    }
+
+    func testOldReceivedDescriptorCacheWithoutOwnerDisplayNameStillDecodes() throws {
+        let calendarID = UUID()
+        let json = """
+        {
+          "id": "\(calendarID.uuidString)",
+          "zoneName": "zone",
+          "ownerName": "owner",
+          "calendarName": "Legacy",
+          "participantCount": 1,
+          "kind": "sharedReceived",
+          "rootRecordName": "calendar",
+          "shareRecordName": "\(CKRecordNameZoneWideShare)"
+        }
+        """
+
+        let descriptor = try JSONDecoder().decode(
+            SharedCalendarDescriptor.self,
+            from: Data(json.utf8)
+        )
+
+        XCTAssertEqual(descriptor.calendarName, "Legacy")
+        XCTAssertNil(descriptor.ownerDisplayName)
+    }
+
+    func testProjectKeepsMarketingVersionOnePointThreeAndBuildEight() throws {
+        let repositoryRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let project = try String(
+            contentsOf: repositoryRoot.appendingPathComponent("Project.swift"),
+            encoding: .utf8
+        )
+
+        XCTAssertTrue(project.contains("let marketingVersion = \"1.3\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"8\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {
@@ -655,6 +833,69 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(client.ownedStates.first?.participants.count, 1)
     }
 
+    func testCancellingInvitationAfterCreationKeepsSharedCalendarAndShare() async throws {
+        let client = MockCalendarSharingClient()
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        let invitation = try await store.createSharedCalendar(name: "Family")
+        try await store.handleInvitationActivity(invitation, outcome: .cancelled)
+
+        XCTAssertEqual(store.calendar(id: invitation.calendarID)?.kind, .sharedOwned)
+        XCTAssertEqual(store.ownedDescriptor(id: invitation.calendarID)?.calendarName, "Family")
+        XCTAssertEqual(client.ownedStates.map(\.calendar.id), [invitation.calendarID])
+        XCTAssertTrue(store.participants(for: invitation.calendarID).isEmpty)
+
+        let laterInvitation = try await store.createInvitation(for: invitation.calendarID)
+        XCTAssertEqual(laterInvitation.calendarID, invitation.calendarID)
+    }
+
+    func testUnavailableInitialInvitationURLKeepsCreatedSharedCalendar() async {
+        let client = MockCalendarSharingClient()
+        client.invitationURL = nil
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        do {
+            _ = try await store.createSharedCalendar(name: "Family")
+            XCTFail("A missing invitation URL must be surfaced separately")
+        } catch {
+            XCTAssertEqual(error as? CalendarSharingError, .invitationURLUnavailable)
+        }
+
+        let created = store.calendars.first { $0.kind == .sharedOwned }
+        XCTAssertEqual(created?.name, "Family")
+        XCTAssertEqual(client.ownedStates.map(\.calendar.id), [created?.id].compactMap { $0 })
+        XCTAssertTrue(created.map { store.participants(for: $0.id).isEmpty } ?? false)
+    }
+
+    func testCloudShareCreationFailureDoesNotKeepLocalCalendar() async {
+        let client = MockCalendarSharingClient()
+        client.createShareError = CalendarSharingError.shareCreationFailed
+        let calendarRepository = InMemoryCalendarRepository(
+            calendars: [.personal(name: "My Calendar")]
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            calendarRepository: calendarRepository
+        )
+
+        do {
+            _ = try await store.createSharedCalendar(name: "Family")
+            XCTFail("A CloudKit share creation failure must be surfaced")
+        } catch {
+            XCTAssertEqual(error as? CalendarSharingError, .shareCreationFailed)
+        }
+
+        XCTAssertFalse(store.calendars.contains { $0.kind == .sharedOwned })
+        XCTAssertTrue(client.ownedStates.isEmpty)
+    }
+
     func testConfirmedSelectorDeletionCallsExistingStopFlowExactlyOnce() async throws {
         let owned = makeCalendar(kind: .sharedOwned, name: "Family")
         let calendars = [TimeNestCalendar.personal(name: "My Calendar"), owned]
@@ -741,6 +982,98 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(store.calendar(id: received.id)?.kind, .sharedReceived)
         XCTAssertEqual(store.calendars.filter { $0.id == received.id }.count, 1)
         XCTAssertNil(store.invitationAcceptanceError)
+    }
+
+    func testAcceptedMetadataOwnerNameImmediatelyFillsMissingReceivedOwnerName() async {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let payload = makeReceivedPayload(calendar: received)
+        let client = MockCalendarSharingClient()
+        client.acceptedZoneName = payload.calendar.zoneName
+        client.receivedPayloads = [payload]
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+        let metadata = makeFakeSharingMetadata(
+            zoneName: payload.calendar.zoneName,
+            ownerGivenName: "Sou"
+        )
+
+        let result = await store.accept(metadata: metadata)
+
+        XCTAssertEqual(result, .completed)
+        XCTAssertEqual(store.receivedDescriptor(id: received.id)?.ownerDisplayName, "Sou")
+    }
+
+    func testInvitationMetadataOwnerNameTakesPriorityDuringInitialAcceptRefresh() async {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        var payload = makeReceivedPayload(calendar: received)
+        var descriptor = payload.calendar
+        descriptor.ownerDisplayName = "Refreshed Owner"
+        payload = ReceivedSharedCalendarPayload(
+            calendar: descriptor,
+            events: payload.events,
+            shifts: payload.shifts,
+            workRecords: payload.workRecords
+        )
+        let client = MockCalendarSharingClient()
+        client.receivedPayloads = [payload]
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+        let metadata = makeFakeSharingMetadata(
+            zoneName: payload.calendar.zoneName,
+            ownerGivenName: "Metadata Owner"
+        )
+
+        let result = await store.accept(metadata: metadata)
+
+        XCTAssertEqual(result, .completed)
+        XCTAssertEqual(
+            store.receivedDescriptor(id: received.id)?.ownerDisplayName,
+            "Metadata Owner"
+        )
+    }
+
+    func testRegularSharedDatabaseRefreshKeepsZoneWideShareOwnerName() async {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let initialPayload = makeReceivedPayload(calendar: received)
+        var descriptor = initialPayload.calendar
+        descriptor.ownerDisplayName = "Share Owner"
+        let client = MockCalendarSharingClient()
+        client.receivedPayloads = [
+            ReceivedSharedCalendarPayload(
+                calendar: descriptor,
+                events: initialPayload.events,
+                shifts: initialPayload.shifts,
+                workRecords: initialPayload.workRecords
+            )
+        ]
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        await store.synchronizeAll()
+
+        XCTAssertEqual(store.receivedDescriptor(id: received.id)?.ownerDisplayName, "Share Owner")
+    }
+
+    func testUnavailableCurrentUserNameDoesNotBlockSharedCalendarCreation() async throws {
+        let client = MockCalendarSharingClient()
+        client.currentUserDisplayNameResult = nil
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        let displayName = await store.currentUserDisplayName()
+        XCTAssertNil(displayName)
+        let invitation = try await store.createSharedCalendar(name: "My Shared Calendar")
+
+        XCTAssertEqual(client.currentUserDisplayNameCallCount, 1)
+        XCTAssertEqual(store.calendar(id: invitation.calendarID)?.name, "My Shared Calendar")
     }
 
     func testManualShareURLFetchesMetadataThenUsesExistingAcceptAndRefreshPath() async throws {
@@ -1790,7 +2123,7 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(client.revokedParticipantIDs.count, 1)
     }
 
-    func testActivityErrorAlsoCleansOnlyCurrentInvitation() async throws {
+    func testActivityErrorIsDistinctFromCancellationAndKeepsCalendar() async throws {
         let owned = makeCalendar(kind: .sharedOwned, name: "Family")
         let client = MockCalendarSharingClient(
             ownedStates: [makeOwnedState(calendar: owned)]
@@ -1802,8 +2135,14 @@ final class CalendarSharingStoreTests: XCTestCase {
         await store.synchronizeAll()
         let invitation = try await store.createInvitation(for: owned.id)
 
-        try await store.handleInvitationActivity(invitation, outcome: .activityError)
+        do {
+            try await store.handleInvitationActivity(invitation, outcome: .activityError)
+            XCTFail("A system sharing activity error must not be treated as user cancellation")
+        } catch {
+            XCTAssertEqual(error as? CalendarSharingError, .invitationActivityFailed)
+        }
 
+        XCTAssertEqual(store.calendar(id: owned.id)?.kind, .sharedOwned)
         XCTAssertTrue(store.participants(for: owned.id).isEmpty)
         XCTAssertEqual(client.revokedParticipantIDs.count, 1)
     }
@@ -2347,6 +2686,9 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     var shareMetadataFetchCallCount = 0
     var shareMetadataFetchGate: ControlledAsyncGate?
     var acceptError: Error?
+    var createShareError: Error?
+    var currentUserDisplayNameResult: String?
+    var currentUserDisplayNameCallCount = 0
     var acceptedZoneName: String?
     var acceptCallCount = 0
     var cloudAcceptCallCount = 0
@@ -2360,6 +2702,11 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
 
     init(ownedStates: [OwnedSharedCalendarCloudState] = []) {
         self.ownedStates = ownedStates
+    }
+
+    func currentUserDisplayName() async -> String? {
+        currentUserDisplayNameCallCount += 1
+        return currentUserDisplayNameResult
     }
 
     func fetchShareMetadata(
@@ -2388,6 +2735,7 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
         shifts: [SharedShiftSnapshot],
         workRecords: [SharedWorkRecordSnapshot]
     ) async throws -> OwnedSharingInvitationResult {
+        if let createShareError { throw createShareError }
         let calendar = makeCalendar(kind: .sharedOwned, name: calendarName, id: calendarID)
         let participantID = nextParticipantID()
         let state = makeOwnedState(
@@ -2496,13 +2844,20 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
         receivedPayloads
     }
 
-    func accept(metadata: any CalendarSharingShareMetadata) async throws -> String {
+    func accept(
+        metadata: any CalendarSharingShareMetadata
+    ) async throws -> AcceptedSharedCalendarCloudResult {
         acceptCallCount += 1
         if let acceptError { throw acceptError }
         if metadata.participantStatus == .pending {
             cloudAcceptCallCount += 1
         }
-        return acceptedZoneName ?? metadata.share.recordID.zoneID.zoneName
+        return AcceptedSharedCalendarCloudResult(
+            zoneName: acceptedZoneName ?? metadata.share.recordID.zoneID.zoneName,
+            ownerDisplayName: CalendarSharingPersonNameFormatter.displayName(
+                from: metadata.ownerNameComponents
+            )
+        )
     }
 
     func leaveSharedCalendar(_ calendar: SharedCalendarDescriptor) async throws {
@@ -2748,18 +3103,23 @@ private struct FakeCalendarSharingMetadata: CalendarSharingShareMetadata {
     let containerIdentifier: String
     let participantStatus: CKShare.ParticipantAcceptanceStatus
     let share: CKShare
+    let ownerNameComponents: PersonNameComponents?
 }
 
 private func makeFakeSharingMetadata(
     zoneName: String = CalendarSharingCloudSchema.zoneName(for: UUID()),
     containerIdentifier: String = "iCloud.com.song.TimeNest",
-    status: CKShare.ParticipantAcceptanceStatus = .pending
+    status: CKShare.ParticipantAcceptanceStatus = .pending,
+    ownerGivenName: String? = nil
 ) -> FakeCalendarSharingMetadata {
     let zoneID = CKRecordZone.ID(zoneName: zoneName, ownerName: "owner")
+    var components = PersonNameComponents()
+    components.givenName = ownerGivenName
     return FakeCalendarSharingMetadata(
         containerIdentifier: containerIdentifier,
         participantStatus: status,
-        share: CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: zoneID)
+        share: CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: zoneID),
+        ownerNameComponents: ownerGivenName == nil ? nil : components
     )
 }
 

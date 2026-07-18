@@ -52,6 +52,7 @@ struct SharedCalendarDescriptor: Codable, Identifiable, Hashable {
     let id: UUID
     let zoneName: String
     let ownerName: String
+    var ownerDisplayName: String? = nil
     var calendarName: String
     var participantCount: Int
     let kind: TimeNestCalendarKind
@@ -538,6 +539,7 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
     case invitationAcceptanceFailed
     case invitationCreationFailed
     case invitationURLUnavailable
+    case invitationActivityFailed
     case shareCreationFailed
     case shareUnavailable
     case permissionDenied
@@ -581,6 +583,8 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingInvitationCreationFailed)
         case .invitationURLUnavailable:
             LocalizationManager.shared.localized(.calendarSharingInvitationURLUnavailable)
+        case .invitationActivityFailed:
+            LocalizationManager.shared.localized(.calendarSharingInvitationActivityFailed)
         case .shareCreationFailed:
             LocalizationManager.shared.localized(.calendarSharingCreationFailed)
         case .shareUnavailable:

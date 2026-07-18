@@ -446,11 +446,15 @@
 "calendar_sharing.create_calendar" = "공유 캘린더 만들기";
 "calendar_sharing.no_shared_calendars" = "공유 캘린더가 없습니다";
 "calendar_sharing.read_only" = "보기 전용";
-"calendar_sharing.calendar_name" = "캘린더 이름";
+"calendar_sharing.calendar_name" = "공유 캘린더 이름";
+"calendar_sharing.default_calendar_name" = "내 공유 캘린더";
+"calendar_sharing.default_name_with_owner" = "%@의 공유 캘린더";
+"calendar_sharing.shared_by_owner" = "%@님이 공유함";
+"calendar_sharing.shared_by_icloud_user" = "iCloud 사용자가 공유함";
 "calendar_sharing.edit_calendar" = "공유 캘린더 편집";
 "calendar_sharing.delete_calendar" = "공유 캘린더 삭제";
 "calendar_sharing.invite_people" = "초대할 사람";
-"calendar_sharing.invite_after_creation" = "공유 캘린더를 만든 후 iCloud 공유 화면이 열립니다.";
+"calendar_sharing.invite_after_creation" = "공유 캘린더를 만든 후\niCloud 공유 화면에서 사람을 초대할 수 있습니다.";
 "calendar_sharing.create_action" = "만들기";
 "calendar_sharing.save_action" = "저장";
 "calendar_sharing.delete_action" = "삭제";
@@ -495,6 +499,7 @@
 "calendar_sharing.error.invitation_creation_failed" = "공유 초대를 만들 수 없습니다. 잠시 후 다시 시도해 주세요.";
 "calendar_sharing.error.invitation_cancellation_failed" = "사용하지 않은 초대를 삭제하지 못했습니다. 아래 목록에서 다시 시도할 수 있습니다.";
 "calendar_sharing.error.invitation_url_unavailable" = "공유 링크를 가져올 수 없습니다. 잠시 후 다시 시도해 주세요.";
+"calendar_sharing.error.invitation_activity_failed" = "공유 캘린더는 만들어졌지만 공유 화면에서 초대를 완료하지 못했습니다. 공유 캘린더 편집 화면에서 다시 초대할 수 있습니다.";
 "calendar_sharing.error.creation_failed" = "공유를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 "calendar_sharing.error.share_unavailable" = "이 공유 캘린더를 사용할 수 없어 내 캘린더로 돌아왔습니다.";
 "calendar_sharing.error.permission_denied" = "이 공유 캘린더에 접근할 권한이 없습니다.";

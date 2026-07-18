@@ -42,6 +42,63 @@ enum CalendarSharingFormValidation {
     }
 }
 
+struct CalendarSharingCreateNameDraft: Equatable {
+    private(set) var value = ""
+    private(set) var initialFallbackName: String?
+    private(set) var hasUserEditedCalendarName = false
+    private(set) var hasAppliedResolvedDefaultName = false
+
+    mutating func initialize(defaultName: String) {
+        guard initialFallbackName == nil else { return }
+        initialFallbackName = defaultName
+        guard value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        value = defaultName
+    }
+
+    mutating func updateFromUser(_ value: String) {
+        self.value = value
+        hasUserEditedCalendarName = true
+    }
+
+    @discardableResult
+    mutating func applyResolvedDefaultName(_ value: String) -> Bool {
+        guard let initialFallbackName,
+              !hasAppliedResolvedDefaultName,
+              !hasUserEditedCalendarName,
+              self.value == initialFallbackName,
+              !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return false
+        }
+        self.value = value
+        hasAppliedResolvedDefaultName = true
+        return true
+    }
+}
+
+enum CalendarSharingLocalizedOwnerText {
+    static func defaultCalendarName(
+        ownerDisplayName: String,
+        format: String,
+        locale: Locale
+    ) -> String {
+        String(format: format, locale: locale, ownerDisplayName)
+    }
+
+    static func sharedByText(
+        ownerDisplayName: String?,
+        format: String,
+        fallback: String,
+        locale: Locale
+    ) -> String {
+        guard let ownerDisplayName = ownerDisplayName?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !ownerDisplayName.isEmpty else {
+            return fallback
+        }
+        return String(format: format, locale: locale, ownerDisplayName)
+    }
+}
+
 enum CalendarSelectionAccessibilityLabels {
     static let edit: LocalizedString = .calendarSharingEditCalendar
     static let delete: LocalizedString = .calendarSharingDeleteCalendar
@@ -378,10 +435,14 @@ struct CalendarSelectionView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(calendar.name)
                             .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
                         if calendar.isReadOnly {
-                            Text(localization.localized(.calendarSharingReadOnly))
+                            Text(receivedOwnerSubtitle(for: calendar))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
                         }
                     }
                     Spacer()
@@ -393,6 +454,7 @@ struct CalendarSelectionView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
+                .accessibilityElement(children: .combine)
             }
             .buttonStyle(.plain)
             .disabled(!actions.actionsAreEnabled)
@@ -444,6 +506,15 @@ struct CalendarSelectionView: View {
                 }
             }
         }
+    }
+
+    private func receivedOwnerSubtitle(for calendar: TimeNestCalendar) -> String {
+        CalendarSharingLocalizedOwnerText.sharedByText(
+            ownerDisplayName: sharingStore.receivedDescriptor(id: calendar.id)?.ownerDisplayName,
+            format: localization.localized(.calendarSharingSharedByOwner),
+            fallback: localization.localized(.calendarSharingSharedByICloudUser),
+            locale: localization.currentLocale
+        )
     }
 
     private func calendarActionButton(
@@ -614,13 +685,14 @@ private struct CreateSharedCalendarView: View {
     @EnvironmentObject private var sharingStore: CalendarSharingStore
     @EnvironmentObject private var localization: LocalizationManager
     @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
+    @State private var nameDraft = CalendarSharingCreateNameDraft()
     @State private var isWorking = false
     @State private var invitation: CalendarSharingInvitation?
     @State private var errorMessage: String?
+    @State private var dismissAfterErrorAcknowledgement = false
 
     private var canSubmit: Bool {
-        CalendarSharingFormValidation.hasRequiredName(name)
+        CalendarSharingFormValidation.hasRequiredName(nameDraft.value)
     }
 
     var body: some View {
@@ -628,7 +700,13 @@ private struct CreateSharedCalendarView: View {
             VStack(spacing: 0) {
                 Form {
                     Section(localization.localized(.calendarSharingCalendarName)) {
-                        TextField(localization.localized(.calendarSharingCalendarName), text: $name)
+                        TextField(
+                            localization.localized(.calendarSharingCalendarName),
+                            text: Binding(
+                                get: { nameDraft.value },
+                                set: { nameDraft.updateFromUser($0) }
+                            )
+                        )
                             .textInputAutocapitalization(.sentences)
                     }
 
@@ -662,6 +740,26 @@ private struct CreateSharedCalendarView: View {
             }
         }
         .calendarSharingPresentation()
+        .onAppear {
+            nameDraft.initialize(
+                defaultName: localization.localized(.calendarSharingDefaultCalendarName)
+            )
+        }
+        .task {
+            nameDraft.initialize(
+                defaultName: localization.localized(.calendarSharingDefaultCalendarName)
+            )
+            guard let ownerDisplayName = await sharingStore.currentUserDisplayName() else {
+                return
+            }
+            nameDraft.applyResolvedDefaultName(
+                CalendarSharingLocalizedOwnerText.defaultCalendarName(
+                    ownerDisplayName: ownerDisplayName,
+                    format: localization.localized(.calendarSharingDefaultNameWithOwner),
+                    locale: localization.currentLocale
+                )
+            )
+        }
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(
                 invitation: item,
@@ -677,6 +775,7 @@ private struct CreateSharedCalendarView: View {
                             dismiss()
                         } catch {
                             errorMessage = error.localizedDescription
+                            dismissAfterErrorAcknowledgement = true
                         }
                     }
                 }
@@ -689,7 +788,13 @@ private struct CreateSharedCalendarView: View {
                 set: { if !$0 { errorMessage = nil } }
             )
         ) {
-            Button(localization.localized(.ok)) { errorMessage = nil }
+            Button(localization.localized(.ok)) {
+                errorMessage = nil
+                if dismissAfterErrorAcknowledgement {
+                    dismissAfterErrorAcknowledgement = false
+                    dismiss()
+                }
+            }
         } message: {
             Text(errorMessage ?? "")
         }
@@ -699,9 +804,11 @@ private struct CreateSharedCalendarView: View {
         isWorking = true
         defer { isWorking = false }
         do {
-            invitation = try await sharingStore.createSharedCalendar(name: name)
+            invitation = try await sharingStore.createSharedCalendar(name: nameDraft.value)
         } catch {
             errorMessage = error.localizedDescription
+            dismissAfterErrorAcknowledgement = (error as? CalendarSharingError)
+                == .invitationURLUnavailable
         }
     }
 }
