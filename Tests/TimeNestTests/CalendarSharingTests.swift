@@ -61,6 +61,99 @@ final class CalendarSelectionAndPolicyTests: XCTestCase {
         XCTAssertTrue(state.isCreating)
     }
 
+    func testManualInvitationEntryOpensItsOwnRoute() {
+        var state = CalendarSelectionActionState()
+
+        state.requestInvitationLinkInput()
+
+        XCTAssertTrue(state.isEnteringInvitationLink)
+        XCTAssertFalse(state.isCreating)
+    }
+
+    func testICloudShareURLValidationAcceptsSupportedPublicShape() throws {
+        let url = try CalendarSharingInvitationURLValidator.validatedURL(
+            from: "  https://www.icloud.com/share/example-token  "
+        )
+
+        XCTAssertEqual(url.scheme, "https")
+        XCTAssertEqual(url.host, "www.icloud.com")
+        XCTAssertEqual(url.path, "/share/example-token")
+    }
+
+    func testICloudShareURLValidationRejectsEmptyMalformedAndUnsupportedURLs() {
+        assertInvitationURL("", throws: .invitationURLInputEmpty)
+        assertInvitationURL("not a URL", throws: .invitationURLInvalid)
+        assertInvitationURL(
+            "http://www.icloud.com/share/example-token",
+            throws: .invitationURLInvalid
+        )
+        assertInvitationURL(
+            "https://user:password@www.icloud.com/share/example-token",
+            throws: .invitationURLInvalid
+        )
+        assertInvitationURL(
+            "https://example.com/share/example-token",
+            throws: .notCloudKitShare
+        )
+        assertInvitationURL(
+            "https://www.icloud.com/ordinary-page",
+            throws: .notCloudKitShare
+        )
+        assertInvitationURL(
+            "timenest://calendar?date=2026-07-18",
+            throws: .invitationURLInvalid
+        )
+    }
+
+    func testInvitationURLDiagnosticUsesOnlyDigest() throws {
+        let token = "private-invitation-token"
+        let url = try XCTUnwrap(
+            URL(string: "https://www.icloud.com/share/\(token)")
+        )
+
+        let digest = CalendarSharingDiagnostics.urlHash(url)
+
+        XCTAssertFalse(digest.contains(token))
+        XCTAssertEqual(digest.count, 16)
+    }
+
+    func testWidgetCalendarDeepLinkRouteIsUnchanged() throws {
+        let sourceDate = try XCTUnwrap(
+            Calendar(identifier: .gregorian).date(
+                from: DateComponents(year: 2026, month: 7, day: 18)
+            )
+        )
+        let url = try XCTUnwrap(TimeNestWidgetDeepLink.url(for: sourceDate))
+        let parsedDate = try XCTUnwrap(TimeNestWidgetDeepLink.date(from: url))
+
+        XCTAssertEqual(url.scheme, "timenest")
+        XCTAssertEqual(url.host, "calendar")
+        XCTAssertEqual(
+            Calendar.current.startOfDay(for: parsedDate),
+            Calendar.current.startOfDay(for: sourceDate)
+        )
+    }
+
+    private func assertInvitationURL(
+        _ rawValue: String,
+        throws expectedError: CalendarSharingError,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertThrowsError(
+            try CalendarSharingInvitationURLValidator.validatedURL(from: rawValue),
+            file: file,
+            line: line
+        ) { error in
+            XCTAssertEqual(
+                error as? CalendarSharingError,
+                expectedError,
+                file: file,
+                line: line
+            )
+        }
+    }
+
     func testOwnedRowShowsDirectEditAndDeleteWithoutOverflowMenu() {
         let actions = CalendarSelectionRowActions(
             calendar: makeCalendar(kind: .sharedOwned, name: "Family")
@@ -305,6 +398,27 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
                 context: .acceptingInvitation
             ),
             .invitationRevoked
+        )
+        XCTAssertEqual(
+            CalendarSharingErrorMapper.map(
+                CKError(.unknownItem),
+                context: .fetchingInvitationMetadata
+            ),
+            .invitationUnavailable
+        )
+        XCTAssertEqual(
+            CalendarSharingErrorMapper.map(
+                CKError(.serviceUnavailable),
+                context: .fetchingInvitationMetadata
+            ),
+            .serviceTemporarilyUnavailable
+        )
+        XCTAssertEqual(
+            CalendarSharingErrorMapper.map(
+                CKError(.networkFailure),
+                context: .fetchingInvitationMetadata
+            ),
+            .networkUnavailable
         )
     }
 
@@ -627,6 +741,186 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(store.calendar(id: received.id)?.kind, .sharedReceived)
         XCTAssertEqual(store.calendars.filter { $0.id == received.id }.count, 1)
         XCTAssertNil(store.invitationAcceptanceError)
+    }
+
+    func testManualShareURLFetchesMetadataThenUsesExistingAcceptAndRefreshPath() async throws {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let payload = makeReceivedPayload(calendar: received)
+        let metadata = makeFakeSharingMetadata(zoneName: payload.calendar.zoneName)
+        let client = MockCalendarSharingClient()
+        client.shareMetadata = metadata
+        client.receivedPayloads = [payload]
+        let router = makeInvitationRouter()
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            invitationRouter: router
+        )
+
+        let result = try await store.acceptShareURL(
+            " https://www.icloud.com/share/example-token "
+        )
+
+        XCTAssertEqual(result, .accepted)
+        XCTAssertEqual(client.shareMetadataFetchCallCount, 1)
+        XCTAssertEqual(client.acceptCallCount, 1)
+        XCTAssertEqual(client.cloudAcceptCallCount, 1)
+        XCTAssertEqual(store.selection, .calendar(received.id))
+        XCTAssertEqual(store.manualInvitationState, .accepted)
+    }
+
+    func testManualShareURLRejectsMetadataFromAnotherContainerBeforeAccept() async {
+        let client = MockCalendarSharingClient()
+        client.shareMetadata = makeFakeSharingMetadata(
+            containerIdentifier: "iCloud.example.other"
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            invitationRouter: makeInvitationRouter()
+        )
+
+        do {
+            _ = try await store.acceptShareURL(
+                "https://www.icloud.com/share/example-token"
+            )
+            XCTFail("A foreign container must not reach the accept queue")
+        } catch {
+            XCTAssertEqual(
+                error as? CalendarSharingError,
+                .invitationContainerMismatch
+            )
+        }
+
+        XCTAssertEqual(client.shareMetadataFetchCallCount, 1)
+        XCTAssertEqual(client.acceptCallCount, 0)
+        XCTAssertTrue(store.receivedCalendars.isEmpty)
+    }
+
+    func testConcurrentSameManualURLFetchesAndAcceptsOnlyOnce() async throws {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let payload = makeReceivedPayload(calendar: received)
+        let client = MockCalendarSharingClient()
+        client.shareMetadata = makeFakeSharingMetadata(
+            zoneName: payload.calendar.zoneName
+        )
+        client.receivedPayloads = [payload]
+        let gate = ControlledAsyncGate()
+        client.shareMetadataFetchGate = gate
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            invitationRouter: makeInvitationRouter()
+        )
+        let link = "https://www.icloud.com/share/example-token"
+
+        async let first = store.acceptShareURL(link)
+        await gate.waitUntilEntered()
+        async let second = store.acceptShareURL(link)
+        await Task.yield()
+
+        XCTAssertEqual(client.shareMetadataFetchCallCount, 1)
+        gate.release()
+        let results = try await [first, second]
+
+        XCTAssertEqual(results, [.accepted, .accepted])
+        XCTAssertEqual(client.shareMetadataFetchCallCount, 1)
+        XCTAssertEqual(client.cloudAcceptCallCount, 1)
+        XCTAssertEqual(store.calendars.filter { $0.id == received.id }.count, 1)
+    }
+
+    func testManualURLAndSystemMetadataShareTheSameAcceptanceQueue() async throws {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let payload = makeReceivedPayload(calendar: received)
+        let metadata = makeFakeSharingMetadata(zoneName: payload.calendar.zoneName)
+        let client = MockCalendarSharingClient()
+        client.shareMetadata = metadata
+        client.receivedPayloads = [payload]
+        let gate = ControlledAsyncGate()
+        client.shareMetadataFetchGate = gate
+        let coordinator = CalendarSharingAcceptanceCoordinator()
+        let router = makeInvitationRouter(coordinator: coordinator)
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            invitationRouter: router
+        )
+
+        async let manualResult = store.acceptShareURL(
+            "https://www.icloud.com/share/example-token"
+        )
+        await gate.waitUntilEntered()
+        router.receive(metadata, source: .scene)
+        await coordinator.waitUntilIdle()
+        gate.release()
+        let resolvedManualResult = try await manualResult
+
+        XCTAssertEqual(resolvedManualResult, .alreadyAccepted)
+        XCTAssertEqual(client.cloudAcceptCallCount, 1)
+        XCTAssertEqual(store.selection, .calendar(received.id))
+        XCTAssertEqual(store.calendars.filter { $0.id == received.id }.count, 1)
+    }
+
+    func testAlreadyAcceptedManualMetadataSkipsCloudAcceptAndRefreshes() async throws {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let payload = makeReceivedPayload(calendar: received)
+        let client = MockCalendarSharingClient()
+        client.shareMetadata = makeFakeSharingMetadata(
+            zoneName: payload.calendar.zoneName,
+            status: .accepted
+        )
+        client.receivedPayloads = [payload]
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            invitationRouter: makeInvitationRouter()
+        )
+
+        let result = try await store.acceptShareURL(
+            "https://www.icloud.com/share/example-token"
+        )
+
+        XCTAssertEqual(result, .alreadyAccepted)
+        XCTAssertEqual(client.acceptCallCount, 1)
+        XCTAssertEqual(client.cloudAcceptCallCount, 0)
+        XCTAssertEqual(store.selection, .calendar(received.id))
+        XCTAssertEqual(store.manualInvitationState, .alreadyAccepted)
+    }
+
+    func testMetadataFetchFailureCreatesNothingAndCanBeRetried() async throws {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let payload = makeReceivedPayload(calendar: received)
+        let client = MockCalendarSharingClient()
+        client.shareMetadataError = InjectedSharingTestError.failure
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            invitationRouter: makeInvitationRouter()
+        )
+        let link = "https://www.icloud.com/share/example-token"
+
+        do {
+            _ = try await store.acceptShareURL(link)
+            XCTFail("Metadata fetch failure must remain visible to the input sheet")
+        } catch {
+            XCTAssertEqual(error as? CalendarSharingError, .metadataFetchFailed)
+        }
+
+        XCTAssertEqual(store.manualInvitationState, .failed(.metadataFetchFailed))
+        XCTAssertTrue(store.receivedCalendars.isEmpty)
+        XCTAssertEqual(client.acceptCallCount, 0)
+
+        client.shareMetadataError = nil
+        client.shareMetadata = makeFakeSharingMetadata(
+            zoneName: payload.calendar.zoneName
+        )
+        client.receivedPayloads = [payload]
+        let retryResult = try await store.acceptShareURL(link)
+
+        XCTAssertEqual(retryResult, .accepted)
+        XCTAssertEqual(client.shareMetadataFetchCallCount, 2)
+        XCTAssertEqual(client.cloudAcceptCallCount, 1)
+        XCTAssertEqual(store.selection, .calendar(received.id))
     }
 
     func testReceivedCalendarRetainsLocalHolidaysAcrossMonthWeekAndDayData() async throws {
@@ -1974,7 +2268,8 @@ final class CalendarSharingStoreTests: XCTestCase {
         client: MockCalendarSharingClient,
         calendars: [TimeNestCalendar],
         eventUseCase: EventUseCase = EventUseCase(repository: InMemoryEventRepository()),
-        calendarRepository: (any CalendarRepository)? = nil
+        calendarRepository: (any CalendarRepository)? = nil,
+        invitationRouter: CalendarSharingInvitationRouter? = nil
     ) -> CalendarSharingStore {
         let defaults = UserDefaults(suiteName: "CalendarSharingStoreTests-\(UUID().uuidString)")!
         let cache = CalendarSharingCache(
@@ -1989,7 +2284,23 @@ final class CalendarSharingStoreTests: XCTestCase {
             calendarRepository: resolvedCalendarRepository,
             cache: cache,
             selectionPersistence: CalendarSelectionPersistence(defaults: defaults),
-            initialCalendars: calendars
+            initialCalendars: calendars,
+            invitationRouter: invitationRouter ?? .shared
+        )
+    }
+
+    private func makeInvitationRouter() -> CalendarSharingInvitationRouter {
+        makeInvitationRouter(
+            coordinator: CalendarSharingAcceptanceCoordinator()
+        )
+    }
+
+    private func makeInvitationRouter(
+        coordinator: CalendarSharingAcceptanceCoordinator
+    ) -> CalendarSharingInvitationRouter {
+        CalendarSharingInvitationRouter(
+            coordinator: coordinator,
+            configuredContainerIdentifier: { "iCloud.com.song.TimeNest" }
         )
     }
 
@@ -2031,9 +2342,14 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     var leftCalendarIDs: [UUID] = []
     var revokedParticipantIDs: [String] = []
     var invitationURL: URL? = URL(string: "https://example.invalid/share")
+    var shareMetadata: (any CalendarSharingShareMetadata)?
+    var shareMetadataError: Error?
+    var shareMetadataFetchCallCount = 0
+    var shareMetadataFetchGate: ControlledAsyncGate?
     var acceptError: Error?
     var acceptedZoneName: String?
     var acceptCallCount = 0
+    var cloudAcceptCallCount = 0
     var maxConcurrentSyncsByCalendarID: [UUID: Int] = [:]
     private var activeSyncsByCalendarID: [UUID: Int] = [:]
     private var syncGatesByCalendarID: [UUID: [ControlledAsyncGate]] = [:]
@@ -2044,6 +2360,21 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
 
     init(ownedStates: [OwnedSharedCalendarCloudState] = []) {
         self.ownedStates = ownedStates
+    }
+
+    func fetchShareMetadata(
+        from url: URL
+    ) async throws -> any CalendarSharingShareMetadata {
+        _ = CalendarSharingDiagnostics.urlHash(url)
+        shareMetadataFetchCallCount += 1
+        if let shareMetadataFetchGate {
+            try await shareMetadataFetchGate.waitForRelease()
+        }
+        if let shareMetadataError { throw shareMetadataError }
+        guard let shareMetadata else {
+            throw CalendarSharingError.metadataFetchFailed
+        }
+        return shareMetadata
     }
 
     func fetchOwnedCalendars() async throws -> [OwnedSharedCalendarCloudState] {
@@ -2168,6 +2499,9 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     func accept(metadata: any CalendarSharingShareMetadata) async throws -> String {
         acceptCallCount += 1
         if let acceptError { throw acceptError }
+        if metadata.participantStatus == .pending {
+            cloudAcceptCallCount += 1
+        }
         return acceptedZoneName ?? metadata.share.recordID.zoneID.zoneName
     }
 

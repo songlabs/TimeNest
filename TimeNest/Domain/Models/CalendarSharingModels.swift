@@ -525,9 +525,17 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
     case noICloudAccount
     case iCloudRestricted
     case networkUnavailable
+    case serviceTemporarilyUnavailable
     case invitationPending
     case invitationInvalid
     case invitationRevoked
+    case invitationURLInputEmpty
+    case invitationURLInvalid
+    case notCloudKitShare
+    case metadataFetchFailed
+    case invitationContainerMismatch
+    case invitationUnavailable
+    case invitationAcceptanceFailed
     case invitationCreationFailed
     case invitationURLUnavailable
     case shareCreationFailed
@@ -547,12 +555,28 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingICloudRestricted)
         case .networkUnavailable:
             LocalizationManager.shared.localized(.calendarSharingNetworkUnavailable)
+        case .serviceTemporarilyUnavailable:
+            LocalizationManager.shared.localized(.calendarSharingServiceTemporarilyUnavailable)
         case .invitationPending:
             LocalizationManager.shared.localized(.calendarSharingInvitationPending)
         case .invitationInvalid:
             LocalizationManager.shared.localized(.calendarSharingInvitationInvalid)
         case .invitationRevoked:
             LocalizationManager.shared.localized(.calendarSharingInvitationRevoked)
+        case .invitationURLInputEmpty:
+            LocalizationManager.shared.localized(.calendarSharingInvitationURLEmpty)
+        case .invitationURLInvalid:
+            LocalizationManager.shared.localized(.calendarSharingInvitationURLInvalid)
+        case .notCloudKitShare:
+            LocalizationManager.shared.localized(.calendarSharingNotCloudKitShare)
+        case .metadataFetchFailed:
+            LocalizationManager.shared.localized(.calendarSharingMetadataFetchFailed)
+        case .invitationContainerMismatch:
+            LocalizationManager.shared.localized(.calendarSharingInvitationContainerMismatch)
+        case .invitationUnavailable:
+            LocalizationManager.shared.localized(.calendarSharingInvitationUnavailable)
+        case .invitationAcceptanceFailed:
+            LocalizationManager.shared.localized(.calendarSharingInvitationAcceptanceFailed)
         case .invitationCreationFailed:
             LocalizationManager.shared.localized(.calendarSharingInvitationCreationFailed)
         case .invitationURLUnavailable:

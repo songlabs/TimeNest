@@ -9,6 +9,15 @@ enum CalendarSharingSyncStatus: Equatable {
     case failed
 }
 
+enum CalendarSharingManualInvitationState: Equatable {
+    case idle
+    case validating
+    case accepting
+    case accepted
+    case alreadyAccepted
+    case failed(CalendarSharingError)
+}
+
 @MainActor
 final class CalendarSharingStore: ObservableObject {
     @Published private(set) var selection: CalendarSelection
@@ -20,6 +29,7 @@ final class CalendarSharingStore: ObservableObject {
     @Published private(set) var lastError: CalendarSharingError?
     @Published private(set) var isAcceptingInvitation = false
     @Published private(set) var invitationAcceptanceError: CalendarSharingError?
+    @Published private(set) var manualInvitationState: CalendarSharingManualInvitationState = .idle
     @Published private(set) var revision = 0
 
     private let client: any CalendarSharingClientProtocol
@@ -27,6 +37,7 @@ final class CalendarSharingStore: ObservableObject {
     private let calendarRepository: any CalendarRepository
     private let cache: CalendarSharingCache
     private let selectionPersistence: CalendarSelectionPersistence
+    private let invitationRouter: CalendarSharingInvitationRouter
     private var eventsByCalendarID: [UUID: [SharedEventSnapshot]]
     private var shiftsByCalendarID: [UUID: [SharedShiftSnapshot]]
     private var workRecordsByCalendarID: [UUID: [SharedWorkRecordSnapshot]]
@@ -49,7 +60,8 @@ final class CalendarSharingStore: ObservableObject {
         cache: CalendarSharingCache = CalendarSharingCache(),
         selectionPersistence: CalendarSelectionPersistence = CalendarSelectionPersistence(),
         initialCalendars: [TimeNestCalendar] = [],
-        initialMigrationError: CalendarSharingError? = nil
+        initialMigrationError: CalendarSharingError? = nil,
+        invitationRouter: CalendarSharingInvitationRouter? = nil
     ) {
         self.client = client
         self.eventUseCase = eventUseCase
@@ -57,6 +69,7 @@ final class CalendarSharingStore: ObservableObject {
         self.cache = cache
         self.selectionPersistence = selectionPersistence
         self.initialMigrationError = initialMigrationError
+        self.invitationRouter = invitationRouter ?? .shared
         calendars = initialCalendars
         let cached = cache.load()
         receivedCalendars = cached.receivedCalendars
@@ -148,13 +161,13 @@ final class CalendarSharingStore: ObservableObject {
 
     func start() async {
         await loadLocalCalendars()
-        CalendarSharingInvitationRouter.shared.register(store: self)
+        invitationRouter.register(store: self)
         await synchronizeAll()
     }
 
     func synchronizeOnAppActivation() async {
         await synchronizeAll()
-        CalendarSharingInvitationRouter.shared.retryPending()
+        invitationRouter.retryPending()
     }
 
     func synchronizeAll() async {
@@ -170,7 +183,7 @@ final class CalendarSharingStore: ObservableObject {
             refreshWasRequested = false
             await performFullSynchronization()
         } while refreshWasRequested
-        CalendarSharingInvitationRouter.shared.retryPending()
+        invitationRouter.retryPending()
     }
 
     private func performFullSynchronization() async {
@@ -537,6 +550,52 @@ final class CalendarSharingStore: ObservableObject {
         revision &+= 1
     }
 
+    func acceptShareURL(
+        _ rawValue: String
+    ) async throws -> CalendarSharingManualInvitationResult {
+        manualInvitationState = .validating
+        do {
+            let url = try CalendarSharingInvitationURLValidator.validatedURL(
+                from: rawValue
+            )
+            invitationRouter.register(store: self)
+            let result = try await invitationRouter.receive(
+                url: url,
+                source: .manualURL,
+                metadataDidLoad: { [weak self] in
+                    self?.manualInvitationState = .accepting
+                }
+            )
+            invitationAcceptanceError = nil
+            switch result {
+            case .accepted:
+                manualInvitationState = .accepted
+            case .alreadyAccepted:
+                manualInvitationState = .alreadyAccepted
+            }
+            return result
+        } catch {
+            let mappedError = (error as? CalendarSharingError)
+                ?? CalendarSharingErrorMapper.map(
+                    error,
+                    context: .fetchingInvitationMetadata
+                )
+            manualInvitationState = .failed(mappedError)
+            invitationAcceptanceError = nil
+            throw mappedError
+        }
+    }
+
+    func resetManualInvitationState() {
+        manualInvitationState = .idle
+    }
+
+    func fetchShareMetadata(
+        from url: URL
+    ) async throws -> any CalendarSharingShareMetadata {
+        try await client.fetchShareMetadata(from: url)
+    }
+
     func accept(
         metadata: any CalendarSharingShareMetadata
     ) async -> CalendarSharingAcceptanceProcessingResult {
@@ -631,12 +690,16 @@ final class CalendarSharingStore: ObservableObject {
     ) -> CalendarSharingAcceptanceProcessingResult {
         switch error {
         case .noICloudAccount, .iCloudRestricted, .networkUnavailable,
-             .invitationPending, .receivedCalendarRefreshFailed, .syncFailed:
+             .serviceTemporarilyUnavailable, .invitationPending,
+             .invitationAcceptanceFailed, .receivedCalendarRefreshFailed, .syncFailed:
             .retryLater
         case .invitationInvalid, .invitationRevoked, .cloudEnvironmentMismatch,
-             .permissionDenied, .invitationCreationFailed, .invitationURLUnavailable,
-             .shareCreationFailed, .shareUnavailable, .calendarDataMigrationFailed,
-             .invitationCancellationFailed:
+             .invitationURLInputEmpty, .invitationURLInvalid, .notCloudKitShare,
+             .metadataFetchFailed, .invitationContainerMismatch,
+             .invitationUnavailable, .permissionDenied,
+             .invitationCreationFailed, .invitationURLUnavailable,
+             .shareCreationFailed, .shareUnavailable,
+             .calendarDataMigrationFailed, .invitationCancellationFailed:
             .discarded
         }
     }

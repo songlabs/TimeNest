@@ -10,6 +10,46 @@ enum CalendarSharingAcceptanceProcessingResult: Equatable {
 enum CalendarSharingMetadataSource: String {
     case scene
     case app
+    case manualURL
+}
+
+enum CalendarSharingManualInvitationResult: Equatable {
+    case accepted
+    case alreadyAccepted
+}
+
+enum CalendarSharingInvitationURLValidator {
+    private static let supportedHosts: Set<String> = ["www.icloud.com"]
+
+    static func validatedURL(from rawValue: String) throws -> URL {
+        let trimmed = rawValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            throw CalendarSharingError.invitationURLInputEmpty
+        }
+        guard let components = URLComponents(string: trimmed),
+              let scheme = components.scheme,
+              let host = components.host,
+              let url = components.url else {
+            throw CalendarSharingError.invitationURLInvalid
+        }
+        guard scheme.lowercased() == "https",
+              components.user == nil,
+              components.password == nil else {
+            throw CalendarSharingError.invitationURLInvalid
+        }
+        guard supportedHosts.contains(host.lowercased()) else {
+            throw CalendarSharingError.notCloudKitShare
+        }
+        let pathComponents = components.percentEncodedPath.split(separator: "/")
+        guard pathComponents.count >= 2, pathComponents.first == "share" else {
+            throw CalendarSharingError.notCloudKitShare
+        }
+        return url
+    }
+
+    static func validate(_ url: URL) throws {
+        _ = try validatedURL(from: url.absoluteString)
+    }
 }
 
 @MainActor
@@ -23,9 +63,18 @@ final class CalendarSharingAcceptanceCoordinator {
         let metadata: any CalendarSharingShareMetadata
     }
 
+    struct AwaitedResult: Equatable {
+        let wasAlreadyQueued: Bool
+        let processingResult: CalendarSharingAcceptanceProcessingResult
+    }
+
     private var pending: [PendingAcceptance] = []
     private var queuedIdentifiers: Set<String> = []
     private var finalizedIdentifiers: Set<String> = []
+    private var finalizedResults: [String: CalendarSharingAcceptanceProcessingResult] = [:]
+    private var completionWaiters: [
+        String: [CheckedContinuation<CalendarSharingAcceptanceProcessingResult, Never>]
+    ] = [:]
     private var handler: Handler?
     private var isProcessing = false
 
@@ -36,10 +85,11 @@ final class CalendarSharingAcceptanceCoordinator {
         processIfPossible()
     }
 
+    @discardableResult
     func receive(
         _ metadata: any CalendarSharingShareMetadata,
         identifier: String
-    ) {
+    ) -> Bool {
         guard !queuedIdentifiers.contains(identifier),
               !finalizedIdentifiers.contains(identifier) else {
             CalendarSharingDiagnostics.debug(
@@ -48,7 +98,8 @@ final class CalendarSharingAcceptanceCoordinator {
                 database: "shared",
                 details: "metadataHash=\(identifier)"
             )
-            return
+            processIfPossible()
+            return false
         }
         pending.append(PendingAcceptance(identifier: identifier, metadata: metadata))
         queuedIdentifiers.insert(identifier)
@@ -59,6 +110,28 @@ final class CalendarSharingAcceptanceCoordinator {
             details: "metadataHash=\(identifier) pendingCount=\(pending.count)"
         )
         processIfPossible()
+        return true
+    }
+
+    func receiveAndWait(
+        _ metadata: any CalendarSharingShareMetadata,
+        identifier: String
+    ) async -> AwaitedResult {
+        let wasEnqueued = receive(metadata, identifier: identifier)
+        if let finalizedResult = finalizedResults[identifier] {
+            return AwaitedResult(
+                wasAlreadyQueued: true,
+                processingResult: finalizedResult
+            )
+        }
+        let processingResult = await withCheckedContinuation { continuation in
+            completionWaiters[identifier, default: []].append(continuation)
+            processIfPossible()
+        }
+        return AwaitedResult(
+            wasAlreadyQueued: !wasEnqueued,
+            processingResult: processingResult
+        )
     }
 
     func retryPending() {
@@ -88,10 +161,21 @@ final class CalendarSharingAcceptanceCoordinator {
                 pending.removeFirst()
                 queuedIdentifiers.remove(current.identifier)
                 finalizedIdentifiers.insert(current.identifier)
+                finalizedResults[current.identifier] = result
+                resumeWaiters(for: current.identifier, with: result)
             case .retryLater:
+                resumeWaiters(for: current.identifier, with: result)
                 return
             }
         }
+    }
+
+    private func resumeWaiters(
+        for identifier: String,
+        with result: CalendarSharingAcceptanceProcessingResult
+    ) {
+        let waiters = completionWaiters.removeValue(forKey: identifier) ?? []
+        waiters.forEach { $0.resume(returning: result) }
     }
 }
 
@@ -99,9 +183,34 @@ final class CalendarSharingAcceptanceCoordinator {
 final class CalendarSharingInvitationRouter {
     static let shared = CalendarSharingInvitationRouter()
 
-    private let coordinator = CalendarSharingAcceptanceCoordinator()
+    typealias MetadataFetcher = (
+        URL
+    ) async throws -> any CalendarSharingShareMetadata
 
-    private init() {}
+    private let coordinator: CalendarSharingAcceptanceCoordinator
+    private let configuredContainerIdentifier: () -> String?
+    private var metadataFetcher: MetadataFetcher?
+    private var acceptanceErrorProvider: (() -> CalendarSharingError?)?
+    private var urlTasks: [
+        String: Task<CalendarSharingManualInvitationResult, Error>
+    ] = [:]
+
+    init(
+        configuredContainerIdentifier: @escaping () -> String? = {
+            CKContainer.default().containerIdentifier
+        }
+    ) {
+        coordinator = CalendarSharingAcceptanceCoordinator()
+        self.configuredContainerIdentifier = configuredContainerIdentifier
+    }
+
+    init(
+        coordinator: CalendarSharingAcceptanceCoordinator,
+        configuredContainerIdentifier: @escaping () -> String?
+    ) {
+        self.coordinator = coordinator
+        self.configuredContainerIdentifier = configuredContainerIdentifier
+    }
 
     func register(store: CalendarSharingStore) {
         CalendarSharingDiagnostics.debug(
@@ -114,16 +223,23 @@ final class CalendarSharingInvitationRouter {
             guard let store else { return .retryLater }
             return await store.accept(metadata: metadata)
         }
+        metadataFetcher = { [weak store] url in
+            guard let store else { throw CalendarSharingError.metadataFetchFailed }
+            return try await store.fetchShareMetadata(from: url)
+        }
+        acceptanceErrorProvider = { [weak store] in
+            store?.invitationAcceptanceError
+        }
     }
 
     func receive(
-        _ metadata: CKShare.Metadata,
+        _ metadata: any CalendarSharingShareMetadata,
         source: CalendarSharingMetadataSource
     ) {
         let metadataHash = CalendarSharingDiagnostics.metadataHash(metadata)
         let configuredContainerIdentifier = CKContainer.default().containerIdentifier
         let containerIdentifierMatched = metadata.containerIdentifier == configuredContainerIdentifier
-        let rootHash = metadata.hierarchicalRootRecordID.map(
+        let rootHash = (metadata as? CKShare.Metadata)?.hierarchicalRootRecordID.map(
             CalendarSharingDiagnostics.recordHash
         ) ?? "zone-wide"
         CalendarSharingDiagnostics.debug(
@@ -137,6 +253,79 @@ final class CalendarSharingInvitationRouter {
                 + "shareHash=\(CalendarSharingDiagnostics.recordHash(metadata.share.recordID))"
         )
         coordinator.receive(metadata, identifier: metadataHash)
+    }
+
+    func receive(
+        url: URL,
+        source: CalendarSharingMetadataSource,
+        metadataDidLoad: (() -> Void)? = nil
+    ) async throws -> CalendarSharingManualInvitationResult {
+        try CalendarSharingInvitationURLValidator.validate(url)
+        let urlHash = CalendarSharingDiagnostics.urlHash(url)
+        if let task = urlTasks[urlHash] {
+            CalendarSharingDiagnostics.debug(
+                operation: "fetchShareMetadata",
+                stage: "url-duplicate",
+                database: "shared",
+                details: "source=\(source.rawValue) urlHash=\(urlHash)"
+            )
+            return try await task.value
+        }
+
+        let task = Task { [weak self] in
+            guard let self else { throw CalendarSharingError.metadataFetchFailed }
+            return try await self.process(
+                url: url,
+                urlHash: urlHash,
+                source: source,
+                metadataDidLoad: metadataDidLoad
+            )
+        }
+        urlTasks[urlHash] = task
+        defer { urlTasks[urlHash] = nil }
+        return try await task.value
+    }
+
+    private func process(
+        url: URL,
+        urlHash: String,
+        source: CalendarSharingMetadataSource,
+        metadataDidLoad: (() -> Void)?
+    ) async throws -> CalendarSharingManualInvitationResult {
+        guard let metadataFetcher else {
+            throw CalendarSharingError.metadataFetchFailed
+        }
+        CalendarSharingDiagnostics.debug(
+            operation: "fetchShareMetadata",
+            stage: "url-received",
+            database: "shared",
+            details: "source=\(source.rawValue) urlHash=\(urlHash)"
+        )
+        let metadata = try await metadataFetcher(url)
+        do {
+            try CalendarSharingContainerValidator.validate(
+                metadataContainerIdentifier: metadata.containerIdentifier,
+                configuredContainerIdentifier: configuredContainerIdentifier()
+            )
+        } catch CalendarSharingError.cloudEnvironmentMismatch {
+            throw CalendarSharingError.invitationContainerMismatch
+        }
+
+        metadataDidLoad?()
+        let metadataHash = CalendarSharingDiagnostics.metadataHash(metadata)
+        let wasAlreadyAccepted = metadata.participantStatus == .accepted
+        let result = await coordinator.receiveAndWait(
+            metadata,
+            identifier: metadataHash
+        )
+        switch result.processingResult {
+        case .completed:
+            return wasAlreadyAccepted || result.wasAlreadyQueued
+                ? .alreadyAccepted
+                : .accepted
+        case .retryLater, .discarded:
+            throw acceptanceErrorProvider?() ?? .invitationAcceptanceFailed
+        }
     }
 
     func retryPending() {

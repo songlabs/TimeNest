@@ -371,6 +371,9 @@ struct CalendarSharingContentRecordPlanExecutor {
 
 @MainActor
 protocol CalendarSharingClientProtocol {
+    func fetchShareMetadata(
+        from url: URL
+    ) async throws -> any CalendarSharingShareMetadata
     func fetchOwnedCalendars() async throws -> [OwnedSharedCalendarCloudState]
     func createShare(
         calendarID: UUID,
@@ -438,6 +441,7 @@ enum CalendarSharingErrorContext: Equatable {
     case general
     case creatingShare
     case creatingInvitation
+    case fetchingInvitationMetadata
     case acceptingInvitation
 }
 
@@ -510,6 +514,10 @@ enum CalendarSharingDiagnostics {
                 participantIDs
             ].joined(separator: "|")
         )
+    }
+
+    static func urlHash(_ url: URL) -> String {
+        identifierHash(url.absoluteString)
     }
 }
 
@@ -694,6 +702,18 @@ enum CalendarSharingErrorMapper {
             || codes.contains(.managedAccountRestricted) { return .iCloudRestricted }
         if codes.contains(.permissionFailure) { return .permissionDenied }
         if codes.contains(.participantMayNeedVerification) { return .invitationPending }
+        if context == .fetchingInvitationMetadata {
+            if codes.contains(where: invitationUnavailableCodes.contains) {
+                return .invitationUnavailable
+            }
+            if codes.contains(where: networkCodes.contains) {
+                return .networkUnavailable
+            }
+            if codes.contains(where: serviceUnavailableCodes.contains) {
+                return .serviceTemporarilyUnavailable
+            }
+            return .metadataFetchFailed
+        }
         if codes.contains(where: retryableCodes.contains) { return .networkUnavailable }
         if context == .acceptingInvitation,
            codes.contains(where: { $0 == .unknownItem || $0 == .userDeletedZone || $0 == .zoneNotFound }) {
@@ -703,7 +723,8 @@ enum CalendarSharingErrorMapper {
         case .general: return .syncFailed
         case .creatingShare: return .shareCreationFailed
         case .creatingInvitation: return .invitationCreationFailed
-        case .acceptingInvitation: return .syncFailed
+        case .fetchingInvitationMetadata: return .metadataFetchFailed
+        case .acceptingInvitation: return .invitationAcceptanceFailed
         }
     }
 
@@ -731,13 +752,33 @@ enum CalendarSharingErrorMapper {
     static func diagnosticSummary(_ error: Error) -> String {
         let nsError = error as NSError
         let codes = Set(cloudErrorCodes(in: error).map(\.rawValue)).sorted()
-        return "errorDomain=\(nsError.domain) errorCode=\(nsError.code) ckErrorCodes=\(codes) serverMessage=omitted"
+        let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError
+        let underlyingDomain = underlying?.domain ?? "none"
+        let underlyingCode = underlying?.code ?? 0
+        let retryAfter = cloudErrors(in: error)
+            .compactMap { $0.userInfo[CKErrorRetryAfterKey] as? NSNumber }
+            .map(\.doubleValue)
+            .first
+        let retryAfterText = retryAfter.map { String($0) } ?? "none"
+        return "errorDomain=\(nsError.domain) errorCode=\(nsError.code) "
+            + "underlyingErrorDomain=\(underlyingDomain) underlyingErrorCode=\(underlyingCode) "
+            + "ckErrorCodes=\(codes) retryAfterSeconds=\(retryAfterText) serverMessage=omitted"
     }
 
-    private static let retryableCodes: Set<CKError.Code> = [
-        .accountTemporarilyUnavailable, .networkUnavailable, .networkFailure,
-        .serviceUnavailable, .requestRateLimited, .zoneBusy, .serverResponseLost
+    private static let invitationUnavailableCodes: Set<CKError.Code> = [
+        .unknownItem, .userDeletedZone, .zoneNotFound
     ]
+
+    private static let networkCodes: Set<CKError.Code> = [
+        .networkUnavailable, .networkFailure, .serverResponseLost
+    ]
+
+    private static let serviceUnavailableCodes: Set<CKError.Code> = [
+        .accountTemporarilyUnavailable, .serviceUnavailable,
+        .requestRateLimited, .zoneBusy
+    ]
+
+    private static let retryableCodes = networkCodes.union(serviceUnavailableCodes)
 
     private static func cloudErrors(in error: Error) -> [CKError] {
         guard let cloudError = error as? CKError else { return [] }
@@ -757,6 +798,59 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
 
     init(container: CKContainer = .default()) {
         self.container = container
+    }
+
+    func fetchShareMetadata(
+        from url: URL
+    ) async throws -> any CalendarSharingShareMetadata {
+        let urlHash = CalendarSharingDiagnostics.urlHash(url)
+        CalendarSharingDiagnostics.debug(
+            operation: "fetchShareMetadata",
+            stage: "started",
+            database: "shared",
+            details: "urlHash=\(urlHash)"
+        )
+        do {
+            let defaultContainer = CKContainer.default()
+            let metadata = try await defaultContainer.shareMetadata(for: url)
+            do {
+                try CalendarSharingContainerValidator.validate(
+                    metadataContainerIdentifier: metadata.containerIdentifier,
+                    configuredContainerIdentifier: defaultContainer.containerIdentifier
+                )
+            } catch CalendarSharingError.cloudEnvironmentMismatch {
+                throw CalendarSharingError.invitationContainerMismatch
+            }
+            CalendarSharingDiagnostics.debug(
+                operation: "fetchShareMetadata",
+                stage: "completed",
+                database: "shared",
+                details: "urlHash=\(urlHash) "
+                    + "metadataHash=\(CalendarSharingDiagnostics.metadataHash(metadata))"
+            )
+            return metadata
+        } catch let error as CalendarSharingError {
+            CalendarSharingDiagnostics.error(
+                operation: "fetchShareMetadata",
+                stage: "failed",
+                database: "shared",
+                error: error,
+                details: "urlHash=\(urlHash)"
+            )
+            throw error
+        } catch {
+            CalendarSharingDiagnostics.error(
+                operation: "fetchShareMetadata",
+                stage: "failed",
+                database: "shared",
+                error: error,
+                details: "urlHash=\(urlHash)"
+            )
+            throw CalendarSharingErrorMapper.map(
+                error,
+                context: .fetchingInvitationMetadata
+            )
+        }
     }
 
     func fetchOwnedCalendars() async throws -> [OwnedSharedCalendarCloudState] {

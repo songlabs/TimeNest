@@ -75,12 +75,17 @@ enum CalendarSelectionRoute: Identifiable, Equatable {
 
 struct CalendarSelectionActionState: Equatable {
     var isCreating = false
+    var isEnteringInvitationLink = false
     var route: CalendarSelectionRoute?
     private(set) var deletionCandidateID: UUID?
     private(set) var deletionInProgressID: UUID?
 
     mutating func requestCreate() {
         isCreating = true
+    }
+
+    mutating func requestInvitationLinkInput() {
+        isEnteringInvitationLink = true
     }
 
     /// Returns a calendar ID only for a row-selection interaction. Accessory actions route
@@ -196,6 +201,7 @@ struct CalendarSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var actionState = CalendarSelectionActionState()
     @State private var errorMessage: String?
+    @State private var invitationNotice: LocalizedString?
 
     private var owned: [TimeNestCalendar] {
         sharingStore.calendars.filter { $0.kind == .sharedOwned }
@@ -235,6 +241,15 @@ struct CalendarSelectionView: View {
                             systemImage: "plus.circle.fill"
                         )
                     }
+                    Button {
+                        actionState.requestInvitationLinkInput()
+                    } label: {
+                        Label(
+                            localization.localized(.calendarSharingInvitationLinkInputTitle),
+                            systemImage: "link.badge.plus"
+                        )
+                    }
+                    .foregroundStyle(.secondary)
                 }
 
                 if let error = sharingStore.lastError {
@@ -272,6 +287,16 @@ struct CalendarSelectionView: View {
             CreateSharedCalendarView()
                 .environmentObject(sharingStore)
                 .environmentObject(localization)
+        }
+        .sheet(isPresented: $actionState.isEnteringInvitationLink) {
+            ManualSharedCalendarLinkView { result in
+                actionState.isEnteringInvitationLink = false
+                invitationNotice = result == .accepted
+                    ? .calendarSharingInvitationAccepted
+                    : .calendarSharingInvitationAlreadyAccepted
+            }
+            .environmentObject(sharingStore)
+            .environmentObject(localization)
         }
         .sheet(item: $actionState.route) { route in
             Group {
@@ -321,6 +346,17 @@ struct CalendarSelectionView: View {
             Button(localization.localized(.ok)) { errorMessage = nil }
         } message: {
             Text(errorMessage ?? "")
+        }
+        .alert(
+            localization.localized(
+                invitationNotice ?? .calendarSharingInvitationAccepted
+            ),
+            isPresented: Binding(
+                get: { invitationNotice != nil },
+                set: { if !$0 { invitationNotice = nil } }
+            )
+        ) {
+            Button(localization.localized(.ok)) { invitationNotice = nil }
         }
     }
 
@@ -476,6 +512,100 @@ private struct CalendarSharingPrimaryActionButton: View {
         .disabled(!isEnabled || isWorking)
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
+    }
+}
+
+@MainActor
+private struct ManualSharedCalendarLinkView: View {
+    @EnvironmentObject private var sharingStore: CalendarSharingStore
+    @EnvironmentObject private var localization: LocalizationManager
+    @Environment(\.dismiss) private var dismiss
+    let onCompleted: (CalendarSharingManualInvitationResult) -> Void
+    @State private var linkText = ""
+    @State private var isWorking = false
+    @State private var errorMessage: String?
+
+    private var canSubmit: Bool {
+        !linkText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Form {
+                    Section {
+                        Text(localization.localized(
+                            .calendarSharingInvitationLinkInputHint
+                        ))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                        TextField(
+                            localization.localized(
+                                .calendarSharingInvitationLinkInputPlaceholder
+                            ),
+                            text: $linkText,
+                            axis: .vertical
+                        )
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .textContentType(.URL)
+                        .lineLimit(2...4)
+                    }
+
+                    if let errorMessage {
+                        Section {
+                            Text(errorMessage)
+                                .font(.subheadline)
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                CalendarSharingPrimaryActionButton(
+                    title: localization.localized(
+                        .calendarSharingInvitationLinkInputSubmit
+                    ),
+                    isEnabled: canSubmit,
+                    isWorking: isWorking,
+                    action: { Task { await submit() } }
+                )
+            }
+            .navigationTitle(localization.localized(
+                .calendarSharingInvitationLinkInputTitle
+            ))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localization.localized(.cancel)) {
+                        linkText = ""
+                        sharingStore.resetManualInvitationState()
+                        dismiss()
+                    }
+                    .disabled(isWorking)
+                }
+            }
+        }
+        .calendarSharingPresentation()
+        .interactiveDismissDisabled(isWorking)
+        .onDisappear {
+            linkText = ""
+            sharingStore.resetManualInvitationState()
+        }
+    }
+
+    private func submit() async {
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            let result = try await sharingStore.acceptShareURL(linkText)
+            linkText = ""
+            onCompleted(result)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }
 
