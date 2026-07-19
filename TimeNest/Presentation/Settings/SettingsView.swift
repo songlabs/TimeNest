@@ -1,10 +1,15 @@
+import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
+import UIKit
 
 struct SettingsView: View {
     private static let privacyPolicyURL = URL(string: "https://songlabs.github.io/timenest/privacy.html")
 
     @Environment(\.openURL) private var openURL
+    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var localization: LocalizationManager
+    @EnvironmentObject private var calendarSharingStore: CalendarSharingStore
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
 
@@ -12,6 +17,15 @@ struct SettingsView: View {
     @State private var showingHelp = false
     @State private var showingThirdPartyLicenses = false
     @State private var purchaseAlertMessage: String?
+    @State private var dataAlertMessage: String?
+    @State private var exportedFile: TimeNestTemporaryExportFile?
+    @State private var isImportingBackup = false
+    @State private var pendingRestore: TimeNestBackupDocument?
+    @State private var isConfirmingRestore = false
+    @State private var shouldRestoreAfterConfirmationDismissal = false
+    @State private var isSelectingWorkRecordMonth = false
+    @State private var selectedWorkRecordMonth = Date()
+    @State private var dataOperationInProgress = false
     @StateObject private var subscriptionManager: HolidaySubscriptionManager
     @ObservedObject private var purchaseManager = RemoveAdsPurchaseManager.shared
 
@@ -57,6 +71,7 @@ struct SettingsView: View {
                 SettingsCard {
                     SettingsPickerRow(
                         title: localization.localized(.settingsLanguage),
+                        allowsMultiline: true,
                         selection: Binding(
                             get: { localization.selectedLanguageCode },
                             set: { localization.setLanguage(DisplayLanguage(rawValue: $0) ?? .system) }
@@ -70,7 +85,105 @@ struct SettingsView: View {
                             SettingsPickerOption(title: localization.localized(.languageEnglish), tag: "enUS")
                         ]
                     )
+                    .accessibilityIdentifier("settings.currentLanguage")
                 }
+
+                SettingsCard {
+                    SettingsCardTitle(localization.localized(.calendarSharingSettingsTitle))
+                    SettingsDivider()
+
+                    SettingsValueRow(
+                        title: localization.localized(.calendarSharingICloudStatusTitle),
+                        value: localization.localized(calendarSharingStore.iCloudStatus.localizedKey),
+                        allowsMultiline: true
+                    )
+                    .accessibilityIdentifier("sharing.iCloudStatusValue")
+
+                    SettingsDivider()
+
+                    SettingsValueRow(
+                        title: localization.localized(.calendarSharingLastSuccessfulSync),
+                        value: lastSuccessfulSyncText,
+                        allowsMultiline: true
+                    )
+                    .accessibilityIdentifier("sharing.lastSuccessfulSync")
+
+                    SettingsDivider()
+
+                    SettingsActionRow(
+                        title: localization.localized(.calendarSharingSyncNow),
+                        systemImage: "arrow.triangle.2.circlepath"
+                    ) {
+                        Task {
+                            await calendarSharingStore.synchronizeAll(
+                                forceICloudStatusRefresh: true
+                            )
+                        }
+                    }
+                    .accessibilityIdentifier("sharing.syncNow")
+
+                    if shouldShowICloudSettingsAction {
+                        SettingsDivider()
+
+                        SettingsActionRow(
+                            title: localization.localized(.calendarSharingOpenSettings),
+                            systemImage: "gearshape"
+                        ) {
+                            openSystemSettings()
+                        }
+                    }
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("sharing.icloudStatus")
+
+                SettingsCard {
+                    SettingsCardTitle(
+                        localization.localized(.settingsDataManagement),
+                        allowsMultiline: true
+                    )
+                    SettingsDivider()
+
+                    SettingsActionRow(
+                        title: localization.localized(.dataBackupCreate),
+                        systemImage: "square.and.arrow.up",
+                        allowsMultiline: true
+                    ) {
+                        createBackup()
+                    }
+                    .accessibilityIdentifier("settings.createBackup")
+
+                    SettingsDivider()
+
+                    SettingsActionRow(
+                        title: localization.localized(.dataBackupRestore),
+                        systemImage: "square.and.arrow.down",
+                        allowsMultiline: true
+                    ) {
+                        guard !dataOperationInProgress else { return }
+#if DEBUG
+                        if TimeNestUITestSupport.isEnabled {
+                            prepareUITestRestoreFixture()
+                            return
+                        }
+#endif
+                        isImportingBackup = true
+                    }
+                    .accessibilityIdentifier("settings.restoreBackup")
+
+                    SettingsDivider()
+
+                    SettingsActionRow(
+                        title: localization.localized(.dataWorkRecordsExport),
+                        systemImage: "tablecells",
+                        allowsMultiline: true
+                    ) {
+                        guard !dataOperationInProgress else { return }
+                        isSelectingWorkRecordMonth = true
+                    }
+                    .accessibilityIdentifier("settings.exportWorkRecords")
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("settings.dataManagement")
 
                 SettingsCard {
                     SettingsNavigationRow(
@@ -215,25 +328,150 @@ struct SettingsView: View {
             ThirdPartyLicensesView()
                 .environmentObject(localization)
         }
+        .sheet(item: $exportedFile) { item in
+            TimeNestActivityView(activityItems: [item.url]) {
+                cleanupExportedFile(item)
+            }
+        }
+        .sheet(isPresented: $isSelectingWorkRecordMonth) {
+            ZStack {
+                SettingsModalSurface.background.ignoresSafeArea()
+                YearMonthPickerView(
+                    currentDate: selectedWorkRecordMonth,
+                    onCancel: { isSelectingWorkRecordMonth = false },
+                    onSelect: { year, month in
+                        let calendar = Calendar(identifier: .gregorian)
+                        selectedWorkRecordMonth = calendar.date(
+                            from: DateComponents(year: year, month: month, day: 1)
+                        ) ?? selectedWorkRecordMonth
+                        isSelectingWorkRecordMonth = false
+                        exportWorkRecords()
+                    }
+                )
+                .environmentObject(localization)
+                .padding()
+            }
+            .presentationDetents([.height(280)])
+        }
+        .sheet(isPresented: $isConfirmingRestore, onDismiss: {
+            guard shouldRestoreAfterConfirmationDismissal else { return }
+            shouldRestoreAfterConfirmationDismissal = false
+            Task { await restorePendingBackup() }
+        }) {
+            restoreConfirmationSheet
+        }
+        .fileImporter(
+            isPresented: $isImportingBackup,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false,
+            onCompletion: handleBackupImport
+        )
         .alert(
-            purchaseAlertMessage ?? "",
+            dataAlertMessage ?? purchaseAlertMessage ?? "",
             isPresented: Binding(
-                get: { purchaseAlertMessage != nil },
+                get: { dataAlertMessage != nil || purchaseAlertMessage != nil },
                 set: { isPresented in
                     if !isPresented {
+                        dataAlertMessage = nil
                         purchaseAlertMessage = nil
                     }
                 }
             )
         ) {
             Button(localization.localized(.ok), role: .cancel) {
+                dataAlertMessage = nil
                 purchaseAlertMessage = nil
             }
         }
         .task {
+#if DEBUG
+            if !TimeNestUITestSupport.isEnabled {
+                await purchaseManager.loadProductIfNeeded()
+                await purchaseManager.refreshPurchasedState(context: "settings appear")
+            }
+#else
             await purchaseManager.loadProductIfNeeded()
             await purchaseManager.refreshPurchasedState(context: "settings appear")
+#endif
+            _ = await calendarSharingStore.refreshICloudStatus()
         }
+    }
+
+    private var restoreConfirmationSheet: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(localization.localized(.dataBackupRestoreConfirmationTitle))
+                    .font(.title2.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(localization.localized(.dataBackupRestoreConfirmationMessage))
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                VStack(spacing: 12) {
+                    Button(role: .destructive) {
+                        shouldRestoreAfterConfirmationDismissal = true
+                        isConfirmingRestore = false
+                    } label: {
+                        Text(localization.localized(.dataBackupRestoreConfirmationAction))
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .padding(.horizontal, 16)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.white)
+                    .background(Color.red)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityIdentifier("settings.restoreConfirm")
+
+                    Button {
+                        shouldRestoreAfterConfirmationDismissal = false
+                        pendingRestore = nil
+                        isConfirmingRestore = false
+                    } label: {
+                        Text(localization.localized(.cancel))
+                            .font(.headline)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .padding(.horizontal, 16)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.primary)
+                    .background(Color.secondary.opacity(0.14))
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .accessibilityIdentifier("settings.restoreCancel")
+                }
+            }
+            .padding(24)
+        }
+        .background(SettingsModalSurface.background.ignoresSafeArea())
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var shouldShowICloudSettingsAction: Bool {
+        switch calendarSharingStore.iCloudStatus {
+        case .noAccount, .restricted:
+            true
+        case .unknown, .checking, .available, .temporarilyUnavailable,
+             .couldNotDetermine, .requestFailed:
+            false
+        }
+    }
+
+    private var lastSuccessfulSyncText: String {
+        guard let date = calendarSharingStore.lastSuccessfulSyncAt else {
+            return localization.localized(.calendarSharingLastSuccessfulSyncNever)
+        }
+        let formatter = DateFormatter()
+        formatter.locale = localization.currentLocale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
 
     private var enabledSubscriptionsDisplayText: String {
@@ -259,6 +497,149 @@ struct SettingsView: View {
     private func openPrivacyPolicy() {
         guard let url = Self.privacyPolicyURL else { return }
         openURL(url) { _ in }
+    }
+
+    private func openSystemSettings() {
+        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+        openURL(url) { _ in }
+    }
+
+    private func createBackup() {
+        guard !dataOperationInProgress else { return }
+        dataOperationInProgress = true
+        defer { dataOperationInProgress = false }
+        do {
+            let document = try backupService.makeDocument(
+                appVersion: appVersionText
+            )
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.dateFormat = "yyyy-MM-dd_HHmmss"
+            exportedFile = try TimeNestTemporaryExportFile.make(
+                data: document.encoded(),
+                fileName: "TimeNest_Backup_\(formatter.string(from: document.createdAt)).json"
+            )
+        } catch {
+            dataAlertMessage = localization.localized(.dataBackupCreateFailed)
+        }
+    }
+
+    private func handleBackupImport(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else {
+                throw CocoaError(.fileReadUnknown)
+            }
+            let didAccess = url.startAccessingSecurityScopedResource()
+            defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+            let document = try TimeNestBackupDocument.decoded(from: Data(contentsOf: url))
+            pendingRestore = document
+            isConfirmingRestore = true
+        } catch {
+            pendingRestore = nil
+            dataAlertMessage = localization.localized(.dataBackupInvalidFile)
+        }
+    }
+
+#if DEBUG
+    private func prepareUITestRestoreFixture() {
+        do {
+            let document = try backupService.makeDocument(appVersion: appVersionText)
+            if TimeNestUITestSupport.shouldSimulateRestoreFailure {
+                pendingRestore = TimeNestBackupDocument(
+                    formatVersion: TimeNestBackupDocument.currentFormatVersion + 1,
+                    appIdentifier: document.appIdentifier,
+                    createdAt: document.createdAt,
+                    appVersion: document.appVersion,
+                    data: document.data
+                )
+            } else {
+                pendingRestore = document
+            }
+            isConfirmingRestore = true
+        } catch {
+            pendingRestore = nil
+            dataAlertMessage = localization.localized(.dataBackupInvalidFile)
+        }
+    }
+#endif
+
+    private func restorePendingBackup() async {
+        guard let pendingRestore, !dataOperationInProgress else { return }
+        dataOperationInProgress = true
+        defer { dataOperationInProgress = false }
+        do {
+            let notificationSummary = try await backupService.restore(pendingRestore)
+            self.pendingRestore = nil
+            subscriptionManager.reloadFromPersistence()
+            LocalizationManager.shared.reloadFromPersistence()
+            NotificationCenter.default.post(name: .timeNestDataDidRestore, object: nil)
+            Task { await calendarSharingStore.handleLocalDataRestore() }
+            dataAlertMessage = localization.localized(.dataBackupRestoreSuccess)
+#if DEBUG
+            if notificationSummary.hasWarnings {
+                print(
+                    "[TimeNest][Restore] notification rebuild warning "
+                        + "denied=\(notificationSummary.deniedCount) "
+                        + "failed=\(notificationSummary.failedCount)"
+                )
+            }
+#endif
+        } catch {
+            dataAlertMessage = localization.localized(.dataBackupRestoreFailed)
+        }
+    }
+
+    private func exportWorkRecords() {
+        guard !dataOperationInProgress else { return }
+        dataOperationInProgress = true
+        defer { dataOperationInProgress = false }
+        do {
+            let events = try modelContext.fetch(
+                FetchDescriptor<SwiftDataCalendarEventEntity>(sortBy: [SortDescriptor(\.startDate)])
+            ).map(SwiftDataEventMapper.makeDomainModel)
+            let export = try WorkRecordCSVExporter.makeExport(
+                events: events,
+                monthContaining: selectedWorkRecordMonth,
+                headers: WorkRecordCSVHeaders(
+                    date: localization.localized(.dataCSVDate),
+                    startTime: localization.localized(.dataCSVStartTime),
+                    endTime: localization.localized(.dataCSVEndTime),
+                    restTime: localization.localized(.dataCSVRestTime),
+                    workedTime: localization.localized(.dataCSVWorkedTime),
+                    recordName: localization.localized(.dataCSVRecordName),
+                    note: localization.localized(.dataCSVNote)
+                ),
+                locale: localization.currentLocale
+            )
+            exportedFile = try TimeNestTemporaryExportFile.make(
+                data: export.data,
+                fileName: export.fileName
+            )
+        } catch WorkRecordCSVExportError.noData {
+            dataAlertMessage = localization.localized(.dataWorkRecordsNoData)
+        } catch {
+            dataAlertMessage = localization.localized(.dataWorkRecordsExportFailed)
+        }
+    }
+
+    private var backupService: TimeNestBackupService {
+        TimeNestBackupService(modelContext: modelContext)
+    }
+
+    private func cleanupExportedFile(_ item: TimeNestTemporaryExportFile) {
+#if DEBUG
+        if TimeNestUITestSupport.preserveExportedTestFile {
+            if exportedFile?.id == item.id {
+                exportedFile = nil
+            }
+            return
+        }
+#endif
+        try? FileManager.default.removeItem(at: item.cleanupURL)
+        if exportedFile?.id == item.id {
+            exportedFile = nil
+        }
     }
 
     private func purchaseRemoveAds() async {
@@ -310,6 +691,73 @@ struct SettingsView: View {
             return localization.localized(.adsRestoreFailed)
         case .productUnavailable, .purchaseFailed, .verificationFailed, .productMismatch, .unknownPurchaseResult:
             return localization.localized(.adsPurchaseFailed)
+        }
+    }
+}
+
+private struct TimeNestTemporaryExportFile: Identifiable {
+    let id = UUID()
+    let url: URL
+    let cleanupURL: URL
+
+    static func make(data: Data, fileName: String) throws -> TimeNestTemporaryExportFile {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("TimeNestExport-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        let url = directory.appendingPathComponent(fileName, isDirectory: false)
+        do {
+            try data.write(to: url, options: .atomic)
+            return TimeNestTemporaryExportFile(url: url, cleanupURL: directory)
+        } catch {
+            try? FileManager.default.removeItem(at: directory)
+            throw error
+        }
+    }
+}
+
+private struct TimeNestActivityView: UIViewControllerRepresentable {
+    let activityItems: [Any]
+    let onCompletion: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onCompletion: onCompletion)
+    }
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        let controller = UIActivityViewController(
+            activityItems: activityItems,
+            applicationActivities: nil
+        )
+        controller.completionWithItemsHandler = { _, _, _, _ in
+            context.coordinator.complete()
+        }
+        return controller
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+
+    static func dismantleUIViewController(
+        _ uiViewController: UIActivityViewController,
+        coordinator: Coordinator
+    ) {
+        coordinator.complete()
+    }
+
+    final class Coordinator {
+        private let onCompletion: () -> Void
+        private var didComplete = false
+
+        init(onCompletion: @escaping () -> Void) {
+            self.onCompletion = onCompletion
+        }
+
+        func complete() {
+            guard !didComplete else { return }
+            didComplete = true
+            onCompletion()
         }
     }
 }
@@ -371,15 +819,19 @@ private struct SettingsCard<Content: View>: View {
 
 private struct SettingsCardTitle: View {
     let title: String
+    let allowsMultiline: Bool
 
-    init(_ title: String) {
+    init(_ title: String, allowsMultiline: Bool = false) {
         self.title = title
+        self.allowsMultiline = allowsMultiline
     }
 
     var body: some View {
         Text(title)
             .font(.subheadline.weight(.semibold))
             .foregroundColor(SettingsStyle.secondaryText)
+            .lineLimit(allowsMultiline ? nil : 1)
+            .fixedSize(horizontal: false, vertical: allowsMultiline)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
             .padding(.top, SettingsStyle.titleTopPadding)
@@ -398,13 +850,16 @@ private struct SettingsDivider: View {
 
 private struct SettingsRow<Accessory: View>: View {
     let title: String
+    let allowsMultiline: Bool
     let accessory: Accessory
 
     init(
         title: String,
+        allowsMultiline: Bool = false,
         @ViewBuilder accessory: () -> Accessory
     ) {
         self.title = title
+        self.allowsMultiline = allowsMultiline
         self.accessory = accessory()
     }
 
@@ -413,8 +868,9 @@ private struct SettingsRow<Accessory: View>: View {
             Text(title)
                 .font(.body)
                 .foregroundColor(SettingsStyle.primaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
+                .lineLimit(allowsMultiline ? nil : 1)
+                .minimumScaleFactor(allowsMultiline ? 1 : 0.82)
+                .fixedSize(horizontal: false, vertical: allowsMultiline)
                 .layoutPriority(1)
 
             Spacer(minLength: SettingsStyle.rowAccessoryMinSpacing)
@@ -430,11 +886,12 @@ private struct SettingsRow<Accessory: View>: View {
 
 private struct SettingsPickerRow: View {
     let title: String
+    var allowsMultiline = false
     @Binding var selection: String
     let options: [SettingsPickerOption]
 
     var body: some View {
-        SettingsRow(title: title) {
+        SettingsRow(title: title, allowsMultiline: allowsMultiline) {
             Picker("", selection: $selection) {
                 ForEach(options) { option in
                     Text(option.title).tag(option.tag)
@@ -489,6 +946,7 @@ private struct SettingsNavigationRow<Destination: View>: View {
 private struct SettingsActionRow: View {
     let title: String
     let systemImage: String
+    var allowsMultiline = false
     let action: () -> Void
 
     var body: some View {
@@ -502,8 +960,9 @@ private struct SettingsActionRow: View {
                 Text(title)
                     .font(.body)
                     .foregroundColor(SettingsStyle.primaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
+                    .lineLimit(allowsMultiline ? nil : 1)
+                    .minimumScaleFactor(allowsMultiline ? 1 : 0.82)
+                    .fixedSize(horizontal: false, vertical: allowsMultiline)
 
                 Spacer(minLength: SettingsStyle.rowAccessoryMinSpacing)
 
@@ -513,6 +972,7 @@ private struct SettingsActionRow: View {
             }
             .frame(minHeight: SettingsStyle.rowMinHeight)
             .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
+            .padding(.vertical, allowsMultiline ? 6 : 0)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -522,14 +982,30 @@ private struct SettingsActionRow: View {
 private struct SettingsValueRow: View {
     let title: String
     let value: String
+    var allowsMultiline = false
 
+    @ViewBuilder
     var body: some View {
-        SettingsRow(title: title) {
-            Text(value)
-                .font(.body)
-                .foregroundColor(SettingsStyle.secondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
+        if allowsMultiline {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.body)
+                    .foregroundColor(SettingsStyle.primaryText)
+                Text(value)
+                    .font(.body)
+                    .foregroundColor(SettingsStyle.secondaryText)
+            }
+            .frame(maxWidth: .infinity, minHeight: SettingsStyle.rowMinHeight, alignment: .leading)
+            .padding(.horizontal, SettingsStyle.rowHorizontalPadding)
+            .padding(.vertical, 8)
+        } else {
+            SettingsRow(title: title) {
+                Text(value)
+                    .font(.body)
+                    .foregroundColor(SettingsStyle.secondaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
         }
     }
 }

@@ -48,6 +48,117 @@ struct CalendarSelectionPersistence {
     }
 }
 
+enum CalendarSharingICloudStatus: Equatable {
+    case unknown
+    case checking
+    case available
+    case noAccount
+    case restricted
+    case temporarilyUnavailable
+    case couldNotDetermine
+    case requestFailed(CalendarSharingError)
+
+    var blocksSharingOperation: Bool {
+        switch self {
+        case .available:
+            false
+        case .unknown, .checking, .noAccount, .restricted,
+             .temporarilyUnavailable, .couldNotDetermine, .requestFailed:
+            true
+        }
+    }
+
+    var operationError: CalendarSharingError? {
+        switch self {
+        case .available:
+            nil
+        case .noAccount:
+            .noICloudAccount
+        case .restricted:
+            .iCloudRestricted
+        case .temporarilyUnavailable:
+            .serviceTemporarilyUnavailable
+        case .unknown, .checking, .couldNotDetermine:
+            .iCloudStatusUnavailable
+        case .requestFailed(let error):
+            error
+        }
+    }
+}
+
+enum CalendarSharingDisplayStatus: Equatable {
+    case notShared
+    case waitingForAcceptance
+    case shared
+    case syncing
+    case failed
+    case unavailable
+}
+
+extension CalendarSharingICloudStatus {
+    var localizedKey: LocalizedString {
+        switch self {
+        case .checking:
+            .calendarSharingICloudStatusChecking
+        case .available:
+            .calendarSharingICloudStatusAvailable
+        case .noAccount:
+            .calendarSharingICloudStatusNoAccount
+        case .restricted:
+            .calendarSharingICloudStatusRestricted
+        case .temporarilyUnavailable:
+            .calendarSharingICloudStatusTemporarilyUnavailable
+        case .requestFailed:
+            .calendarSharingICloudStatusRequestFailed
+        case .unknown, .couldNotDetermine:
+            .calendarSharingICloudStatusUnknown
+        }
+    }
+}
+
+extension CalendarSharingDisplayStatus {
+    var localizedKey: LocalizedString {
+        switch self {
+        case .notShared:
+            .calendarSharingStateNotShared
+        case .waitingForAcceptance:
+            .calendarSharingStateWaiting
+        case .shared:
+            .calendarSharingStateShared
+        case .syncing:
+            .calendarSharingStateSyncing
+        case .failed:
+            .calendarSharingStateFailed
+        case .unavailable:
+            .calendarSharingStateUnavailable
+        }
+    }
+}
+
+struct CalendarSharingSyncMetadataPersistence {
+    static let defaultKey = "calendarSharing.lastSuccessfulSyncAt"
+
+    let defaults: UserDefaults
+    let key: String
+
+    init(defaults: UserDefaults = .standard, key: String = Self.defaultKey) {
+        self.defaults = defaults
+        self.key = key
+    }
+
+    func loadLastSuccessfulSyncAt() -> Date? {
+        defaults.object(forKey: key) as? Date
+    }
+
+    func saveLastSuccessfulSyncAt(_ date: Date?) {
+        if let date {
+            defaults.set(date, forKey: key)
+        } else {
+            defaults.removeObject(forKey: key)
+        }
+    }
+}
+
 struct SharedCalendarDescriptor: Codable, Identifiable, Hashable {
     let id: UUID
     let zoneName: String
@@ -525,6 +636,7 @@ enum CalendarAvatarInitial {
 enum CalendarSharingError: Error, Equatable, LocalizedError {
     case noICloudAccount
     case iCloudRestricted
+    case iCloudStatusUnavailable
     case networkUnavailable
     case serviceTemporarilyUnavailable
     case invitationPending
@@ -555,6 +667,8 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingICloudSignInRequired)
         case .iCloudRestricted:
             LocalizationManager.shared.localized(.calendarSharingICloudRestricted)
+        case .iCloudStatusUnavailable:
+            LocalizationManager.shared.localized(.calendarSharingICloudStatusUnavailable)
         case .networkUnavailable:
             LocalizationManager.shared.localized(.calendarSharingNetworkUnavailable)
         case .serviceTemporarilyUnavailable:

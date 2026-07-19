@@ -56,6 +56,13 @@ final class LocalizationManager: ObservableObject {
         UserDefaults.standard.set(language.rawValue, forKey: "preferredLanguageCode")
     }
 
+    func reloadFromPersistence() {
+        selectedLanguageCode = UserDefaults.standard.string(
+            forKey: "preferredLanguageCode"
+        ) ?? "system"
+        dateFormatterCache.removeAllObjects()
+    }
+
     /// 获取本地化字符串（使用当前选择的语言）
     /// - Parameter key: 本地化字符串的 key
     /// - Returns: 本地化后的字符串

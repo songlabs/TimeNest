@@ -52,6 +52,9 @@ struct TimeNestApp: App {
     private let widgetSnapshotCoordinator: WidgetSnapshotCoordinator
 
     init() {
+#if DEBUG
+        TimeNestUITestSupport.configureDefaults()
+#endif
         let schema = Schema([
             SwiftDataCalendarEventEntity.self,
             SwiftDataReminderEntity.self,
@@ -59,7 +62,15 @@ struct TimeNestApp: App {
         ])
         let modelPreparation: ModelContainerPreparation
         do {
+#if DEBUG
+            if TimeNestUITestSupport.isEnabled {
+                modelPreparation = try TimeNestUITestSupport.makeModelPreparation(schema: schema)
+            } else {
+                modelPreparation = try Self.makeModelContainer(schema: schema)
+            }
+#else
             modelPreparation = try Self.makeModelContainer(schema: schema)
+#endif
             modelContainer = modelPreparation.container
         } catch {
             fatalError("Failed to create SwiftData ModelContainer: \(error)")
@@ -85,6 +96,13 @@ struct TimeNestApp: App {
             legacyOutcome: modelPreparation.legacyMigrationOutcome,
             calendarMigrationFailed: calendarMigrationFailed
         )
+#if DEBUG
+        do {
+            try TimeNestUITestSupport.seedDataManagementScenario(in: modelContainer)
+        } catch {
+            fatalError("Failed to seed UI test data: \(error)")
+        }
+#endif
 
         let eventRepository = SwiftDataEventRepository(modelContainer: modelContainer)
         let calendarRepository = SwiftDataCalendarRepository(modelContainer: modelContainer)
@@ -129,8 +147,15 @@ struct TimeNestApp: App {
         )
         let snapshotCoordinator = WidgetSnapshotCoordinator(builder: snapshotBuilder)
         self.widgetSnapshotCoordinator = snapshotCoordinator
+#if DEBUG
+        let sharingClient: any CalendarSharingClientProtocol = TimeNestUITestSupport.isEnabled
+            ? TimeNestUITestSupport.makeCalendarSharingClient()
+            : CloudKitCalendarSharingClient()
+#else
+        let sharingClient: any CalendarSharingClientProtocol = CloudKitCalendarSharingClient()
+#endif
         let calendarSharingStore = CalendarSharingStore(
-            client: CloudKitCalendarSharingClient(),
+            client: sharingClient,
             eventUseCase: eventUseCase,
             calendarRepository: calendarRepository,
             initialMigrationError: calendarMigrationFailed
@@ -182,9 +207,15 @@ struct TimeNestApp: App {
                     calendarSharingStore: calendarSharingStore
                 )
                 .task {
+#if DEBUG
+                    guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
+#endif
                     await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
                 }
                 .task {
+#if DEBUG
+                    guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
+#endif
                     RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
                     let isAdsRemoved = await RemoveAdsPurchaseManager.shared.refreshPurchasedState(
                         context: "app startup"
@@ -194,6 +225,9 @@ struct TimeNestApp: App {
                     }
                 }
                 .task {
+#if DEBUG
+                    guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
+#endif
                     await widgetSnapshotCoordinator.refresh()
                 }
                 .task {

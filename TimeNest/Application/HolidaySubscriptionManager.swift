@@ -340,6 +340,11 @@ class HolidaySubscriptionManager: ObservableObject {
         cacheRepository.getEvents(on: date, for: regions)
     }
 
+    func reloadFromPersistence() {
+        loadSubscriptions()
+        NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
+    }
+
     // MARK: - Private Methods
 
     private func loadSubscriptions() {

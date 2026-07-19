@@ -25,7 +25,9 @@ final class CalendarSharingStore: ObservableObject {
     @Published private(set) var ownedCalendars: [OwnedSharedCalendarDescriptor] = []
     @Published private(set) var receivedCalendars: [SharedCalendarDescriptor]
     @Published private(set) var participantsByCalendarID: [UUID: [SharedCalendarParticipantSnapshot]] = [:]
+    @Published private(set) var iCloudStatus: CalendarSharingICloudStatus = .unknown
     @Published private(set) var syncStatus: CalendarSharingSyncStatus = .idle
+    @Published private(set) var lastSuccessfulSyncAt: Date?
     @Published private(set) var lastError: CalendarSharingError?
     @Published private(set) var isAcceptingInvitation = false
     @Published private(set) var invitationAcceptanceError: CalendarSharingError?
@@ -37,6 +39,7 @@ final class CalendarSharingStore: ObservableObject {
     private let calendarRepository: any CalendarRepository
     private let cache: CalendarSharingCache
     private let selectionPersistence: CalendarSelectionPersistence
+    private let syncMetadataPersistence: CalendarSharingSyncMetadataPersistence
     private let invitationRouter: CalendarSharingInvitationRouter
     private var eventsByCalendarID: [UUID: [SharedEventSnapshot]]
     private var shiftsByCalendarID: [UUID: [SharedShiftSnapshot]]
@@ -52,6 +55,10 @@ final class CalendarSharingStore: ObservableObject {
     private var syncWorkers: [UUID: Task<Void, Never>] = [:]
     private var syncDescriptors: [UUID: OwnedSharedCalendarDescriptor] = [:]
     private var pendingExtraEvents: [UUID: [UUID: CalendarEvent]] = [:]
+    private var lastICloudStatusCheckAt: Date?
+    private var iCloudStatusRefreshTask: Task<CalendarSharingICloudStatus, Never>?
+
+    private static let iCloudStatusCacheDuration: TimeInterval = 60
 
     init(
         client: any CalendarSharingClientProtocol,
@@ -59,6 +66,7 @@ final class CalendarSharingStore: ObservableObject {
         calendarRepository: any CalendarRepository,
         cache: CalendarSharingCache = CalendarSharingCache(),
         selectionPersistence: CalendarSelectionPersistence = CalendarSelectionPersistence(),
+        syncMetadataPersistence: CalendarSharingSyncMetadataPersistence = CalendarSharingSyncMetadataPersistence(),
         initialCalendars: [TimeNestCalendar] = [],
         initialMigrationError: CalendarSharingError? = nil,
         invitationRouter: CalendarSharingInvitationRouter? = nil
@@ -68,6 +76,7 @@ final class CalendarSharingStore: ObservableObject {
         self.calendarRepository = calendarRepository
         self.cache = cache
         self.selectionPersistence = selectionPersistence
+        self.syncMetadataPersistence = syncMetadataPersistence
         self.initialMigrationError = initialMigrationError
         self.invitationRouter = invitationRouter ?? .shared
         calendars = initialCalendars
@@ -77,9 +86,11 @@ final class CalendarSharingStore: ObservableObject {
         shiftsByCalendarID = cached.shiftsByCalendarID
         workRecordsByCalendarID = cached.workRecordsByCalendarID
         selection = selectionPersistence.load()
+        lastSuccessfulSyncAt = syncMetadataPersistence.loadLastSuccessfulSyncAt()
     }
 
     deinit {
+        iCloudStatusRefreshTask?.cancel()
         for worker in syncWorkers.values {
             worker.cancel()
         }
@@ -135,6 +146,54 @@ final class CalendarSharingStore: ObservableObject {
         participantsByCalendarID[calendarID] ?? []
     }
 
+    func displayStatus(for calendar: TimeNestCalendar) -> CalendarSharingDisplayStatus {
+        guard calendar.kind != .personal else { return .notShared }
+        guard !calendar.stopPhase.isStopping else { return .unavailable }
+        switch syncStatus {
+        case .syncing:
+            return .syncing
+        case .failed:
+            return .failed
+        case .idle, .synced:
+            break
+        }
+        switch calendar.kind {
+        case .personal:
+            return .notShared
+        case .sharedOwned:
+            return participants(for: calendar.id).contains(where: \.isAccepted)
+                ? .shared
+                : .waitingForAcceptance
+        case .sharedReceived:
+            return .shared
+        }
+    }
+
+    @discardableResult
+    func refreshICloudStatus(force: Bool = false) async -> CalendarSharingICloudStatus {
+        if let task = iCloudStatusRefreshTask {
+            return await task.value
+        }
+        if !force,
+           let checkedAt = lastICloudStatusCheckAt,
+           Date().timeIntervalSince(checkedAt) < Self.iCloudStatusCacheDuration,
+           iCloudStatus != .checking,
+           iCloudStatus != .unknown {
+            return iCloudStatus
+        }
+
+        iCloudStatus = .checking
+        let task = Task { @MainActor [client] in
+            await client.iCloudAccountStatus()
+        }
+        iCloudStatusRefreshTask = task
+        let status = await task.value
+        iCloudStatusRefreshTask = nil
+        iCloudStatus = status
+        lastICloudStatusCheckAt = Date()
+        return status
+    }
+
     func select(_ newSelection: CalendarSelection) {
         let resolved = CalendarSelectionPersistence.resolved(
             newSelection,
@@ -178,7 +237,13 @@ final class CalendarSharingStore: ObservableObject {
         invitationRouter.retryPending()
     }
 
-    func synchronizeAll() async {
+    func synchronizeAll(forceICloudStatusRefresh: Bool = false) async {
+        let accountStatus = await refreshICloudStatus(force: forceICloudStatusRefresh)
+        guard accountStatus == .available else {
+            lastError = accountStatus.operationError
+            syncStatus = .failed
+            return
+        }
         if refreshIsInProgress {
             refreshWasRequested = true
             await waitForRefreshToFinish()
@@ -192,6 +257,18 @@ final class CalendarSharingStore: ObservableObject {
             await performFullSynchronization()
         } while refreshWasRequested
         invitationRouter.retryPending()
+    }
+
+    /// Manual retry for an owned invitation. This refreshes the latest CKShare state and
+    /// deliberately never enters the participant-revocation path.
+    func refreshOwnedInvitationStatus(calendarID: UUID) async throws {
+        await synchronizeAll(forceICloudStatusRefresh: true)
+        guard syncStatus == .synced else {
+            throw lastError ?? CalendarSharingError.syncFailed
+        }
+        guard ownedDescriptor(id: calendarID) != nil else {
+            throw CalendarSharingError.shareUnavailable
+        }
     }
 
     private func performFullSynchronization() async {
@@ -258,6 +335,9 @@ final class CalendarSharingStore: ObservableObject {
             persistCache()
             syncStatus = .synced
             lastError = initialMigrationError ?? stopRecoveryError
+            if !ownedCalendars.isEmpty || !receivedCalendars.isEmpty {
+                recordSuccessfulSync()
+            }
             revision &+= 1
         } catch is CancellationError {
             syncStatus = .idle
@@ -279,6 +359,7 @@ final class CalendarSharingStore: ObservableObject {
     }
 
     func createSharedCalendar(name: String) async throws -> CalendarSharingInvitation {
+        try await requireAvailableICloud()
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw CalendarSharingError.shareCreationFailed }
         let now = Date()
@@ -347,6 +428,7 @@ final class CalendarSharingStore: ObservableObject {
     }
 
     func createInvitation(for calendarID: UUID) async throws -> CalendarSharingInvitation {
+        try await requireAvailableICloud()
         guard calendar(id: calendarID)?.canManageParticipants == true,
               let calendar = ownedDescriptor(id: calendarID) else {
             throw CalendarSharingError.shareUnavailable
@@ -573,6 +655,7 @@ final class CalendarSharingStore: ObservableObject {
     ) async throws -> CalendarSharingManualInvitationResult {
         manualInvitationState = .validating
         do {
+            try await requireAvailableICloud()
             let url = try CalendarSharingInvitationURLValidator.validatedURL(
                 from: rawValue
             )
@@ -611,7 +694,8 @@ final class CalendarSharingStore: ObservableObject {
     func fetchShareMetadata(
         from url: URL
     ) async throws -> any CalendarSharingShareMetadata {
-        try await client.fetchShareMetadata(from: url)
+        try await requireAvailableICloud()
+        return try await client.fetchShareMetadata(from: url)
     }
 
     func accept(
@@ -624,6 +708,16 @@ final class CalendarSharingStore: ObservableObject {
         defer { isAcceptingInvitation = false }
         let metadataHash = CalendarSharingDiagnostics.metadataHash(metadata)
         let acceptedShare: AcceptedSharedCalendarCloudResult
+
+        do {
+            try await requireAvailableICloud()
+        } catch {
+            let mappedError = (error as? CalendarSharingError) ?? .iCloudStatusUnavailable
+            lastError = mappedError
+            invitationAcceptanceError = mappedError
+            syncStatus = .failed
+            return acceptanceProcessingResult(for: mappedError)
+        }
 
         if let pendingShare = acceptedMetadataAwaitingRefresh[metadataHash] {
             acceptedShare = pendingShare
@@ -673,6 +767,7 @@ final class CalendarSharingStore: ObservableObject {
             lastError = initialMigrationError
             invitationAcceptanceError = nil
             syncStatus = .synced
+            recordSuccessfulSync()
             CalendarSharingDiagnostics.debug(
                 operation: "acceptShare",
                 stage: "refresh-completed",
@@ -707,7 +802,7 @@ final class CalendarSharingStore: ObservableObject {
         for error: CalendarSharingError
     ) -> CalendarSharingAcceptanceProcessingResult {
         switch error {
-        case .noICloudAccount, .iCloudRestricted, .networkUnavailable,
+        case .noICloudAccount, .iCloudRestricted, .iCloudStatusUnavailable, .networkUnavailable,
              .serviceTemporarilyUnavailable, .invitationPending,
              .invitationAcceptanceFailed, .receivedCalendarRefreshFailed, .syncFailed:
             .retryLater
@@ -1109,5 +1204,35 @@ final class CalendarSharingStore: ObservableObject {
                 workRecordsByCalendarID: workRecordsByCalendarID
             )
         )
+    }
+
+    func handleLocalDataRestore() async {
+        select(.mine)
+        calendars = []
+        ownedCalendars = []
+        receivedCalendars = []
+        participantsByCalendarID = [:]
+        eventsByCalendarID = [:]
+        shiftsByCalendarID = [:]
+        workRecordsByCalendarID = [:]
+        syncStatus = .idle
+        lastError = nil
+        lastSuccessfulSyncAt = nil
+        syncMetadataPersistence.saveLastSuccessfulSyncAt(nil)
+        try? cache.save(.empty)
+        await loadLocalCalendars()
+        revision &+= 1
+    }
+
+    private func requireAvailableICloud() async throws {
+        let status = await refreshICloudStatus()
+        if let error = status.operationError {
+            throw error
+        }
+    }
+
+    private func recordSuccessfulSync(at date: Date = Date()) {
+        lastSuccessfulSyncAt = date
+        syncMetadataPersistence.saveLastSuccessfulSyncAt(date)
     }
 }

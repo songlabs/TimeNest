@@ -56,6 +56,20 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "8DD2784EE1182BB3FCB96969"
+               BuildableName = "TimeNestUITests.xctest"
+               BlueprintName = "TimeNestUITests"
+               ReferencedContainer = "container:TimeNest.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "F417ACF56F3AD1754A4D494A"
                BuildableName = "TimeNestWidgetExtension.appex"
                BlueprintName = "TimeNestWidgetExtension"
@@ -89,6 +103,17 @@
                BlueprintIdentifier = "6D6670E3FD1E0F27727D23A9"
                BuildableName = "TimeNestTests.xctest"
                BlueprintName = "TimeNestTests"
+               ReferencedContainer = "container:TimeNest.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "8DD2784EE1182BB3FCB96969"
+               BuildableName = "TimeNestUITests.xctest"
+               BlueprintName = "TimeNestUITests"
                ReferencedContainer = "container:TimeNest.xcodeproj">
             </BuildableReference>
          </TestableReference>

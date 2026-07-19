@@ -193,6 +193,7 @@ struct FloatingPickerActionRow: View {
                     .cornerRadius(10)
             }
             .frame(minWidth: 110, maxWidth: 120)
+            .accessibilityIdentifier("picker.cancel")
 
             Button(action: onConfirm) {
                 Text(confirmTitle)
@@ -204,6 +205,7 @@ struct FloatingPickerActionRow: View {
                     .cornerRadius(10)
             }
             .frame(minWidth: 110, maxWidth: 120)
+            .accessibilityIdentifier("picker.confirm")
         }
         .frame(maxWidth: .infinity)
         .buttonStyle(.plain)

@@ -124,6 +124,7 @@ struct CalendarHeaderView: View {
                 : calendarDisplayName
         )
         .accessibilityAddTraits(.isSelected)
+        .accessibilityIdentifier("sharing.calendarSelector")
     }
 
     private var titleFont: Font {
@@ -162,6 +163,7 @@ struct CalendarHeaderView: View {
             Button(action: onSettingsTapped) {
                 Label(localization.localized(.settingsTitle), systemImage: "gearshape")
             }
+            .accessibilityIdentifier("settings.open")
         } label: {
             Image(systemName: "ellipsis")
                 .font(.system(size: 22, weight: .semibold))
@@ -176,6 +178,7 @@ struct CalendarHeaderView: View {
                 )
         }
         .buttonStyle(PlainButtonStyle())
+        .accessibilityIdentifier("calendar.moreMenu")
         .accessibilityLabel(Text(localization.localized(.moreMenu)))
         .accessibilityHint(Text(localization.localized(.moreMenu)))
     }

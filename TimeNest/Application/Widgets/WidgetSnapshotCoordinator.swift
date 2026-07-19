@@ -40,6 +40,7 @@ final class WidgetSnapshotCoordinator {
         let names: [Notification.Name] = [
             .holidaySubscriptionsDidChange,
             .holidayEventsDidUpdate,
+            .timeNestDataDidRestore,
             UserDefaults.didChangeNotification
         ]
         observers = names.map { name in

@@ -110,6 +110,10 @@ struct MonthCalendarView: View {
                 await viewModel.openCalendar(on: date)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .timeNestDataDidRestore)) { _ in
+            viewModel.refreshShiftTemplates()
+            Task { await viewModel.reloadMonth() }
+        }
         .popover(isPresented: $showingCalendarSelection) {
             CalendarSelectionView()
                 .environmentObject(calendarSharingStore)

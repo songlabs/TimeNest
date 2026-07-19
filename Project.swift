@@ -132,6 +132,16 @@ let project = Project(
             infoPlist: .default,
             sources: ["Tests/TimeNestScreenshotUITests/**"],
             dependencies: [.target(name: "TimeNest")]
+        ),
+        .target(
+            name: "TimeNestUITests",
+            destinations: .iOS,
+            product: .uiTests,
+            bundleId: "com.song.TimeNestUITests",
+            deploymentTargets: .iOS("18.0"),
+            infoPlist: .default,
+            sources: ["Tests/TimeNestUITests/**"],
+            dependencies: [.target(name: "TimeNest")]
         )
     ],
     schemes: [
@@ -139,7 +149,7 @@ let project = Project(
             name: "TimeNest",
             shared: true,
             buildAction: .buildAction(targets: ["TimeNest"]),
-            testAction: .targets(["TimeNestTests"]),
+            testAction: .targets(["TimeNestTests", "TimeNestUITests"]),
             runAction: .runAction(
                 executable: "TimeNest",
                 options: .options(storeKitConfigurationPath: "TimeNest.storekit")
@@ -150,6 +160,12 @@ let project = Project(
             shared: true,
             buildAction: .buildAction(targets: ["TimeNest", "TimeNestScreenshotUITests"]),
             testAction: .targets(["TimeNestScreenshotUITests"])
+        ),
+        .scheme(
+            name: "TimeNestUITests",
+            shared: true,
+            buildAction: .buildAction(targets: ["TimeNest", "TimeNestUITests"]),
+            testAction: .targets(["TimeNestUITests"])
         )
     ],
     additionalFiles: [

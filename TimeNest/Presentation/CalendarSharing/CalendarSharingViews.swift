@@ -313,9 +313,15 @@ struct CalendarSelectionView: View {
                     Section {
                         Text(error.localizedDescription)
                             .foregroundStyle(.secondary)
+                            .accessibilityIdentifier("sharing.errorMessage")
                         Button(localization.localized(.calendarSharingRetry)) {
-                            Task { await sharingStore.synchronizeAll() }
+                            Task {
+                                await sharingStore.synchronizeAll(
+                                    forceICloudStatusRefresh: true
+                                )
+                            }
                         }
+                        .accessibilityIdentifier("sharing.retry")
                     }
                 }
             }
@@ -327,7 +333,11 @@ struct CalendarSelectionView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        Task { await sharingStore.synchronizeAll() }
+                        Task {
+                            await sharingStore.synchronizeAll(
+                                forceICloudStatusRefresh: true
+                            )
+                        }
                     } label: {
                         if sharingStore.syncStatus == .syncing {
                             ProgressView()
@@ -336,6 +346,7 @@ struct CalendarSelectionView: View {
                         }
                     }
                     .disabled(sharingStore.syncStatus == .syncing)
+                    .accessibilityIdentifier("sharing.refresh")
                 }
             }
         }
@@ -444,6 +455,14 @@ struct CalendarSelectionView: View {
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                         }
+                        if calendar.kind != .personal {
+                            Text(localization.localized(
+                                sharingStore.displayStatus(for: calendar).localizedKey
+                            ))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        }
                     }
                     Spacer()
                     if sharingStore.selection.calendarID == calendar.id {
@@ -458,6 +477,14 @@ struct CalendarSelectionView: View {
             }
             .buttonStyle(.plain)
             .disabled(!actions.actionsAreEnabled)
+            .accessibilityIdentifier("sharing.calendar.\(calendar.id.uuidString.lowercased())")
+            .accessibilityValue(
+                calendar.kind == .personal
+                    ? ""
+                    : localization.localized(
+                        sharingStore.displayStatus(for: calendar).localizedKey
+                    )
+            )
 
             if actions.showsEdit {
                 calendarActionButton(
@@ -823,6 +850,7 @@ private struct OwnedSharedCalendarDetailView: View {
     @State private var invitation: CalendarSharingInvitation?
     @State private var isWorking = false
     @State private var errorMessage: String?
+    @State private var participantPendingRevocation: SharedCalendarParticipantSnapshot?
 
     private var descriptor: OwnedSharedCalendarDescriptor? {
         sharingStore.ownedDescriptor(id: calendarID)
@@ -872,13 +900,22 @@ private struct OwnedSharedCalendarDetailView: View {
                                 }
                                 Spacer()
                                 if !participant.isAccepted {
-                                    Button(localization.localized(.calendarSharingRetry)) {
-                                        Task {
-                                            await retryPendingInvitationRemoval(participant)
+                                    VStack(alignment: .trailing, spacing: 4) {
+                                        Button(localization.localized(.calendarSharingRetry)) {
+                                            Task { await refreshPendingInvitationState() }
                                         }
+                                        .buttonStyle(.borderless)
+                                        .disabled(isWorking)
+
+                                        Button(
+                                            localization.localized(.calendarSharingRevokeInvitation),
+                                            role: .destructive
+                                        ) {
+                                            participantPendingRevocation = participant
+                                        }
+                                        .buttonStyle(.borderless)
+                                        .disabled(isWorking)
                                     }
-                                    .buttonStyle(.borderless)
-                                    .disabled(isWorking)
                                 }
                             }
                         }
@@ -938,6 +975,27 @@ private struct OwnedSharedCalendarDetailView: View {
         } message: {
             Text(errorMessage ?? "")
         }
+        .alert(
+            localization.localized(.calendarSharingRevokeInvitationConfirmationTitle),
+            isPresented: Binding(
+                get: { participantPendingRevocation != nil },
+                set: { if !$0 { participantPendingRevocation = nil } }
+            )
+        ) {
+            Button(
+                localization.localized(.calendarSharingRevokeInvitation),
+                role: .destructive
+            ) {
+                guard let participant = participantPendingRevocation else { return }
+                participantPendingRevocation = nil
+                Task { await revokePendingInvitation(participant) }
+            }
+            Button(localization.localized(.cancel), role: .cancel) {
+                participantPendingRevocation = nil
+            }
+        } message: {
+            Text(localization.localized(.calendarSharingRevokeInvitationConfirmationMessage))
+        }
     }
 
     private func rename() async {
@@ -955,7 +1013,17 @@ private struct OwnedSharedCalendarDetailView: View {
         } catch { errorMessage = error.localizedDescription }
     }
 
-    private func retryPendingInvitationRemoval(
+    private func refreshPendingInvitationState() async {
+        isWorking = true
+        defer { isWorking = false }
+        do {
+            try await sharingStore.refreshOwnedInvitationStatus(calendarID: calendarID)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func revokePendingInvitation(
         _ participant: SharedCalendarParticipantSnapshot
     ) async {
         isWorking = true

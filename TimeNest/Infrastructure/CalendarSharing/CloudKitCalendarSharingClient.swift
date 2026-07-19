@@ -418,6 +418,7 @@ struct CalendarSharingContentRecordPlanExecutor {
 
 @MainActor
 protocol CalendarSharingClientProtocol {
+    func iCloudAccountStatus() async -> CalendarSharingICloudStatus
     func currentUserDisplayName() async -> String?
     func fetchShareMetadata(
         from url: URL
@@ -448,6 +449,12 @@ protocol CalendarSharingClientProtocol {
     ) async throws -> AcceptedSharedCalendarCloudResult
     func leaveSharedCalendar(_ calendar: SharedCalendarDescriptor) async throws
     func stopOwnedSharing(_ calendar: OwnedSharedCalendarDescriptor) async throws
+}
+
+extension CalendarSharingClientProtocol {
+    func iCloudAccountStatus() async -> CalendarSharingICloudStatus {
+        .available
+    }
 }
 
 protocol CalendarSharingShareMetadata {
@@ -771,7 +778,10 @@ enum CalendarSharingErrorMapper {
             }
             return .metadataFetchFailed
         }
-        if codes.contains(where: retryableCodes.contains) { return .networkUnavailable }
+        if codes.contains(where: networkCodes.contains) { return .networkUnavailable }
+        if codes.contains(where: serviceUnavailableCodes.contains) {
+            return .serviceTemporarilyUnavailable
+        }
         if context == .acceptingInvitation,
            codes.contains(where: { $0 == .unknownItem || $0 == .userDeletedZone || $0 == .zoneNotFound }) {
             return .invitationRevoked
@@ -859,6 +869,27 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         currentUserDisplayNameProvider = CloudKitCurrentUserDisplayNameProvider(
             container: container
         )
+    }
+
+    func iCloudAccountStatus() async -> CalendarSharingICloudStatus {
+        do {
+            switch try await container.accountStatus() {
+            case .available:
+                return .available
+            case .noAccount:
+                return .noAccount
+            case .restricted:
+                return .restricted
+            case .temporarilyUnavailable:
+                return .temporarilyUnavailable
+            case .couldNotDetermine:
+                return .couldNotDetermine
+            @unknown default:
+                return .couldNotDetermine
+            }
+        } catch {
+            return .requestFailed(CalendarSharingErrorMapper.map(error))
+        }
     }
 
     func currentUserDisplayName() async -> String? {
@@ -1392,9 +1423,11 @@ final class CloudKitCalendarSharingClient: CalendarSharingClientProtocol {
         case .available: return
         case .noAccount: throw CalendarSharingError.noICloudAccount
         case .restricted: throw CalendarSharingError.iCloudRestricted
-        case .temporarilyUnavailable, .couldNotDetermine:
-            throw CalendarSharingError.networkUnavailable
-        @unknown default: throw CalendarSharingError.syncFailed
+        case .temporarilyUnavailable:
+            throw CalendarSharingError.serviceTemporarilyUnavailable
+        case .couldNotDetermine:
+            throw CalendarSharingError.iCloudStatusUnavailable
+        @unknown default: throw CalendarSharingError.iCloudStatusUnavailable
         }
     }
 

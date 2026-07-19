@@ -807,6 +807,138 @@ final class CalendarSharingAcceptanceCoordinatorTests: XCTestCase {
 
 @MainActor
 final class CalendarSharingStoreTests: XCTestCase {
+    func testICloudAccountStatusesAreDistinctAndBlockUnavailableRefreshes() async {
+        let client = MockCalendarSharingClient()
+        client.iCloudStatusResult = .noAccount
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        await store.synchronizeAll(forceICloudStatusRefresh: true)
+
+        XCTAssertEqual(store.iCloudStatus, .noAccount)
+        XCTAssertEqual(store.lastError, .noICloudAccount)
+        XCTAssertEqual(store.syncStatus, .failed)
+        XCTAssertEqual(client.iCloudStatusCallCount, 1)
+
+        client.iCloudStatusResult = .restricted
+        _ = await store.refreshICloudStatus(force: true)
+        XCTAssertEqual(store.iCloudStatus, .restricted)
+        XCTAssertEqual(store.iCloudStatus.operationError, .iCloudRestricted)
+
+        client.iCloudStatusResult = .couldNotDetermine
+        _ = await store.refreshICloudStatus(force: true)
+        XCTAssertEqual(store.iCloudStatus, .couldNotDetermine)
+        XCTAssertEqual(store.iCloudStatus.operationError, .iCloudStatusUnavailable)
+    }
+
+    func testSuccessfulRefreshUpdatesTimestampAndFailurePreservesIt() async {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let client = MockCalendarSharingClient(
+            ownedStates: [makeOwnedState(calendar: owned)]
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar"), owned]
+        )
+
+        await store.synchronizeAll()
+        let successfulTimestamp = store.lastSuccessfulSyncAt
+        XCTAssertNotNil(successfulTimestamp)
+
+        client.failNextSync(calendarID: owned.id)
+        await store.synchronizeAll()
+
+        XCTAssertEqual(store.syncStatus, .failed)
+        XCTAssertEqual(store.lastSuccessfulSyncAt, successfulTimestamp)
+    }
+
+    func testPendingInvitationRetryRefreshesAcceptedStateWithoutRevoking() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let pending = makeParticipant(id: "pending", isAccepted: false)
+        let accepted = makeParticipant(id: "pending", isAccepted: true)
+        let client = MockCalendarSharingClient(
+            ownedStates: [makeOwnedState(calendar: owned, participants: [pending])]
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar"), owned]
+        )
+        await store.synchronizeAll()
+        let statusChecksBeforeRetry = client.iCloudStatusCallCount
+        client.ownedStates = [makeOwnedState(calendar: owned, participants: [accepted])]
+
+        try await store.refreshOwnedInvitationStatus(calendarID: owned.id)
+
+        XCTAssertTrue(store.participants(for: owned.id).contains(where: \.isAccepted))
+        XCTAssertTrue(client.revokedParticipantIDs.isEmpty)
+        XCTAssertEqual(client.iCloudStatusCallCount, statusChecksBeforeRetry + 1)
+        XCTAssertEqual(store.syncStatus, .synced)
+    }
+
+    func testPendingInvitationRetryCanRemainPendingWithoutDeletingParticipant() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let pending = makeParticipant(id: "pending", isAccepted: false)
+        let client = MockCalendarSharingClient(
+            ownedStates: [makeOwnedState(calendar: owned, participants: [pending])]
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar"), owned]
+        )
+
+        try await store.refreshOwnedInvitationStatus(calendarID: owned.id)
+
+        XCTAssertEqual(store.participants(for: owned.id).map(\.id), [pending.id])
+        XCTAssertFalse(store.participants(for: owned.id)[0].isAccepted)
+        XCTAssertTrue(client.revokedParticipantIDs.isEmpty)
+    }
+
+    func testPendingInvitationRefreshFailureUsesSyncErrorAndPreservesTimestamp() async {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let pending = makeParticipant(id: "pending", isAccepted: false)
+        let client = MockCalendarSharingClient(
+            ownedStates: [makeOwnedState(calendar: owned, participants: [pending])]
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar"), owned]
+        )
+        await store.synchronizeAll()
+        let successfulTimestamp = store.lastSuccessfulSyncAt
+        client.failNextOwnedFetch()
+
+        do {
+            try await store.refreshOwnedInvitationStatus(calendarID: owned.id)
+            XCTFail("Injected refresh failure must be surfaced")
+        } catch {
+            XCTAssertEqual(error as? CalendarSharingError, .syncFailed)
+        }
+
+        XCTAssertEqual(store.lastSuccessfulSyncAt, successfulTimestamp)
+        XCTAssertEqual(store.lastError, .syncFailed)
+        XCTAssertNotEqual(store.lastError, .invitationCancellationFailed)
+        XCTAssertTrue(client.revokedParticipantIDs.isEmpty)
+    }
+
+    func testDisplayStatusDerivesFromExistingStoreState() async {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let accepted = makeParticipant(id: "accepted", isAccepted: true)
+        let client = MockCalendarSharingClient(
+            ownedStates: [makeOwnedState(calendar: owned, participants: [accepted])]
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar"), owned]
+        )
+
+        await store.synchronizeAll()
+
+        XCTAssertEqual(store.displayStatus(for: owned), .shared)
+        XCTAssertEqual(store.displayStatus(for: store.personalCalendar), .notShared)
+    }
+
     func testPersonalCalendarNeverEntersCloudUploadPath() async {
         let personal = TimeNestCalendar.personal(name: "My Calendar")
         let client = MockCalendarSharingClient()
@@ -2623,6 +2755,7 @@ final class CalendarSharingStoreTests: XCTestCase {
             calendarRepository: resolvedCalendarRepository,
             cache: cache,
             selectionPersistence: CalendarSelectionPersistence(defaults: defaults),
+            syncMetadataPersistence: CalendarSharingSyncMetadataPersistence(defaults: defaults),
             initialCalendars: calendars,
             invitationRouter: invitationRouter ?? .shared
         )
@@ -2689,6 +2822,9 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     var createShareError: Error?
     var currentUserDisplayNameResult: String?
     var currentUserDisplayNameCallCount = 0
+    var iCloudStatusResult: CalendarSharingICloudStatus = .available
+    var iCloudStatusCallCount = 0
+    var fetchOwnedCalendarsCallCount = 0
     var acceptedZoneName: String?
     var acceptCallCount = 0
     var cloudAcceptCallCount = 0
@@ -2698,10 +2834,16 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     private var syncErrorsByCalendarID: [UUID: [Error]] = [:]
     private var stopErrors: [Error] = []
     private var revokeErrors: [Error] = []
+    private var ownedFetchErrors: [Error] = []
     private var invitationCounter = 0
 
     init(ownedStates: [OwnedSharedCalendarCloudState] = []) {
         self.ownedStates = ownedStates
+    }
+
+    func iCloudAccountStatus() async -> CalendarSharingICloudStatus {
+        iCloudStatusCallCount += 1
+        return iCloudStatusResult
     }
 
     func currentUserDisplayName() async -> String? {
@@ -2725,7 +2867,11 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     }
 
     func fetchOwnedCalendars() async throws -> [OwnedSharedCalendarCloudState] {
-        ownedStates
+        fetchOwnedCalendarsCallCount += 1
+        if !ownedFetchErrors.isEmpty {
+            throw ownedFetchErrors.removeFirst()
+        }
+        return ownedStates
     }
 
     func createShare(
@@ -2891,6 +3037,10 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
 
     func failNextRevoke(error: Error = InjectedSharingTestError.failure) {
         revokeErrors.append(error)
+    }
+
+    func failNextOwnedFetch(error: Error = CalendarSharingError.syncFailed) {
+        ownedFetchErrors.append(error)
     }
 
     func resetSyncHistory() {
