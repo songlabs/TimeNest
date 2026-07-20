@@ -7,6 +7,53 @@ actor SwiftDataEventRepository: EventRepository {
         try save(event, operation: "create event")
     }
 
+    func createBatch(_ events: [CalendarEvent], ifUnchanged expectedEvents: [CalendarEvent]) async throws {
+        do {
+            let ids = events.map(\.id)
+            guard Set(ids).count == ids.count else {
+                throw EventRepositoryBatchError.duplicateEvent
+            }
+            for event in events {
+                guard try entity(id: event.id) == nil else {
+                    throw EventRepositoryBatchError.duplicateEvent
+                }
+            }
+
+            for expectedEvent in expectedEvents {
+                guard let currentEntity = try entity(id: expectedEvent.id) else {
+                    throw EventRepositoryBatchError.eventNotFound
+                }
+                guard SwiftDataEventMapper.makeDomainModel(from: currentEntity) == expectedEvent else {
+                    throw EventRepositoryBatchError.staleData
+                }
+            }
+
+            let existingEvents = try modelContext.fetch(FetchDescriptor<SwiftDataCalendarEventEntity>())
+                .map(SwiftDataEventMapper.makeDomainModel)
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = .current
+            guard events.allSatisfy({ newEvent in
+                guard newEvent.shiftTemplateID != nil else { return true }
+                return !existingEvents.contains {
+                    $0.calendarID == newEvent.calendarID
+                        && $0.shiftTemplateID != nil
+                        && calendar.isDate($0.startDate, inSameDayAs: newEvent.startDate)
+                }
+            }) else {
+                throw EventRepositoryBatchError.shiftConflict
+            }
+
+            events.forEach {
+                modelContext.insert(SwiftDataEventMapper.makeEntity(from: $0))
+            }
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            SwiftDataRepositoryLogger.log("create event batch", error: error)
+            throw error
+        }
+    }
+
     func update(_ event: CalendarEvent) async throws {
         try save(event, operation: "update event")
     }
@@ -20,6 +67,27 @@ actor SwiftDataEventRepository: EventRepository {
         } catch {
             modelContext.rollback()
             SwiftDataRepositoryLogger.log("delete event", error: error)
+            throw error
+        }
+    }
+
+    func deleteBatch(_ expectedEvents: [CalendarEvent]) async throws {
+        do {
+            var entities: [SwiftDataCalendarEventEntity] = []
+            for expectedEvent in expectedEvents {
+                guard let eventEntity = try entity(id: expectedEvent.id) else {
+                    throw EventRepositoryBatchError.eventNotFound
+                }
+                guard SwiftDataEventMapper.makeDomainModel(from: eventEntity) == expectedEvent else {
+                    throw EventRepositoryBatchError.staleData
+                }
+                entities.append(eventEntity)
+            }
+            entities.forEach(modelContext.delete)
+            try modelContext.save()
+        } catch {
+            modelContext.rollback()
+            SwiftDataRepositoryLogger.log("delete event batch", error: error)
             throw error
         }
     }

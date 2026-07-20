@@ -10,6 +10,7 @@
 		030693C09B9F4289D5D6BA8B /* HolidayNameLocalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */; };
 		054172C57AFFEE2FE3920BDC /* HolidayRecommendedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7EB68E188CDED73B8AE135E /* HolidayRecommendedSource.swift */; };
 		0577A149497FC5B4732CFA3A /* RecurrenceRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E3A9728F3DA57418BB27CD /* RecurrenceRule.swift */; };
+		05EC89A0606891C166D79613 /* ShiftBatchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3954AE56FA4961438C61EEC2 /* ShiftBatchView.swift */; };
 		0697AC19C6BDFFAFFF94B278 /* BundleHolidayProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E799759E69C33C7F7D00BA68 /* BundleHolidayProvider.swift */; };
 		08AE7721247EC259F756BCA7 /* MonthCalendarViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8766BACE67A7E6BF321F82A9 /* MonthCalendarViewModel.swift */; };
 		0ABAEEE72B8CEB22FB3CE3AD /* TimeNestFileDecoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2F5D1815A1BCF29537E68C4 /* TimeNestFileDecoder.swift */; };
@@ -17,6 +18,7 @@
 		0DF651EDB06F4BB5FA9469CF /* WidgetSnapshotBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1A1D94F5C0EC12D7D24238E /* WidgetSnapshotBuilder.swift */; };
 		0EAF58A8D6409270C82840F5 /* MonthGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05993F01B0DB122B6BA1A789 /* MonthGrid.swift */; };
 		0EEE023B94F25784F943D445 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9C782E37B736D8E03823F101 /* Localizable.strings */; };
+		0F80411DCD4356C28C7F190A /* ShiftBatchOperation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 638E77BAEEAEDDE558DB303C /* ShiftBatchOperation.swift */; };
 		1342A02BE9526AF41256D83B /* WidgetCalendarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA3288F1504F024B480E447D /* WidgetCalendarViews.swift */; };
 		139044859F314F13B3A6CF8D /* LocalizedText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC65350465702DE0C940C60B /* LocalizedText.swift */; };
 		1396A511CBE3C0AFAA03AE77 /* TimeNestFileExportUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11B471485AB6829F00A33BC2 /* TimeNestFileExportUseCase.swift */; };
@@ -55,14 +57,17 @@
 		4E729E45EFFDA0295EB03AB3 /* ScheduledReminder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055E266712ABAAFF393EB476 /* ScheduledReminder.swift */; };
 		534AC542EFF8EF9FB8834004 /* Localizable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64D3E6933979EFF7091C4719 /* Localizable.swift */; };
 		5358BC1E33982B6E65DBEF23 /* SpeechMemoRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B51DA1C9AD758069AA378EC /* SpeechMemoRecognitionService.swift */; };
+		54217CE437422C46A71E4659 /* ShiftTemplateFavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D53F7AAB2E0BE7C047180AFD /* ShiftTemplateFavoritesStore.swift */; };
 		5BD2F1565017648D6287192E /* HolidayEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ECE250FA345A1F3AD59B44C /* HolidayEvent.swift */; };
 		5E161B9577756504BA816058 /* HolidayEventCacheRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D5F74197DEF56FB12A7CBCE /* HolidayEventCacheRepository.swift */; };
 		611A9F431992D5584569D5CA /* TimeNestExportFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 375A1C42A512ADA3DFDB2AC4 /* TimeNestExportFile.swift */; };
 		62B3EB0CA01CF25F72504745 /* CloudKitCalendarSharingClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B6B3CB0B72444A7862D37C8 /* CloudKitCalendarSharingClient.swift */; };
 		63269FA47CA3D0AFBB22F285 /* SwiftDataCalendarEventEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2ABF7A719DD2B715D9199174 /* SwiftDataCalendarEventEntity.swift */; };
+		633B4CF4F58D8BBB4D46DDDB /* ShiftTimeTemplate+Batch.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF0304020AEF0F0B4B99D012 /* ShiftTimeTemplate+Batch.swift */; };
 		6423FEA66D4E3409CAB550F0 /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DA9614B509A6481D7AEF1CD /* AppError.swift */; };
 		64FA72591EAFF7BF368196FA /* HomeScreenWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0191EA6B06EB4CEF98AD452D /* HomeScreenWidgets.swift */; };
 		685D2E11E6FA5730C91D5476 /* TimeNestDataManagementUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C9A412271B0B7691F7950D3C /* TimeNestDataManagementUITests.swift */; };
+		68964C56AFC4EE424FA20EBC /* TimeNestShiftBatchUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A1B2E1F7664AB373D4B6E23 /* TimeNestShiftBatchUITests.swift */; };
 		70A3CF824BEC7C8F1300CC90 /* SwiftDataReminderMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93A6B84A5B4D2D14C5C53257 /* SwiftDataReminderMapper.swift */; };
 		715474D479FC05B6C4DB0F44 /* YearMonthPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 36FD11D57EE56D99975E5266 /* YearMonthPickerView.swift */; };
 		71AE462561F299D3BE23BF2E /* EventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56173AE8F9BFC1AD236F1583 /* EventRepository.swift */; };
@@ -97,6 +102,7 @@
 		9EFD24FE873FB4B2B51AE3BF /* HolidayUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD8EA6A72E89D0CF8F82BDA /* HolidayUseCase.swift */; };
 		A3792216AB0BDD08E37C1C2F /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = 1932E070BAE2E6B701259C8D /* InfoPlist.strings */; };
 		A4C08451CAC6D6B86F2900C9 /* SwiftDataEventRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE153F85137A2023D9E1A57B /* SwiftDataEventRepository.swift */; };
+		A4DEB272B4530AAE270DE7F1 /* ShiftBatchOperationUseCase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92EB50E98808D3274C973101 /* ShiftBatchOperationUseCase.swift */; };
 		A5F24E570669D62C4A0C27A4 /* WidgetSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33B507588B23C039BC6ACD89 /* WidgetSnapshot.swift */; };
 		A61E7990DC2EA513351B8666 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59A18716AECA636B75D5EA18 /* HelpView.swift */; };
 		A9E11E45B8FBC59C96450959 /* ImportSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC262AAD2C2D84F38F692A7A /* ImportSource.swift */; };
@@ -120,6 +126,7 @@
 		CABD232E95D22392BF776E6A /* SwiftDataReminderRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC96A0CD153A10F5FE8D984C /* SwiftDataReminderRepository.swift */; };
 		D06F1FBB9D827B9F1F8AFBFC /* CalendarBottomToolbarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1DE6F685787AEAD48B0CD9C0 /* CalendarBottomToolbarView.swift */; };
 		D0F5D81DF85370C1F6EAFEA7 /* CalendarDisplaySetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = E91E182838B9F670B43F27CC /* CalendarDisplaySetting.swift */; };
+		D576C8C56B0D72D2EC6BF30A /* ShiftBatchOperationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0EEC4C0B8024F484C5F51D9 /* ShiftBatchOperationTests.swift */; };
 		D6D05BDFEEB0E05B58DA6388 /* HolidaySubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2513065C4258C1A299CC35D /* HolidaySubscriptionManager.swift */; };
 		DA593174D1A06C484EF86DAC /* TimeNestCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 967E73DB8208F323B0340C71 /* TimeNestCalendar.swift */; };
 		DE6CB8DC70D489E1A1C12957 /* EventOccurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C13D7D01D8B0BE74AB549A4 /* EventOccurrence.swift */; };
@@ -271,6 +278,7 @@
 		375A1C42A512ADA3DFDB2AC4 /* TimeNestExportFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestExportFile.swift; sourceTree = "<group>"; };
 		37973577268BB1024693289A /* TimeNestScreenshotUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeNestScreenshotUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3812DA86CFA7341C6005EADC /* CalendarEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarEvent.swift; sourceTree = "<group>"; };
+		3954AE56FA4961438C61EEC2 /* ShiftBatchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftBatchView.swift; sourceTree = "<group>"; };
 		3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftTimeTemplateID.swift; sourceTree = "<group>"; };
 		40CE646EF687AB7A7AA103A5 /* TimeNestWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TimeNestWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		439F0F42610DAABCB1A9BEF8 /* TimeNestTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TimeNestTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -287,6 +295,7 @@
 		5F13F5A7D39130718BFA3D8C /* ICSParseServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSParseServiceTests.swift; sourceTree = "<group>"; };
 		6014366204119534448DB749 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		628806BD83D5701C69BE9FE7 /* TuistStrings+TimeNestWidgetExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "TuistStrings+TimeNestWidgetExtension.swift"; sourceTree = "<group>"; };
+		638E77BAEEAEDDE558DB303C /* ShiftBatchOperation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftBatchOperation.swift; sourceTree = "<group>"; };
 		64D3E6933979EFF7091C4719 /* Localizable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Localizable.swift; sourceTree = "<group>"; };
 		68EE4CC06CB1727FBB90F994 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		6963FA366BAEA21BAA85D4A3 /* TimeNestWidgetExtension-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimeNestWidgetExtension-Info.plist"; sourceTree = "<group>"; };
@@ -306,11 +315,13 @@
 		86D32FB2CE7ACD239BD9C9FC /* TimeNestTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestTheme.swift; sourceTree = "<group>"; };
 		875E48F4496DB7BFBD6E97F2 /* TimeNestScreenshotUITests-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "TimeNestScreenshotUITests-Info.plist"; sourceTree = "<group>"; };
 		8766BACE67A7E6BF321F82A9 /* MonthCalendarViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MonthCalendarViewModel.swift; sourceTree = "<group>"; };
+		8A1B2E1F7664AB373D4B6E23 /* TimeNestShiftBatchUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestShiftBatchUITests.swift; sourceTree = "<group>"; };
 		8B51DA1C9AD758069AA378EC /* SpeechMemoRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechMemoRecognitionService.swift; sourceTree = "<group>"; };
 		8F719FA6BB1CF0D06E842DAA /* HolidaySourceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySourceSettingsView.swift; sourceTree = "<group>"; };
 		8FBC4D499458C56E0E57EEFB /* TimeNestWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestWidgetBundle.swift; sourceTree = "<group>"; };
 		906DCCE7EA6A1C66D6D3B2E0 /* WorkStatisticsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkStatisticsViewModel.swift; sourceTree = "<group>"; };
 		929ABE66D20FB8733BAE61C3 /* ReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderRepository.swift; sourceTree = "<group>"; };
+		92EB50E98808D3274C973101 /* ShiftBatchOperationUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftBatchOperationUseCase.swift; sourceTree = "<group>"; };
 		93A6B84A5B4D2D14C5C53257 /* SwiftDataReminderMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataReminderMapper.swift; sourceTree = "<group>"; };
 		967E73DB8208F323B0340C71 /* TimeNestCalendar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestCalendar.swift; sourceTree = "<group>"; };
 		96D4AB97AF76F9F168F48EA9 /* CalendarSharingCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarSharingCache.swift; sourceTree = "<group>"; };
@@ -326,6 +337,7 @@
 		AA8102DC9C2AED69BA14461F /* HolidaySubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidaySubscription.swift; sourceTree = "<group>"; };
 		AADEB881A3BE94A11F27A1BF /* AccessoryWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessoryWidget.swift; sourceTree = "<group>"; };
 		AC96A0CD153A10F5FE8D984C /* SwiftDataReminderRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataReminderRepository.swift; sourceTree = "<group>"; };
+		AF0304020AEF0F0B4B99D012 /* ShiftTimeTemplate+Batch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ShiftTimeTemplate+Batch.swift"; sourceTree = "<group>"; };
 		B2B79C74CDC902B76AD477B0 /* CalendarStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStyles.swift; sourceTree = "<group>"; };
 		B39DBADCC8DFAC83240E7052 /* TimeNestFileImportUseCase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimeNestFileImportUseCase.swift; sourceTree = "<group>"; };
 		B88C62841639AC38F232A51D /* WeekdayHeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekdayHeaderView.swift; sourceTree = "<group>"; };
@@ -347,6 +359,7 @@
 		CF6156A25585B758EA3C71B1 /* DayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailView.swift; sourceTree = "<group>"; };
 		D2A4A6D16469A4E399934511 /* WidgetSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSupport.swift; sourceTree = "<group>"; };
 		D506BFDB5D4E6C2C4B100221 /* InMemoryEventRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InMemoryEventRepository.swift; sourceTree = "<group>"; };
+		D53F7AAB2E0BE7C047180AFD /* ShiftTemplateFavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftTemplateFavoritesStore.swift; sourceTree = "<group>"; };
 		D603BB1E8EA2FB44599AC42A /* SwiftDataRepositoryLogger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataRepositoryLogger.swift; sourceTree = "<group>"; };
 		D7EB68E188CDED73B8AE135E /* HolidayRecommendedSource.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HolidayRecommendedSource.swift; sourceTree = "<group>"; };
 		D910A4E18FE4C880A554FDF1 /* TabBarVisibilityState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabBarVisibilityState.swift; sourceTree = "<group>"; };
@@ -369,6 +382,7 @@
 		EDC46903BA04958949B7C48B /* EventEditorDateNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventEditorDateNormalizer.swift; sourceTree = "<group>"; };
 		EFCF5B32C23FA036EF957A1F /* CalendarAdBannerContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarAdBannerContainer.swift; sourceTree = "<group>"; };
 		F064DCE2ED5D1A2700997A8D /* TimeNest.storekit */ = {isa = PBXFileReference; path = TimeNest.storekit; sourceTree = "<group>"; };
+		F0EEC4C0B8024F484C5F51D9 /* ShiftBatchOperationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShiftBatchOperationTests.swift; sourceTree = "<group>"; };
 		F152C27243DE97654B7058DF /* CalendarRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarRepository.swift; sourceTree = "<group>"; };
 		F1A1D94F5C0EC12D7D24238E /* WidgetSnapshotBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetSnapshotBuilder.swift; sourceTree = "<group>"; };
 		F1B26128BDCDE6FD0907625F /* SwiftDataReminderEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwiftDataReminderEntity.swift; sourceTree = "<group>"; };
@@ -441,6 +455,14 @@
 				070695F34210CC1A2873BC3D /* AdConfiguration.swift */,
 			);
 			path = Ads;
+			sourceTree = "<group>";
+		};
+		0DD7F8C5DB0FB00C9FCE0A17 /* ShiftBatch */ = {
+			isa = PBXGroup;
+			children = (
+				3954AE56FA4961438C61EEC2 /* ShiftBatchView.swift */,
+			);
+			path = ShiftBatch;
 			sourceTree = "<group>";
 		};
 		0EFA271A170C55B35FF6648E /* DataManagement */ = {
@@ -591,6 +613,7 @@
 				4589C00AEF24CE62BB657401 /* EventUseCase.swift */,
 				9AD8EA6A72E89D0CF8F82BDA /* HolidayUseCase.swift */,
 				A9DAAC92C759FA388396D515 /* ReminderUseCase.swift */,
+				92EB50E98808D3274C973101 /* ShiftBatchOperationUseCase.swift */,
 				11B471485AB6829F00A33BC2 /* TimeNestFileExportUseCase.swift */,
 				B39DBADCC8DFAC83240E7052 /* TimeNestFileImportUseCase.swift */,
 			);
@@ -726,6 +749,7 @@
 				F4BD75576FA2EF599D439658 /* NoopReminderScheduler.swift */,
 				929ABE66D20FB8733BAE61C3 /* ReminderRepository.swift */,
 				3189AE518B84EB9C17417160 /* ReminderScheduling.swift */,
+				D53F7AAB2E0BE7C047180AFD /* ShiftTemplateFavoritesStore.swift */,
 			);
 			path = Infrastructure;
 			sourceTree = "<group>";
@@ -765,6 +789,7 @@
 				1DCAEA7809845303530375D8 /* DayDetail */,
 				20F12996337E103E1B4559B7 /* EventEditor */,
 				F0414343EB0518AE8279D52C /* Settings */,
+				0DD7F8C5DB0FB00C9FCE0A17 /* ShiftBatch */,
 				D1C5526DFDDA9CC8C751FF36 /* Statistics */,
 			);
 			path = Presentation;
@@ -792,6 +817,7 @@
 			isa = PBXGroup;
 			children = (
 				C9A412271B0B7691F7950D3C /* TimeNestDataManagementUITests.swift */,
+				8A1B2E1F7664AB373D4B6E23 /* TimeNestShiftBatchUITests.swift */,
 			);
 			path = TimeNestUITests;
 			sourceTree = "<group>";
@@ -834,6 +860,7 @@
 				2112727B74951811FF87468E /* ReminderStep.swift */,
 				6BFFD56050E1512F5607B0CE /* ReminderTemplate.swift */,
 				055E266712ABAAFF393EB476 /* ScheduledReminder.swift */,
+				638E77BAEEAEDDE558DB303C /* ShiftBatchOperation.swift */,
 				3A8514C6F62461A52F6C7551 /* ShiftTimeTemplateID.swift */,
 				967E73DB8208F323B0340C71 /* TimeNestCalendar.swift */,
 				375A1C42A512ADA3DFDB2AC4 /* TimeNestExportFile.swift */,
@@ -888,6 +915,7 @@
 				8F719FA6BB1CF0D06E842DAA /* HolidaySourceSettingsView.swift */,
 				5EE6E4F10655EAE53BA61ADD /* HolidaySubscriptionSettingsView.swift */,
 				D916BD562FD27692278BE08C /* SettingsView.swift */,
+				AF0304020AEF0F0B4B99D012 /* ShiftTimeTemplate+Batch.swift */,
 				1C0CAEAD6BBF5761066588BD /* TimeNestFileSharingView.swift */,
 			);
 			path = Settings;
@@ -902,6 +930,7 @@
 				5F13F5A7D39130718BFA3D8C /* ICSParseServiceTests.swift */,
 				2526FED6E41D57A40D2A3384 /* LegacyStoreMigrationTests.swift */,
 				699CA3294F4766305E8F0475 /* SettingsAndStatisticsLogicTests.swift */,
+				F0EEC4C0B8024F484C5F51D9 /* ShiftBatchOperationTests.swift */,
 			);
 			path = TimeNestTests;
 			sourceTree = "<group>";
@@ -1163,6 +1192,7 @@
 				7D94668215024A4C620771B9 /* ICSParseServiceTests.swift in Sources */,
 				2CB8C375608982FD526F3BC6 /* LegacyStoreMigrationTests.swift in Sources */,
 				E0195D25135AD75438254F40 /* SettingsAndStatisticsLogicTests.swift in Sources */,
+				D576C8C56B0D72D2EC6BF30A /* ShiftBatchOperationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1171,6 +1201,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				685D2E11E6FA5730C91D5476 /* TimeNestDataManagementUITests.swift in Sources */,
+				68964C56AFC4EE424FA20EBC /* TimeNestShiftBatchUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1197,6 +1228,7 @@
 				45B12C334F4B056C44795125 /* EventUseCase.swift in Sources */,
 				9EFD24FE873FB4B2B51AE3BF /* HolidayUseCase.swift in Sources */,
 				3885194124E81A81E3EA5AEB /* ReminderUseCase.swift in Sources */,
+				A4DEB272B4530AAE270DE7F1 /* ShiftBatchOperationUseCase.swift in Sources */,
 				1396A511CBE3C0AFAA03AE77 /* TimeNestFileExportUseCase.swift in Sources */,
 				B8B80BF31BF9FE8D09334BE6 /* TimeNestFileImportUseCase.swift in Sources */,
 				0DF651EDB06F4BB5FA9469CF /* WidgetSnapshotBuilder.swift in Sources */,
@@ -1215,6 +1247,7 @@
 				ED55F5AA8BA20313B0D4A40D /* ReminderStep.swift in Sources */,
 				17FAC0999A8B042A0368B9F5 /* ReminderTemplate.swift in Sources */,
 				4E729E45EFFDA0295EB03AB3 /* ScheduledReminder.swift in Sources */,
+				0F80411DCD4356C28C7F190A /* ShiftBatchOperation.swift in Sources */,
 				F070011046E45E3F7915ACCD /* ShiftTimeTemplateID.swift in Sources */,
 				DA593174D1A06C484EF86DAC /* TimeNestCalendar.swift in Sources */,
 				611A9F431992D5584569D5CA /* TimeNestExportFile.swift in Sources */,
@@ -1255,6 +1288,7 @@
 				78F6C1A81FF9FB2A50EED384 /* SwiftDataRepositoryLogger.swift in Sources */,
 				81F909FCB7CE48C8146A7408 /* ReminderRepository.swift in Sources */,
 				2E6816AB0A09DC4A5E7070D7 /* ReminderScheduling.swift in Sources */,
+				54217CE437422C46A71E4659 /* ShiftTemplateFavoritesStore.swift in Sources */,
 				5358BC1E33982B6E65DBEF23 /* SpeechMemoRecognitionService.swift in Sources */,
 				B7E387A03518C78B9B665340 /* AdMobBannerView.swift in Sources */,
 				EABE3524AFD0F00FFBBF2228 /* CalendarAdBannerContainer.swift in Sources */,
@@ -1276,7 +1310,9 @@
 				213AF874F3964CEB0CAE9B05 /* HolidaySourceSettingsView.swift in Sources */,
 				41AA263B87C25050420F8DFB /* HolidaySubscriptionSettingsView.swift in Sources */,
 				F6926445027ACF53819DE6D7 /* SettingsView.swift in Sources */,
+				633B4CF4F58D8BBB4D46DDDB /* ShiftTimeTemplate+Batch.swift in Sources */,
 				C87249AB16F4E371618911FD /* TimeNestFileSharingView.swift in Sources */,
+				05EC89A0606891C166D79613 /* ShiftBatchView.swift in Sources */,
 				32BB4B0199854A155036D99D /* WorkStatisticsView.swift in Sources */,
 				7EB9820BDFD843BE37DFA94A /* WorkStatisticsViewModel.swift in Sources */,
 				B061FE6E7B430B8B6707FB1F /* DateOnly.swift in Sources */,
@@ -1498,7 +1534,7 @@
 				CODE_SIGN_ENTITLEMENTS = TimeNestWidgetExtension/TimeNestWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = JCABFH9F66;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Derived/InfoPlists/TimeNestWidgetExtension-Info.plist";
@@ -1508,7 +1544,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
@@ -1538,7 +1574,7 @@
 				CODE_SIGN_ENTITLEMENTS = TimeNestWidgetExtension/TimeNestWidgetExtension.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = JCABFH9F66;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Derived/InfoPlists/TimeNestWidgetExtension-Info.plist";
@@ -1548,7 +1584,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
@@ -1575,7 +1611,7 @@
 				CODE_SIGN_ENTITLEMENTS = TimeNest/TimeNest.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = JCABFH9F66;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1587,7 +1623,7 @@
 					"@executable_path/Frameworks",
 				);
 				MACH_O_TYPE = mh_execute;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",
@@ -1620,7 +1656,7 @@
 				CODE_SIGN_ENTITLEMENTS = TimeNest/TimeNest.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = JCABFH9F66;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1632,7 +1668,7 @@
 					"@executable_path/Frameworks",
 				);
 				MACH_O_TYPE = mh_execute;
-				MARKETING_VERSION = 1.4;
+				MARKETING_VERSION = 1.5;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-L$(DT_TOOLCHAIN_DIR)/usr/lib/swift/$(PLATFORM_NAME)",

@@ -1144,11 +1144,102 @@ public enum TimeNestStrings: Sendable {
       public static let start = TimeNestStrings.tr("Localizable", "shift.start")
     }
 
+    public enum ShiftBatch: Sendable {
+      /// Add Rotation Item
+      public static let addRotationItem = TimeNestStrings.tr("Localizable", "shift_batch.add_rotation_item")
+      /// Some reminders or refresh tasks could not be completed.
+      public static let auxiliaryFailure = TimeNestStrings.tr("Localizable", "shift_batch.auxiliary_failure")
+      /// Clear
+      public static let clearSelection = TimeNestStrings.tr("Localizable", "shift_batch.clear_selection")
+      /// %d shifts created
+      public static func completed(_ p1: Int) -> String {
+        return TimeNestStrings.tr("Localizable", "shift_batch.completed",p1)
+      }
+      /// Confirm
+      public static let confirm = TimeNestStrings.tr("Localizable", "shift_batch.confirm")
+      /// Copy Previous Day
+      public static let copyPreviousDay = TimeNestStrings.tr("Localizable", "shift_batch.copy_previous_day")
+      /// Copy Previous Week
+      public static let copyPreviousWeek = TimeNestStrings.tr("Localizable", "shift_batch.copy_previous_week")
+      /// Select at least one date.
+      public static let emptySelection = TimeNestStrings.tr("Localizable", "shift_batch.empty_selection")
+      /// End Date
+      public static let endDate = TimeNestStrings.tr("Localizable", "shift_batch.end_date")
+      /// Existing Shift
+      public static let existingShift = TimeNestStrings.tr("Localizable", "shift_batch.existing_shift")
+      /// Invalid Template
+      public static let invalidTemplate = TimeNestStrings.tr("Localizable", "shift_batch.invalid_template")
+      /// Action
+      public static let mode = TimeNestStrings.tr("Localizable", "shift_batch.mode")
+      /// Next month
+      public static let nextMonth = TimeNestStrings.tr("Localizable", "shift_batch.next_month")
+      /// Nothing to Copy
+      public static let noSource = TimeNestStrings.tr("Localizable", "shift_batch.no_source")
+      /// Shift data changed after the preview. Preview again before confirming.
+      public static let planChanged = TimeNestStrings.tr("Localizable", "shift_batch.plan_changed")
+      /// Preview
+      public static let preview = TimeNestStrings.tr("Localizable", "shift_batch.preview")
+      /// Previous month
+      public static let previousMonth = TimeNestStrings.tr("Localizable", "shift_batch.previous_month")
+      /// Remove date
+      public static let removeDate = TimeNestStrings.tr("Localizable", "shift_batch.remove_date")
+      /// Day Off
+      public static let restDay = TimeNestStrings.tr("Localizable", "shift_batch.rest_day")
+      /// Shift Rotation
+      public static let rotation = TimeNestStrings.tr("Localizable", "shift_batch.rotation")
+      /// Starting Position
+      public static let rotationStart = TimeNestStrings.tr("Localizable", "shift_batch.rotation_start")
+      /// %d dates selected
+      public static func selectedCount(_ p1: Int) -> String {
+        return TimeNestStrings.tr("Localizable", "shift_batch.selected_count",p1)
+      }
+      /// Skipped
+      public static let skipped = TimeNestStrings.tr("Localizable", "shift_batch.skipped")
+      /// Start Date
+      public static let startDate = TimeNestStrings.tr("Localizable", "shift_batch.start_date")
+      /// Set Shifts in Bulk
+      public static let title = TimeNestStrings.tr("Localizable", "shift_batch.title")
+      /// Undo
+      public static let undo = TimeNestStrings.tr("Localizable", "shift_batch.undo")
+      /// %d shifts removed
+      public static func undoCompleted(_ p1: Int) -> String {
+        return TimeNestStrings.tr("Localizable", "shift_batch.undo_completed",p1)
+      }
+      /// %d edited shifts could not be undone.
+      public static func undoEdited(_ p1: Int) -> String {
+        return TimeNestStrings.tr("Localizable", "shift_batch.undo_edited",p1)
+      }
+      /// Use Template
+      public static let useTemplate = TimeNestStrings.tr("Localizable", "shift_batch.use_template")
+      /// Will Create
+      public static let willCreate = TimeNestStrings.tr("Localizable", "shift_batch.will_create")
+    }
+
     public enum ShiftInput: Sendable {
       /// No enabled shifts
       public static let empty = TimeNestStrings.tr("Localizable", "shift_input.empty")
       /// Shift Input
       public static let title = TimeNestStrings.tr("Localizable", "shift_input.title")
+    }
+
+    public enum ShiftTemplate: Sendable {
+      /// Add to favorites
+      public static let favorite = TimeNestStrings.tr("Localizable", "shift_template.favorite")
+      /// Favorite Shifts
+      public static let favorites = TimeNestStrings.tr("Localizable", "shift_template.favorites")
+      /// Remove from favorites
+      public static let unfavorite = TimeNestStrings.tr("Localizable", "shift_template.unfavorite")
+
+      public enum DeleteConfirmation: Sendable {
+        /// This template is used by %d existing shifts. The shifts will remain with their saved details.
+        public static func referenced(_ p1: Int) -> String {
+          return TimeNestStrings.tr("Localizable", "shift_template.delete_confirmation.referenced",p1)
+        }
+        /// Delete Shift Template?
+        public static let title = TimeNestStrings.tr("Localizable", "shift_template.delete_confirmation.title")
+        /// Existing shifts will not be deleted.
+        public static let unused = TimeNestStrings.tr("Localizable", "shift_template.delete_confirmation.unused")
+      }
     }
 
     public enum ShiftTime: Sendable {

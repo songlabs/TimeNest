@@ -312,8 +312,16 @@ struct HourMinute24Picker: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            CircularNumberWheelPicker(value: hourBinding, values: hours)
-            CircularNumberWheelPicker(value: minuteBinding, values: minutes)
+            CircularNumberWheelPicker(
+                value: hourBinding,
+                values: hours,
+                accessibilityIdentifier: "timePicker.hour"
+            )
+            CircularNumberWheelPicker(
+                value: minuteBinding,
+                values: minutes,
+                accessibilityIdentifier: "timePicker.minute"
+            )
         }
         .frame(height: 150)
     }
@@ -346,17 +354,30 @@ struct HourMinute24Picker: View {
 private struct CircularNumberWheelPicker: View {
     @Binding var value: Int
     let values: [Int]
+    let accessibilityIdentifier: String
 
     @State private var selectedIndex: Int
     @State private var normalizationGeneration = 0
 
     private let width: CGFloat = 96
-    private static let cycleCount = 100
+    private static var cycleCount: Int {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-uiTesting") {
+            return 3
+        }
+#endif
+        return 100
+    }
     private static let normalizationDelay: TimeInterval = 0.25
 
-    init(value: Binding<Int>, values: [Int]) {
+    init(
+        value: Binding<Int>,
+        values: [Int],
+        accessibilityIdentifier: String
+    ) {
         _value = value
         self.values = values
+        self.accessibilityIdentifier = accessibilityIdentifier
         _selectedIndex = State(initialValue: Self.centerIndex(for: value.wrappedValue, values: values))
     }
 
@@ -372,6 +393,7 @@ private struct CircularNumberWheelPicker: View {
         .labelsHidden()
         .frame(width: width)
         .clipped()
+        .accessibilityIdentifier(accessibilityIdentifier)
         .onAppear {
             selectedIndex = Self.centerIndex(for: value, values: values)
         }
@@ -499,6 +521,7 @@ struct ModalHeaderCloseButton: View {
             Image(systemName: ModalHeaderCloseButtonMetrics.iconName)
         }
         .buttonStyle(ModalHeaderCloseButtonStyle())
+        .accessibilityIdentifier("modal.close")
     }
 }
 

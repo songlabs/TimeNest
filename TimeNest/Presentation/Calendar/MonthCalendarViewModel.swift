@@ -37,6 +37,7 @@ class MonthCalendarViewModel: ObservableObject {
 
     private let calendarDisplayUseCase: CalendarDisplayUseCase
     private let eventUseCase: EventUseCase
+    let shiftBatchOperationUseCase: ShiftBatchOperationUseCase
     private let calendarSharingStore: CalendarSharingStore
     private var currentSetting: CalendarDisplaySetting
     private let subscriptionManager: HolidaySubscriptionManager
@@ -56,6 +57,7 @@ class MonthCalendarViewModel: ObservableObject {
     ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
+        self.shiftBatchOperationUseCase = ShiftBatchOperationUseCase(eventUseCase: eventUseCase)
         self.calendarSharingStore = calendarSharingStore
         self.subscriptionManager = subscriptionManager ?? .shared
 

@@ -8,6 +8,30 @@ actor InMemoryEventRepository: EventRepository {
     func create(_ event: CalendarEvent) async throws {
         events[event.id] = event
     }
+
+    func createBatch(_ newEvents: [CalendarEvent], ifUnchanged expectedEvents: [CalendarEvent]) async throws {
+        let ids = newEvents.map(\.id)
+        guard Set(ids).count == ids.count,
+              ids.allSatisfy({ events[$0] == nil }) else {
+            throw EventRepositoryBatchError.duplicateEvent
+        }
+        guard expectedEvents.allSatisfy({ events[$0.id] == $0 }) else {
+            throw EventRepositoryBatchError.staleData
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        guard newEvents.allSatisfy({ newEvent in
+            guard newEvent.shiftTemplateID != nil else { return true }
+            return !events.values.contains {
+                $0.calendarID == newEvent.calendarID
+                    && $0.shiftTemplateID != nil
+                    && calendar.isDate($0.startDate, inSameDayAs: newEvent.startDate)
+            }
+        }) else {
+            throw EventRepositoryBatchError.shiftConflict
+        }
+        newEvents.forEach { events[$0.id] = $0 }
+    }
     
     func update(_ event: CalendarEvent) async throws {
         events[event.id] = event
@@ -15,6 +39,16 @@ actor InMemoryEventRepository: EventRepository {
     
     func delete(id: UUID) async throws {
         events.removeValue(forKey: id)
+    }
+
+    func deleteBatch(_ expectedEvents: [CalendarEvent]) async throws {
+        guard expectedEvents.allSatisfy({ events[$0.id] != nil }) else {
+            throw EventRepositoryBatchError.eventNotFound
+        }
+        guard expectedEvents.allSatisfy({ events[$0.id] == $0 }) else {
+            throw EventRepositoryBatchError.staleData
+        }
+        expectedEvents.forEach { events.removeValue(forKey: $0.id) }
     }
     
     func events(in range: DateInterval) async throws -> [CalendarEvent] {

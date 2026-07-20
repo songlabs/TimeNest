@@ -215,6 +215,7 @@ struct SettingsView: View {
                         ShiftTimeSettingsView()
                             .environmentObject(localization)
                     }
+                    .accessibilityIdentifier("settings.shiftTemplates")
                 }
 
                 SettingsCard {
@@ -1488,10 +1489,10 @@ extension Color {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
         
-        let red = Int(r * 255)
-        let green = Int(g * 255)
-        let blue = Int(b * 255)
-        let alpha = Int(a * 255)
+        let red = Int((r * 255).rounded())
+        let green = Int((g * 255).rounded())
+        let blue = Int((b * 255).rounded())
+        let alpha = Int((a * 255).rounded())
         
         return String(format: "#%02X%02X%02X%02X", red, green, blue, alpha)
     }
@@ -1513,9 +1514,15 @@ extension Color {
 
 extension ShiftTimeTemplateID {
     var color: Color {
-        let defaults = UserDefaults.standard
-        let colorHex = defaults.string(forKey: self.colorHexKey) ?? self.defaultColorHex
-        return Color(hex: colorHex) ?? .gray
+        color(from: .standard)
+    }
+
+    func colorHex(from defaults: UserDefaults = .standard) -> String {
+        defaults.string(forKey: colorHexKey) ?? defaultColorHex
+    }
+
+    func color(from defaults: UserDefaults = .standard) -> Color {
+        Color(hex: colorHex(from: defaults)) ?? .gray
     }
 }
 
@@ -1525,6 +1532,10 @@ struct ShiftTimeSettingsView: View {
     @State private var selectedShift: ShiftTimeTemplateID?
     @State private var shiftTemplates: [ShiftTimeTemplate] = []
     @State private var showAddShift: Bool = false
+    @State private var favoriteIDs = Set<String>()
+    @State private var pendingDeletion: ShiftTimeTemplate?
+    @State private var pendingDeletionReferenceCount = 0
+    @Query private var storedEvents: [SwiftDataCalendarEventEntity]
 
     var body: some View {
         ScrollView {
@@ -1534,6 +1545,7 @@ struct ShiftTimeSettingsView: View {
                     Text(localization.localized(.shiftTimeSettingsTitle))
                         .font(TimeNestTheme.Fonts.popupTitle)
                         .foregroundColor(SettingsModalSurface.primaryText)
+                        .accessibilityIdentifier("shiftTemplate.list")
                     
                     Spacer()
                     
@@ -1545,14 +1557,22 @@ struct ShiftTimeSettingsView: View {
                 
                 // Shift List
                 VStack(alignment: .leading, spacing: 12) {
-                    ForEach(shiftTemplates) { template in
-                        ShiftTimeSettingsRow(
-                            template: template,
-                            onDelete: deleteShiftTemplate,
-                            onEdit: {
-                                selectedShift = template.id
-                            }
-                        )
+                    let favorites = shiftTemplates.filter { favoriteIDs.contains($0.id.id) }
+                    let remaining = shiftTemplates.filter { !favoriteIDs.contains($0.id.id) }
+
+                    if !favorites.isEmpty {
+                        Text(localization.localized(.shiftTemplateFavorites))
+                            .font(.headline)
+                            .accessibilityIdentifier("shiftTemplate.favoriteSection")
+                        ForEach(favorites) { template in
+                            templateRow(template)
+                        }
+                    }
+
+                    if !remaining.isEmpty {
+                        ForEach(remaining) { template in
+                            templateRow(template)
+                        }
                     }
                 }
                 
@@ -1570,6 +1590,7 @@ struct ShiftTimeSettingsView: View {
                             .foregroundColor(.white)
                             .cornerRadius(8)
                     }
+                    .accessibilityIdentifier("shiftTemplate.add")
                     Spacer()
                 }
                 .padding(.top, 8)
@@ -1598,11 +1619,70 @@ struct ShiftTimeSettingsView: View {
         .onChange(of: localization.selectedLanguageCode) { _, _ in
             loadShiftTemplates()
         }
+        .alert(
+            localization.localized(.shiftTemplateDeleteConfirmationTitle),
+            isPresented: Binding(
+                get: { pendingDeletion != nil },
+                set: { if !$0 { pendingDeletion = nil } }
+            )
+        ) {
+            Button(localization.localized(.cancel), role: .cancel) {
+                pendingDeletion = nil
+            }
+            .accessibilityIdentifier("shiftTemplate.delete.cancel")
+            Button(localization.localized(.shiftTimeDeleteButton), role: .destructive) {
+                guard let template = pendingDeletion else { return }
+                deleteShiftTemplate(template)
+                pendingDeletion = nil
+            }
+            .accessibilityIdentifier("shiftTemplate.delete.confirm")
+        } message: {
+            Text(deleteConfirmationMessage)
+                .accessibilityIdentifier("shiftTemplate.delete.message")
+        }
         .navigationBarBackButtonHidden(true)
+    }
+
+    private func templateRow(_ template: ShiftTimeTemplate) -> some View {
+        ShiftTimeSettingsRow(
+            template: template,
+            isFavorite: favoriteIDs.contains(template.id.id),
+            onToggleFavorite: { toggleFavorite(template) },
+            onDelete: requestDeleteShiftTemplate,
+            onEdit: { selectedShift = template.id }
+        )
     }
 
     private func loadShiftTemplates() {
         shiftTemplates = ShiftTimeTemplate.all()
+        let ids = ShiftTemplateFavoritesStore().reconcile(
+            validTemplateIDs: shiftTemplates.map(\.id)
+        )
+        favoriteIDs = Set(ids)
+    }
+
+    private func requestDeleteShiftTemplate(_ template: ShiftTimeTemplate) {
+        pendingDeletionReferenceCount = storedEvents.filter {
+            switch template.id {
+            case .day:
+                return $0.shiftTemplateKind == "day"
+            case .night:
+                return $0.shiftTemplateKind == "night"
+            case .custom(let id):
+                return $0.shiftTemplateKind == "custom" && $0.shiftTemplateCustomID == id
+            }
+        }.count
+        pendingDeletion = template
+    }
+
+    private var deleteConfirmationMessage: String {
+        if pendingDeletionReferenceCount > 0 {
+            return String(
+                format: localization.localized(.shiftTemplateDeleteReferencedMessage),
+                pendingDeletionReferenceCount
+            )
+        }
+        return localization.localized(.shiftTemplateDeleteUnusedMessage)
     }
 
     private func deleteShiftTemplate(_ template: ShiftTimeTemplate) {
@@ -1612,6 +1692,9 @@ struct ShiftTimeSettingsView: View {
         
         shiftTemplates.removeAll { $0.id == template.id }
         saveShiftTemplates()
+        favoriteIDs = Set(
+            ShiftTemplateFavoritesStore().reconcile(validTemplateIDs: shiftTemplates.map(\.id))
+        )
     }
 
     private func updateShiftTemplate(_ template: ShiftTimeTemplate) {
@@ -1624,6 +1707,13 @@ struct ShiftTimeSettingsView: View {
     private func addNewShiftTemplate(_ template: ShiftTimeTemplate) {
         shiftTemplates.append(template)
         saveShiftTemplates()
+    }
+
+    private func toggleFavorite(_ template: ShiftTimeTemplate) {
+        let willFavorite = !favoriteIDs.contains(template.id.id)
+        favoriteIDs = Set(
+            ShiftTemplateFavoritesStore().setFavorite(willFavorite, id: template.id)
+        )
     }
 
     private func saveShiftTemplates() {
@@ -1682,6 +1772,8 @@ struct ShiftToggleActiveButtonStyle: ButtonStyle {
 
 private struct ShiftTimeSettingsRow: View {
     let template: ShiftTimeTemplate
+    let isFavorite: Bool
+    let onToggleFavorite: () -> Void
     let onDelete: (ShiftTimeTemplate) -> Void
     let onEdit: () -> Void
     @EnvironmentObject var localization: LocalizationManager
@@ -1707,21 +1799,38 @@ private struct ShiftTimeSettingsRow: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
+                    .accessibilityIdentifier("shiftTemplate.time")
             }
 
             Spacer()
+
+            Button(action: onToggleFavorite) {
+                Image(systemName: isFavorite ? "star.fill" : "star")
+                    .foregroundColor(ShiftCalendarColors.accentYellow)
+            }
+            .accessibilityLabel(
+                localization.localized(isFavorite ? .shiftTemplateUnfavorite : .shiftTemplateFavorite)
+            )
+            .accessibilityIdentifier(
+                isFavorite ? "shiftTemplate.unfavorite" : "shiftTemplate.favorite"
+            )
+            .accessibilityValue(template.displayName)
 
             // Edit Button
             Button(action: onEdit) {
                 Image(systemName: "pencil")
                     .foregroundColor(.blue)
             }
+            .accessibilityIdentifier("shiftTemplate.edit")
+            .accessibilityValue(template.displayName)
 
             // Delete Button
             Button(action: { onDelete(template) }) {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
             }
+            .accessibilityIdentifier("shiftTemplate.delete")
+            .accessibilityValue(template.displayName)
         }
         .padding()
         .background(Color.gray.opacity(0.1))
@@ -1778,6 +1887,13 @@ private struct ShiftTimeEditSheet: View {
                     Section {
                         TextField(localization.localized(.editorTitle), text: $displayName)
                             .textFieldStyle(.plain)
+                            .accessibilityIdentifier("shiftTemplate.name")
+
+                        TextField(localization.localized(.editorNote), text: $note, axis: .vertical)
+                            .textFieldStyle(.plain)
+                            .lineLimit(1...5)
+                            .accessibilityLabel(localization.localized(.editorNote))
+                            .accessibilityIdentifier("shiftTemplate.note")
                     }
 
                     // 颜色
@@ -1786,6 +1902,9 @@ private struct ShiftTimeEditSheet: View {
                             Text(localization.localized(.shiftTimeColor))
                             Spacer()
                             ColorPicker("", selection: $color)
+                                .accessibilityLabel(localization.localized(.shiftTimeColor))
+                                .accessibilityValue(color.toHex().uppercased())
+                                .accessibilityIdentifier("shiftTemplate.colorPicker")
                         }
                     }
 
@@ -1819,12 +1938,14 @@ private struct ShiftTimeEditSheet: View {
                         Button(localization.localized(.cancel)) {
                             dismiss()
                         }
+                        .accessibilityIdentifier("shiftTemplate.edit.cancel")
                     }
 
                     ToolbarItem(placement: .confirmationAction) {
                         Button(localization.localized(.save)) {
                             save()
                         }
+                        .accessibilityIdentifier("shiftTemplate.edit.save")
                     }
                 }
             }
@@ -1845,6 +1966,9 @@ private struct ShiftTimeEditSheet: View {
                 .glassCapsuleStyle()
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(
+            target == .start ? "shiftTemplate.startTime" : "shiftTemplate.endTime"
+        )
     }
 
     @ViewBuilder

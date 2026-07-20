@@ -190,13 +190,33 @@ final class TimeNestDataManagementUITests: XCTestCase {
                 statusValues.insert(status)
 
                 if scenario == "syncFailure" {
-                    assertLocalizedElement(
-                        element(in: app, identifier: "sharing.errorMessage"),
-                        identifier: "sharing.errorMessage"
-                    )
+                    let scrollContainer = sharingScrollContainer(in: app)
+                    let errorMessage = element(in: app, identifier: "sharing.errorMessage")
                     let retry = app.buttons["sharing.retry"]
-                    if !retry.exists { app.swipeUp() }
+                    let didRevealFailureActions = scrollUntilVisible(
+                        [errorMessage, retry],
+                        in: scrollContainer,
+                        maxSwipes: 6
+                    )
+                    if !didRevealFailureActions {
+                        attachScrollFailureEvidence(
+                            named: "sharing-\(language)-syncFailure-scroll-failure",
+                            app: app,
+                            scrollContainer: scrollContainer,
+                            targets: [errorMessage, retry]
+                        )
+                    }
+                    XCTAssertTrue(didRevealFailureActions, "Failed to reveal sharing failure actions")
+                    assertLocalizedElement(errorMessage, identifier: "sharing.errorMessage")
+                    XCTAssertTrue(retry.exists)
+                    XCTAssertFalse(retry.label.isEmpty)
+                    XCTAssertTrue(retry.isHittable)
+
+                    retry.tap()
+
+                    assertLocalizedElement(errorMessage, identifier: "sharing.errorMessage after retry")
                     XCTAssertTrue(retry.waitForExistence(timeout: 5))
+                    XCTAssertTrue(retry.isHittable)
                 }
                 attachScreenshot(named: "sharing-\(language)-\(scenario)", app: app)
                 app.terminate()
@@ -264,6 +284,65 @@ final class TimeNestDataManagementUITests: XCTestCase {
             }
             app.terminate()
         }
+    }
+
+    func testSmallScreenDarkAccessibilitySharingFailureRemainsScrollableAndActionable() {
+        let app = launchApp(
+            language: "ja",
+            cloudState: "available",
+            seedData: true,
+            theme: "dark",
+            contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL",
+            sharingScenario: "syncFailure"
+        )
+        app.buttons["sharing.calendarSelector"].tap()
+
+        let scrollContainer = sharingScrollContainer(in: app)
+        let calendarRow = element(
+            in: app,
+            identifier: "sharing.calendar.22222222-2222-2222-2222-222222222222"
+        )
+        let didRevealCalendarRow = scrollUntilVisible(
+            [calendarRow],
+            in: scrollContainer,
+            maxSwipes: 6
+        )
+        if !didRevealCalendarRow {
+            attachScrollFailureEvidence(
+                named: "small-dark-accessibility-sharing-row-scroll-failure",
+                app: app,
+                scrollContainer: scrollContainer,
+                targets: [calendarRow]
+            )
+        }
+        XCTAssertTrue(didRevealCalendarRow, "Failed to reveal shared calendar status row")
+        XCTAssertFalse((calendarRow.value as? String ?? "").isEmpty)
+
+        let errorMessage = element(in: app, identifier: "sharing.errorMessage")
+        let retry = app.buttons["sharing.retry"]
+        let didRevealFailureActions = scrollUntilVisible(
+            [errorMessage, retry],
+            in: scrollContainer,
+            maxSwipes: 6
+        )
+        if !didRevealFailureActions {
+            attachScrollFailureEvidence(
+                named: "small-dark-accessibility-sharing-scroll-failure",
+                app: app,
+                scrollContainer: scrollContainer,
+                targets: [errorMessage, retry]
+            )
+        }
+        XCTAssertTrue(didRevealFailureActions, "Failed to reveal sharing failure actions")
+        assertLocalizedElement(errorMessage, identifier: "sharing.errorMessage")
+        XCTAssertTrue(retry.isHittable)
+        attachScreenshot(named: "small-dark-accessibility-sharing-failure", app: app)
+
+        retry.tap()
+
+        assertLocalizedElement(errorMessage, identifier: "sharing.errorMessage after retry")
+        XCTAssertTrue(retry.waitForExistence(timeout: 5))
+        XCTAssertTrue(retry.isHittable)
     }
 
     private func launchApp(
@@ -374,5 +453,64 @@ final class TimeNestDataManagementUITests: XCTestCase {
             element.isHittable,
             "Element frame \(element.frame), scroll frame \(scrollView.frame)"
         )
+    }
+
+    private func sharingScrollContainer(in app: XCUIApplication) -> XCUIElement {
+        for candidate in [
+            app.collectionViews.firstMatch,
+            app.tables.firstMatch,
+            app.scrollViews.firstMatch
+        ] where candidate.waitForExistence(timeout: 1) {
+            return candidate
+        }
+        XCTFail("Sharing page did not expose a scrollable container")
+        return app
+    }
+
+    private func scrollUntilVisible(
+        _ elements: [XCUIElement],
+        in scrollView: XCUIElement,
+        maxSwipes: Int = 6
+    ) -> Bool {
+        if elements.allSatisfy({ $0.exists }) {
+            return true
+        }
+        for _ in 0..<maxSwipes {
+            let start = scrollView.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)
+            )
+            let end = scrollView.coordinate(
+                withNormalizedOffset: CGVector(dx: 0.5, dy: 0.50)
+            )
+            start.press(forDuration: 0.05, thenDragTo: end)
+            if elements.allSatisfy({ $0.waitForExistence(timeout: 0.5) }) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func attachScrollFailureEvidence(
+        named name: String,
+        app: XCUIApplication,
+        scrollContainer: XCUIElement,
+        targets: [XCUIElement]
+    ) {
+        let targetSummary = targets.map { target in
+            guard target.exists else { return "exists=false" }
+            return "identifier=\(target.identifier), exists=true, hittable=\(target.isHittable), frame=\(target.frame)"
+        }.joined(separator: "\n")
+        let treeAttachment = XCTAttachment(string: """
+        Scroll container: type=\(scrollContainer.elementType.rawValue), frame=\(scrollContainer.frame)
+        Targets:
+        \(targetSummary)
+
+        Accessibility tree:
+        \(app.debugDescription)
+        """)
+        treeAttachment.name = "\(name)-accessibility-tree"
+        treeAttachment.lifetime = .keepAlways
+        add(treeAttachment)
+        attachScreenshot(named: name, app: app)
     }
 }
