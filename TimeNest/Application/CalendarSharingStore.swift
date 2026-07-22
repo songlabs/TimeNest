@@ -18,6 +18,20 @@ enum CalendarSharingManualInvitationState: Equatable {
     case failed(CalendarSharingError)
 }
 
+enum CalendarSharingOwnerDisplayNameResolver {
+    static func normalized(_ value: String?) -> String? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !value.isEmpty else {
+            return nil
+        }
+        return value
+    }
+
+    static func resolve(incoming: String?, existing: String?) -> String? {
+        normalized(incoming) ?? normalized(existing)
+    }
+}
+
 @MainActor
 final class CalendarSharingStore: ObservableObject {
     @Published private(set) var selection: CalendarSelection
@@ -302,7 +316,9 @@ final class CalendarSharingStore: ObservableObject {
             }
 
             let refreshedOwnedStates = try await client.fetchOwnedCalendars()
-            let receivedPayloads = try await client.fetchReceivedCalendars()
+            let receivedPayloads = mergingReceivedOwnerDisplayNames(
+                into: try await client.fetchReceivedCalendars()
+            )
             try await reconcileRemovedCloudCalendars(
                 ownedIDs: Set(refreshedOwnedStates.map(\.calendar.id)),
                 receivedIDs: Set(receivedPayloads.map(\.calendar.id))
@@ -821,13 +837,18 @@ final class CalendarSharingStore: ObservableObject {
     private func refreshReceivedCalendar(
         acceptedShare: AcceptedSharedCalendarCloudResult
     ) async throws -> SharedCalendarDescriptor {
-        let payloads = try await client.fetchReceivedCalendars().map { payload in
+        let metadataOwnerDisplayName = CalendarSharingOwnerDisplayNameResolver.normalized(
+            acceptedShare.ownerDisplayName
+        )
+        let payloads = mergingReceivedOwnerDisplayNames(
+            into: try await client.fetchReceivedCalendars()
+        ).map { payload in
             guard payload.calendar.zoneName == acceptedShare.zoneName,
-                  acceptedShare.ownerDisplayName != nil else {
+                  let metadataOwnerDisplayName else {
                 return payload
             }
             var calendar = payload.calendar
-            calendar.ownerDisplayName = acceptedShare.ownerDisplayName
+            calendar.ownerDisplayName = metadataOwnerDisplayName
             return ReceivedSharedCalendarPayload(
                 calendar: calendar,
                 events: payload.events,
@@ -863,6 +884,28 @@ final class CalendarSharingStore: ObservableObject {
         persistCache()
         revision &+= 1
         return acceptedPayload.calendar
+    }
+
+    private func mergingReceivedOwnerDisplayNames(
+        into payloads: [ReceivedSharedCalendarPayload]
+    ) -> [ReceivedSharedCalendarPayload] {
+        payloads.map { payload in
+            let existingOwnerDisplayName = receivedCalendars.first {
+                $0.id == payload.calendar.id
+            }?.ownerDisplayName
+
+            var calendar = payload.calendar
+            calendar.ownerDisplayName = CalendarSharingOwnerDisplayNameResolver.resolve(
+                incoming: calendar.ownerDisplayName,
+                existing: existingOwnerDisplayName
+            )
+            return ReceivedSharedCalendarPayload(
+                calendar: calendar,
+                events: payload.events,
+                shifts: payload.shifts,
+                workRecords: payload.workRecords
+            )
+        }
     }
 
     func ensureCanWrite(calendarID: UUID) throws {

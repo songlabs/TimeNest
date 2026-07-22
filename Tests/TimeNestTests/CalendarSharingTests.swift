@@ -639,6 +639,15 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(root["ownerDisplayName"])
     }
 
+    func testPersonNameFormatterReturnsNilForNonNilEmptyComponents() {
+        XCTAssertNil(
+            CalendarSharingPersonNameFormatter.displayName(
+                from: PersonNameComponents(),
+                locale: Locale(identifier: "en_US")
+            )
+        )
+    }
+
     func testOldReceivedDescriptorCacheWithoutOwnerDisplayNameStillDecodes() throws {
         let calendarID = UUID()
         let json = """
@@ -1190,6 +1199,120 @@ final class CalendarSharingStoreTests: XCTestCase {
         await store.synchronizeAll()
 
         XCTAssertEqual(store.receivedDescriptor(id: received.id)?.ownerDisplayName, "Share Owner")
+    }
+
+    func testOwnerNameMergePreservesExistingNameWhenIncomingIsNil() {
+        XCTAssertEqual(
+            CalendarSharingOwnerDisplayNameResolver.resolve(
+                incoming: nil,
+                existing: "Owner A"
+            ),
+            "Owner A"
+        )
+    }
+
+    func testOwnerNameMergePreservesExistingNameWhenIncomingIsEmpty() {
+        XCTAssertEqual(
+            CalendarSharingOwnerDisplayNameResolver.resolve(
+                incoming: "",
+                existing: "Owner A"
+            ),
+            "Owner A"
+        )
+    }
+
+    func testOwnerNameMergePreservesExistingNameWhenIncomingIsWhitespace() {
+        XCTAssertEqual(
+            CalendarSharingOwnerDisplayNameResolver.resolve(
+                incoming: " \n\t ",
+                existing: " Owner A\n"
+            ),
+            "Owner A"
+        )
+    }
+
+    func testOwnerNameMergeUsesNewValidName() {
+        XCTAssertEqual(
+            CalendarSharingOwnerDisplayNameResolver.resolve(
+                incoming: " Owner B\n",
+                existing: "Owner A"
+            ),
+            "Owner B"
+        )
+    }
+
+    func testOwnerNameMergeKeepsNilWhenBothNamesAreMissing() {
+        XCTAssertNil(
+            CalendarSharingOwnerDisplayNameResolver.resolve(
+                incoming: nil,
+                existing: nil
+            )
+        )
+    }
+
+    func testRegularRefreshPreservesMetadataOwnerNameWhenIncomingNameIsMissing() async {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let client = MockCalendarSharingClient()
+        client.receivedPayloads = [
+            makeReceivedPayload(calendar: received, ownerDisplayName: "Owner A")
+        ]
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+        await store.synchronizeAll()
+
+        client.receivedPayloads = [makeReceivedPayload(calendar: received)]
+        await store.synchronizeAll()
+
+        XCTAssertEqual(store.receivedDescriptor(id: received.id)?.ownerDisplayName, "Owner A")
+    }
+
+    func testUIFallbackIsNotPersistedInReceivedDescriptorCache() async {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let client = MockCalendarSharingClient()
+        client.receivedPayloads = [makeReceivedPayload(calendar: received)]
+        let cache = CalendarSharingCache(
+            fileURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("CalendarSharingStoreTests-\(UUID().uuidString).json")
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")],
+            cache: cache
+        )
+
+        await store.synchronizeAll()
+        let renderedSubtitle = CalendarSharingLocalizedOwnerText.sharedByText(
+            ownerDisplayName: store.receivedDescriptor(id: received.id)?.ownerDisplayName,
+            format: "%@ shared",
+            fallback: "Fallback",
+            locale: Locale(identifier: "en_US")
+        )
+
+        XCTAssertEqual(renderedSubtitle, "Fallback")
+        XCTAssertNil(store.receivedDescriptor(id: received.id)?.ownerDisplayName)
+        XCTAssertNil(cache.load().receivedCalendars.first?.ownerDisplayName)
+    }
+
+    func testRemovedReceivedShareIsDeletedEvenWhenExistingOwnerNameCouldBePreserved() async {
+        let received = makeCalendar(kind: .sharedReceived, name: "Family")
+        let client = MockCalendarSharingClient()
+        client.receivedPayloads = [
+            makeReceivedPayload(calendar: received, ownerDisplayName: "Owner A")
+        ]
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+        await store.synchronizeAll()
+        XCTAssertNotNil(store.receivedDescriptor(id: received.id))
+
+        client.receivedPayloads = []
+        await store.synchronizeAll()
+
+        XCTAssertNil(store.receivedDescriptor(id: received.id))
+        XCTAssertNil(store.calendar(id: received.id))
     }
 
     func testUnavailableCurrentUserNameDoesNotBlockSharedCalendarCreation() async throws {
@@ -2740,10 +2863,11 @@ final class CalendarSharingStoreTests: XCTestCase {
         calendars: [TimeNestCalendar],
         eventUseCase: EventUseCase = EventUseCase(repository: InMemoryEventRepository()),
         calendarRepository: (any CalendarRepository)? = nil,
-        invitationRouter: CalendarSharingInvitationRouter? = nil
+        invitationRouter: CalendarSharingInvitationRouter? = nil,
+        cache: CalendarSharingCache? = nil
     ) -> CalendarSharingStore {
         let defaults = UserDefaults(suiteName: "CalendarSharingStoreTests-\(UUID().uuidString)")!
-        let cache = CalendarSharingCache(
+        let resolvedCache = cache ?? CalendarSharingCache(
             fileURL: FileManager.default.temporaryDirectory
                 .appendingPathComponent("CalendarSharingStoreTests-\(UUID().uuidString).json")
         )
@@ -2753,7 +2877,7 @@ final class CalendarSharingStoreTests: XCTestCase {
             client: client,
             eventUseCase: eventUseCase,
             calendarRepository: resolvedCalendarRepository,
-            cache: cache,
+            cache: resolvedCache,
             selectionPersistence: CalendarSelectionPersistence(defaults: defaults),
             syncMetadataPersistence: CalendarSharingSyncMetadataPersistence(defaults: defaults),
             initialCalendars: calendars,
@@ -3298,7 +3422,10 @@ private func makeFakeSharingMetadata(
     )
 }
 
-private func makeReceivedPayload(calendar: TimeNestCalendar) -> ReceivedSharedCalendarPayload {
+private func makeReceivedPayload(
+    calendar: TimeNestCalendar,
+    ownerDisplayName: String? = nil
+) -> ReceivedSharedCalendarPayload {
     let zoneName = calendar.zoneName ?? CalendarSharingCloudSchema.zoneName(for: calendar.id)
     let ownerName = calendar.ownerName ?? "owner"
     return ReceivedSharedCalendarPayload(
@@ -3306,6 +3433,7 @@ private func makeReceivedPayload(calendar: TimeNestCalendar) -> ReceivedSharedCa
             id: calendar.id,
             zoneName: zoneName,
             ownerName: ownerName,
+            ownerDisplayName: ownerDisplayName,
             calendarName: calendar.name,
             participantCount: 1,
             kind: .sharedReceived,
