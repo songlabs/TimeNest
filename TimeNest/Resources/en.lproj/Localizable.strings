@@ -303,6 +303,9 @@
 "shift_time.display_name" = "Display Name";
 "shift_time.note" = "Note";
 "shift_time.color" = "Color";
+"shift_time.details" = "Detailed Settings";
+"shift_time.details.expand" = "Expand detailed settings";
+"shift_time.details.collapse" = "Collapse detailed settings";
 "shift_time.add_button" = "Add Shift";
 "shift_time.new_shift_name" = "New Shift";
 "shift_time.edit_shift_title" = "Edit Shift";

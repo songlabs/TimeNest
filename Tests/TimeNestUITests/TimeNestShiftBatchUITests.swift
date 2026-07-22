@@ -256,6 +256,44 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testCoreOnlyCreateShowsCoreFieldsAndIsSelectableInBatch() {
+        let app = launchApp()
+        openShiftTemplates(in: app)
+        app.buttons["shiftTemplate.add"].tap()
+
+        let nameField = app.textFields["shiftTemplate.name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["shiftTemplate.startTime"].exists)
+        XCTAssertTrue(app.buttons["shiftTemplate.endTime"].exists)
+        XCTAssertTrue(element(in: app, identifier: "shiftTemplate.colorPicker").exists)
+        XCTAssertTrue(app.buttons["shiftTemplate.details.toggle"].exists)
+        XCTAssertFalse(app.textFields["shiftTemplate.note"].exists)
+        XCTAssertFalse(app.switches["shiftTemplate.enabled"].exists)
+
+        replaceText(in: nameField, with: "Core Only Shift")
+        let startTime = app.buttons["shiftTemplate.startTime"].label
+        let endTime = app.buttons["shiftTemplate.endTime"].label
+        app.buttons["shiftTemplate.edit.save"].tap()
+
+        scrollUntilHittable(templateRow(named: "Core Only Shift", in: app), in: app)
+        openEditor(for: "Core Only Shift", in: app)
+        XCTAssertEqual(nameField.value as? String, "Core Only Shift")
+        XCTAssertEqual(app.buttons["shiftTemplate.startTime"].label, startTime)
+        XCTAssertEqual(app.buttons["shiftTemplate.endTime"].label, endTime)
+        XCTAssertFalse(app.textFields["shiftTemplate.note"].exists)
+        app.buttons["shiftTemplate.edit.cancel"].tap()
+
+        closeTemplatesAndSettings(in: app)
+        openShiftBatch(in: app)
+        let option = button(
+            identifier: "shiftBatch.templateOption",
+            value: "Core Only Shift",
+            in: app
+        )
+        scrollUntilHittable(option, in: app)
+        XCTAssertTrue(option.isHittable)
+    }
+
     func testTemplateCreationPersistsNoteTimesAndNonDefaultColorWhenReopened() {
         let app = launchApp()
         openShiftTemplates(in: app)
@@ -267,6 +305,7 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
             colorComponents: (red: 0.85, green: 0.20, blue: 0.70),
             adjustStartTime: true,
             adjustEndTime: true,
+            disableTemplate: true,
             in: app
         )
 
@@ -274,11 +313,15 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         XCTAssertEqual(matchingRows(named: "UITest Early Shift", in: app).count, 1)
         openEditor(for: "UITest Early Shift", in: app)
         XCTAssertEqual(app.textFields["shiftTemplate.name"].value as? String, "UITest Early Shift")
+        XCTAssertFalse(app.textFields["shiftTemplate.note"].exists)
+        expandDetails(in: app)
         XCTAssertEqual(app.textFields["shiftTemplate.note"].value as? String, note)
+        XCTAssertEqual(enabledValue(in: app), "0")
+        attachScreenshot(named: "shift-template-create-reopen", app: app)
+        collapseDetails(in: app)
         XCTAssertEqual(app.buttons["shiftTemplate.startTime"].label, persisted.start)
         XCTAssertEqual(app.buttons["shiftTemplate.endTime"].label, persisted.end)
         XCTAssertEqual(colorValue(in: app), persisted.color)
-        attachScreenshot(named: "shift-template-create-reopen", app: app)
         app.buttons["shiftTemplate.edit.cancel"].tap()
     }
 
@@ -294,8 +337,12 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
 
         openEditor(for: "Gate Edit", in: app)
         replaceText(in: app.textFields["shiftTemplate.name"], with: "Gate Edited")
+        expandDetails(in: app)
         let updatedNote = "Edited note\nUnicode café"
         replaceText(in: app.textFields["shiftTemplate.note"], with: updatedNote)
+        toggleEnabled(in: app)
+        XCTAssertEqual(enabledValue(in: app), "0")
+        collapseDetails(in: app)
         let updatedStartTime = adjustTime(buttonIdentifier: "shiftTemplate.startTime", in: app)
         let updatedEndTime = adjustTime(buttonIdentifier: "shiftTemplate.endTime", in: app)
         let updatedColor = selectColor(
@@ -315,14 +362,23 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         XCTAssertEqual(matchingRows(named: "Gate Edited", in: app).count, 1)
         openEditor(for: "Gate Edited", in: app)
         XCTAssertEqual(app.textFields["shiftTemplate.name"].value as? String, "Gate Edited")
+        XCTAssertFalse(app.textFields["shiftTemplate.note"].exists)
+        expandDetails(in: app)
         XCTAssertEqual(app.textFields["shiftTemplate.note"].value as? String, updatedNote)
+        XCTAssertEqual(enabledValue(in: app), "0")
+        attachScreenshot(named: "shift-template-edit-reopen", app: app)
+        collapseDetails(in: app)
         XCTAssertEqual(app.buttons["shiftTemplate.startTime"].label, updatedStartTime)
         XCTAssertEqual(app.buttons["shiftTemplate.endTime"].label, updatedEndTime)
         XCTAssertEqual(colorValue(in: app), updatedColor)
-        attachScreenshot(named: "shift-template-edit-reopen", app: app)
 
-        replaceText(in: app.textFields["shiftTemplate.name"], with: "Cancelled Name")
+        let nameField = app.textFields["shiftTemplate.name"]
+        scrollDownUntilHittable(nameField, in: app)
+        replaceText(in: nameField, with: "Cancelled Name")
+        expandDetails(in: app)
         replaceText(in: app.textFields["shiftTemplate.note"], with: "Cancelled note")
+        toggleEnabled(in: app)
+        collapseDetails(in: app)
         let cancelledColor = selectColor(
             red: 0.75,
             green: 0.75,
@@ -336,10 +392,66 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         XCTAssertEqual(matchingRows(named: "Gate Edited", in: app).count, 1)
         openEditor(for: "Gate Edited", in: app)
         XCTAssertEqual(app.textFields["shiftTemplate.name"].value as? String, "Gate Edited")
+        expandDetails(in: app)
         XCTAssertEqual(app.textFields["shiftTemplate.note"].value as? String, updatedNote)
+        XCTAssertEqual(enabledValue(in: app), "0")
+        collapseDetails(in: app)
         XCTAssertEqual(app.buttons["shiftTemplate.startTime"].label, updatedStartTime)
         XCTAssertEqual(app.buttons["shiftTemplate.endTime"].label, updatedEndTime)
         XCTAssertEqual(colorValue(in: app), updatedColor)
+        app.buttons["shiftTemplate.edit.cancel"].tap()
+    }
+
+    func testCancelNewTemplateDoesNotAddRow() {
+        let app = launchApp()
+        openShiftTemplates(in: app)
+        let initialCount = app.buttons.matching(identifier: "shiftTemplate.edit").count
+
+        app.buttons["shiftTemplate.add"].tap()
+        let nameField = app.textFields["shiftTemplate.name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        replaceText(in: nameField, with: "Cancelled New Shift")
+        expandDetails(in: app)
+        replaceText(in: app.textFields["shiftTemplate.note"], with: "Must not be saved")
+        app.buttons["shiftTemplate.edit.cancel"].tap()
+
+        XCTAssertFalse(templateRow(named: "Cancelled New Shift", in: app).exists)
+        XCTAssertEqual(app.buttons.matching(identifier: "shiftTemplate.edit").count, initialCount)
+    }
+
+    func testEmptyNameShowsValidationAndDoesNotDismissEditor() {
+        let app = launchApp()
+        openShiftTemplates(in: app)
+        app.buttons["shiftTemplate.add"].tap()
+        let nameField = app.textFields["shiftTemplate.name"]
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        replaceText(in: nameField, with: "   ")
+
+        app.buttons["shiftTemplate.edit.save"].tap()
+
+        let alert = app.alerts.firstMatch
+        XCTAssertTrue(alert.waitForExistence(timeout: 5))
+        XCTAssertTrue(alert.staticTexts["Please enter a title"].exists)
+        alert.buttons.firstMatch.tap()
+        XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+        app.buttons["shiftTemplate.edit.cancel"].tap()
+    }
+
+    func testAccessibilityTextKeepsEditorActionsAndDetailsAccessible() {
+        let app = launchApp(contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL")
+        openShiftTemplates(in: app)
+        let add = app.buttons["shiftTemplate.add"]
+        scrollUntilHittable(add, in: app)
+        add.tap()
+
+        XCTAssertTrue(app.textFields["shiftTemplate.name"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["shiftTemplate.edit.cancel"].isHittable)
+        XCTAssertTrue(app.buttons["shiftTemplate.edit.save"].isHittable)
+        let details = app.buttons["shiftTemplate.details.toggle"]
+        scrollUntilHittable(details, in: app)
+        XCTAssertFalse(details.label.contains("shift_time."))
+        expandDetails(in: app)
+        XCTAssertTrue(app.buttons["shiftTemplate.edit.save"].isHittable)
         app.buttons["shiftTemplate.edit.cancel"].tap()
     }
 
@@ -431,7 +543,10 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         attachScreenshot(named: "shift-template-referenced-event-preserved", app: app)
     }
 
-    private func launchApp(seedInvalidFavorite: Bool = false) -> XCUIApplication {
+    private func launchApp(
+        seedInvalidFavorite: Bool = false,
+        contentSizeCategory: String? = nil
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "-uiTesting",
@@ -441,6 +556,12 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         ]
         if seedInvalidFavorite {
             app.launchArguments.append("-seedInvalidShiftTemplateFavorite")
+        }
+        if let contentSizeCategory {
+            app.launchArguments += [
+                "-UIPreferredContentSizeCategoryName",
+                contentSizeCategory
+            ]
         }
         app.launch()
         XCTAssertTrue(app.buttons["calendar.moreMenu"].waitForExistence(timeout: 10))
@@ -470,6 +591,7 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         colorComponents: (red: CGFloat, green: CGFloat, blue: CGFloat)? = nil,
         adjustStartTime: Bool = false,
         adjustEndTime: Bool = false,
+        disableTemplate: Bool = false,
         in app: XCUIApplication
     ) -> TemplateEditorSnapshot {
         let add = app.buttons["shiftTemplate.add"]
@@ -478,9 +600,18 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         let nameField = app.textFields["shiftTemplate.name"]
         XCTAssertTrue(nameField.waitForExistence(timeout: 5))
         replaceText(in: nameField, with: name)
-        let noteField = app.textFields["shiftTemplate.note"]
-        XCTAssertTrue(noteField.exists)
-        replaceText(in: noteField, with: note)
+        XCTAssertFalse(app.textFields["shiftTemplate.note"].exists)
+        if !note.isEmpty || disableTemplate {
+            expandDetails(in: app)
+            let noteField = app.textFields["shiftTemplate.note"]
+            replaceText(in: noteField, with: note)
+            if disableTemplate {
+                toggleEnabled(in: app)
+                XCTAssertEqual(enabledValue(in: app), "0")
+            }
+            collapseDetails(in: app)
+            XCTAssertFalse(noteField.exists)
+        }
         let initialColor = colorValue(in: app)
         var selectedColor = initialColor
         if let colorComponents {
@@ -518,6 +649,50 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         scrollUntilHittable(edit, in: app)
         edit.tap()
         XCTAssertTrue(app.textFields["shiftTemplate.name"].waitForExistence(timeout: 5))
+    }
+
+    private func expandDetails(in app: XCUIApplication) {
+        dismissKeyboardIfNeeded(in: app)
+        let toggle = app.buttons["shiftTemplate.details.toggle"]
+        scrollUntilHittable(toggle, in: app)
+        toggle.tap()
+        XCTAssertTrue(app.textFields["shiftTemplate.note"].waitForExistence(timeout: 5))
+    }
+
+    private func collapseDetails(in app: XCUIApplication) {
+        dismissKeyboardIfNeeded(in: app)
+        let toggle = app.buttons["shiftTemplate.details.toggle"]
+        scrollDownUntilHittable(toggle, in: app)
+        toggle.tap()
+        XCTAssertFalse(app.textFields["shiftTemplate.note"].exists)
+    }
+
+    private func toggleEnabled(in app: XCUIApplication) {
+        dismissKeyboardIfNeeded(in: app)
+        let enabled = app.switches["shiftTemplate.enabled"]
+        scrollUntilHittable(enabled, in: app)
+        let originalValue = enabled.value as? String
+        enabled.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.5)).tap()
+        let changed = NSPredicate { element, _ in
+            (element as? XCUIElement)?.value as? String != originalValue
+        }
+        let expectation = XCTNSPredicateExpectation(predicate: changed, object: enabled)
+        XCTAssertEqual(XCTWaiter.wait(for: [expectation], timeout: 2), .completed)
+    }
+
+    private func enabledValue(in app: XCUIApplication) -> String? {
+        let enabled = app.switches["shiftTemplate.enabled"]
+        scrollUntilHittable(enabled, in: app)
+        return enabled.value as? String
+    }
+
+    private func dismissKeyboardIfNeeded(in app: XCUIApplication) {
+        let keyboard = app.keyboards.firstMatch
+        guard keyboard.exists else { return }
+        let dismissKey = app.buttons["shiftTemplate.keyboard.done"]
+        XCTAssertTrue(dismissKey.waitForExistence(timeout: 2))
+        dismissKey.tap()
+        XCTAssertFalse(keyboard.waitForExistence(timeout: 2))
     }
 
     private func requestDelete(templateNamed name: String, in app: XCUIApplication) {
@@ -663,12 +838,29 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
     }
 
     private func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication) {
-        let scrollView = app.scrollViews.firstMatch
-        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        let scrollView = scrollContainer(in: app)
         for _ in 0..<12 where !element.isHittable {
             scrollView.swipeUp()
         }
         XCTAssertTrue(element.isHittable)
+    }
+
+    private func scrollDownUntilHittable(_ element: XCUIElement, in app: XCUIApplication) {
+        let scrollView = scrollContainer(in: app)
+        for _ in 0..<12 where !element.isHittable {
+            scrollView.swipeDown()
+        }
+        XCTAssertTrue(element.isHittable)
+    }
+
+    private func scrollContainer(in app: XCUIApplication) -> XCUIElement {
+        let collectionView = app.collectionViews.firstMatch
+        if collectionView.exists {
+            return collectionView
+        }
+        let scrollView = app.scrollViews.firstMatch
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        return scrollView
     }
 
     private func attachScreenshot(named name: String, app: XCUIApplication) {

@@ -1843,6 +1843,11 @@ private enum ShiftTimePickerTarget: Hashable {
     case end
 }
 
+private enum ShiftTemplateFocusedField: Hashable {
+    case name
+    case note
+}
+
 private struct ShiftTimeEditSheet: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
@@ -1856,7 +1861,11 @@ private struct ShiftTimeEditSheet: View {
     @State private var color: Color
     @State private var startTime: String
     @State private var endTime: String
+    @State private var isEnabled: Bool
+    @State private var isDetailsExpanded = false
+    @State private var showsValidationError = false
     @State private var editingTime: ShiftTimePickerTarget?
+    @FocusState private var focusedField: ShiftTemplateFocusedField?
     private let initialDisplayName: String
     private let initialUsesLocalizedDefaultName: Bool
 
@@ -1872,40 +1881,26 @@ private struct ShiftTimeEditSheet: View {
         self.initialDisplayName = initialDisplayName
         self.initialUsesLocalizedDefaultName = existingTemplate?.usesLocalizedDefaultName ?? false
         _displayName = State(initialValue: initialDisplayName)
-        _note = State(initialValue: defaults.string(forKey: shiftID.noteKey) ?? "")
-        let defaultHex = defaults.string(forKey: shiftID.colorHexKey) ?? shiftID.defaultColorHex
+        _note = State(initialValue: existingTemplate?.note ?? "")
+        let defaultHex = existingTemplate?.colorHex ?? shiftID.defaultColorHex
         _color = State(initialValue: Color(hex: defaultHex) ?? .blue)
-        _startTime = State(initialValue: defaults.string(forKey: shiftID.startTimeKey) ?? shiftID.defaultStartTime)
-        _endTime = State(initialValue: defaults.string(forKey: shiftID.endTimeKey) ?? shiftID.defaultEndTime)
+        _startTime = State(initialValue: existingTemplate?.startTime ?? shiftID.defaultStartTime)
+        _endTime = State(initialValue: existingTemplate?.endTime ?? shiftID.defaultEndTime)
+        _isEnabled = State(initialValue: existingTemplate?.enabled ?? true)
     }
 
     var body: some View {
         ZStack {
             NavigationStack {
                 Form {
-                    // 标题（与新規予定一致的 placeholder 样式）
+                    // Core fields stay visible for the shortest template-creation path.
                     Section {
                         TextField(localization.localized(.editorTitle), text: $displayName)
                             .textFieldStyle(.plain)
+                            .focused($focusedField, equals: .name)
+                            .submitLabel(.done)
+                            .onSubmit { focusedField = nil }
                             .accessibilityIdentifier("shiftTemplate.name")
-
-                        TextField(localization.localized(.editorNote), text: $note, axis: .vertical)
-                            .textFieldStyle(.plain)
-                            .lineLimit(1...5)
-                            .accessibilityLabel(localization.localized(.editorNote))
-                            .accessibilityIdentifier("shiftTemplate.note")
-                    }
-
-                    // 颜色
-                    Section {
-                        HStack {
-                            Text(localization.localized(.shiftTimeColor))
-                            Spacer()
-                            ColorPicker("", selection: $color)
-                                .accessibilityLabel(localization.localized(.shiftTimeColor))
-                                .accessibilityValue(color.toHex().uppercased())
-                                .accessibilityIdentifier("shiftTemplate.colorPicker")
-                        }
                     }
 
                     // 时间
@@ -1929,7 +1924,57 @@ private struct ShiftTimeEditSheet: View {
                     } footer: {
                         Text(localization.localized(.shiftTimeEditFooter))
                     }
+
+                    Section {
+                        HStack {
+                            Text(localization.localized(.shiftTimeColor))
+                            Spacer()
+                            ColorPicker("", selection: $color)
+                                .accessibilityLabel(localization.localized(.shiftTimeColor))
+                                .accessibilityValue(color.toHex().uppercased())
+                                .accessibilityIdentifier("shiftTemplate.colorPicker")
+                        }
+                    }
+
+                    Section {
+                        Button {
+                            focusedField = nil
+                            withAnimation {
+                                isDetailsExpanded.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Text(localization.localized(.shiftTimeDetails))
+                                    .foregroundStyle(.primary)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                Spacer(minLength: 8)
+                                Image(systemName: "chevron.right")
+                                    .foregroundStyle(.secondary)
+                                    .rotationEffect(.degrees(isDetailsExpanded ? 90 : 0))
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localization.localized(
+                            isDetailsExpanded ? .shiftTimeDetailsCollapse : .shiftTimeDetailsExpand
+                        ))
+                        .accessibilityIdentifier("shiftTemplate.details.toggle")
+
+                        if isDetailsExpanded {
+                            TextField(localization.localized(.editorNote), text: $note, axis: .vertical)
+                                .textFieldStyle(.plain)
+                                .lineLimit(1...5)
+                                .focused($focusedField, equals: .note)
+                                .accessibilityLabel(localization.localized(.editorNote))
+                                .accessibilityIdentifier("shiftTemplate.note")
+
+                            Toggle(localization.localized(.shiftEnabled), isOn: $isEnabled)
+                                .accessibilityIdentifier("shiftTemplate.enabled")
+                        }
+                    }
                 }
+                .scrollDismissesKeyboard(.immediately)
                 .navigationTitle(localization.localized(.shiftTimeEditTitle))
                 .navigationBarTitleDisplayMode(.inline)
                 .navigationBarBackButtonHidden(true)
@@ -1947,6 +1992,19 @@ private struct ShiftTimeEditSheet: View {
                         }
                         .accessibilityIdentifier("shiftTemplate.edit.save")
                     }
+
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button(localization.localized(.done)) {
+                            focusedField = nil
+                        }
+                        .accessibilityIdentifier("shiftTemplate.keyboard.done")
+                    }
+                }
+                .alert(localization.localized(.editorError), isPresented: $showsValidationError) {
+                    Button(localization.localized(.ok), role: .cancel) {}
+                } message: {
+                    Text(localization.localized(.validationTitleRequired))
                 }
             }
 
@@ -2024,12 +2082,7 @@ private struct ShiftTimeEditSheet: View {
     private func save() {
         // 标题不能为空
         guard !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            let alert = UIAlertController(
-                title: localization.localized(.editorError),
-                message: localization.localized(.validationTitleRequired),
-                preferredStyle: .alert
-            )
-            alert.addAction(UIAlertAction(title: localization.localized(.ok), style: .default))
+            showsValidationError = true
             return
         }
         
@@ -2046,7 +2099,7 @@ private struct ShiftTimeEditSheet: View {
             colorHex: colorHex,
             startTime: startTime,
             endTime: endTime,
-            enabled: true,
+            enabled: isEnabled,
             usesLocalizedDefaultName: usesLocalizedDefaultName
         )
         onSave(template)

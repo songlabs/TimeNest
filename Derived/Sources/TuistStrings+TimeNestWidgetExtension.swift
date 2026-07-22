@@ -1236,6 +1236,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let color = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.color")
     /// Delete
     public static let deleteButton = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.delete_button")
+    /// Detailed Settings
+    public static let details = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.details")
     /// Display Name
     public static let displayName = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.display_name")
     /// Set the start and end times. For night shifts that span across midnight, the end time can be earlier than the start time.
@@ -1252,6 +1254,13 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let settingsTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.settings_title")
     /// Start Time
     public static let startTime = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.start_time")
+
+    public enum Details: Sendable {
+      /// Collapse detailed settings
+      public static let collapse = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.details.collapse")
+      /// Expand detailed settings
+      public static let expand = TimeNestWidgetExtensionStrings.tr("Localizable", "shift_time.details.expand")
+    }
   }
 
   public enum Tab: Sendable {

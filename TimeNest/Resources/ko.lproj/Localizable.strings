@@ -303,6 +303,9 @@
 "shift_time.display_name" = "표시 이름";
 "shift_time.note" = "메모";
 "shift_time.color" = "색상";
+"shift_time.details" = "세부 설정";
+"shift_time.details.expand" = "세부 설정 펼치기";
+"shift_time.details.collapse" = "세부 설정 접기";
 "shift_time.add_button" = "근무 추가";
 "shift_time.new_shift_name" = "새 근무";
 "shift_time.edit_shift_title" = "근무 편집";

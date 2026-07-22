@@ -303,6 +303,9 @@
 "shift_time.display_name" = "顯示名稱";
 "shift_time.note" = "備註";
 "shift_time.color" = "顏色";
+"shift_time.details" = "詳細設定";
+"shift_time.details.expand" = "展開詳細設定";
+"shift_time.details.collapse" = "收合詳細設定";
 "shift_time.add_button" = "新增班次";
 "shift_time.new_shift_name" = "新班次";
 "shift_time.edit_shift_title" = "編輯班次";
