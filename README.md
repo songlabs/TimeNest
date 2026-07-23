@@ -21,8 +21,9 @@ The first release is ad-supported and includes a one-time Apple In-App Purchase 
 ## Shared Calendars
 
 - Open the calendar chooser from the icon at the top left. TimeNest displays either My Calendar or one selected shared calendar; the checkmark identifies the current selection.
+- Adding an event or work record from a displayed writable calendar automatically assigns it to that calendar, without asking for the calendar again. Editing keeps the entry in its original calendar. TimeNest currently displays one calendar at a time and has no aggregate-calendar add flow.
 - Creating, renaming, inviting people to, accepting, refreshing, stopping, leaving, or deleting a shared calendar requires access to the user's Apple iCloud account and CloudKit. A recipient device must also be able to use iCloud to accept an invitation.
-- Recipients have read-only access. They can view shared events, shifts, and work records but cannot create, edit, move, or delete the owner's shared content.
+- Recipients have read-only access. They can view shared events, shifts, and work records but cannot create, edit, move, or delete the owner's shared content. If they try to add an entry, TimeNest asks them to switch to a calendar they can edit.
 - Events, shifts, and work records assigned to an owned shared calendar are currently synchronized automatically. The current implementation does not expose per-category sharing switches.
 - Event titles and times, shift display data, and work-record clock-in, clock-out, and break times may enter the shared zone. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift-template settings, app settings, and Remove Ads purchase state do not.
 - Holidays are not synchronized through CloudKit. A shared calendar uses the recipient device's enabled holiday regions and local holiday cache.

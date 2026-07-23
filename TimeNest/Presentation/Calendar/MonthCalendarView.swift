@@ -18,6 +18,7 @@ struct MonthCalendarView: View {
     private let holidaySubscriptionManager: HolidaySubscriptionManager
     @State private var showingCalendarSelection = false
     @State private var readOnlyDetail: ReadOnlyCalendarDetail?
+    @State private var showingReadOnlyCreateAlert = false
     @State private var shiftBatchUndoSnapshot: ShiftBatchUndoSnapshot?
     @State private var shiftBatchResultMessage: String?
 
@@ -227,7 +228,9 @@ struct MonthCalendarView: View {
                         )
                     },
                     availableCalendars: calendarSharingStore.writableCalendars,
-                    initialCalendarID: calendarSharingStore.selection.calendarID
+                    entryCalendarContext: .fixedWritableCalendar(
+                        calendarSharingStore.selection.calendarID
+                    )
                 )
             }
         }
@@ -240,7 +243,9 @@ struct MonthCalendarView: View {
                 initialEntryKind: .event,
                 showsEntryKindPicker: true,
                 availableCalendars: calendarSharingStore.writableCalendars,
-                initialCalendarID: calendarSharingStore.selection.calendarID,
+                calendarContext: .fixedWritableCalendar(
+                    calendarSharingStore.selection.calendarID
+                ),
                 onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                     try await viewModel.createEvent(
                         title: title,
@@ -255,6 +260,18 @@ struct MonthCalendarView: View {
                     )
                 }
             )
+        }
+        .alert(
+            localization.localized(.calendarSharingReadOnlyAddTitle),
+            isPresented: $showingReadOnlyCreateAlert
+        ) {
+            Button(localization.localized(.ok)) {
+                showingReadOnlyCreateAlert = false
+            }
+            .accessibilityIdentifier("calendar.readOnlyAlert.dismiss")
+        } message: {
+            Text(localization.localized(.calendarSharingReadOnlyAddMessage))
+                .accessibilityIdentifier("calendar.readOnlyAlert.message")
         }
     }
 
@@ -526,8 +543,12 @@ struct MonthCalendarView: View {
             selectedViewMode: $viewModel.displayMode,
             onTodayTapped: handleTodayTapped,
             onAddEventTapped: {
-                Task {
-                    await viewModel.openSelectedDateEntryEditor()
+                if calendarSharingStore.accessPolicy.canCreate {
+                    Task {
+                        await viewModel.openSelectedDateEntryEditor()
+                    }
+                } else {
+                    showingReadOnlyCreateAlert = true
                 }
             },
             onModeChanged: handleModeChanged,
@@ -716,8 +737,12 @@ struct MonthCalendarView: View {
     }
 
     private func presentReadOnlyDetailIfNeeded(for cell: CalendarDayCell) {
-        guard calendarSharingStore.accessPolicy.isReadOnly, !cell.events.isEmpty else { return }
-        readOnlyDetail = ReadOnlyCalendarDetail(date: cell.date.toDate(), events: cell.events)
+        guard calendarSharingStore.accessPolicy.isReadOnly else { return }
+        if cell.events.isEmpty {
+            showingReadOnlyCreateAlert = true
+        } else {
+            readOnlyDetail = ReadOnlyCalendarDetail(date: cell.date.toDate(), events: cell.events)
+        }
     }
 
     private func presentReadOnlyEventIfNeeded(_ event: EventOccurrence) {
@@ -979,6 +1004,7 @@ struct DayCellView: View {
         }
         .frame(width: cellWidth, height: cellHeight)
         .opacity(cell.isInCurrentMonth ? 1.0 : 0.5)
+        .accessibilityIdentifier("calendar.day.\(cell.id)")
     }
 
 

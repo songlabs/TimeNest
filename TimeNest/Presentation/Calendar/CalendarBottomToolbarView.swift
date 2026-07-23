@@ -88,6 +88,7 @@ struct CalendarBottomToolbarView: View {
                                 .background(ShiftCalendarColors.primaryBlue)
                                 .clipShape(Circle())
                         }
+                        .accessibilityIdentifier("calendar.addEntry")
                     } else {
                         Color.clear
                             .frame(width: ShiftCalendarLayout.addButtonSize, height: ShiftCalendarLayout.addButtonSize)

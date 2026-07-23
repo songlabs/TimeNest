@@ -622,7 +622,8 @@ struct CalendarAccessPolicy: Equatable {
     var canCreate: Bool { selectedCalendar.canEditContent }
     var canEdit: Bool { selectedCalendar.canEditContent }
     var canDelete: Bool { selectedCalendar.canEditContent }
-    var showsAddButton: Bool { canCreate }
+    /// Keep the affordance visible for read-only calendars so a tap can explain why creation is blocked.
+    var showsAddButton: Bool { true }
 }
 
 enum CalendarAvatarInitial {

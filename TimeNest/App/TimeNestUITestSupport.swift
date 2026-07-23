@@ -57,6 +57,10 @@ enum TimeNestUITestSupport {
         if arguments.contains("-seedInvalidShiftTemplateFavorite") {
             defaults.set(["missing-shift-template"], forKey: ShiftTemplateFavoritesStore.storageKey)
         }
+        if arguments.contains("-emptyShiftTemplates") {
+            defaults.set(true, forKey: "shiftTemplate.deleted.day")
+            defaults.set(true, forKey: "shiftTemplate.deleted.night")
+        }
         defaults.set("sunday", forKey: "weekStart")
         if let language = value(after: "-uiTestLanguage") {
             defaults.set(language, forKey: "preferredLanguageCode")
@@ -345,6 +349,8 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
             throw CalendarSharingError.syncFailed
         case "syncing":
             try await Task.sleep(nanoseconds: 30_000_000_000)
+        case "received":
+            return []
         case nil:
             return []
         default:
@@ -388,7 +394,9 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
     ) async throws {
         throw CalendarSharingError.syncFailed
     }
-    func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload] { [] }
+    func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload] {
+        scenario == "received" ? [receivedPayload()] : []
+    }
     func accept(
         metadata: any CalendarSharingShareMetadata
     ) async throws -> AcceptedSharedCalendarCloudResult {
@@ -426,6 +434,26 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
             ),
             share: CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: zoneID),
             participants: [participant]
+        )
+    }
+
+    private func receivedPayload() -> ReceivedSharedCalendarPayload {
+        let calendarID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        return ReceivedSharedCalendarPayload(
+            calendar: SharedCalendarDescriptor(
+                id: calendarID,
+                zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
+                ownerName: "ui-test-owner",
+                ownerDisplayName: "UI Test Owner",
+                calendarName: "Received UI Test Calendar",
+                participantCount: 1,
+                kind: .sharedReceived,
+                rootRecordName: CalendarSharingCloudSchema.calendarRecordName,
+                shareRecordName: CKRecordNameZoneWideShare
+            ),
+            events: [],
+            shifts: [],
+            workRecords: []
         )
     }
 }

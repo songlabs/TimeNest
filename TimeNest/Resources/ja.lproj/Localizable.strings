@@ -167,7 +167,8 @@
 "work_record.edit" = "勤務記録を編集";
 "work_record.default_title" = "バイト";
 "work_record.section_title" = "勤務記録";
-"work_record.empty" = "勤務記録はありません";
+"work_record.empty" = "勤務記録はまだありません";
+"work_record.empty_message" = "この日の実際の出勤・退勤・休憩時間を登録できます。";
 "work_record.missing_clock_in" = "未出勤";
 "work_record.missing_clock_out" = "未退勤";
 
@@ -348,7 +349,7 @@
 "help.category.privacy" = "データとプライバシー";
 
 "help.events.add.question" = "予定を追加するには？";
-"help.events.add.answer" = "カレンダー右下の追加ボタンをタップし、内容を入力して保存します。メモ欄では、対応している端末と言語で音声入力も利用できます。";
+"help.events.add.answer" = "編集可能なカレンダーの右下にある追加ボタンをタップし、内容を入力して保存します。表示中のカレンダーが自動で設定され、編集時も元のカレンダーが維持されます。メモ欄では、対応している端末と言語で音声入力も利用できます。";
 "help.events.all_day.question" = "終日予定とは？";
 "help.events.all_day.answer" = "開始・終了時刻を指定せず、その日全体の予定として表示する予定です。";
 "help.events.edit_delete.question" = "予定を編集・削除するには？";
@@ -394,7 +395,7 @@
 "help.sharing.switch.question" = "表示するカレンダーを切り替えるには？";
 "help.sharing.switch.answer" = "カレンダー左上のアイコンをタップし、「マイカレンダー」または共有カレンダーを選びます。チェックマークは現在表示中のカレンダーを示します。一度に表示できるのは1つのカレンダーです。";
 "help.sharing.read_only_holidays.question" = "共有カレンダーを編集できますか？祝日はどう表示されますか？";
-"help.sharing.read_only_holidays.answer" = "受信側は共有された予定、シフト、勤務記録を閲覧できますが、編集はできません。祝日は CloudKit では共有されず、受信側の端末で有効にしている地域とローカルキャッシュに基づいて表示されます。";
+"help.sharing.read_only_holidays.answer" = "受信側は共有された予定、シフト、勤務記録を閲覧できますが、追加や編集はできません。追加しようとした場合は、編集可能なカレンダーに切り替えてください。祝日は CloudKit では共有されず、受信側の端末で有効にしている地域とローカルキャッシュに基づいて表示されます。";
 "help.sharing.content.question" = "共有される内容と共有されない内容は？";
 "help.sharing.content.answer" = "現在は、その共有カレンダー内の予定、シフト、勤務記録が自動的に共有され、種類ごとに個別にオフにはできません。予定のタイトルと日時、勤務記録の出退勤時刻と休憩時間は共有されます。メモ、リマインダーや通知、音声入力の内容、時給、給与、交通費、シフトテンプレート、設定、広告削除の購入状態は共有されません。";
 "help.sharing.stop.question" = "共有を停止・削除した場合は？";
@@ -447,8 +448,11 @@
 "calendar_sharing.my_calendar" = "マイカレンダー";
 "calendar_sharing.owned_calendars" = "共有カレンダー";
 "calendar_sharing.create_calendar" = "共有カレンダーを作成";
-"calendar_sharing.no_shared_calendars" = "共有カレンダーはありません";
+"calendar_sharing.no_shared_calendars" = "共有カレンダーはまだありません";
+"calendar_sharing.no_shared_calendars_message" = "家族や同僚が予定やシフトを確認できる読み取り専用共有を作成できます。";
 "calendar_sharing.read_only" = "閲覧のみ";
+"calendar_sharing.read_only_add.title" = "読み取り専用カレンダー";
+"calendar_sharing.read_only_add.message" = "この共有カレンダーは読み取り専用です。予定や勤務記録を追加するには、編集可能なカレンダーに切り替えてください。";
 "calendar_sharing.calendar_name" = "共有カレンダー名";
 "calendar_sharing.default_calendar_name" = "マイ共有カレンダー";
 "calendar_sharing.default_name_with_owner" = "%@の共有カレンダー";
@@ -562,6 +566,8 @@
 
 /* Shift Batch */
 "shift_template.favorites" = "よく使うシフト";
+"shift_template.empty.title" = "シフトテンプレートはまだありません";
+"shift_template.empty.message" = "早番や遅番などのテンプレートを作成すると、複数の日付にすばやくシフトを設定できます。";
 "shift_template.favorite" = "よく使うシフトに追加";
 "shift_template.unfavorite" = "よく使うシフトから解除";
 "shift_template.delete_confirmation.title" = "シフトテンプレートを削除しますか？";

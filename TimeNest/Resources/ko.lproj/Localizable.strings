@@ -167,7 +167,8 @@
 "work_record.edit" = "알바 기록 편집";
 "work_record.default_title" = "근무";
 "work_record.section_title" = "알바 기록";
-"work_record.empty" = "알바 기록 없음";
+"work_record.empty" = "근무 기록이 아직 없습니다";
+"work_record.empty_message" = "이 날짜의 실제 출근, 퇴근 및 휴게 시간을 기록할 수 있습니다.";
 "work_record.missing_clock_in" = "출근 없음";
 "work_record.missing_clock_out" = "퇴근 없음";
 
@@ -348,7 +349,7 @@
 "help.category.privacy" = "데이터 및 개인정보";
 
 "help.events.add.question" = "일정을 추가하려면?";
-"help.events.add.answer" = "달력 오른쪽 아래의 추가 버튼을 누르고 내용을 입력한 후 저장하세요. 지원되는 기기와 언어에서는 메모란에 음성 입력도 사용할 수 있습니다.";
+"help.events.add.answer" = "편집 가능한 캘린더의 오른쪽 아래에서 추가 버튼을 누르고 내용을 입력한 후 저장하세요. 현재 표시 중인 캘린더가 자동으로 지정되며, 편집할 때도 원래 캘린더가 유지됩니다. 지원되는 기기와 언어에서는 메모란에 음성 입력도 사용할 수 있습니다.";
 "help.events.all_day.question" = "종일 일정이란?";
 "help.events.all_day.answer" = "시작 및 종료 시간을 지정하지 않고 하루 전체 일정으로 표시되는 일정입니다.";
 "help.events.edit_delete.question" = "일정을 편집하거나 삭제하려면?";
@@ -394,7 +395,7 @@
 "help.sharing.switch.question" = "표시할 캘린더를 전환하려면?";
 "help.sharing.switch.answer" = "캘린더 왼쪽 위 아이콘을 누르고 내 캘린더 또는 공유 캘린더 하나를 선택하세요. 체크 표시는 현재 표시 중인 캘린더를 뜻합니다. 한 번에 하나의 캘린더만 표시됩니다.";
 "help.sharing.read_only_holidays.question" = "공유 캘린더를 편집할 수 있나요? 공휴일은 어떻게 표시되나요?";
-"help.sharing.read_only_holidays.answer" = "받는 사람은 공유된 일정, 근무 및 출퇴근 기록을 볼 수 있지만 편집할 수는 없습니다. 공휴일은 CloudKit으로 공유되지 않으며 받는 사람의 기기에서 활성화한 지역과 로컬 캐시에 따라 표시됩니다.";
+"help.sharing.read_only_holidays.answer" = "받는 사람은 공유된 일정, 근무 및 출퇴근 기록을 볼 수 있지만 추가하거나 편집할 수는 없습니다. 항목을 추가하려면 편집 가능한 캘린더로 전환하세요. 공휴일은 CloudKit으로 공유되지 않으며 받는 사람의 기기에서 활성화한 지역과 로컬 캐시에 따라 표시됩니다.";
 "help.sharing.content.question" = "공유되는 내용과 공유되지 않는 내용은?";
 "help.sharing.content.answer" = "현재 해당 공유 캘린더의 일정, 근무 및 출퇴근 기록은 자동으로 공유되며 종류별로 끌 수 없습니다. 일정 제목과 시간, 출퇴근 기록의 출근・퇴근 및 휴게 시간은 공유됩니다. 메모, 미리 알림과 알림, 음성 입력 내용, 시급, 급여, 교통비, 근무 템플릿, 설정 및 광고 제거 구입 상태는 공유되지 않습니다.";
 "help.sharing.stop.question" = "공유를 중단하거나 삭제하면 어떻게 되나요?";
@@ -447,8 +448,11 @@
 "calendar_sharing.my_calendar" = "내 캘린더";
 "calendar_sharing.owned_calendars" = "공유 캘린더";
 "calendar_sharing.create_calendar" = "공유 캘린더 만들기";
-"calendar_sharing.no_shared_calendars" = "공유 캘린더가 없습니다";
+"calendar_sharing.no_shared_calendars" = "공유 캘린더가 아직 없습니다";
+"calendar_sharing.no_shared_calendars_message" = "가족이나 동료가 일정과 근무를 볼 수 있도록 읽기 전용 공유를 만들 수 있습니다.";
 "calendar_sharing.read_only" = "보기 전용";
+"calendar_sharing.read_only_add.title" = "읽기 전용 캘린더";
+"calendar_sharing.read_only_add.message" = "이 공유 캘린더는 읽기 전용입니다. 일정이나 근무 기록을 추가하려면 편집 가능한 캘린더로 전환하세요.";
 "calendar_sharing.calendar_name" = "공유 캘린더 이름";
 "calendar_sharing.default_calendar_name" = "내 공유 캘린더";
 "calendar_sharing.default_name_with_owner" = "%@의 공유 캘린더";
@@ -562,6 +566,8 @@
 
 /* Shift Batch */
 "shift_template.favorites" = "자주 쓰는 근무";
+"shift_template.empty.title" = "근무 템플릿이 아직 없습니다";
+"shift_template.empty.message" = "주간·야간 등 자주 쓰는 템플릿을 만들면 여러 날짜에 더 빠르게 근무를 배정할 수 있습니다.";
 "shift_template.favorite" = "즐겨찾기에 추가";
 "shift_template.unfavorite" = "즐겨찾기에서 제거";
 "shift_template.delete_confirmation.title" = "근무 템플릿을 삭제할까요?";

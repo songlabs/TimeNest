@@ -237,7 +237,10 @@ enum LocalizedString: String {
     case calendarSharingOwnedCalendars = "calendar_sharing.owned_calendars"
     case calendarSharingCreateCalendar = "calendar_sharing.create_calendar"
     case calendarSharingNoSharedCalendars = "calendar_sharing.no_shared_calendars"
+    case calendarSharingNoSharedCalendarsMessage = "calendar_sharing.no_shared_calendars_message"
     case calendarSharingReadOnly = "calendar_sharing.read_only"
+    case calendarSharingReadOnlyAddTitle = "calendar_sharing.read_only_add.title"
+    case calendarSharingReadOnlyAddMessage = "calendar_sharing.read_only_add.message"
     case calendarSharingCalendarName = "calendar_sharing.calendar_name"
     case calendarSharingDefaultCalendarName = "calendar_sharing.default_calendar_name"
     case calendarSharingDefaultNameWithOwner = "calendar_sharing.default_name_with_owner"
@@ -349,6 +352,8 @@ enum LocalizedString: String {
     // MARK: - Shift Batch
 
     case shiftTemplateFavorites = "shift_template.favorites"
+    case shiftTemplateEmptyTitle = "shift_template.empty.title"
+    case shiftTemplateEmptyMessage = "shift_template.empty.message"
     case shiftTemplateFavorite = "shift_template.favorite"
     case shiftTemplateUnfavorite = "shift_template.unfavorite"
     case shiftTemplateDeleteConfirmationTitle = "shift_template.delete_confirmation.title"
@@ -514,6 +519,7 @@ enum LocalizedString: String {
     case workRecordDefaultTitle = "work_record.default_title"
     case workRecordSectionTitle = "work_record.section_title"
     case workRecordEmpty = "work_record.empty"
+    case workRecordEmptyMessage = "work_record.empty_message"
     case workRecordMissingClockIn = "work_record.missing_clock_in"
     case workRecordMissingClockOut = "work_record.missing_clock_out"
 

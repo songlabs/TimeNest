@@ -167,7 +167,8 @@
 "work_record.edit" = "Edit Work Record";
 "work_record.default_title" = "Work";
 "work_record.section_title" = "Work Records";
-"work_record.empty" = "No work records";
+"work_record.empty" = "No work records yet";
+"work_record.empty_message" = "Record actual clock-in, clock-out, and break times for this date.";
 "work_record.missing_clock_in" = "No clock-in";
 "work_record.missing_clock_out" = "No clock-out";
 
@@ -348,7 +349,7 @@
 "help.category.privacy" = "Data and Privacy";
 
 "help.events.add.question" = "How do I add an event?";
-"help.events.add.answer" = "Tap the add button at the bottom right of the calendar, enter the details, and save. The memo field also supports voice input on supported devices and languages.";
+"help.events.add.answer" = "Tap the add button at the bottom right of a calendar you can edit, enter the details, and save. The displayed calendar is assigned automatically, and editing keeps the entry in its original calendar. The memo field also supports voice input on supported devices and languages.";
 "help.events.all_day.question" = "What is an all-day event?";
 "help.events.all_day.answer" = "It is shown for the whole day without a specific start or end time.";
 "help.events.edit_delete.question" = "How do I edit or delete an event?";
@@ -394,7 +395,7 @@
 "help.sharing.switch.question" = "How do I switch the displayed calendar?";
 "help.sharing.switch.answer" = "Tap the calendar icon at the top left and choose My Calendar or one shared calendar. The checkmark identifies the calendar currently displayed. Only one calendar is displayed at a time.";
 "help.sharing.read_only_holidays.question" = "Can I edit a shared calendar, and how are holidays shown?";
-"help.sharing.read_only_holidays.answer" = "Recipients can view shared events, shifts, and work records but cannot edit them. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.";
+"help.sharing.read_only_holidays.answer" = "Recipients can view shared events, shifts, and work records but cannot add or edit them. If you try to add an entry, switch to a calendar you can edit. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.";
 "help.sharing.content.question" = "What is and is not shared?";
 "help.sharing.content.answer" = "Events, shifts, and work records in that shared calendar are currently shared automatically and cannot be disabled by category. Event titles and times, plus work-record clock-in, clock-out, and break times, are shared. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift templates, settings, and Remove Ads purchase state are not shared.";
 "help.sharing.stop.question" = "What happens when sharing is stopped or deleted?";
@@ -447,8 +448,11 @@
 "calendar_sharing.my_calendar" = "My Calendar";
 "calendar_sharing.owned_calendars" = "Shared Calendars";
 "calendar_sharing.create_calendar" = "Create Shared Calendar";
-"calendar_sharing.no_shared_calendars" = "No shared calendars";
+"calendar_sharing.no_shared_calendars" = "No shared calendars yet";
+"calendar_sharing.no_shared_calendars_message" = "Create read-only sharing so family or coworkers can view events and shifts.";
 "calendar_sharing.read_only" = "View Only";
+"calendar_sharing.read_only_add.title" = "Read-Only Calendar";
+"calendar_sharing.read_only_add.message" = "This shared calendar is read-only. To add an event or work record, switch to a calendar you can edit.";
 "calendar_sharing.calendar_name" = "Shared Calendar Name";
 "calendar_sharing.default_calendar_name" = "My Shared Calendar";
 "calendar_sharing.default_name_with_owner" = "%@'s Shared Calendar";
@@ -562,6 +566,8 @@
 
 /* Shift Batch */
 "shift_template.favorites" = "Favorite Shifts";
+"shift_template.empty.title" = "No shift templates yet";
+"shift_template.empty.message" = "Create common day or night shift templates to schedule multiple dates faster.";
 "shift_template.favorite" = "Add to favorites";
 "shift_template.unfavorite" = "Remove from favorites";
 "shift_template.delete_confirmation.title" = "Delete Shift Template?";

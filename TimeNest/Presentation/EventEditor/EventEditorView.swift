@@ -105,6 +105,51 @@ enum EntryEditorKind: Hashable {
     case workRecord
 }
 
+enum EntryCalendarContext: Equatable {
+    case fixedWritableCalendar(UUID)
+    case needsCalendarSelection(initialCalendarID: UUID)
+    case readOnlyCalendar(UUID)
+
+    var showsCalendarSelector: Bool {
+        if case .needsCalendarSelection = self {
+            return true
+        }
+        return false
+    }
+
+    var allowsEditing: Bool {
+        if case .readOnlyCalendar = self {
+            return false
+        }
+        return true
+    }
+
+    func initialCalendarID(in calendars: [TimeNestCalendar]) -> UUID {
+        switch self {
+        case .fixedWritableCalendar(let calendarID), .readOnlyCalendar(let calendarID):
+            return calendarID
+        case .needsCalendarSelection(let preferredCalendarID):
+            let writableCalendars = calendars.filter(\.canEditContent)
+            if writableCalendars.contains(where: { $0.id == preferredCalendarID }) {
+                return preferredCalendarID
+            }
+            if writableCalendars.contains(where: { $0.id == TimeNestCalendar.personalID }) {
+                return TimeNestCalendar.personalID
+            }
+            return writableCalendars.first?.id ?? TimeNestCalendar.personalID
+        }
+    }
+
+    func resolvedCalendarID(selectedCalendarID: UUID) -> UUID {
+        switch self {
+        case .fixedWritableCalendar(let calendarID), .readOnlyCalendar(let calendarID):
+            return calendarID
+        case .needsCalendarSelection:
+            return selectedCalendarID
+        }
+    }
+}
+
 
 private enum NotificationSaveAlert: Identifiable {
     case denied
@@ -176,6 +221,7 @@ struct EventEditorView: View {
     var onSave: EventEditorSaveAction
     private let showsEntryKindPicker: Bool
     private let availableCalendars: [TimeNestCalendar]
+    private let calendarContext: EntryCalendarContext
 
     @State private var selectedEntryKind: EntryEditorKind
     @State private var selectedCalendarID: UUID
@@ -231,15 +277,18 @@ struct EventEditorView: View {
         initialEntryKind: EntryEditorKind = .event,
         showsEntryKindPicker: Bool = false,
         availableCalendars: [TimeNestCalendar] = [],
-        initialCalendarID: UUID = TimeNestCalendar.personalID,
+        calendarContext: EntryCalendarContext = .fixedWritableCalendar(TimeNestCalendar.personalID),
         onSave: @escaping EventEditorSaveAction
     ) {
         _isPresented = isPresented
         self.mode = mode
         self.existingEvents = existingEvents
         self.onSave = onSave
-        self.availableCalendars = availableCalendars
-        _selectedCalendarID = State(initialValue: initialCalendarID)
+        self.availableCalendars = availableCalendars.filter(\.canEditContent)
+        self.calendarContext = calendarContext
+        _selectedCalendarID = State(
+            initialValue: calendarContext.initialCalendarID(in: availableCalendars)
+        )
         let isCreateMode: Bool
         switch mode {
         case .create:
@@ -315,7 +364,7 @@ struct EventEditorView: View {
 
                     ScrollView {
                         VStack(spacing: EventEditorStyle.sectionSpacing) {
-                            if !availableCalendars.isEmpty {
+                            if calendarContext.showsCalendarSelector && !availableCalendars.isEmpty {
                                 CalendarAssignmentEditorSection(
                                     calendars: availableCalendars,
                                     selectedCalendarID: $selectedCalendarID
@@ -370,14 +419,20 @@ struct EventEditorView: View {
             }
         }
         .presentationDetents([.fraction(0.6), .large])
+        .accessibilityIdentifier("entry.editor")
     }
 
     private var entryKindPicker: some View {
         Picker("", selection: $selectedEntryKind) {
-            Text(localization.localized(.entryKindEvent)).tag(EntryEditorKind.event)
-            Text(localization.localized(.entryKindWorkRecord)).tag(EntryEditorKind.workRecord)
+            Text(localization.localized(.entryKindEvent))
+                .tag(EntryEditorKind.event)
+                .accessibilityIdentifier("entry.kind.event")
+            Text(localization.localized(.entryKindWorkRecord))
+                .tag(EntryEditorKind.workRecord)
+                .accessibilityIdentifier("entry.kind.workRecord")
         }
         .pickerStyle(.segmented)
+        .accessibilityIdentifier("entry.kind")
     }
 
     @ViewBuilder
@@ -497,6 +552,7 @@ struct EventEditorView: View {
                 validationText(errorMessage)
             }
         }
+        .accessibilityIdentifier("workRecord.editor")
     }
 
     private func validationText(_ text: String) -> some View {
@@ -718,6 +774,7 @@ struct EventEditorView: View {
     }
 
     private var canSave: Bool {
+        guard calendarContext.allowsEditing else { return false }
         if showsEntryKindPicker && selectedEntryKind == .workRecord {
             return !saving
         }
@@ -921,7 +978,7 @@ struct EventEditorView: View {
                 reminderOffsetMinutes,
                 selectedShiftTemplateID,
                 saveContext.workInfo,
-                selectedCalendarID
+                calendarContext.resolvedCalendarID(selectedCalendarID: selectedCalendarID)
             )
             saving = false
             if let alert = NotificationSaveAlert(result: notificationResult) {
@@ -954,7 +1011,7 @@ struct EventEditorView: View {
                         reminderOffsetMinutes,
                         shiftTemplateID,
                         workInfo,
-                        selectedCalendarID
+                        calendarContext.resolvedCalendarID(selectedCalendarID: selectedCalendarID)
                     )
                 },
                 onUpdateEvent: nil
@@ -1434,6 +1491,7 @@ struct WorkRecordEditorView: View {
     var onUpdateEvent: WorkRecordEventUpdateAction?
     var onSaved: (() -> Void)?
     private let availableCalendars: [TimeNestCalendar]
+    private let calendarContext: EntryCalendarContext
 
     @State private var workDate: Date
     @State private var selectedCalendarID: UUID
@@ -1457,7 +1515,7 @@ struct WorkRecordEditorView: View {
         mode: WorkRecordEditorMode,
         existingEvents: [EventOccurrence] = [],
         availableCalendars: [TimeNestCalendar] = [],
-        initialCalendarID: UUID = TimeNestCalendar.personalID,
+        calendarContext: EntryCalendarContext = .fixedWritableCalendar(TimeNestCalendar.personalID),
         onCreateEvent: @escaping WorkRecordEventCreateAction,
         onUpdateEvent: WorkRecordEventUpdateAction? = nil,
         onSaved: (() -> Void)? = nil
@@ -1465,8 +1523,11 @@ struct WorkRecordEditorView: View {
         _isPresented = isPresented
         self.mode = mode
         self.existingEvents = existingEvents
-        self.availableCalendars = availableCalendars
-        _selectedCalendarID = State(initialValue: initialCalendarID)
+        self.availableCalendars = availableCalendars.filter(\.canEditContent)
+        self.calendarContext = calendarContext
+        _selectedCalendarID = State(
+            initialValue: calendarContext.initialCalendarID(in: availableCalendars)
+        )
         self.onCreateEvent = onCreateEvent
         self.onUpdateEvent = onUpdateEvent
         self.onSaved = onSaved
@@ -1494,7 +1555,7 @@ struct WorkRecordEditorView: View {
                         title: editorTitle,
                         cancelTitle: localization.localized(.editorCancel),
                         saveTitle: localization.localized(.editorSave),
-                        canSave: !saving,
+                        canSave: calendarContext.allowsEditing && !saving,
                         saving: saving,
                         onCancel: { isPresented = false },
                         onSave: {
@@ -1506,7 +1567,7 @@ struct WorkRecordEditorView: View {
 
                     ScrollView {
                         VStack(spacing: EventEditorStyle.sectionSpacing) {
-                            if !availableCalendars.isEmpty {
+                            if calendarContext.showsCalendarSelector && !availableCalendars.isEmpty {
                                 CalendarAssignmentEditorSection(
                                     calendars: availableCalendars,
                                     selectedCalendarID: $selectedCalendarID
@@ -1717,7 +1778,7 @@ struct WorkRecordEditorView: View {
                         reminderOffsetMinutes,
                         shiftTemplateID,
                         workInfo,
-                        selectedCalendarID
+                        calendarContext.resolvedCalendarID(selectedCalendarID: selectedCalendarID)
                     )
                 },
                 onUpdateEvent: onUpdateEvent.map { update in
@@ -1732,7 +1793,7 @@ struct WorkRecordEditorView: View {
                             reminderOffsetMinutes,
                             shiftTemplateID,
                             workInfo,
-                            selectedCalendarID
+                            calendarContext.resolvedCalendarID(selectedCalendarID: selectedCalendarID)
                         )
                     }
                 }
@@ -1845,12 +1906,14 @@ private struct EditorHeader: View {
                 Button(cancelTitle, action: onCancel)
                     .buttonStyle(HeaderCapsuleButtonStyle(isEnabled: !saving))
                     .disabled(saving)
+                    .accessibilityIdentifier("entry.editor.cancel")
 
                 Spacer()
 
                 Button(saveTitle, action: onSave)
                     .buttonStyle(HeaderCapsuleButtonStyle(isEnabled: canSave && !saving))
                     .disabled(!canSave || saving)
+                    .accessibilityIdentifier("entry.editor.save")
             }
         }
         .padding(.horizontal, EventEditorStyle.horizontalPadding)
@@ -2410,6 +2473,7 @@ private struct TitleInputSection: View {
             .background(EventEditorStyle.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: EventEditorStyle.cardCornerRadius, style: .continuous))
             .tint(EventEditorStyle.primaryText)
+            .accessibilityIdentifier("entry.title")
     }
 }
 
@@ -2805,5 +2869,6 @@ private struct CalendarAssignmentEditorSection: View {
                 style: .continuous
             )
         )
+        .accessibilityIdentifier("entry.calendarSelector")
     }
 }

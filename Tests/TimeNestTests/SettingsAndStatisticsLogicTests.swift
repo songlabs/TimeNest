@@ -61,6 +61,13 @@ final class ShiftTimeTemplateLogicTests: XCTestCase {
         XCTAssertFalse(custom.enabled)
     }
 
+    func testDeletingBothBuiltInTemplatesProducesLoadedEmptyCollection() {
+        defaults.set(true, forKey: "shiftTemplate.deleted.day")
+        defaults.set(true, forKey: "shiftTemplate.deleted.night")
+
+        XCTAssertTrue(ShiftTimeTemplate.all(from: defaults).isEmpty)
+    }
+
     func testHourMinuteRejectsInvalidTimes() {
         XCTAssertEqual(ShiftTimeTemplate.hourMinute(from: "23:59")?.hour, 23)
         XCTAssertNil(ShiftTimeTemplate.hourMinute(from: "24:00"))

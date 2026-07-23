@@ -130,8 +130,10 @@ public enum TimeNestStrings: Sendable {
       public static let leaveConfirmation = TimeNestStrings.tr("Localizable", "calendar_sharing.leave_confirmation")
       /// My Calendar
       public static let myCalendar = TimeNestStrings.tr("Localizable", "calendar_sharing.my_calendar")
-      /// No shared calendars
+      /// No shared calendars yet
       public static let noSharedCalendars = TimeNestStrings.tr("Localizable", "calendar_sharing.no_shared_calendars")
+      /// Create read-only sharing so family or coworkers can view events and shifts.
+      public static let noSharedCalendarsMessage = TimeNestStrings.tr("Localizable", "calendar_sharing.no_shared_calendars_message")
       /// Shared Calendars
       public static let ownedCalendars = TimeNestStrings.tr("Localizable", "calendar_sharing.owned_calendars")
       /// Owner
@@ -284,6 +286,13 @@ public enum TimeNestStrings: Sendable {
       public enum LastSuccessfulSync: Sendable {
         /// Not yet synced
         public static let never = TimeNestStrings.tr("Localizable", "calendar_sharing.last_successful_sync.never")
+      }
+
+      public enum ReadOnlyAdd: Sendable {
+        /// This shared calendar is read-only. To add an event or work record, switch to a calendar you can edit.
+        public static let message = TimeNestStrings.tr("Localizable", "calendar_sharing.read_only_add.message")
+        /// Read-Only Calendar
+        public static let title = TimeNestStrings.tr("Localizable", "calendar_sharing.read_only_add.title")
       }
 
       public enum Settings: Sendable {
@@ -607,7 +616,7 @@ public enum TimeNestStrings: Sendable {
       public enum Events: Sendable {
       
         public enum Add: Sendable {
-          /// Tap the add button at the bottom right of the calendar, enter the details, and save. The memo field also supports voice input on supported devices and languages.
+          /// Tap the add button at the bottom right of a calendar you can edit, enter the details, and save. The displayed calendar is assigned automatically, and editing keeps the entry in its original calendar. The memo field also supports voice input on supported devices and languages.
           public static let answer = TimeNestStrings.tr("Localizable", "help.events.add.answer")
           /// How do I add an event?
           public static let question = TimeNestStrings.tr("Localizable", "help.events.add.question")
@@ -720,7 +729,7 @@ public enum TimeNestStrings: Sendable {
         }
 
         public enum ReadOnlyHolidays: Sendable {
-          /// Recipients can view shared events, shifts, and work records but cannot edit them. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.
+          /// Recipients can view shared events, shifts, and work records but cannot add or edit them. If you try to add an entry, switch to a calendar you can edit. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.
           public static let answer = TimeNestStrings.tr("Localizable", "help.sharing.read_only_holidays.answer")
           /// Can I edit a shared calendar, and how are holidays shown?
           public static let question = TimeNestStrings.tr("Localizable", "help.sharing.read_only_holidays.question")
@@ -1240,6 +1249,13 @@ public enum TimeNestStrings: Sendable {
         /// Existing shifts will not be deleted.
         public static let unused = TimeNestStrings.tr("Localizable", "shift_template.delete_confirmation.unused")
       }
+
+      public enum Empty: Sendable {
+        /// Create common day or night shift templates to schedule multiple dates faster.
+        public static let message = TimeNestStrings.tr("Localizable", "shift_template.empty.message")
+        /// No shift templates yet
+        public static let title = TimeNestStrings.tr("Localizable", "shift_template.empty.title")
+      }
     }
 
     public enum ShiftTime: Sendable {
@@ -1418,8 +1434,10 @@ public enum TimeNestStrings: Sendable {
       public static let defaultTitle = TimeNestStrings.tr("Localizable", "work_record.default_title")
       /// Edit Work Record
       public static let edit = TimeNestStrings.tr("Localizable", "work_record.edit")
-      /// No work records
+      /// No work records yet
       public static let empty = TimeNestStrings.tr("Localizable", "work_record.empty")
+      /// Record actual clock-in, clock-out, and break times for this date.
+      public static let emptyMessage = TimeNestStrings.tr("Localizable", "work_record.empty_message")
       /// No clock-in
       public static let missingClockIn = TimeNestStrings.tr("Localizable", "work_record.missing_clock_in")
       /// No clock-out

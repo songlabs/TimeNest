@@ -251,6 +251,48 @@ private enum CalendarSelectionLayout {
     static let actionButtonHorizontalPadding: CGFloat = 2
 }
 
+enum CalendarSelectionSharedListState: Equatable {
+    case loading
+    case error
+    case empty
+    case content
+
+    static func resolve(
+        iCloudStatus: CalendarSharingICloudStatus,
+        syncStatus: CalendarSharingSyncStatus,
+        hasError: Bool,
+        hasSharedCalendars: Bool
+    ) -> Self {
+        // Keep previously loaded content visible while a refresh is in progress or fails.
+        if hasSharedCalendars {
+            return .content
+        }
+
+        switch iCloudStatus {
+        case .unknown, .checking:
+            return .loading
+        case .available:
+            break
+        case .noAccount, .restricted, .temporarilyUnavailable,
+             .couldNotDetermine, .requestFailed:
+            return .error
+        }
+
+        if hasError || syncStatus == .failed {
+            return .error
+        }
+
+        switch syncStatus {
+        case .idle, .syncing:
+            return .loading
+        case .synced:
+            return .empty
+        case .failed:
+            return .error
+        }
+    }
+}
+
 @MainActor
 struct CalendarSelectionView: View {
     @EnvironmentObject private var sharingStore: CalendarSharingStore
@@ -268,6 +310,15 @@ struct CalendarSelectionView: View {
         sharingStore.calendars.filter { $0.kind == .sharedReceived }
     }
 
+    private var sharedListState: CalendarSelectionSharedListState {
+        CalendarSelectionSharedListState.resolve(
+            iCloudStatus: sharingStore.iCloudStatus,
+            syncStatus: sharingStore.syncStatus,
+            hasError: sharingStore.lastError != nil,
+            hasSharedCalendars: !owned.isEmpty || !received.isEmpty
+        )
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -279,24 +330,43 @@ struct CalendarSelectionView: View {
                     }
                 }
 
-                Section(localization.localized(.calendarSharingOwnedCalendars)) {
-                    if owned.isEmpty && received.isEmpty {
-                        Text(localization.localized(.calendarSharingNoSharedCalendars))
-                            .foregroundStyle(.secondary)
-                    } else {
+                if sharedListState == .content {
+                    Section(localization.localized(.calendarSharingOwnedCalendars)) {
                         ForEach(owned) { calendarRow($0) }
                         ForEach(received) { calendarRow($0) }
+                    }
+                } else if sharedListState == .loading {
+                    Section(localization.localized(.calendarSharingOwnedCalendars)) {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                            Text(localization.localized(.calendarSharingStateSyncing))
+                                .foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("sharing.loading")
+                    }
+                } else if sharedListState == .empty {
+                    Section(localization.localized(.calendarSharingOwnedCalendars)) {
+                        TimeNestActionableEmptyStateView(
+                            actionTitle: localization.localized(.calendarSharingCreateCalendar),
+                            containerIdentifier: "sharing.empty",
+                            actionIdentifier: "sharing.empty.create",
+                            action: { actionState.requestCreate() }
+                        )
                     }
                 }
 
                 Section {
-                    Button {
-                        actionState.requestCreate()
-                    } label: {
-                        Label(
-                            localization.localized(.calendarSharingCreateCalendar),
-                            systemImage: "plus.circle.fill"
-                        )
+                    if sharedListState != .empty {
+                        Button {
+                            actionState.requestCreate()
+                        } label: {
+                            Label(
+                                localization.localized(.calendarSharingCreateCalendar),
+                                systemImage: "plus.circle.fill"
+                            )
+                        }
+                        .accessibilityIdentifier("sharing.create")
                     }
                     Button {
                         actionState.requestInvitationLinkInput()
@@ -307,6 +377,7 @@ struct CalendarSelectionView: View {
                         )
                     }
                     .foregroundStyle(.secondary)
+                    .accessibilityIdentifier("sharing.invitationLink")
                 }
 
                 if let error = sharingStore.lastError {
@@ -325,11 +396,13 @@ struct CalendarSelectionView: View {
                     }
                 }
             }
+            .accessibilityIdentifier("sharing.calendarList")
             .navigationTitle(localization.localized(.calendarSharingSelectCalendar))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button(localization.localized(.cancel)) { dismiss() }
+                        .accessibilityIdentifier("sharing.cancel")
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -735,6 +808,7 @@ private struct CreateSharedCalendarView: View {
                             )
                         )
                             .textInputAutocapitalization(.sentences)
+                            .accessibilityIdentifier("sharing.createCalendar.name")
                     }
 
                     Section {
@@ -763,9 +837,11 @@ private struct CreateSharedCalendarView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localization.localized(.cancel)) { dismiss() }
                         .disabled(isWorking)
+                        .accessibilityIdentifier("sharing.createCalendar.cancel")
                 }
             }
         }
+        .accessibilityIdentifier("sharing.createCalendar")
         .calendarSharingPresentation()
         .onAppear {
             nameDraft.initialize(

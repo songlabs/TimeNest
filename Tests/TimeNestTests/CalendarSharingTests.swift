@@ -61,6 +61,71 @@ final class CalendarSelectionAndPolicyTests: XCTestCase {
         XCTAssertTrue(state.isCreating)
     }
 
+    func testSharedListStateShowsEmptyOnlyAfterSuccessfulRefresh() {
+        XCTAssertEqual(
+            CalendarSelectionSharedListState.resolve(
+                iCloudStatus: .unknown,
+                syncStatus: .idle,
+                hasError: false,
+                hasSharedCalendars: false
+            ),
+            .loading
+        )
+        XCTAssertEqual(
+            CalendarSelectionSharedListState.resolve(
+                iCloudStatus: .available,
+                syncStatus: .syncing,
+                hasError: false,
+                hasSharedCalendars: false
+            ),
+            .loading
+        )
+        XCTAssertEqual(
+            CalendarSelectionSharedListState.resolve(
+                iCloudStatus: .available,
+                syncStatus: .synced,
+                hasError: false,
+                hasSharedCalendars: false
+            ),
+            .empty
+        )
+    }
+
+    func testSharedListStateKeepsErrorsAndUnavailableICloudOutOfEmptyState() {
+        XCTAssertEqual(
+            CalendarSelectionSharedListState.resolve(
+                iCloudStatus: .noAccount,
+                syncStatus: .failed,
+                hasError: true,
+                hasSharedCalendars: false
+            ),
+            .error
+        )
+        XCTAssertEqual(
+            CalendarSelectionSharedListState.resolve(
+                iCloudStatus: .available,
+                syncStatus: .synced,
+                hasError: true,
+                hasSharedCalendars: false
+            ),
+            .error
+        )
+    }
+
+    func testSharedListStatePreservesExistingContentDuringRefreshOrFailure() {
+        for syncStatus in [CalendarSharingSyncStatus.syncing, .failed] {
+            XCTAssertEqual(
+                CalendarSelectionSharedListState.resolve(
+                    iCloudStatus: .available,
+                    syncStatus: syncStatus,
+                    hasError: syncStatus == .failed,
+                    hasSharedCalendars: true
+                ),
+                .content
+            )
+        }
+    }
+
     func testManualInvitationEntryOpensItsOwnRoute() {
         var state = CalendarSelectionActionState()
 
@@ -672,7 +737,7 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(descriptor.ownerDisplayName)
     }
 
-    func testProjectKeepsMarketingVersionOnePointFiveAndBuildEleven() throws {
+    func testProjectKeepsMarketingVersionOnePointSixAndBuildTwelve() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -682,8 +747,8 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(project.contains("let marketingVersion = \"1.5\""))
-        XCTAssertTrue(project.contains("let buildNumber = \"11\""))
+        XCTAssertTrue(project.contains("let marketingVersion = \"1.6\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"12\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {

@@ -167,7 +167,8 @@
 "work_record.edit" = "編輯打工記錄";
 "work_record.default_title" = "打工";
 "work_record.section_title" = "打工記錄";
-"work_record.empty" = "暫無打工記錄";
+"work_record.empty" = "還沒有工時記錄";
+"work_record.empty_message" = "可以登記這一天實際的上班、下班和休息時間。";
 "work_record.missing_clock_in" = "未上班";
 "work_record.missing_clock_out" = "未下班";
 
@@ -348,7 +349,7 @@
 "help.category.privacy" = "資料與隱私";
 
 "help.events.add.question" = "如何新增行程？";
-"help.events.add.answer" = "點擊行事曆右下角的新增按鈕，填寫內容後儲存。備忘欄在支援的裝置和語言下也可以使用語音輸入。";
+"help.events.add.answer" = "在可編輯的日曆中點擊右下角的新增按鈕，填寫內容後儲存。目前顯示的日曆會自動設為目標，編輯時也會保留原日曆。備忘欄在支援的裝置和語言下也可以使用語音輸入。";
 "help.events.all_day.question" = "什麼是全天行程？";
 "help.events.all_day.answer" = "不指定開始和結束時間，並作為一整天的行程顯示。";
 "help.events.edit_delete.question" = "如何編輯或刪除行程？";
@@ -394,7 +395,7 @@
 "help.sharing.switch.question" = "如何切換顯示的日曆？";
 "help.sharing.switch.answer" = "點擊行事曆左上角的圖示，選擇「我的日曆」或一個共享日曆。勾選符號表示目前正在顯示的日曆。每次只能顯示一個日曆。";
 "help.sharing.read_only_holidays.question" = "可以編輯共享日曆嗎？節假日如何顯示？";
-"help.sharing.read_only_holidays.answer" = "接收方只能查看共享的行程、班次和工作記錄，不能編輯。節假日不會透過 CloudKit 共享，而是依接收方裝置已啟用的地區和本機快取顯示。";
+"help.sharing.read_only_holidays.answer" = "接收方只能查看共享的行程、班次和工作記錄，不能新增或編輯。若嘗試新增，請先切換至可編輯的日曆。節假日不會透過 CloudKit 共享，而是依接收方裝置已啟用的地區和本機快取顯示。";
 "help.sharing.content.question" = "哪些內容會共享，哪些不會？";
 "help.sharing.content.answer" = "目前會自動共享該共享日曆中的行程、班次和工作記錄，暫時無法按類別個別關閉。行程標題和時間、工作記錄中的上班時間、下班時間與休息時間會共享。備忘、提醒與通知、語音輸入內容、時薪、薪資、交通費、班次範本、設定以及移除廣告的購買狀態不會共享。";
 "help.sharing.stop.question" = "停止或刪除共享後會怎樣？";
@@ -447,8 +448,11 @@
 "calendar_sharing.my_calendar" = "我的日曆";
 "calendar_sharing.owned_calendars" = "共享日曆";
 "calendar_sharing.create_calendar" = "建立共享日曆";
-"calendar_sharing.no_shared_calendars" = "目前沒有共享日曆";
+"calendar_sharing.no_shared_calendars" = "還沒有共享日曆";
+"calendar_sharing.no_shared_calendars_message" = "可以建立唯讀共享，讓家人或同事查看行程和班次。";
 "calendar_sharing.read_only" = "僅供檢視";
+"calendar_sharing.read_only_add.title" = "唯讀日曆";
+"calendar_sharing.read_only_add.message" = "這個共享日曆為唯讀。若要新增行程或工作記錄，請先切換至可編輯的日曆。";
 "calendar_sharing.calendar_name" = "共享日曆名稱";
 "calendar_sharing.default_calendar_name" = "我的共享日曆";
 "calendar_sharing.default_name_with_owner" = "%@的共享日曆";
@@ -562,6 +566,8 @@
 
 /* Shift Batch */
 "shift_template.favorites" = "常用班次";
+"shift_template.empty.title" = "還沒有班次範本";
+"shift_template.empty.message" = "建立早班、晚班等常用範本後，可以更快安排多個日期。";
 "shift_template.favorite" = "收藏";
 "shift_template.unfavorite" = "取消收藏";
 "shift_template.delete_confirmation.title" = "刪除班次範本？";

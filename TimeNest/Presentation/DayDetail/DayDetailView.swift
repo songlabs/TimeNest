@@ -20,7 +20,7 @@ struct DayDetailView: View {
     let onCreateEvent: EventEditorSaveAction
     let onUpdateEvent: EventEditorUpdateAction
     var availableCalendars: [TimeNestCalendar] = []
-    var initialCalendarID: UUID = TimeNestCalendar.personalID
+    var entryCalendarContext: EntryCalendarContext = .fixedWritableCalendar(TimeNestCalendar.personalID)
 
     @State private var editingEvent: EditingEvent?
     @State private var showingAddEntry: Bool = false
@@ -47,6 +47,7 @@ struct DayDetailView: View {
                 .padding(.top, DayDetailLayout.contentTopPadding)
                 .padding(.bottom, DayDetailLayout.bottomPadding)
             }
+            .accessibilityIdentifier("dayDetail.content")
         }
         .background(SettingsModalSurface.background)
         .presentationDetents([.fraction(DayDetailLayout.presentationHeightFraction)])
@@ -59,7 +60,7 @@ struct DayDetailView: View {
                 initialEntryKind: addEntryInitialKind,
                 showsEntryKindPicker: true,
                 availableCalendars: availableCalendars,
-                initialCalendarID: initialCalendarID,
+                calendarContext: entryCalendarContext,
                 onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                     try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
                 }
@@ -81,7 +82,7 @@ struct DayDetailView: View {
                 ),
                 existingEvents: cell.events,
                 availableCalendars: availableCalendars,
-                initialCalendarID: event.calendarID,
+                calendarContext: .fixedWritableCalendar(event.calendarID),
                 onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo, calendarID in
                     try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo, calendarID)
                 }
@@ -93,7 +94,7 @@ struct DayDetailView: View {
                 mode: .edit(session),
                 existingEvents: cell.events,
                 availableCalendars: availableCalendars,
-                initialCalendarID: session.calendarID,
+                calendarContext: .fixedWritableCalendar(session.calendarID),
                 onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                     try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
                 },
@@ -151,23 +152,33 @@ struct DayDetailView: View {
             Text(localization.localized(.workRecordSectionTitle))
                 .font(.title3.weight(.bold))
                 .foregroundColor(.primary)
+                .accessibilityIdentifier("workRecord.list")
 
-            ForEach(workRecordSessions) { session in
-                WorkRecordSessionRowView(
-                    session: session,
-                    selectedDate: cell.date.toDate(),
-                    onEdit: {
-                        editingWorkRecord = session.editorInitialSession(selectedDate: cell.date.toDate())
-                    },
-                    onDelete: {
-                        session.eventIDs.forEach(onDeleteEvent)
-                    }
+            if workRecordSessions.isEmpty {
+                TimeNestActionableEmptyStateView(
+                    actionTitle: localization.localized(.workRecordAdd),
+                    containerIdentifier: "workRecord.empty",
+                    actionIdentifier: "workRecord.empty.create",
+                    action: { presentAddEntry(kind: .workRecord) }
                 )
-            }
+            } else {
+                ForEach(workRecordSessions) { session in
+                    WorkRecordSessionRowView(
+                        session: session,
+                        selectedDate: cell.date.toDate(),
+                        onEdit: {
+                            editingWorkRecord = session.editorInitialSession(selectedDate: cell.date.toDate())
+                        },
+                        onDelete: {
+                            session.eventIDs.forEach(onDeleteEvent)
+                        }
+                    )
+                }
 
-            addWorkRecordButton
-                .frame(maxWidth: .infinity)
-                .padding(.top, DayDetailLayout.sectionButtonTopSpacing)
+                addWorkRecordButton
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, DayDetailLayout.sectionButtonTopSpacing)
+            }
         }
     }
 
@@ -199,6 +210,7 @@ struct DayDetailView: View {
                 .foregroundColor(.white)
                 .clipShape(RoundedRectangle(cornerRadius: TimeNestTheme.controlCornerRadius, style: .continuous))
         }
+        .accessibilityIdentifier("workRecord.add")
     }
 
     private var regularEvents: [EventOccurrence] {
@@ -496,11 +508,13 @@ private struct WorkRecordSessionRowView: View {
                 Image(systemName: "pencil")
                     .foregroundColor(.blue)
             }
+            .accessibilityIdentifier("workRecord.edit")
 
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
             }
+            .accessibilityIdentifier("workRecord.delete")
         }
         .padding()
         .background(Color.gray.opacity(0.1))
@@ -583,11 +597,13 @@ struct EventRowView: View {
                 Image(systemName: "pencil")
                     .foregroundColor(.blue)
             }
+            .accessibilityIdentifier("event.edit")
 
             Button(action: onDelete) {
                 Image(systemName: "trash")
                     .foregroundColor(.red)
             }
+            .accessibilityIdentifier("event.delete")
         }
         .padding()
         .background(Color.gray.opacity(0.1))

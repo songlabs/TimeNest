@@ -1531,6 +1531,7 @@ struct ShiftTimeSettingsView: View {
     @EnvironmentObject private var localization: LocalizationManager
     @State private var selectedShift: ShiftTimeTemplateID?
     @State private var shiftTemplates: [ShiftTimeTemplate] = []
+    @State private var hasLoadedShiftTemplates = false
     @State private var showAddShift: Bool = false
     @State private var favoriteIDs = Set<String>()
     @State private var pendingDeletion: ShiftTimeTemplate?
@@ -1555,45 +1556,58 @@ struct ShiftTimeSettingsView: View {
                 }
                 .padding(.bottom, 8)
                 
-                // Shift List
-                VStack(alignment: .leading, spacing: 12) {
-                    let favorites = shiftTemplates.filter { favoriteIDs.contains($0.id.id) }
-                    let remaining = shiftTemplates.filter { !favoriteIDs.contains($0.id.id) }
+                if !hasLoadedShiftTemplates {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, minHeight: 160)
+                        .accessibilityIdentifier("shiftTemplate.loading")
+                } else if shiftTemplates.isEmpty {
+                    TimeNestActionableEmptyStateView(
+                        actionTitle: localization.localized(.shiftTimeAddButton),
+                        containerIdentifier: "shiftTemplate.empty",
+                        actionIdentifier: "shiftTemplate.empty.create",
+                        action: { showAddShift = true }
+                    )
+                } else {
+                    // Shift List
+                    VStack(alignment: .leading, spacing: 12) {
+                        let favorites = shiftTemplates.filter { favoriteIDs.contains($0.id.id) }
+                        let remaining = shiftTemplates.filter { !favoriteIDs.contains($0.id.id) }
 
-                    if !favorites.isEmpty {
-                        Text(localization.localized(.shiftTemplateFavorites))
-                            .font(.headline)
-                            .accessibilityIdentifier("shiftTemplate.favoriteSection")
-                        ForEach(favorites) { template in
-                            templateRow(template)
+                        if !favorites.isEmpty {
+                            Text(localization.localized(.shiftTemplateFavorites))
+                                .font(.headline)
+                                .accessibilityIdentifier("shiftTemplate.favoriteSection")
+                            ForEach(favorites) { template in
+                                templateRow(template)
+                            }
+                        }
+
+                        if !remaining.isEmpty {
+                            ForEach(remaining) { template in
+                                templateRow(template)
+                            }
                         }
                     }
 
-                    if !remaining.isEmpty {
-                        ForEach(remaining) { template in
-                            templateRow(template)
+                    // Add Button
+                    HStack {
+                        Spacer()
+                        Button {
+                            showAddShift = true
+                        } label: {
+                            Text(localization.localized(.shiftTimeAddButton))
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 12)
+                                .background(Color.blue)
+                                .foregroundColor(.white)
+                                .cornerRadius(8)
                         }
+                        .accessibilityIdentifier("shiftTemplate.add")
+                        Spacer()
                     }
+                    .padding(.top, 8)
                 }
-                
-                // Add Button
-                HStack {
-                    Spacer()
-                    Button {
-                        showAddShift = true
-                    } label: {
-                        Text(localization.localized(.shiftTimeAddButton))
-                            .fontWeight(.medium)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.blue)
-                            .foregroundColor(.white)
-                            .cornerRadius(8)
-                    }
-                    .accessibilityIdentifier("shiftTemplate.add")
-                    Spacer()
-                }
-                .padding(.top, 8)
             }
             .padding()
         }
@@ -1659,6 +1673,7 @@ struct ShiftTimeSettingsView: View {
             validTemplateIDs: shiftTemplates.map(\.id)
         )
         favoriteIDs = Set(ids)
+        hasLoadedShiftTemplates = true
     }
 
     private func requestDeleteShiftTemplate(_ template: ShiftTimeTemplate) {
