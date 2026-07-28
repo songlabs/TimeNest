@@ -16,7 +16,7 @@ Public-holiday subscriptions may download ICS data over HTTPS from the public so
 
 The Widget, if included in the submitted build, reads a local calendar snapshot shared by the app through the App Group on the same device. This App Group data sharing is not cloud synchronization.
 
-The optional Shared Calendar feature uses the user's Apple iCloud account and CloudKit. The owner chooses whether to share events, shifts, and work records. Recipients have read-only access. Memos, notifications, voice content, hourly rates, pay, transport fees, app settings, advertising state, and purchase state are not included in shared records.
+The optional Shared Calendar feature uses the user's Apple iCloud account and CloudKit. Events, shifts, and work records assigned to an owned shared calendar synchronize automatically, and the current implementation has no per-category sharing switches. Recipients have read-only access. Memos, notifications, voice content, hourly rates, pay, transport fees, app settings, advertising state, and purchase state are not included in shared records.
 
 Google Mobile Ads is integrated, and the first release displays banner ads after the required consent flow permits ad requests. The current first release includes a one-time Remove Ads In-App Purchase handled by Apple StoreKit; restored purchases are based on Apple transaction entitlements.
 

@@ -99,7 +99,7 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
 
         let fileURL = cacheFileURL(for: region)
         let data = try JSONEncoder().encode(cache)
-        try data.write(to: fileURL)
+        try data.write(to: fileURL, options: .atomic)
     }
 
     // MARK: - Public Methods
@@ -121,7 +121,7 @@ class HolidayEventCacheRepository: HolidayEventCacheRepositoryProtocol {
             // 保存到文件
             let fileURL = cacheDirectory.appendingPathComponent("\(region.rawValue)_holidays.json")
             let data = try JSONEncoder().encode(existingCache)
-            try data.write(to: fileURL)
+            try data.write(to: fileURL, options: .atomic)
 
             storage.setCache(existingCache, for: region)
         }.value

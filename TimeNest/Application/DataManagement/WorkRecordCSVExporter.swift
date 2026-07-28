@@ -33,163 +33,58 @@ struct CalculatedWorkRecordSession {
 }
 
 enum WorkRecordSessionCalculator {
-    private struct Group {
-        var clockIn: CalendarEvent?
-        var clockOut: CalendarEvent?
-    }
-
     static func sessions(
         from events: [CalendarEvent],
         in selectedRange: DateInterval,
         calendar: Calendar = .current
     ) -> [CalculatedWorkRecordSession] {
-        var sessions: [UUID: Group] = [:]
-        var legacyClockInsByDay: [Date: [CalendarEvent]] = [:]
-        var legacyClockOutsByDay: [Date: [CalendarEvent]] = [:]
-
+        var eventsByID: [UUID: CalendarEvent] = [:]
         for event in events {
-            guard let kind = workClockKind(for: event) else { continue }
-            guard kind != .clockOut || event.isWorkOutTimeSet else { continue }
-            let workDay = calendar.startOfDay(for: event.workInfo?.workDate ?? event.startDate)
+            eventsByID[event.id] = event
+        }
 
-            if let sessionID = event.workInfo?.workSessionId {
-                var group = sessions[sessionID] ?? Group()
-                switch kind {
-                case .clockIn:
-                    let time = event.workInfo?.workInTime ?? event.startDate
-                    if group.clockIn.map({ time < ($0.workInfo?.workInTime ?? $0.startDate) }) ?? true {
-                        group.clockIn = event
-                    }
-                case .clockOut:
-                    let time = event.workInfo?.workOutTime ?? event.startDate
-                    if group.clockOut.map({ time > ($0.workInfo?.workOutTime ?? $0.startDate) }) ?? true {
-                        group.clockOut = event
-                    }
+        let entries = events.compactMap(WorkRecordClockEntry.init(event:))
+        return WorkRecordSessionAssembler.sessions(from: entries, calendar: calendar)
+            .compactMap { session in
+                guard session.isComplete,
+                      let clockInEntry = session.clockIn,
+                      let clockOutEntry = session.clockOut,
+                      case .event(let clockInID) = clockInEntry.sourceID,
+                      case .event(let clockOutID) = clockOutEntry.sourceID,
+                      let clockIn = eventsByID[clockInID],
+                      let clockOut = eventsByID[clockOutID] else {
+                    return nil
                 }
-                sessions[sessionID] = group
-            } else {
-                switch kind {
-                case .clockIn:
-                    legacyClockInsByDay[workDay, default: []].append(event)
-                case .clockOut:
-                    legacyClockOutsByDay[workDay, default: []].append(event)
-                }
-            }
-        }
-
-        for group in sessions.values {
-            if let clockIn = group.clockIn, group.clockOut == nil {
-                let workDay = calendar.startOfDay(for: clockIn.workInfo?.workDate ?? clockIn.startDate)
-                legacyClockInsByDay[workDay, default: []].append(clockIn)
-            }
-            if let clockOut = group.clockOut, group.clockIn == nil {
-                let workDay = calendar.startOfDay(for: clockOut.workInfo?.workDate ?? clockOut.startDate)
-                legacyClockOutsByDay[workDay, default: []].append(clockOut)
-            }
-        }
-
-        let legacyGroups = makeLegacyGroups(
-            clockInsByDay: legacyClockInsByDay,
-            clockOutsByDay: legacyClockOutsByDay,
-            calendar: calendar
-        )
-
-        return (Array(sessions.values) + legacyGroups).compactMap { group in
-            guard let clockIn = group.clockIn, let clockOut = group.clockOut else { return nil }
-            let startTime = clockIn.workInfo?.workInTime ?? clockIn.startDate
-            let endTime = effectiveClockOutTime(
-                for: clockOut,
-                clockInTime: startTime,
-                calendar: calendar
-            )
-            guard endTime > startTime else { return nil }
-            let day = calendar.startOfDay(
-                for: clockIn.workInfo?.workDate
-                    ?? clockOut.workInfo?.workDate
-                    ?? startTime
-            )
-            guard selectedRange.contains(day) else { return nil }
-            let restHours = clockIn.workInfo?.restHours ?? clockOut.workInfo?.restHours ?? 0
-            let workedSeconds = max(0, endTime.timeIntervalSince(startTime) - restHours * 3600)
-            return CalculatedWorkRecordSession(
-                day: day,
-                clockIn: clockIn,
-                clockOut: clockOut,
-                startTime: startTime,
-                endTime: endTime,
-                restHours: restHours,
-                workedSeconds: workedSeconds,
-                workedMinutes: Int(workedSeconds / 60)
-            )
-        }
-        .sorted {
-            if $0.day != $1.day { return $0.day < $1.day }
-            return $0.startTime < $1.startTime
-        }
-    }
-
-    private static func makeLegacyGroups(
-        clockInsByDay: [Date: [CalendarEvent]],
-        clockOutsByDay: [Date: [CalendarEvent]],
-        calendar: Calendar
-    ) -> [Group] {
-        let clockIns = clockInsByDay.values.flatMap { $0 }.sorted {
-            ($0.workInfo?.workInTime ?? $0.startDate) < ($1.workInfo?.workInTime ?? $1.startDate)
-        }
-        let clockOuts = clockOutsByDay.values.flatMap { $0 }.sorted {
-            ($0.workInfo?.workOutTime ?? $0.startDate) < ($1.workInfo?.workOutTime ?? $1.startDate)
-        }
-        var usedClockOutIDs = Set<UUID>()
-        var groups: [Group] = []
-
-        for (index, clockIn) in clockIns.enumerated() {
-            let startTime = clockIn.workInfo?.workInTime ?? clockIn.startDate
-            let nextStartTime = clockIns.dropFirst(index + 1).first.map {
-                $0.workInfo?.workInTime ?? $0.startDate
-            }
-            guard let clockOut = clockOuts.first(where: { candidate in
-                guard !usedClockOutIDs.contains(candidate.id) else { return false }
-                let endTime = effectiveClockOutTime(
-                    for: candidate,
-                    clockInTime: startTime,
+                let startTime = clockInEntry.clockDate
+                let endTime = WorkRecordSessionAssembler.effectiveClockOutDate(
+                    clockOutEntry,
+                    clockInDate: startTime,
                     calendar: calendar
                 )
-                guard endTime > startTime else { return false }
-                if let nextStartTime, endTime >= nextStartTime { return false }
-                return true
-            }) else {
-                continue
+                guard endTime > startTime,
+                      selectedRange.contains(session.workDate) else {
+                    return nil
+                }
+                let restHours = clockInEntry.restHours
+                let workedSeconds = max(
+                    0,
+                    endTime.timeIntervalSince(startTime) - restHours * 3_600
+                )
+                return CalculatedWorkRecordSession(
+                    day: session.workDate,
+                    clockIn: clockIn,
+                    clockOut: clockOut,
+                    startTime: startTime,
+                    endTime: endTime,
+                    restHours: restHours,
+                    workedSeconds: workedSeconds,
+                    workedMinutes: Int(workedSeconds / 60)
+                )
             }
-            usedClockOutIDs.insert(clockOut.id)
-            groups.append(Group(clockIn: clockIn, clockOut: clockOut))
-        }
-        return groups
-    }
-
-    private static func effectiveClockOutTime(
-        for event: CalendarEvent,
-        clockInTime: Date,
-        calendar: Calendar
-    ) -> Date {
-        let endTime = event.workInfo?.workOutTime ?? event.startDate
-        guard calendar.isDate(endTime, inSameDayAs: clockInTime) else { return endTime }
-        let end = calendar.dateComponents([.hour, .minute], from: endTime)
-        let start = calendar.dateComponents([.hour, .minute], from: clockInTime)
-        let endMinutes = (end.hour ?? 0) * 60 + (end.minute ?? 0)
-        let startMinutes = (start.hour ?? 0) * 60 + (start.minute ?? 0)
-        guard endMinutes <= startMinutes else { return endTime }
-        return calendar.date(byAdding: .day, value: 1, to: endTime) ?? endTime
-    }
-
-    private static func workClockKind(for event: CalendarEvent) -> WorkClockKind? {
-        if let kind = event.workClockKind { return kind }
-        if event.workInfo?.workInTime != nil, event.workInfo?.workOutTime == nil {
-            return .clockIn
-        }
-        if event.workInfo?.workOutTime != nil, event.workInfo?.workInTime == nil {
-            return .clockOut
-        }
-        return nil
+            .sorted {
+                if $0.day != $1.day { return $0.day < $1.day }
+                return $0.startTime < $1.startTime
+            }
     }
 }
 

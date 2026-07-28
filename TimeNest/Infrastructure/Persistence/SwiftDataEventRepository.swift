@@ -54,6 +54,50 @@ actor SwiftDataEventRepository: EventRepository {
         }
     }
 
+    func applyBatch(
+        upserting events: [CalendarEvent],
+        deleting eventsToDelete: [CalendarEvent],
+        ifUnchanged expectedEvents: [CalendarEvent]
+    ) async throws {
+        let transactionContext = ModelContext(modelContext.container)
+        transactionContext.autosaveEnabled = false
+        do {
+            let currentEntities = try transactionContext.fetch(
+                FetchDescriptor<SwiftDataCalendarEventEntity>()
+            )
+            let currentEvents = currentEntities.map(SwiftDataEventMapper.makeDomainModel)
+            try EventRepositoryBatchValidator.validateApplyBatch(
+                currentEvents: currentEvents,
+                upserting: events,
+                deleting: eventsToDelete,
+                ifUnchanged: expectedEvents
+            )
+            let currentEntitiesByID = Dictionary(
+                uniqueKeysWithValues: currentEntities.map { ($0.id, $0) }
+            )
+
+            for event in events {
+                if let currentEntity = currentEntitiesByID[event.id] {
+                    SwiftDataEventMapper.update(currentEntity, from: event)
+                } else {
+                    transactionContext.insert(SwiftDataEventMapper.makeEntity(from: event))
+                }
+            }
+
+            for event in eventsToDelete {
+                guard let currentEntity = currentEntitiesByID[event.id] else {
+                    throw EventRepositoryBatchError.eventNotFound
+                }
+                transactionContext.delete(currentEntity)
+            }
+            try transactionContext.save()
+        } catch {
+            transactionContext.rollback()
+            SwiftDataRepositoryLogger.log("apply event batch", error: error)
+            throw error
+        }
+    }
+
     func update(_ event: CalendarEvent) async throws {
         try save(event, operation: "update event")
     }
@@ -94,10 +138,11 @@ actor SwiftDataEventRepository: EventRepository {
 
     func events(in range: DateInterval) async throws -> [CalendarEvent] {
         do {
+            let context = ModelContext(modelContext.container)
             let descriptor = FetchDescriptor<SwiftDataCalendarEventEntity>(
                 sortBy: [SortDescriptor(\.startDate)]
             )
-            return try modelContext.fetch(descriptor)
+            return try context.fetch(descriptor)
                 .map(SwiftDataEventMapper.makeDomainModel)
                 .filter { event in
                     let isWorkClockEvent = event.workClockKind != nil
@@ -114,7 +159,12 @@ actor SwiftDataEventRepository: EventRepository {
 
     func event(id: UUID) async throws -> CalendarEvent? {
         do {
-            return try entity(id: id).map(SwiftDataEventMapper.makeDomainModel)
+            let context = ModelContext(modelContext.container)
+            let descriptor = FetchDescriptor<SwiftDataCalendarEventEntity>(
+                predicate: #Predicate { $0.id == id }
+            )
+            return try context.fetch(descriptor).first
+                .map(SwiftDataEventMapper.makeDomainModel)
         } catch {
             SwiftDataRepositoryLogger.log("fetch event", error: error)
             throw error

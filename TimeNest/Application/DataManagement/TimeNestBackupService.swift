@@ -640,7 +640,7 @@ struct TimeNestBackupService {
                 summary.expiredReminderCount += 1
             case .denied:
                 summary.deniedCount += 1
-            case .failed:
+            case .failed, .failedWithCause:
                 summary.failedCount += 1
             case .noReminder:
                 break

@@ -443,6 +443,9 @@ enum LocalizedString: String {
     case holidaySubscriptionSynced = "holiday_subscription.synced"
     case holidaySubscriptionSyncFailed = "holiday_subscription.sync_failed"
     case holidaySubscriptionNotSynced = "holiday_subscription.not_synced"
+    case holidaySubscriptionSyncing = "holiday_subscription.syncing"
+    case holidaySubscriptionUsingCachedData = "holiday_subscription.using_cached_data"
+    case holidaySubscriptionLastSuccessfulSyncFormat = "holiday_subscription.last_successful_sync_format"
     case holidaySubscriptionSyncError = "holiday_subscription.sync_error"
     case holidaySubscriptionNoURL = "holiday_subscription.no_url"
     case holidaySubscriptionSyncSuccessTitle = "holiday_subscription.sync_success_title"
@@ -630,6 +633,8 @@ enum LocalizedString: String {
     case workStatisticsLoading = "work_statistics.loading"
     case workStatisticsEmptyTitle = "work_statistics.empty_title"
     case workStatisticsEmptyMessage = "work_statistics.empty_message"
+    case workStatisticsReceivedUnavailableTitle = "work_statistics.received_unavailable_title"
+    case workStatisticsReceivedUnavailableMessage = "work_statistics.received_unavailable_message"
 }
 
 // MARK: - EnvironmentObject Extension

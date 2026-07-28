@@ -165,7 +165,7 @@
 "event.memo.voice.recognizing" = "音声入力中...";
 "work_record.add" = "勤務記録を新規作成";
 "work_record.edit" = "勤務記録を編集";
-"work_record.default_title" = "バイト";
+"work_record.default_title" = "勤務";
 "work_record.section_title" = "勤務記録";
 "work_record.empty" = "勤務記録はまだありません";
 "work_record.empty_message" = "この日の実際の出勤・退勤・休憩時間を登録できます。";
@@ -183,7 +183,7 @@
 "holiday_region.min_limit" = "祝祭日を選択する必要があります";
 
 /* Holiday Subscription */
-"holiday_subscription.settings_title" = "祝祭日订阅";
+"holiday_subscription.settings_title" = "祝日購読";
 "holiday_subscription.list_header" = "購読中の地域";
 "holiday_subscription.source_settings" = "購読元設定";
 "holiday_subscription.refresh" = "手動更新";
@@ -194,6 +194,9 @@
 "holiday_subscription.synced" = "同期済み";
 "holiday_subscription.sync_failed" = "同期失敗";
 "holiday_subscription.not_synced" = "未同期";
+"holiday_subscription.syncing" = "同期中";
+"holiday_subscription.using_cached_data" = "前回成功したデータを使用中";
+"holiday_subscription.last_successful_sync_format" = "最終成功：%@";
 "holiday_subscription.sync_error" = "同期エラー";
 "holiday_subscription.no_url" = "未設定";
 
@@ -313,7 +316,7 @@
 "shift_time.delete_button" = "削除";
 
 /* Work Statistics */
-"work_statistics.title" = "アルバイト統計";
+"work_statistics.title" = "勤務統計";
 "work_statistics" = "統計";
 "work_statistics.start_date_month" = "開始日";
 "work_statistics.end_date_month" = "終了日";
@@ -326,6 +329,8 @@
 "work_statistics.loading" = "読み込み中...";
 "work_statistics.empty_title" = "統計データがありません";
 "work_statistics.empty_message" = "条件を調整して統計ボタンをタップしてください";
+"work_statistics.received_unavailable_title" = "受信した共有カレンダーでは利用できません";
+"work_statistics.received_unavailable_message" = "受信した共有カレンダーには時給や交通費が共有されないため、勤務統計を正しく計算できません。個人カレンダーまたは自分が所有する共有カレンダーに切り替えてください。";
 
 "work.nextDayPrefix" = "翌日";
 
@@ -384,7 +389,7 @@
 "help.shifts.overnight.question" = "翌日の退勤はどのように扱われますか？";
 "help.shifts.overnight.answer" = "夜勤など日をまたぐ勤務では、退勤時刻を翌日として記録できます。統計では出勤から翌日の退勤までの実時間から休憩時間を差し引いて計算します。";
 "help.shifts.statistics.question" = "勤務統計はどのように計算されますか？";
-"help.shifts.statistics.answer" = "勤務統計は、記録した出勤時刻、退勤時刻、休憩時間、時給、交通費をもとに計算します。基本式は「勤務時間 = 退勤時刻 - 出勤時刻 - 休憩時間」「給与 = 勤務時間 × 時給」「合計 = 給与 + 交通費」です。";
+"help.shifts.statistics.answer" = "勤務統計は、記録した出勤時刻、退勤時刻、休憩時間、時給、交通費をもとに計算します。すべての金額は日本円（JPY）です。基本式は「勤務時間 = 退勤時刻 - 出勤時刻 - 休憩時間」「給与 = 勤務時間 × 時給」「合計 = 給与 + 交通費」です。";
 "help.shifts.statistics_missing.question" = "統計結果が表示されないのはなぜですか？";
 "help.shifts.statistics_missing.answer" = "対象期間内に出勤記録と退勤記録が保存され、時給などの必要な情報が入力されているか確認してください。シフトだけでは給与統計は自動作成されません。";
 

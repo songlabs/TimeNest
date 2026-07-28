@@ -1248,12 +1248,11 @@ struct ReadOnlySharedCalendarDetailView: View {
     private func dateText(for event: EventOccurrence) -> String {
         if event.isWorkClockEvent { return CalendarTimelineEventMetrics.timeText(for: event) }
         if event.isAllDay { return localization.localized(.editorAllDay) }
-        let formatter = localization.dateFormatter(dateFormat: "yyyy/MM/dd HH:mm")
         return String(
             format: localization.localized(.calendarSharingDateRangeFormat),
             locale: localization.currentLocale,
-            formatter.string(from: event.startDate),
-            formatter.string(from: event.endDate)
+            localization.formattedUserVisibleDateTime(for: event.startDate),
+            localization.formattedUserVisibleDateTime(for: event.endDate)
         )
     }
 }

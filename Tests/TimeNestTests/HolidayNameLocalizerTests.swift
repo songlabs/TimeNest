@@ -1680,6 +1680,90 @@ final class LocalizationResourceParityTests: XCTestCase {
         XCTAssertTrue(enumKeys.isSubset(of: resourceKeys), "Localizable.swift keys should exist in Localizable.strings")
     }
 
+    func testLocalizablePlaceholderSignaturesMatchAcrossLanguages() throws {
+        let resourceRoot = try sourceURL(for: "TimeNest/Resources")
+        let languageFolders = ["ja.lproj", "zh-Hans.lproj", "zh-Hant.lproj", "en.lproj", "ko.lproj"]
+        let referenceEntries = Dictionary(
+            uniqueKeysWithValues: try localizationEntries(
+                in: resourceRoot.appendingPathComponent("en.lproj/Localizable.strings")
+            )
+        )
+
+        for folder in languageFolders {
+            let entries = Dictionary(
+                uniqueKeysWithValues: try localizationEntries(
+                    in: resourceRoot.appendingPathComponent(folder).appendingPathComponent("Localizable.strings")
+                )
+            )
+            for (key, referenceValue) in referenceEntries {
+                let value = try XCTUnwrap(entries[key], "\(folder) is missing \(key)")
+                XCTAssertEqual(
+                    placeholderSignature(in: value),
+                    placeholderSignature(in: referenceValue),
+                    "\(folder) placeholder signature should match en.lproj for \(key)"
+                )
+            }
+        }
+    }
+
+    func testWorkRecordTerminologyAndJPYUnitsAreConsistent() throws {
+        let resourceRoot = try sourceURL(for: "TimeNest/Resources")
+        let expectations: [String: [String: String]] = [
+            "ja.lproj": [
+                "entry.kind.work_record": "勤務記録",
+                "work_record.section_title": "勤務記録",
+                "work_statistics.title": "勤務統計",
+                "editor.currencyUnit": "円",
+                "holiday_subscription.settings_title": "祝日購読"
+            ],
+            "zh-Hans.lproj": [
+                "entry.kind.work_record": "工作记录",
+                "work_record.section_title": "工作记录",
+                "work_statistics.title": "工作统计",
+                "editor.currencyUnit": "日元"
+            ],
+            "zh-Hant.lproj": [
+                "entry.kind.work_record": "工作記錄",
+                "work_record.section_title": "工作記錄",
+                "work_statistics.title": "工作統計",
+                "editor.currencyUnit": "日圓"
+            ],
+            "en.lproj": [
+                "entry.kind.work_record": "Work Record",
+                "work_record.section_title": "Work Records",
+                "work_statistics.title": "Work Statistics",
+                "editor.currencyUnit": "JPY"
+            ],
+            "ko.lproj": [
+                "entry.kind.work_record": "근무 기록",
+                "work_record.section_title": "근무 기록",
+                "work_statistics.title": "근무 통계",
+                "editor.currencyUnit": "일본 엔"
+            ]
+        ]
+
+        for (folder, expectedValues) in expectations {
+            let entries = Dictionary(
+                uniqueKeysWithValues: try localizationEntries(
+                    in: resourceRoot.appendingPathComponent(folder).appendingPathComponent("Localizable.strings")
+                )
+            )
+            for (key, expectedValue) in expectedValues {
+                XCTAssertEqual(entries[key], expectedValue, "\(folder) should use the agreed term for \(key)")
+            }
+        }
+
+        for folder in ["zh-Hans.lproj", "zh-Hant.lproj"] {
+            let entries = try localizationEntries(
+                in: resourceRoot.appendingPathComponent(folder).appendingPathComponent("Localizable.strings")
+            )
+            let contaminatedKeys = entries
+                .filter { $0.value.contains("勤務") }
+                .map(\.key)
+            XCTAssertTrue(contaminatedKeys.isEmpty, "\(folder) should not contain Japanese 勤務 text: \(contaminatedKeys)")
+        }
+    }
+
     func testInfoPlistStringsAreCompleteAcrossLanguages() throws {
         let resourceRoot = try sourceURL(for: "TimeNest/Resources")
         let languageFolders = ["ja.lproj", "zh-Hans.lproj", "zh-Hant.lproj", "en.lproj", "ko.lproj"]
@@ -1720,6 +1804,108 @@ final class LocalizationResourceParityTests: XCTestCase {
             XCTAssertEqual(manager.currentLanguageCode, code)
             if code != "system" {
                 XCTAssertEqual(manager.currentLocale.identifier, localeIdentifier)
+            }
+        }
+    }
+
+    func testUserVisibleDatesFollowEachAppLocaleAndKeepTwentyFourHourTime() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let date = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 11, day: 23, hour: 23, minute: 15))
+        )
+        let cases: [(String, Bool)] = [
+            ("ja", true),
+            ("zhHans", true),
+            ("zh-Hant", true),
+            ("enUS", false),
+            ("ko", true)
+        ]
+
+        for (languageCode, yearFirst) in cases {
+            let manager = LocalizationManager(savedCode: languageCode)
+            let text = manager.formattedUserVisibleDate(for: date)
+            let year = try XCTUnwrap(text.range(of: "2026"), "\(languageCode): \(text)")
+            let month = try XCTUnwrap(text.range(of: "11"), "\(languageCode): \(text)")
+            let day = try XCTUnwrap(text.range(of: "23"), "\(languageCode): \(text)")
+
+            if yearFirst {
+                XCTAssertLessThan(year.lowerBound, month.lowerBound, "\(languageCode): \(text)")
+                XCTAssertLessThan(month.lowerBound, day.lowerBound, "\(languageCode): \(text)")
+            } else {
+                XCTAssertLessThan(month.lowerBound, day.lowerBound, "\(languageCode): \(text)")
+                XCTAssertLessThan(day.lowerBound, year.lowerBound, "\(languageCode): \(text)")
+            }
+            XCTAssertTrue(
+                manager.formattedUserVisibleDateTime(for: date).hasSuffix("23:15"),
+                "\(languageCode) should preserve the product's 24-hour time rule"
+            )
+        }
+    }
+
+    func testUserVisibleDateHandlesLeapDayAndCrossYear() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let leapDay = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2028, month: 2, day: 29, hour: 12))
+        )
+        let yearEnd = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2026, month: 12, day: 31, hour: 12))
+        )
+        let nextYear = try XCTUnwrap(
+            calendar.date(from: DateComponents(year: 2027, month: 1, day: 1, hour: 12))
+        )
+
+        for languageCode in ["ja", "zhHans", "zh-Hant", "enUS", "ko"] {
+            let manager = LocalizationManager(savedCode: languageCode)
+            let expectedLeapDay = languageCode == "enUS" ? [2, 29, 2028] : [2028, 2, 29]
+            let expectedYearEnd = languageCode == "enUS" ? [12, 31, 2026] : [2026, 12, 31]
+            let expectedNextYear = languageCode == "enUS" ? [1, 1, 2027] : [2027, 1, 1]
+            XCTAssertEqual(
+                numericDateComponents(in: manager.formattedUserVisibleDate(for: leapDay)),
+                expectedLeapDay
+            )
+            XCTAssertEqual(
+                numericDateComponents(in: manager.formattedUserVisibleDate(for: yearEnd)),
+                expectedYearEnd
+            )
+            XCTAssertEqual(
+                numericDateComponents(in: manager.formattedUserVisibleDate(for: nextYear)),
+                expectedNextYear
+            )
+        }
+    }
+
+    func testReleaseDraftsDoNotClaimPerCategorySharingSwitches() throws {
+        let files = [
+            "README.md",
+            "Docs/AppPrivacyAnswersDraft.md",
+            "Docs/PrivacyPolicyDraft.md",
+            "Docs/SupportPageDraft.md",
+            "Docs/AppReviewNotesDraft.md",
+            "Docs/AppStoreMetadataDraft.md",
+            "Docs/AppStoreReleaseChecklist.md",
+            "Docs/TestFlightSubmissionNotes.md",
+            "Docs/release_review_v1.0.0_to_head.md"
+        ]
+        let forbiddenClaims = [
+            "can separately choose",
+            "owner chooses whether",
+            "owner can choose",
+            "所有者可分别选择",
+            "個別に共有でき",
+            "work-record switches are enabled",
+            "shared-content switches",
+            "selectable shared content",
+            "共有内容を選択可能",
+            "可选择共享内容",
+            "공유 콘텐츠 선택 가능"
+        ]
+
+        for relativePath in files {
+            let text = try String(contentsOf: sourceURL(for: relativePath), encoding: .utf8)
+            for claim in forbiddenClaims {
+                XCTAssertFalse(text.localizedCaseInsensitiveContains(claim), "\(relativePath) contains: \(claim)")
             }
         }
     }
@@ -1785,6 +1971,22 @@ final class LocalizationResourceParityTests: XCTestCase {
         }
     }
 
+    private func placeholderSignature(in value: String) -> [String] {
+        let pattern = #"%(?:\d+\$)?[-+#0 ']*\d*(?:\.\d+)?[a-zA-Z@]"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
+        let range = NSRange(value.startIndex..<value.endIndex, in: value)
+        return regex.matches(in: value, range: range).compactMap { match in
+            guard let matchRange = Range(match.range, in: value) else { return nil }
+            return String(value[matchRange])
+        }.sorted()
+    }
+
+    private func numericDateComponents(in value: String) -> [Int] {
+        value
+            .split(whereSeparator: { !$0.isNumber })
+            .compactMap { Int($0) }
+    }
+
     private func matches(in text: String, pattern: String) -> [String] {
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return [] }
         let range = NSRange(text.startIndex..<text.endIndex, in: text)
@@ -1834,6 +2036,40 @@ final class EventSchedulingUseCaseTests: XCTestCase {
         XCTAssertNotNil(savedEvent.notificationID)
     }
 
+    func testEventWithoutReminderDoesNotInvokeNotificationScheduler() async throws {
+        let scheduler = EventNotificationSchedulerSpy()
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            notificationScheduler: scheduler
+        )
+        let event = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: nil
+        )
+
+        let result = try await useCase.createEvent(event)
+
+        XCTAssertEqual(result, .noReminder)
+        XCTAssertTrue(scheduler.scheduledEvents.isEmpty)
+        XCTAssertTrue(scheduler.cancelledIDs.isEmpty)
+    }
+
+    func testThrowingSchedulerAdapterPreservesOriginalFailureCause() async {
+        let scheduler = ThrowingEventNotificationScheduler()
+        let event = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: 10
+        )
+
+        let result = await scheduler.scheduleEventNotificationResult(event: event)
+
+        guard case .failedWithCause(let failure) = result else {
+            return XCTFail("Expected typed scheduling failure")
+        }
+        XCTAssertTrue(failure.underlyingError is NotificationRestorationFailure)
+    }
+
     func testUpdatingReminderReplacesOldNotificationID() async throws {
         let scheduler = EventNotificationSchedulerSpy()
         let repository = InMemoryEventRepository()
@@ -1843,6 +2079,8 @@ final class EventSchedulingUseCaseTests: XCTestCase {
         try await useCase.createEvent(event)
         let createdEvent = try await repository.event(id: event.id)
         let firstID = try XCTUnwrap(createdEvent?.notificationID)
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
 
         event.notificationID = firstID
         event.reminderOffsetMinutes = 30
@@ -1853,6 +2091,7 @@ final class EventSchedulingUseCaseTests: XCTestCase {
         let updatedEvent = try XCTUnwrap(storedUpdatedEvent)
         XCTAssertNotEqual(updatedEvent.notificationID, firstID)
         XCTAssertEqual(scheduler.cancelledIDs, [firstID])
+        XCTAssertEqual(callbackCount, 1)
     }
 
     func testDeletingEventCancelsNotification() async throws {
@@ -1869,6 +2108,219 @@ final class EventSchedulingUseCaseTests: XCTestCase {
         let deletedEvent = try await repository.event(id: event.id)
         XCTAssertEqual(scheduler.cancelledIDs, [notificationID])
         XCTAssertNil(deletedEvent)
+    }
+
+    func testCreateFailureCancelsNewlyScheduledNotification() async throws {
+        let scheduler = EventNotificationSchedulerSpy()
+        scheduler.queuedResults = [.scheduled("new-notification")]
+        let repository = FailingMutationEventRepository(failingOperation: .create)
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+        let event = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: 10
+        )
+
+        do {
+            try await useCase.createEvent(event)
+            XCTFail("Expected repository create to fail")
+        } catch EventRepositoryMutationFailure.create {
+            let storedEvent = try await repository.event(id: event.id)
+            XCTAssertEqual(scheduler.cancelledIDs, ["new-notification"])
+            XCTAssertNil(storedEvent)
+        }
+    }
+
+    func testDeleteFailureKeepsExistingNotification() async throws {
+        var event = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: 10
+        )
+        event.notificationID = "existing-notification"
+        let scheduler = EventNotificationSchedulerSpy()
+        let repository = FailingMutationEventRepository(
+            events: [event],
+            failingOperation: .delete
+        )
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+
+        do {
+            try await useCase.deleteEvent(id: event.id)
+            XCTFail("Expected repository delete to fail")
+        } catch EventRepositoryMutationFailure.delete {
+            let storedEvent = try await repository.event(id: event.id)
+            XCTAssertTrue(scheduler.cancelledIDs.isEmpty)
+            XCTAssertEqual(storedEvent, event)
+        }
+    }
+
+    func testUpdateFailureSurfacesNotificationRestorationFailure() async throws {
+        var oldEvent = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: 10
+        )
+        oldEvent.notificationID = "existing-notification"
+        var updatedEvent = oldEvent
+        updatedEvent.reminderOffsetMinutes = 30
+        updatedEvent.updatedAt = Date()
+
+        let scheduler = EventNotificationSchedulerSpy()
+        let notificationFailure = EventNotificationScheduleFailure(
+            underlyingError: NotificationRestorationFailure.injected
+        )
+        scheduler.queuedResults = [
+            .scheduled("existing-notification"),
+            .failedWithCause(notificationFailure)
+        ]
+        let repository = FailingMutationEventRepository(
+            events: [oldEvent],
+            failingOperation: .update
+        )
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+
+        do {
+            try await useCase.updateEvent(updatedEvent)
+            XCTFail("Expected repository update and restoration to fail")
+        } catch let error as EventNotificationCompensationError {
+            let storedEvent = try await repository.event(id: oldEvent.id)
+            XCTAssertTrue(error.primaryError is EventRepositoryMutationFailure)
+            guard case .failedWithCause(let preservedFailure) = error.compensationResult else {
+                return XCTFail("Expected typed notification restoration failure")
+            }
+            XCTAssertTrue(
+                preservedFailure.underlyingError is NotificationRestorationFailure
+            )
+            XCTAssertTrue(error.localizedDescription.contains("notification restoration: failed"))
+            XCTAssertEqual(scheduler.scheduledEvents.count, 2)
+            XCTAssertEqual(storedEvent, oldEvent)
+        }
+    }
+
+    func testUpdateFailureRestoresOldNotificationAndRethrowsRepositoryError() async throws {
+        var oldEvent = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: 10
+        )
+        oldEvent.notificationID = "existing-notification"
+        var updatedEvent = oldEvent
+        updatedEvent.reminderOffsetMinutes = 30
+        updatedEvent.updatedAt = Date()
+
+        let scheduler = EventNotificationSchedulerSpy()
+        scheduler.queuedResults = [
+            .scheduled("existing-notification"),
+            .scheduled("existing-notification")
+        ]
+        let repository = FailingMutationEventRepository(
+            events: [oldEvent],
+            failingOperation: .update
+        )
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+
+        do {
+            try await useCase.updateEvent(updatedEvent)
+            XCTFail("Expected repository update to fail")
+        } catch EventRepositoryMutationFailure.update {
+            let storedEvent = try await repository.event(id: oldEvent.id)
+            XCTAssertEqual(scheduler.scheduledEvents.count, 2)
+            XCTAssertTrue(scheduler.cancelledIDs.isEmpty)
+            XCTAssertEqual(storedEvent, oldEvent)
+        }
+    }
+
+    func testNoReminderToReminderUpdateFailureCancelsNewNotificationOnlyOnce() async throws {
+        let oldEvent = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: nil
+        )
+        var updatedEvent = oldEvent
+        updatedEvent.reminderOffsetMinutes = 10
+        updatedEvent.updatedAt = Date()
+        let scheduler = EventNotificationSchedulerSpy()
+        scheduler.queuedResults = [.scheduled("new-notification")]
+        let repository = FailingMutationEventRepository(
+            events: [oldEvent],
+            failingOperation: .update
+        )
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+
+        do {
+            try await useCase.updateEvent(updatedEvent)
+            XCTFail("The repository update must fail")
+        } catch EventRepositoryMutationFailure.update {}
+
+        let storedEvent = try await repository.event(id: oldEvent.id)
+        XCTAssertEqual(scheduler.cancelledIDs, ["new-notification"])
+        XCTAssertEqual(scheduler.scheduledEvents.count, 1)
+        XCTAssertEqual(callbackCount, 0)
+        XCTAssertEqual(storedEvent, oldEvent)
+    }
+
+    func testReminderToNoReminderUpdateFailureKeepsOldNotification() async throws {
+        var oldEvent = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: 10
+        )
+        oldEvent.notificationID = "old-notification"
+        var updatedEvent = oldEvent
+        updatedEvent.reminderOffsetMinutes = nil
+        updatedEvent.updatedAt = Date()
+        let scheduler = EventNotificationSchedulerSpy()
+        let repository = FailingMutationEventRepository(
+            events: [oldEvent],
+            failingOperation: .update
+        )
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+
+        do {
+            try await useCase.updateEvent(updatedEvent)
+            XCTFail("The repository update must fail")
+        } catch EventRepositoryMutationFailure.update {}
+
+        let storedEvent = try await repository.event(id: oldEvent.id)
+        XCTAssertTrue(scheduler.cancelledIDs.isEmpty)
+        XCTAssertTrue(scheduler.scheduledEvents.isEmpty)
+        XCTAssertEqual(callbackCount, 0)
+        XCTAssertEqual(storedEvent, oldEvent)
+    }
+
+    func testReminderIdentifierChangeFailureCancelsNewAndRestoresExactOldContent() async throws {
+        var oldEvent = makeEvent(
+            startDate: Date().addingTimeInterval(3_600),
+            reminderOffsetMinutes: 10
+        )
+        oldEvent.notificationID = "old-notification"
+        oldEvent.note = "Original reminder content"
+        var updatedEvent = oldEvent
+        updatedEvent.note = "Updated reminder content"
+        updatedEvent.reminderOffsetMinutes = 30
+        updatedEvent.updatedAt = Date()
+        let scheduler = EventNotificationSchedulerSpy()
+        scheduler.queuedResults = [
+            .scheduled("new-notification"),
+            .scheduled("old-notification")
+        ]
+        let repository = FailingMutationEventRepository(
+            events: [oldEvent],
+            failingOperation: .update
+        )
+        let useCase = EventUseCase(repository: repository, notificationScheduler: scheduler)
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+
+        do {
+            try await useCase.updateEvent(updatedEvent)
+            XCTFail("The repository update must fail")
+        } catch EventRepositoryMutationFailure.update {}
+
+        let storedEvent = try await repository.event(id: oldEvent.id)
+        XCTAssertEqual(scheduler.cancelledIDs, ["new-notification"])
+        XCTAssertEqual(scheduler.scheduledEvents, [updatedEvent, oldEvent])
+        XCTAssertEqual(callbackCount, 0)
+        XCTAssertEqual(storedEvent, oldEvent)
     }
 
     func testAllDayEventSaveNormalizesToFullDayRange() async throws {
@@ -1917,15 +2369,23 @@ final class EventNotificationSchedulerSpy: LocalNotificationScheduling {
     private(set) var scheduledEvents: [CalendarEvent] = []
     private(set) var cancelledIDs: [String] = []
     var isAuthorized = true
+    var queuedResults: [EventNotificationScheduleResult] = []
 
     func requestAuthorizationIfNeeded() async -> Bool {
         isAuthorized
     }
 
     func scheduleEventNotification(event: CalendarEvent) async throws -> String? {
-        guard isAuthorized else { return nil }
+        await scheduleEventNotificationResult(event: event).notificationID
+    }
+
+    func scheduleEventNotificationResult(event: CalendarEvent) async -> EventNotificationScheduleResult {
         scheduledEvents.append(event)
-        return "notification-\(scheduledEvents.count)"
+        if !queuedResults.isEmpty {
+            return queuedResults.removeFirst()
+        }
+        guard isAuthorized else { return .failed }
+        return .scheduled("notification-\(scheduledEvents.count)")
     }
 
     func cancelNotification(id: String) {
@@ -1935,4 +2395,116 @@ final class EventNotificationSchedulerSpy: LocalNotificationScheduling {
     func scheduleDailyScheduleCheck(hour: Int, minute: Int) async {}
 
     func cancelDailyScheduleCheck() {}
+}
+
+private final class ThrowingEventNotificationScheduler: LocalNotificationScheduling {
+    func requestAuthorizationIfNeeded() async -> Bool {
+        true
+    }
+
+    func scheduleEventNotification(event: CalendarEvent) async throws -> String? {
+        throw NotificationRestorationFailure.injected
+    }
+
+    func cancelNotification(id: String) {}
+    func scheduleDailyScheduleCheck(hour: Int, minute: Int) async {}
+    func cancelDailyScheduleCheck() {}
+}
+
+private enum EventRepositoryMutationFailure: Error {
+    case create
+    case update
+    case delete
+}
+
+private enum NotificationRestorationFailure: Error {
+    case injected
+}
+
+private actor FailingMutationEventRepository: EventRepository {
+    private var storedEvents: [UUID: CalendarEvent]
+    private let failingOperation: EventRepositoryMutationFailure
+
+    init(
+        events: [CalendarEvent] = [],
+        failingOperation: EventRepositoryMutationFailure
+    ) {
+        storedEvents = Dictionary(
+            uniqueKeysWithValues: events.map { ($0.id, $0) }
+        )
+        self.failingOperation = failingOperation
+    }
+
+    func create(_ event: CalendarEvent) async throws {
+        if case .create = failingOperation {
+            throw EventRepositoryMutationFailure.create
+        }
+        storedEvents[event.id] = event
+    }
+
+    func createBatch(
+        _ events: [CalendarEvent],
+        ifUnchanged expectedEvents: [CalendarEvent]
+    ) async throws {
+        if case .create = failingOperation {
+            throw EventRepositoryMutationFailure.create
+        }
+        events.forEach { storedEvents[$0.id] = $0 }
+    }
+
+    func applyBatch(
+        upserting events: [CalendarEvent],
+        deleting eventsToDelete: [CalendarEvent],
+        ifUnchanged expectedEvents: [CalendarEvent]
+    ) async throws {
+        try EventRepositoryBatchValidator.validateApplyBatch(
+            currentEvents: Array(storedEvents.values),
+            upserting: events,
+            deleting: eventsToDelete,
+            ifUnchanged: expectedEvents
+        )
+        var updated = storedEvents
+        for event in events {
+            updated[event.id] = event
+        }
+        for event in eventsToDelete {
+            updated.removeValue(forKey: event.id)
+        }
+        storedEvents = updated
+    }
+
+    func update(_ event: CalendarEvent) async throws {
+        if case .update = failingOperation {
+            throw EventRepositoryMutationFailure.update
+        }
+        storedEvents[event.id] = event
+    }
+
+    func delete(id: UUID) async throws {
+        if case .delete = failingOperation {
+            throw EventRepositoryMutationFailure.delete
+        }
+        storedEvents.removeValue(forKey: id)
+    }
+
+    func deleteBatch(_ expectedEvents: [CalendarEvent]) async throws {
+        for event in expectedEvents {
+            try await delete(id: event.id)
+        }
+    }
+
+    func events(in range: DateInterval) async throws -> [CalendarEvent] {
+        Array(storedEvents.values)
+    }
+
+    func event(id: UUID) async throws -> CalendarEvent? {
+        storedEvents[id]
+    }
+
+    func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
+        for (id, var event) in storedEvents where event.calendarID == sourceCalendarID {
+            event.calendarID = targetCalendarID
+            storedEvents[id] = event
+        }
+    }
 }

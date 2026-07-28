@@ -96,5 +96,5 @@
 - [ ] Complete `Docs/TestFlightChecklist.md` on the exact candidate build.
 - [ ] Complete at least one TestFlight internal-test pass and record device, iOS version, app version/build, language, network state, and result.
 - [ ] On a physical device, install the App Store `v1.0.0`, create an event, shift, work record, and reminder, upgrade to the exact candidate, and confirm SwiftData preservation plus Widget refresh. The local temporary-store migration tests do not satisfy this gate.
-- [ ] On two physical devices with separate Apple IDs, verify CloudKit invitation acceptance, recipient read-only behavior, shared-content switches, calendar-name updates, stopping/leaving a share, and excluded private fields. Confirm the CloudKit Production schema and iCloud container are deployed for the submitted build.
+- [ ] On two physical devices with separate Apple IDs, verify CloudKit invitation acceptance, automatic synchronization of events, shifts, and work records assigned to the owned shared calendar, recipient read-only behavior, calendar-name updates, stopping/leaving a share, and excluded private fields. Confirm the CloudKit Production schema and iCloud container are deployed for the submitted build.
 - [ ] Resolve release-blocking crashes, upload errors, missing metadata, and privacy-answer mismatches before submission.

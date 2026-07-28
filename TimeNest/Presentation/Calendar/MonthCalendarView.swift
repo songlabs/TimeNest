@@ -10,6 +10,7 @@ struct MonthCalendarView: View {
     @State private var showingYearMonthPicker = false
     @State private var showingSettings = false
     @State private var showingStatistics = false
+    @State private var showingReceivedStatisticsUnavailable = false
     @State private var showingShiftBatch = false
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
@@ -38,7 +39,12 @@ struct MonthCalendarView: View {
                 subscriptionManager: holidaySubscriptionManager
             )
         )
-        _statisticsViewModel = StateObject(wrappedValue: WorkStatisticsViewModel(eventUseCase: eventUseCase))
+        _statisticsViewModel = StateObject(
+            wrappedValue: WorkStatisticsViewModel(
+                eventUseCase: eventUseCase,
+                calendarID: calendarSharingStore.selection.calendarID
+            )
+        )
     }
 
     var body: some View {
@@ -200,6 +206,11 @@ struct MonthCalendarView: View {
                             await viewModel.deleteEvent(id: eventID)
                         }
                     },
+                    onDeleteWorkRecord: { eventIDs in
+                        Task {
+                            await viewModel.deleteWorkRecord(eventIDs: eventIDs)
+                        }
+                    },
                     onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                         try await viewModel.createEvent(
                             title: title,
@@ -227,6 +238,9 @@ struct MonthCalendarView: View {
                             calendarID: calendarID
                         )
                     },
+                    onSaveWorkRecordPair: { request in
+                        try await viewModel.saveWorkRecordPair(request)
+                    },
                     availableCalendars: calendarSharingStore.writableCalendars,
                     entryCalendarContext: .fixedWritableCalendar(
                         calendarSharingStore.selection.calendarID
@@ -246,6 +260,9 @@ struct MonthCalendarView: View {
                 calendarContext: .fixedWritableCalendar(
                     calendarSharingStore.selection.calendarID
                 ),
+                onSaveWorkRecordPair: { request in
+                    try await viewModel.saveWorkRecordPair(request)
+                },
                 onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                     try await viewModel.createEvent(
                         title: title,
@@ -273,6 +290,16 @@ struct MonthCalendarView: View {
             Text(localization.localized(.calendarSharingReadOnlyAddMessage))
                 .accessibilityIdentifier("calendar.readOnlyAlert.message")
         }
+        .alert(
+            localization.localized(.workStatisticsReceivedUnavailableTitle),
+            isPresented: $showingReceivedStatisticsUnavailable
+        ) {
+            Button(localization.localized(.ok)) {
+                showingReceivedStatisticsUnavailable = false
+            }
+        } message: {
+            Text(localization.localized(.workStatisticsReceivedUnavailableMessage))
+        }
     }
 
     private var yearMonthPickerOverlay: some View {
@@ -298,6 +325,13 @@ struct MonthCalendarView: View {
     }
 
     private func openStatistics() {
+        guard calendarSharingStore.selectedCalendar.kind != .sharedReceived else {
+            showingReceivedStatisticsUnavailable = true
+            return
+        }
+        statisticsViewModel.setCalendarScope(
+            calendarID: calendarSharingStore.selection.calendarID
+        )
         openModal(.statistics)
     }
 
@@ -733,7 +767,10 @@ struct MonthCalendarView: View {
 
     private var sharedCalendarStatusText: String? {
         guard calendarSharingStore.selectedCalendar.kind == .sharedReceived else { return nil }
-        return localization.localized(.calendarSharingReadOnly)
+        return [
+            localization.localized(.calendarSharingReadOnly),
+            localization.localized(.workStatisticsReceivedUnavailableMessage)
+        ].joined(separator: " · ")
     }
 
     private func presentReadOnlyDetailIfNeeded(for cell: CalendarDayCell) {

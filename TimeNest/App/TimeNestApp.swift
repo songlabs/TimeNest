@@ -231,11 +231,23 @@ struct TimeNestApp: App {
                     await widgetSnapshotCoordinator.refresh()
                 }
                 .task {
+#if DEBUG
+                    guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
+#endif
+                    await holidaySubscriptionManager.performAutoSync()
+                }
+                .task {
                     await calendarSharingStore.start()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     guard newPhase == .active else { return }
                     Task { await calendarSharingStore.synchronizeOnAppActivation() }
+                    Task {
+#if DEBUG
+                        guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
+#endif
+                        await holidaySubscriptionManager.performAutoSync()
+                    }
                 }
             }
         }

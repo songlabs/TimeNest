@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 enum EventUseCaseError: Error, LocalizedError {
     case invalidDateRange
@@ -11,6 +12,66 @@ enum EventUseCaseError: Error, LocalizedError {
         case .eventNotFound:
             return LocalizationManager.shared.localized(.eventNotFound)
         }
+    }
+}
+
+enum WorkRecordPairSaveError: Error, Equatable, LocalizedError {
+    case duplicateExplicitEventID
+    case explicitEventNotFound
+    case calendarMismatch
+    case notWorkRecord
+    case clockKindMismatch
+    case sessionMismatch
+
+    var errorDescription: String? {
+        switch self {
+        case .calendarMismatch, .sessionMismatch:
+            return LocalizationManager.shared.localized(.calendarSharingPermissionDenied)
+        case .duplicateExplicitEventID, .explicitEventNotFound, .notWorkRecord, .clockKindMismatch:
+            return LocalizationManager.shared.localized(.eventNotFound)
+        }
+    }
+}
+
+struct EventNotificationCompensationError: Error, LocalizedError {
+    let primaryError: Error
+    let compensationResult: EventNotificationScheduleResult
+
+    var errorDescription: String? {
+        "\(primaryError.localizedDescription) [notification restoration: \(compensationResult.diagnosticStatus)]"
+    }
+}
+
+private extension EventNotificationScheduleResult {
+    var diagnosticStatus: String {
+        switch self {
+        case .scheduled:
+            return "scheduled"
+        case .noReminder:
+            return "no_reminder"
+        case .triggerDateInPast:
+            return "trigger_date_in_past"
+        case .denied:
+            return "denied"
+        case .failed, .failedWithCause:
+            return "failed"
+        }
+    }
+}
+
+private enum EventUseCaseDiagnostics {
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.song.TimeNest",
+        category: "EventUseCase"
+    )
+
+    static func notificationRestorationFailed(
+        primaryError: Error,
+        compensationResult: EventNotificationScheduleResult
+    ) {
+        logger.error(
+            "operation=update_notification_compensation primary_type=\(String(reflecting: type(of: primaryError)), privacy: .public) compensation_status=\(compensationResult.diagnosticStatus, privacy: .public)"
+        )
     }
 }
 
@@ -37,7 +98,14 @@ class EventUseCase {
         var eventToSave = event
         let notificationResult = await scheduleNotification(for: eventToSave)
         eventToSave.notificationID = notificationResult.notificationID
-        try await repository.create(eventToSave)
+        do {
+            try await repository.create(eventToSave)
+        } catch {
+            if let notificationID = eventToSave.notificationID {
+                notificationScheduler?.cancelNotification(id: notificationID)
+            }
+            throw error
+        }
         onEventsChanged?()
         return notificationResult
     }
@@ -51,7 +119,7 @@ class EventUseCase {
                 switch $0 {
                 case .scheduled, .noReminder:
                     return false
-                case .triggerDateInPast, .denied, .failed:
+                case .triggerDateInPast, .denied, .failed, .failedWithCause:
                     return true
                 }
             }.count
@@ -100,14 +168,50 @@ class EventUseCase {
         guard let oldEvent = try await repository.event(id: event.id) else {
             throw EventUseCaseError.eventNotFound
         }
-        if let oldNotificationID = oldEvent.notificationID {
-            notificationScheduler?.cancelNotification(id: oldNotificationID)
-        }
-
         var eventToSave = event
-        let notificationResult = await scheduleNotification(for: eventToSave)
-        eventToSave.notificationID = notificationResult.notificationID
-        try await repository.update(eventToSave)
+        let oldNotificationID = oldEvent.notificationID
+        let notificationResult: EventNotificationScheduleResult
+
+        if eventToSave.reminderOffsetMinutes == nil {
+            notificationResult = .noReminder
+            eventToSave.notificationID = nil
+            try await repository.update(eventToSave)
+            if let oldNotificationID {
+                notificationScheduler?.cancelNotification(id: oldNotificationID)
+            }
+        } else {
+            // Reuse the existing identifier so UNUserNotificationCenter replaces the request
+            // without first creating a reminder-free gap.
+            eventToSave.notificationID = oldNotificationID
+            notificationResult = await scheduleNotification(for: eventToSave)
+            eventToSave.notificationID = notificationResult.notificationID
+            do {
+                try await repository.update(eventToSave)
+            } catch {
+                if let newNotificationID = notificationResult.notificationID {
+                    if newNotificationID != oldNotificationID {
+                        notificationScheduler?.cancelNotification(id: newNotificationID)
+                    }
+                    if oldNotificationID != nil {
+                        let compensationResult = await scheduleNotification(for: oldEvent)
+                        guard case .scheduled = compensationResult else {
+                            EventUseCaseDiagnostics.notificationRestorationFailed(
+                                primaryError: error,
+                                compensationResult: compensationResult
+                            )
+                            throw EventNotificationCompensationError(
+                                primaryError: error,
+                                compensationResult: compensationResult
+                            )
+                        }
+                    }
+                }
+                throw error
+            }
+            if let oldNotificationID, oldNotificationID != eventToSave.notificationID {
+                notificationScheduler?.cancelNotification(id: oldNotificationID)
+            }
+        }
         onEventsChanged?()
         return notificationResult
     }
@@ -117,10 +221,10 @@ class EventUseCase {
         if let event {
             try await validateWriteAccess(calendarID: event.calendarID)
         }
+        try await repository.delete(id: id)
         if let notificationID = event?.notificationID {
             notificationScheduler?.cancelNotification(id: notificationID)
         }
-        try await repository.delete(id: id)
         onEventsChanged?()
     }
 
@@ -147,6 +251,111 @@ class EventUseCase {
 
     func event(id: UUID) async throws -> CalendarEvent? {
         try await repository.event(id: id)
+    }
+
+    func saveWorkRecordPair(_ request: WorkRecordPairSaveRequest) async throws {
+        try await validateWriteAccess(calendarID: request.calendarID)
+
+        if let clockInEventID = request.clockInEventID,
+           clockInEventID == request.clockOutEventID {
+            throw WorkRecordPairSaveError.duplicateExplicitEventID
+        }
+
+        var existingEvents = try await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        existingEvents = existingEvents.filter {
+            $0.calendarID == request.calendarID
+                && $0.workInfo?.workSessionId == request.sessionID
+                && $0.workClockKind != nil
+        }
+
+        let explicitClockIn = try await validatedExplicitWorkClockEvent(
+            id: request.clockInEventID,
+            expectedKind: .clockIn,
+            request: request
+        )
+        let explicitClockOut = try await validatedExplicitWorkClockEvent(
+            id: request.clockOutEventID,
+            expectedKind: .clockOut,
+            request: request
+        )
+
+        for explicitEvent in [explicitClockIn, explicitClockOut].compactMap({ $0 }) {
+            if !existingEvents.contains(where: { $0.id == explicitEvent.id }) {
+                existingEvents.append(explicitEvent)
+            }
+        }
+
+        let sortedExisting = existingEvents.sorted {
+            if $0.createdAt != $1.createdAt { return $0.createdAt < $1.createdAt }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+        let existingClockIn = explicitClockIn
+            ?? sortedExisting.first { $0.workClockKind == .clockIn }
+        let existingClockOut = explicitClockOut
+            ?? sortedExisting.first { $0.workClockKind == .clockOut }
+        let now = Date()
+        let clockIn = makeWorkClockEvent(
+            existing: existingClockIn,
+            id: existingClockIn?.id ?? UUID(),
+            request: request,
+            kind: .clockIn,
+            now: now
+        )
+        let clockOut = makeWorkClockEvent(
+            existing: existingClockOut,
+            id: existingClockOut?.id ?? UUID(),
+            request: request,
+            kind: .clockOut,
+            now: now
+        )
+        try validate(clockIn)
+        try validate(clockOut)
+
+        let retainedIDs = Set([clockIn.id, clockOut.id])
+        let duplicates = existingEvents.filter { !retainedIDs.contains($0.id) }
+        let expectedEvents = Dictionary(
+            existingEvents.map { ($0.id, $0) },
+            uniquingKeysWith: { current, _ in current }
+        ).values.map { $0 }
+
+        try await repository.applyBatch(
+            upserting: [clockIn, clockOut],
+            deleting: duplicates,
+            ifUnchanged: expectedEvents
+        )
+        expectedEvents.compactMap(\.notificationID).forEach {
+            notificationScheduler?.cancelNotification(id: $0)
+        }
+        onEventsChanged?()
+    }
+
+    private func validatedExplicitWorkClockEvent(
+        id: UUID?,
+        expectedKind: WorkClockKind,
+        request: WorkRecordPairSaveRequest
+    ) async throws -> CalendarEvent? {
+        guard let id else { return nil }
+        guard let event = try await repository.event(id: id) else {
+            throw WorkRecordPairSaveError.explicitEventNotFound
+        }
+        guard event.calendarID == request.calendarID else {
+            throw WorkRecordPairSaveError.calendarMismatch
+        }
+        guard event.shiftTemplateID == nil,
+              event.workInfo != nil,
+              let actualKind = event.workClockKind else {
+            throw WorkRecordPairSaveError.notWorkRecord
+        }
+        guard actualKind == expectedKind else {
+            throw WorkRecordPairSaveError.clockKindMismatch
+        }
+        if let existingSessionID = event.workInfo?.workSessionId,
+           existingSessionID != request.sessionID {
+            throw WorkRecordPairSaveError.sessionMismatch
+        }
+        return event
     }
 
     func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
@@ -289,5 +498,61 @@ class EventUseCase {
         }
 
         return await notificationScheduler?.scheduleEventNotificationResult(event: event) ?? .failed
+    }
+
+    private func makeWorkClockEvent(
+        existing: CalendarEvent?,
+        id: UUID,
+        request: WorkRecordPairSaveRequest,
+        kind: WorkClockKind,
+        now: Date
+    ) -> CalendarEvent {
+        let clockDate: Date
+        let workInfo: WorkInfo
+        switch kind {
+        case .clockIn:
+            clockDate = request.clockInDate
+            workInfo = WorkInfo(
+                workInTime: request.clockInDate,
+                workOutTime: nil,
+                restHours: request.restHours,
+                workDate: request.workDate,
+                transportFee: request.transportFee,
+                hourlyRate: request.hourlyRate,
+                workSessionId: request.sessionID,
+                isWorkOutTimeSet: request.isWorkOutTimeSet
+            )
+        case .clockOut:
+            clockDate = request.clockOutDate
+            workInfo = WorkInfo(
+                workInTime: nil,
+                workOutTime: request.clockOutDate,
+                restHours: request.restHours,
+                workDate: request.workDate,
+                transportFee: request.transportFee,
+                hourlyRate: request.hourlyRate,
+                workSessionId: request.sessionID,
+                isWorkOutTimeSet: request.isWorkOutTimeSet
+            )
+        }
+        return CalendarEvent(
+            id: id,
+            calendarID: request.calendarID,
+            title: request.title,
+            note: nil,
+            startDate: clockDate,
+            endDate: CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false),
+            isAllDay: false,
+            categoryID: existing?.categoryID,
+            recurrenceRule: existing?.recurrenceRule ?? .none,
+            reminderTemplateID: existing?.reminderTemplateID,
+            reminderOffsetMinutes: nil,
+            notificationID: nil,
+            importSource: existing?.importSource,
+            createdAt: existing?.createdAt ?? now,
+            updatedAt: now,
+            shiftTemplateID: nil,
+            workInfo: workInfo
+        )
     }
 }

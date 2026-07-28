@@ -3,8 +3,8 @@
 /* Tab Titles */
 "tab.calendar" = "달력";
 "tab.list_calendar" = "목록";
-"tab.shift_input" = "근무 입력";
-"tab.shift_share" = "근무 공유";
+"tab.shift_input" = "근무조 입력";
+"tab.shift_share" = "근무조 공유";
 
 /* Placeholder */
 "placeholder.coming_soon" = "곧 공개";
@@ -95,8 +95,8 @@
 "event.not_found" = "일정을 찾을 수 없습니다.";
 
 /* Shift Input */
-"shift_input.title" = "근무 입력";
-"shift_input.empty" = "활성화된 근무가 없습니다";
+"shift_input.title" = "근무조 입력";
+"shift_input.empty" = "활성화된 근무조가 없습니다";
 
 /* Event Marker */
 "event_marker.day_off" = "휴무";
@@ -131,7 +131,7 @@
 /* Event Editor */
 "entry.create.title" = "새로 만들기";
 "entry.kind.event" = "일정";
-"entry.kind.work_record" = "알바 기록";
+"entry.kind.work_record" = "근무 기록";
 "editor.note" = "메모";
 "editor.title" = "제목";
 "editor.basic_info" = "기본 정보";
@@ -155,7 +155,7 @@
 "editor.restTime" = "휴식 시간";
 "editor.transportFee" = "교통비";
 "editor.hourlyRate" = "시급";
-"editor.currencyUnit" = "위안";
+"editor.currencyUnit" = "일본 엔";
 "event.memo.title" = "메모";
 "event.memo.voice.placeholder" = "음성으로 메모 입력";
 "event.memo.voice.start" = "음성 입력 시작";
@@ -163,10 +163,10 @@
 "event.memo.voice.permission_denied" = "메모 음성 입력을 사용하려면 마이크와 음성 인식 권한이 필요합니다.";
 "event.memo.voice.unavailable" = "이 기기 또는 현재 언어에서는 음성 입력을 사용할 수 없습니다.";
 "event.memo.voice.recognizing" = "음성 입력 중...";
-"work_record.add" = "알바 기록 새로 만들기";
-"work_record.edit" = "알바 기록 편집";
+"work_record.add" = "근무 기록 새로 만들기";
+"work_record.edit" = "근무 기록 편집";
 "work_record.default_title" = "근무";
-"work_record.section_title" = "알바 기록";
+"work_record.section_title" = "근무 기록";
 "work_record.empty" = "근무 기록이 아직 없습니다";
 "work_record.empty_message" = "이 날짜의 실제 출근, 퇴근 및 휴게 시간을 기록할 수 있습니다.";
 "work_record.missing_clock_in" = "출근 없음";
@@ -194,6 +194,9 @@
 "holiday_subscription.synced" = "동기화 완료";
 "holiday_subscription.sync_failed" = "동기화 실패";
 "holiday_subscription.not_synced" = "동기화 안 됨";
+"holiday_subscription.syncing" = "동기화 중";
+"holiday_subscription.using_cached_data" = "마지막으로 성공한 데이터를 사용 중";
+"holiday_subscription.last_successful_sync_format" = "마지막 성공 동기화: %@";
 "holiday_subscription.sync_error" = "동기화 오류";
 "holiday_subscription.no_url" = "설정되지 않음";
 
@@ -286,8 +289,8 @@
 "app_error.unknown" = "알 수 없는 오류";
 
 /* Shift Time */
-"shift_time.settings_title" = "근무 시간 사용자 설정";
-"shift.common" = "자주 쓰는 근무";
+"shift_time.settings_title" = "근무조 시간 사용자 설정";
+"shift.common" = "자주 쓰는 근무조";
 "shift.day" = "주간";
 "shift.night" = "야간";
 "shift.start" = "시작";
@@ -300,20 +303,20 @@
 "shift.disabled" = "사용 안 함";
 "shift_time.start_time" = "시작 시간";
 "shift_time.end_time" = "종료 시간";
-"shift_time.edit_footer" = "시작 및 종료 시간을 설정하세요. 자정을 넘는 야간 근무의 경우 종료 시간이 시작 시간보다 앞서 있을 수 있습니다.";
+"shift_time.edit_footer" = "시작 및 종료 시간을 설정하세요. 자정을 넘는 야간 근무조의 경우 종료 시간이 시작 시간보다 앞서 있을 수 있습니다.";
 "shift_time.display_name" = "표시 이름";
 "shift_time.note" = "메모";
 "shift_time.color" = "색상";
 "shift_time.details" = "세부 설정";
 "shift_time.details.expand" = "세부 설정 펼치기";
 "shift_time.details.collapse" = "세부 설정 접기";
-"shift_time.add_button" = "근무 추가";
-"shift_time.new_shift_name" = "새 근무";
-"shift_time.edit_shift_title" = "근무 편집";
+"shift_time.add_button" = "근무조 추가";
+"shift_time.new_shift_name" = "새 근무조";
+"shift_time.edit_shift_title" = "근무조 편집";
 "shift_time.delete_button" = "삭제";
 
 /* Work Statistics */
-"work_statistics.title" = "알바 통계";
+"work_statistics.title" = "근무 통계";
 "work_statistics" = "통계";
 "work_statistics.start_date_month" = "시작일";
 "work_statistics.end_date_month" = "종료일";
@@ -326,6 +329,8 @@
 "work_statistics.loading" = "불러오는 중...";
 "work_statistics.empty_title" = "통계 데이터가 없습니다";
 "work_statistics.empty_message" = "필터를 조정한 후 통계 버튼을 눌러주세요";
+"work_statistics.received_unavailable_title" = "받은 공유 캘린더에서는 근무 통계를 사용할 수 없음";
+"work_statistics.received_unavailable_message" = "받은 공유 캘린더에는 시급과 교통비가 공유되지 않아 정확한 근무 통계를 계산할 수 없습니다. 내 캘린더나 내가 만든 공유 캘린더로 전환하세요.";
 
 "work.nextDayPrefix" = "다음날";
 
@@ -343,7 +348,7 @@
 "help.category.events" = "일정 추가 및 편집";
 "help.category.views" = "월・주・일 보기";
 "help.category.holidays" = "공휴일・휴일";
-"help.category.shifts" = "근무와 출퇴근 기록";
+"help.category.shifts" = "근무조와 근무 기록";
 "help.category.sharing" = "공유 캘린더";
 "help.category.ads" = "광고";
 "help.category.privacy" = "데이터 및 개인정보";
@@ -369,24 +374,24 @@
 "help.holidays.language.question" = "공휴일 이름의 언어";
 "help.holidays.language.answer" = "공휴일 이름은 선택한 지역에 맞는 언어로 표시됩니다.";
 
-"help.shifts.add.question" = "근무를 추가하려면?";
-"help.shifts.add.answer" = "달력 위쪽 메뉴에서 근무 입력을 열고 날짜를 선택한 다음 근무 버튼을 누르세요. 추가한 근무는 월・주・일 보기에 표시됩니다.";
-"help.shifts.multiple.question" = "하루에 여러 근무를 추가할 수 있나요?";
-"help.shifts.multiple.answer" = "같은 날에는 하나의 근무만 유지됩니다. 이미 근무가 있는 날에 다른 근무를 선택하면 기존 근무가 교체되지만 일반 일정이나 출근・퇴근 기록은 삭제되지 않습니다.";
-"help.shifts.replace.question" = "당일 근무를 변경하려면?";
-"help.shifts.replace.answer" = "근무 입력을 다시 열고 같은 날짜를 선택한 다음 새 근무를 누르면 교체됩니다. 취소 버튼은 선택한 날짜의 근무만 삭제하며 다른 일정에는 영향을 주지 않습니다.";
-"help.shifts.change_time.question" = "근무 시간을 사용자 설정하려면?";
-"help.shifts.change_time.answer" = "설정의 근무 시간 사용자 설정에서 주간, 야간 및 사용자 지정 근무의 이름, 시작 시간, 종료 시간과 색상을 변경할 수 있습니다. 변경 내용은 이후에 생성하는 근무에 적용됩니다.";
-"help.shifts.difference.question" = "근무와 출퇴근 기록은 어떻게 다른가요?";
-"help.shifts.difference.answer" = "근무는 주간이나 야간 같은 예정된 근무 일정을 뜻합니다. 출퇴근 기록은 실제 출근・퇴근 시간, 휴게 시간, 시급 및 교통비를 기록한 정보이며 근무 통계에 사용됩니다.";
+"help.shifts.add.question" = "근무조를 추가하려면?";
+"help.shifts.add.answer" = "달력 위쪽 메뉴에서 근무조 입력을 열고 날짜를 선택한 다음 근무조 버튼을 누르세요. 추가한 근무조는 월・주・일 보기에 표시됩니다.";
+"help.shifts.multiple.question" = "하루에 여러 근무조를 추가할 수 있나요?";
+"help.shifts.multiple.answer" = "같은 날에는 하나의 근무조만 유지됩니다. 이미 근무조가 있는 날에 다른 근무조를 선택하면 기존 근무조가 교체되지만 일반 일정이나 출근・퇴근 기록은 삭제되지 않습니다.";
+"help.shifts.replace.question" = "당일 근무조를 변경하려면?";
+"help.shifts.replace.answer" = "근무조 입력을 다시 열고 같은 날짜를 선택한 다음 새 근무조를 누르면 교체됩니다. 취소 버튼은 선택한 날짜의 근무조만 삭제하며 다른 일정에는 영향을 주지 않습니다.";
+"help.shifts.change_time.question" = "근무조 시간을 사용자 설정하려면?";
+"help.shifts.change_time.answer" = "설정의 근무조 시간 사용자 설정에서 주간, 야간 및 사용자 지정 근무조의 이름, 시작 시간, 종료 시간과 색상을 변경할 수 있습니다. 변경 내용은 이후에 생성하는 근무조에 적용됩니다.";
+"help.shifts.difference.question" = "근무조와 근무 기록은 어떻게 다른가요?";
+"help.shifts.difference.answer" = "근무조는 주간이나 야간 같은 예정된 근무 일정을 뜻합니다. 근무 기록은 실제 출근・퇴근 시간, 휴게 시간, 시급 및 교통비를 기록한 정보이며 근무 통계에 사용됩니다.";
 "help.shifts.record.question" = "출근과 퇴근을 기록하려면?";
-"help.shifts.record.answer" = "날짜 상세에서 알바 기록 새로 만들기를 열거나 새로 만들기 화면에서 알바 기록을 선택한 뒤 출근 시간, 퇴근 시간, 휴게 시간, 시급 및 교통비를 입력합니다. 저장한 내용은 근무 통계에 반영됩니다.";
+"help.shifts.record.answer" = "날짜 상세에서 근무 기록 새로 만들기를 열거나 새로 만들기 화면에서 근무 기록을 선택한 뒤 출근 시간, 퇴근 시간, 휴게 시간, 시급 및 교통비를 입력합니다. 저장한 내용은 근무 통계에 반영됩니다.";
 "help.shifts.overnight.question" = "다음 날 퇴근은 어떻게 처리되나요?";
 "help.shifts.overnight.answer" = "야간 근무처럼 날짜를 넘기는 경우 퇴근 시간을 다음 날로 기록할 수 있습니다. 통계에서는 출근부터 다음 날 퇴근까지의 실제 시간에서 휴게 시간을 빼서 계산합니다.";
 "help.shifts.statistics.question" = "근무 통계는 어떻게 계산되나요?";
-"help.shifts.statistics.answer" = "근무 통계는 기록된 출근 시간, 퇴근 시간, 휴게 시간, 시급 및 교통비를 기준으로 계산합니다. 기본 계산식은 근무 시간 = 퇴근 시간 - 출근 시간 - 휴게 시간, 급여 = 근무 시간 × 시급, 합계 = 급여 + 교통비입니다.";
+"help.shifts.statistics.answer" = "근무 통계는 기록된 출근 시간, 퇴근 시간, 휴게 시간, 시급 및 교통비를 기준으로 계산합니다. 모든 금액은 일본 엔(JPY)입니다. 기본 계산식은 근무 시간 = 퇴근 시간 - 출근 시간 - 휴게 시간, 급여 = 근무 시간 × 시급, 합계 = 급여 + 교통비입니다.";
 "help.shifts.statistics_missing.question" = "통계 결과가 표시되지 않는 이유는?";
-"help.shifts.statistics_missing.answer" = "선택한 기간에 출근과 퇴근 기록이 저장되어 있고 시급 등 필요한 정보가 입력되어 있는지 확인하세요. 근무 일정만으로는 급여 통계가 자동 생성되지 않습니다.";
+"help.shifts.statistics_missing.answer" = "선택한 기간에 출근과 퇴근 기록이 저장되어 있고 시급 등 필요한 정보가 입력되어 있는지 확인하세요. 근무조만으로는 급여 통계가 자동 생성되지 않습니다.";
 
 "help.sharing.create.question" = "공유 캘린더를 만들거나 편집하려면?";
 "help.sharing.create.answer" = "캘린더 왼쪽 위 아이콘을 누르고 공유 캘린더 만들기를 선택하세요. 이름을 입력하고 만들기를 누르면 iCloud 공유 화면이 열립니다. 만든 뒤에는 연필 버튼으로 이름을 바꾸고 사람 추가에서 초대를 보낼 수 있습니다.";
@@ -395,9 +400,9 @@
 "help.sharing.switch.question" = "표시할 캘린더를 전환하려면?";
 "help.sharing.switch.answer" = "캘린더 왼쪽 위 아이콘을 누르고 내 캘린더 또는 공유 캘린더 하나를 선택하세요. 체크 표시는 현재 표시 중인 캘린더를 뜻합니다. 한 번에 하나의 캘린더만 표시됩니다.";
 "help.sharing.read_only_holidays.question" = "공유 캘린더를 편집할 수 있나요? 공휴일은 어떻게 표시되나요?";
-"help.sharing.read_only_holidays.answer" = "받는 사람은 공유된 일정, 근무 및 출퇴근 기록을 볼 수 있지만 추가하거나 편집할 수는 없습니다. 항목을 추가하려면 편집 가능한 캘린더로 전환하세요. 공휴일은 CloudKit으로 공유되지 않으며 받는 사람의 기기에서 활성화한 지역과 로컬 캐시에 따라 표시됩니다.";
+"help.sharing.read_only_holidays.answer" = "받는 사람은 공유된 일정, 근무조 및 근무 기록을 볼 수 있지만 추가하거나 편집할 수는 없습니다. 항목을 추가하려면 편집 가능한 캘린더로 전환하세요. 공휴일은 CloudKit으로 공유되지 않으며 받는 사람의 기기에서 활성화한 지역과 로컬 캐시에 따라 표시됩니다.";
 "help.sharing.content.question" = "공유되는 내용과 공유되지 않는 내용은?";
-"help.sharing.content.answer" = "현재 해당 공유 캘린더의 일정, 근무 및 출퇴근 기록은 자동으로 공유되며 종류별로 끌 수 없습니다. 일정 제목과 시간, 출퇴근 기록의 출근・퇴근 및 휴게 시간은 공유됩니다. 메모, 미리 알림과 알림, 음성 입력 내용, 시급, 급여, 교통비, 근무 템플릿, 설정 및 광고 제거 구입 상태는 공유되지 않습니다.";
+"help.sharing.content.answer" = "현재 해당 공유 캘린더의 일정, 근무조 및 근무 기록은 자동으로 공유되며 종류별로 끌 수 없습니다. 일정 제목과 시간, 근무 기록의 출근・퇴근 및 휴게 시간은 공유됩니다. 메모, 미리 알림과 알림, 음성 입력 내용, 시급, 급여, 교통비, 근무조 템플릿, 설정 및 광고 제거 구입 상태는 공유되지 않습니다.";
 "help.sharing.stop.question" = "공유를 중단하거나 삭제하면 어떻게 되나요?";
 "help.sharing.stop.answer" = "소유자가 공유를 중단하거나 공유 캘린더를 삭제하면 받는 사람은 더 이상 해당 캘린더를 볼 수 없습니다. 받는 사람이 공유에서 나가면 자신의 기기 목록에서만 제거되며 소유자의 데이터에는 영향이 없습니다. 변경 내용이 보이지 않으면 캘린더 선택 화면에서 새로고침하세요.";
 
@@ -405,7 +410,7 @@
 "help.ads.about.answer" = "동의 흐름에서 광고 요청이 허용되면 TimeNest에 광고가 표시될 수 있습니다. 설정에서 일회성 구입으로 광고를 제거할 수 있고, 구입 복원으로 Apple 구입 상태를 확인할 수 있습니다.";
 
 "help.privacy.storage.question" = "데이터는 어디에 저장되나요?";
-"help.privacy.storage.answer" = "일정, 근무, 알바 기록, 표시 설정 및 공휴일 설정은 이 기기에 저장됩니다. Widget 표시에 필요한 캘린더 정보는 같은 기기의 App Group 안에서만 공유됩니다.";
+"help.privacy.storage.answer" = "일정, 근무조, 근무 기록, 표시 설정 및 공휴일 설정은 이 기기에 저장됩니다. Widget 표시에 필요한 캘린더 정보는 같은 기기의 App Group 안에서만 공유됩니다.";
 "help.privacy.account.question" = "계정이 필요한가요?";
 "help.privacy.account.answer" = "TimeNest를 사용하는 데 계정 등록이나 로그인이 필요하지 않습니다. TimeNest가 운영하는 클라우드 동기화는 없으며, 공유 캘린더는 Apple iCloud(CloudKit)를 사용합니다.";
 "help.privacy.delete_app.question" = "App을 삭제한 경우의 데이터";
@@ -432,7 +437,7 @@
 "widget.twoMonths.title" = "이번 달과 다음 달";
 "widget.twoMonths.description" = "두 달을 나란히 표시합니다.";
 "widget.weekSchedule.title" = "이번 주 일정";
-"widget.weekSchedule.description" = "이번 주 근무, 공휴일 및 일정을 표시합니다.";
+"widget.weekSchedule.description" = "이번 주 근무조, 공휴일 및 일정을 표시합니다.";
 "widget.upcoming.title" = "다가오는 일정과 캘린더";
 "widget.upcoming.description" = "다가오는 일정과 이번 달 캘린더를 표시합니다.";
 "widget.accessory.title" = "오늘 요약";
@@ -442,14 +447,14 @@
 "widget.allDay" = "하루 종일";
 "widget.today" = "오늘";
 "widget.tomorrow" = "내일";
-"widget.shift" = "근무";
+"widget.shift" = "근무조";
 "widget.holiday" = "공휴일";
 "calendar_sharing.select_calendar" = "캘린더 선택";
 "calendar_sharing.my_calendar" = "내 캘린더";
 "calendar_sharing.owned_calendars" = "공유 캘린더";
 "calendar_sharing.create_calendar" = "공유 캘린더 만들기";
 "calendar_sharing.no_shared_calendars" = "공유 캘린더가 아직 없습니다";
-"calendar_sharing.no_shared_calendars_message" = "가족이나 동료가 일정과 근무를 볼 수 있도록 읽기 전용 공유를 만들 수 있습니다.";
+"calendar_sharing.no_shared_calendars_message" = "가족이나 동료가 일정과 근무조를 볼 수 있도록 읽기 전용 공유를 만들 수 있습니다.";
 "calendar_sharing.read_only" = "보기 전용";
 "calendar_sharing.read_only_add.title" = "읽기 전용 캘린더";
 "calendar_sharing.read_only_add.message" = "이 공유 캘린더는 읽기 전용입니다. 일정이나 근무 기록을 추가하려면 편집 가능한 캘린더로 전환하세요.";
@@ -518,7 +523,7 @@
 "calendar_sharing.error.data_migration_failed" = "캘린더 데이터를 이전하지 못했습니다. 원본 데이터는 삭제되지 않았습니다. 앱을 다시 시작해 재시도하세요.";
 "calendar_sharing.error.legacy_store_migration_failed" = "기존 데이터를 현재 저장 위치로 이전하지 못했습니다. 원본 데이터는 안전하게 보존됩니다. 앱을 종료한 뒤 다시 열어 재시도하세요. 이전이 완료될 때까지 편집할 수 없습니다.";
 "calendar_sharing.error.sync_failed" = "동기화하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-"calendar_sharing.content.privacy_note" = "이 캘린더의 일정, 교대 및 근무 기록은 자동으로 공유됩니다. 메모, 알림, 시급, 교통비 및 급여 정보는 공유되지 않으며 받는 사람은 읽기만 할 수 있습니다.";
+"calendar_sharing.content.privacy_note" = "이 캘린더의 일정, 근무조 및 근무 기록은 자동으로 공유됩니다. 메모, 알림, 시급, 교통비 및 급여 정보는 공유되지 않으며 받는 사람은 읽기만 할 수 있습니다.";
 
 "settings.data_management" = "데이터 관리";
 "data_management.backup.create" = "백업 생성";
@@ -565,15 +570,15 @@
 "calendar_sharing.error.icloud_status_unavailable" = "현재 iCloud 상태를 확인할 수 없습니다. 나중에 다시 시도해 주세요.";
 
 /* Shift Batch */
-"shift_template.favorites" = "자주 쓰는 근무";
-"shift_template.empty.title" = "근무 템플릿이 아직 없습니다";
-"shift_template.empty.message" = "주간·야간 등 자주 쓰는 템플릿을 만들면 여러 날짜에 더 빠르게 근무를 배정할 수 있습니다.";
+"shift_template.favorites" = "자주 쓰는 근무조";
+"shift_template.empty.title" = "근무조 템플릿이 아직 없습니다";
+"shift_template.empty.message" = "주간·야간 등 자주 쓰는 템플릿을 만들면 여러 날짜에 더 빠르게 근무조를 배정할 수 있습니다.";
 "shift_template.favorite" = "즐겨찾기에 추가";
 "shift_template.unfavorite" = "즐겨찾기에서 제거";
-"shift_template.delete_confirmation.title" = "근무 템플릿을 삭제할까요?";
-"shift_template.delete_confirmation.referenced" = "이 템플릿은 기존 근무 %d개에서 사용 중입니다. 저장된 근무 내용은 그대로 유지됩니다.";
-"shift_template.delete_confirmation.unused" = "이미 만든 근무는 삭제되지 않습니다.";
-"shift_batch.title" = "근무 일괄 설정";
+"shift_template.delete_confirmation.title" = "근무조 템플릿을 삭제할까요?";
+"shift_template.delete_confirmation.referenced" = "이 템플릿은 기존 근무조 %d개에서 사용 중입니다. 저장된 근무조 내용은 그대로 유지됩니다.";
+"shift_template.delete_confirmation.unused" = "이미 만든 근무조는 삭제되지 않습니다.";
+"shift_batch.title" = "근무조 일괄 설정";
 "shift_batch.selected_count" = "%d개 날짜 선택됨";
 "shift_batch.clear_selection" = "선택 해제";
 "shift_batch.mode" = "작업";
@@ -589,15 +594,15 @@
 "shift_batch.preview" = "미리보기";
 "shift_batch.will_create" = "생성 예정";
 "shift_batch.skipped" = "건너뜀";
-"shift_batch.existing_shift" = "기존 근무 있음";
-"shift_batch.no_source" = "복사할 근무 없음";
+"shift_batch.existing_shift" = "기존 근무조 있음";
+"shift_batch.no_source" = "복사할 근무조 없음";
 "shift_batch.invalid_template" = "유효하지 않은 템플릿";
-"shift_batch.completed" = "근무 %d개를 만들었습니다";
+"shift_batch.completed" = "근무조 %d개를 만들었습니다";
 "shift_batch.auxiliary_failure" = "일부 알림 또는 새로 고침을 완료하지 못했습니다.";
 "shift_batch.undo" = "실행 취소";
-"shift_batch.undo_completed" = "근무 %d개를 삭제했습니다";
-"shift_batch.undo_edited" = "수정된 근무 %d개는 실행 취소할 수 없습니다.";
-"shift_batch.plan_changed" = "미리보기 후 근무 정보가 변경되었습니다. 다시 미리 확인해 주세요.";
+"shift_batch.undo_completed" = "근무조 %d개를 삭제했습니다";
+"shift_batch.undo_edited" = "수정된 근무조 %d개는 실행 취소할 수 없습니다.";
+"shift_batch.plan_changed" = "미리보기 후 근무조 정보가 변경되었습니다. 다시 미리 확인해 주세요.";
 "shift_batch.empty_selection" = "날짜를 하나 이상 선택해 주세요.";
 "shift_batch.confirm" = "확인";
 "shift_batch.remove_date" = "날짜 선택 해제";

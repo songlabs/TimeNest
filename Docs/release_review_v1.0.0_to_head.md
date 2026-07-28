@@ -5,7 +5,7 @@
 ## 2026-07-12 追補
 
 - 現在の repository HEAD は `8bea0d9`。下記の 2026-07-06 時点の commit 数、HEAD、diff 件数、検証結果は履歴スナップショットであり、現在値として扱わない。
-- その後、Apple iCloud / CloudKit を使う共有カレンダーを追加。作成者は予定・シフト・勤務記録を個別に共有でき、受信側は閲覧のみ。メモ、通知、音声内容、時給、給与、交通費、テンプレート、広告・購入状態、端末情報、App 設定、Widget の私的データ、祝日購読内部情報は共有対象外。
+- その後、Apple iCloud / CloudKit を使う共有カレンダーを追加。所有者の共有カレンダーに割り当てた予定・シフト・勤務記録は自動的に共有され、種類別の共有スイッチはない。受信側は閲覧のみ。メモ、通知、音声内容、時給、給与、交通費、テンプレート、広告・購入状態、端末情報、App 設定、Widget の私的データ、祝日購読内部情報は共有対象外。
 - `ja` / `zh-Hans` / `zh-Hant` / `en` / `ko` の `Localizable.strings` は現在各 392 keys。`InfoPlist.strings` は各 5 keys。
 - TimeNest 独自アカウント、開発者運用 backend、汎用 cloud sync は引き続き存在しないが、「cloud sharing は未実装」という旧表現は現在の CloudKit 共有機能には適用しない。
 - `v1.0.0` の app sandbox `Library/Application Support/TimeNest.store` と、現在の App Group `Library/Application Support/TimeNest.store` は別 URL であり、自動 fallback はないため upgrade data loss risk は成立していた。現在は `LegacyStoreMigrator` の一回限りの model-level migration で code-side risk を修正済み。

@@ -131,7 +131,7 @@
 /* Event Editor */
 "entry.create.title" = "新建";
 "entry.kind.event" = "日程";
-"entry.kind.work_record" = "打工记录";
+"entry.kind.work_record" = "工作记录";
 "editor.note" = "备注";
 "editor.title" = "标题";
 "editor.basic_info" = "基本信息";
@@ -155,7 +155,7 @@
 "editor.restTime" = "休息时间";
 "editor.transportFee" = "交通费";
 "editor.hourlyRate" = "时薪";
-"editor.currencyUnit" = "元";
+"editor.currencyUnit" = "日元";
 "event.memo.title" = "备忘";
 "event.memo.voice.placeholder" = "用语音输入备忘";
 "event.memo.voice.start" = "开始语音输入";
@@ -163,11 +163,11 @@
 "event.memo.voice.permission_denied" = "使用语音输入备忘需要允许麦克风和语音识别权限。";
 "event.memo.voice.unavailable" = "此设备或当前语言不支持语音输入。";
 "event.memo.voice.recognizing" = "语音输入中...";
-"work_record.add" = "新增打工记录";
-"work_record.edit" = "编辑打工记录";
-"work_record.default_title" = "打工";
-"work_record.section_title" = "打工记录";
-"work_record.empty" = "还没有工时记录";
+"work_record.add" = "新增工作记录";
+"work_record.edit" = "编辑工作记录";
+"work_record.default_title" = "工作";
+"work_record.section_title" = "工作记录";
+"work_record.empty" = "还没有工作记录";
 "work_record.empty_message" = "可以登记这一天实际的上班、下班和休息时间。";
 "work_record.missing_clock_in" = "未上班";
 "work_record.missing_clock_out" = "未下班";
@@ -194,6 +194,9 @@
 "holiday_subscription.synced" = "已同步";
 "holiday_subscription.sync_failed" = "同步失败";
 "holiday_subscription.not_synced" = "未同步";
+"holiday_subscription.syncing" = "正在同步";
+"holiday_subscription.using_cached_data" = "正在使用上次成功的数据";
+"holiday_subscription.last_successful_sync_format" = "上次成功同步：%@";
 "holiday_subscription.sync_error" = "同步错误";
 "holiday_subscription.no_url" = "未设置";
 
@@ -313,7 +316,7 @@
 "shift_time.delete_button" = "删除";
 
 /* Work Statistics */
-"work_statistics.title" = "打工统计";
+"work_statistics.title" = "工作统计";
 "work_statistics" = "统计";
 "work_statistics.start_date_month" = "开始日期";
 "work_statistics.end_date_month" = "结束日期";
@@ -326,6 +329,8 @@
 "work_statistics.loading" = "加载中...";
 "work_statistics.empty_title" = "暂无统计数据";
 "work_statistics.empty_message" = "请调整筛选条件后点击统计按钮";
+"work_statistics.received_unavailable_title" = "收到的共享日历不支持工作统计";
+"work_statistics.received_unavailable_message" = "收到的共享日历不会共享时薪和交通费，因此无法可靠计算工作统计。请切换到个人日历或自己创建的共享日历。";
 
 "work.nextDayPrefix" = "次日";
 
@@ -380,11 +385,11 @@
 "help.shifts.difference.question" = "班次和工作记录有什么区别？";
 "help.shifts.difference.answer" = "班次表示预定的工作安排，例如白班或夜班。工作记录表示实际的上班、下班、休息时间、时薪和交通费，用于工作统计。";
 "help.shifts.record.question" = "如何记录上班和下班？";
-"help.shifts.record.answer" = "在日期详情中打开“新增打工记录”，或在新建画面选择“打工记录”，输入上班时间、下班时间、休息时间、时薪和交通费。保存后会参与工作统计。";
+"help.shifts.record.answer" = "在日期详情中打开“新增工作记录”，或在新建画面选择“工作记录”，输入上班时间、下班时间、休息时间、时薪和交通费。保存后会参与工作统计。";
 "help.shifts.overnight.question" = "第二天下班如何处理？";
 "help.shifts.overnight.answer" = "夜班等跨日工作时，下班时间可以记录为次日。统计时会按从上班到次日下班的实际时间计算，并扣除休息时间。";
 "help.shifts.statistics.question" = "工作统计如何计算？";
-"help.shifts.statistics.answer" = "工作统计会根据已记录的上班时间、下班时间、休息时间、时薪和交通费计算。基本规则是：工作时间 = 下班时间 - 上班时间 - 休息时间；工资 = 工作时间 × 时薪；合计 = 工资 + 交通费。";
+"help.shifts.statistics.answer" = "工作统计会根据已记录的上班时间、下班时间、休息时间、时薪和交通费计算。所有金额均为日元（JPY）。基本规则是：工作时间 = 下班时间 - 上班时间 - 休息时间；工资 = 工作时间 × 时薪；合计 = 工资 + 交通费。";
 "help.shifts.statistics_missing.question" = "为什么统计结果没有显示？";
 "help.shifts.statistics_missing.answer" = "请确认目标期间内已经保存了上班和下班记录，并且时薪等必要信息已输入。只有班次本身不会自动生成工资统计。";
 
@@ -405,7 +410,7 @@
 "help.ads.about.answer" = "当同意流程允许请求广告时，TimeNest 可能会显示广告。你可以在设置中通过一次性购买去除广告，也可以通过“恢复购买”确认 Apple 购买状态。";
 
 "help.privacy.storage.question" = "数据保存在哪里？";
-"help.privacy.storage.answer" = "日程、班次、打工记录、显示设置和节假日设置保存在此设备中。Widget 显示所需的日历信息只会在同一设备的 App Group 内共享。";
+"help.privacy.storage.answer" = "日程、班次、工作记录、显示设置和节假日设置保存在此设备中。Widget 显示所需的日历信息只会在同一设备的 App Group 内共享。";
 "help.privacy.account.question" = "需要账号吗？";
 "help.privacy.account.answer" = "使用 TimeNest 无需注册账号或登录。TimeNest 不提供自有云同步，共享日历使用 Apple 的 iCloud（CloudKit）。";
 "help.privacy.delete_app.question" = "删除 App 后数据会怎样？";
@@ -524,24 +529,24 @@
 "data_management.backup.create" = "创建备份";
 "data_management.backup.restore" = "从备份恢复";
 "data_management.restore.confirmation.title" = "替换当前数据？";
-"data_management.restore.confirmation.message" = "当前日程、班次和勤務记录将被备份内容替换。此操作无法撤销。";
+"data_management.restore.confirmation.message" = "当前日程、班次和工作记录将被备份内容替换。此操作无法撤销。";
 "data_management.restore.confirmation.action" = "替换并恢复";
 "data_management.restore.success" = "已从备份恢复。";
 "data_management.backup.invalid_file" = "此文件不是有效的 TimeNest 备份。";
 "data_management.backup.create_failed" = "无法创建备份。";
 "data_management.backup.restore_failed" = "无法恢复。当前数据未被更改。";
-"data_management.csv.export" = "导出勤務记录 CSV";
-"data_management.csv.export_title" = "导出勤務记录";
+"data_management.csv.export" = "导出工作记录 CSV";
+"data_management.csv.export_title" = "导出工作记录";
 "data_management.csv.month" = "月份";
 "data_management.csv.export_action" = "导出";
-"data_management.csv.no_data" = "所选月份没有可导出的勤務记录。";
-"data_management.csv.export_failed" = "无法导出勤務记录。";
+"data_management.csv.no_data" = "所选月份没有可导出的工作记录。";
+"data_management.csv.export_failed" = "无法导出工作记录。";
 "data_management.csv.column.date" = "日期";
 "data_management.csv.column.start_time" = "开始时间";
 "data_management.csv.column.end_time" = "结束时间";
 "data_management.csv.column.rest_time" = "休息时间";
-"data_management.csv.column.worked_time" = "实际勤務时间";
-"data_management.csv.column.record_name" = "勤務名称";
+"data_management.csv.column.worked_time" = "实际工作时间";
+"data_management.csv.column.record_name" = "工作记录名称";
 "data_management.csv.column.note" = "备注";
 "calendar_sharing.settings.title" = "共享日历";
 "calendar_sharing.icloud_status.title" = "iCloud 状态";

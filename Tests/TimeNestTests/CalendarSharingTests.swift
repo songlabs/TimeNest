@@ -737,7 +737,7 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(descriptor.ownerDisplayName)
     }
 
-    func testProjectKeepsMarketingVersionOnePointSixAndBuildTwelve() throws {
+    func testProjectKeepsMarketingVersionOnePointSevenAndBuildThirteen() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -747,8 +747,8 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(project.contains("let marketingVersion = \"1.6\""))
-        XCTAssertTrue(project.contains("let buildNumber = \"12\""))
+        XCTAssertTrue(project.contains("let marketingVersion = \"1.7\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"13\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {
@@ -2840,7 +2840,7 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertNil(savedEvents.first)
     }
 
-    func testWorkRecordMidSaveFailureRetriesWithoutDuplicateClocksOrCalendarDrift() async throws {
+    func testWorkRecordPairFailureIsAtomicAndRetryDoesNotDuplicateClocks() async throws {
         let owned = makeCalendar(kind: .sharedOwned, name: "Family")
         let calendars = [TimeNestCalendar.personal(name: "My Calendar"), owned]
         let calendarRepository = ControlledCalendarRepository(calendars: calendars)
@@ -2858,59 +2858,35 @@ final class CalendarSharingStoreTests: XCTestCase {
         let viewModel = makeViewModel(eventUseCase: eventUseCase, store: store)
         let workDate = Date(timeIntervalSince1970: 1_700_500_000)
         let sessionID = UUID()
-        let context = WorkRecordEditorSaveContext(
+        let request = WorkRecordPairSaveRequest(
+            clockInEventID: nil,
+            clockOutEventID: nil,
+            calendarID: owned.id,
             title: "Work",
             workDate: workDate,
-            workInDate: workDate,
-            workOutDate: workDate.addingTimeInterval(28_800),
-            restTime: 1,
-            transportFee: "900",
-            hourlyRate: "2500",
-            workSessionId: sessionID,
-            isWorkOutTimeSet: true,
-            editInitialSession: nil
+            clockInDate: workDate,
+            clockOutDate: workDate.addingTimeInterval(28_800),
+            restHours: 1,
+            transportFee: 900,
+            hourlyRate: 2_500,
+            sessionID: sessionID,
+            isWorkOutTimeSet: true
         )
-        let create: EventEditorSaveAction = { title, note, start, end, isAllDay,
-            reminder, shift, workInfo, calendarID in
-            try await viewModel.createEvent(
-                title: title,
-                note: note,
-                startDate: start,
-                endDate: end,
-                isAllDay: isAllDay,
-                reminderOffsetMinutes: reminder,
-                shiftTemplateID: shift,
-                workInfo: workInfo,
-                calendarID: calendarID
-            )
-        }
-        let save = {
-            try await WorkRecordEditorSaveLogic.save(
-                context: context,
-                defaultTitle: "Work",
-                onCreateEvent: { title, note, start, end, isAllDay, reminder, shift, workInfo in
-                    try await create(
-                        title, note, start, end, isAllDay, reminder, shift, workInfo, owned.id
-                    )
-                },
-                onUpdateEvent: nil
-            )
-        }
-        await eventRepository.failWrite(afterSuccessfulWrites: 2)
+        await eventRepository.failNextWrite()
 
         do {
-            _ = try await save()
-            XCTFail("The injected failure must interrupt after the clock-in is durable")
+            try await viewModel.saveWorkRecordPair(request)
+            XCTFail("The injected batch failure must reject the whole pair")
         } catch {}
 
         var saved = try await eventUseCase.events(
             in: DateInterval(start: .distantPast, end: .distantFuture),
             calendarID: owned.id
         )
-        XCTAssertEqual(saved.filter { $0.workClockKind == .clockIn }.count, 1)
+        XCTAssertEqual(saved.filter { $0.workClockKind == .clockIn }.count, 0)
         XCTAssertEqual(saved.filter { $0.workClockKind == .clockOut }.count, 0)
 
-        _ = try await save()
+        try await viewModel.saveWorkRecordPair(request)
         saved = try await eventUseCase.events(
             in: DateInterval(start: .distantPast, end: .distantFuture),
             calendarID: owned.id
@@ -2921,6 +2897,329 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(Set(clocks.map(\.id)).count, 2)
         XCTAssertTrue(clocks.allSatisfy { $0.calendarID == owned.id })
         XCTAssertEqual(store.selection, .mine)
+    }
+
+    func testWorkRecordPairRejectsOrdinaryEventsInEitherExplicitPositionWithoutSideEffects() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let scheduler = EventNotificationSchedulerSpy()
+        let useCase = EventUseCase(
+            repository: repository,
+            notificationScheduler: scheduler,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        let ordinary = makeEvent(
+            id: UUID(),
+            title: "Clock In",
+            calendarID: owned.id,
+            notificationID: "ordinary-notification"
+        )
+        try await repository.create(ordinary)
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+
+        for request in [
+            makeWorkPairRequest(
+                calendarID: owned.id,
+                sessionID: UUID(),
+                clockInEventID: ordinary.id
+            ),
+            makeWorkPairRequest(
+                calendarID: owned.id,
+                sessionID: UUID(),
+                clockOutEventID: ordinary.id
+            )
+        ] {
+            do {
+                try await useCase.saveWorkRecordPair(request)
+                XCTFail("An ordinary event must never be converted into a work clock")
+            } catch {
+                XCTAssertEqual(error as? WorkRecordPairSaveError, .notWorkRecord)
+            }
+        }
+
+        let stored = await repository.event(id: ordinary.id)
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        XCTAssertEqual(applyBatchCallCount, 0)
+        XCTAssertEqual(callbackCount, 0)
+        XCTAssertTrue(scheduler.cancelledIDs.isEmpty)
+        XCTAssertEqual(stored, ordinary)
+    }
+
+    func testWorkRecordPairRejectsSwappedKindsAndSameExplicitID() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        let sessionID = UUID()
+        let clockIn = makeWorkClockEvent(
+            kind: .clockIn,
+            calendarID: owned.id,
+            sessionID: sessionID
+        )
+        let clockOut = makeWorkClockEvent(
+            kind: .clockOut,
+            calendarID: owned.id,
+            sessionID: sessionID
+        )
+        try await repository.create(clockIn)
+        try await repository.create(clockOut)
+
+        do {
+            try await useCase.saveWorkRecordPair(
+                makeWorkPairRequest(
+                    calendarID: owned.id,
+                    sessionID: sessionID,
+                    clockInEventID: clockOut.id,
+                    clockOutEventID: clockIn.id
+                )
+            )
+            XCTFail("Swapped clock kinds must fail")
+        } catch {
+            XCTAssertEqual(error as? WorkRecordPairSaveError, .clockKindMismatch)
+        }
+
+        do {
+            try await useCase.saveWorkRecordPair(
+                makeWorkPairRequest(
+                    calendarID: owned.id,
+                    sessionID: sessionID,
+                    clockInEventID: clockIn.id,
+                    clockOutEventID: clockIn.id
+                )
+            )
+            XCTFail("One event ID cannot fill both work-clock positions")
+        } catch {
+            XCTAssertEqual(error as? WorkRecordPairSaveError, .duplicateExplicitEventID)
+        }
+
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        let storedClockIn = await repository.event(id: clockIn.id)
+        let storedClockOut = await repository.event(id: clockOut.id)
+        XCTAssertEqual(applyBatchCallCount, 0)
+        XCTAssertEqual(storedClockIn, clockIn)
+        XCTAssertEqual(storedClockOut, clockOut)
+    }
+
+    func testWorkRecordPairRejectsCalendarSessionAndMissingExplicitReferences() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let other = makeCalendar(kind: .sharedOwned, name: "Other")
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned, other]
+            )
+        )
+        let targetSessionID = UUID()
+        let otherCalendarClockIn = makeWorkClockEvent(
+            kind: .clockIn,
+            calendarID: other.id,
+            sessionID: targetSessionID
+        )
+        let otherSessionClockIn = makeWorkClockEvent(
+            kind: .clockIn,
+            calendarID: owned.id,
+            sessionID: UUID()
+        )
+        let validClockIn = makeWorkClockEvent(
+            kind: .clockIn,
+            calendarID: owned.id,
+            sessionID: targetSessionID
+        )
+        try await repository.create(otherCalendarClockIn)
+        try await repository.create(otherSessionClockIn)
+        try await repository.create(validClockIn)
+
+        let cases: [(WorkRecordPairSaveRequest, WorkRecordPairSaveError)] = [
+            (
+                makeWorkPairRequest(
+                    calendarID: owned.id,
+                    sessionID: targetSessionID,
+                    clockInEventID: otherCalendarClockIn.id
+                ),
+                .calendarMismatch
+            ),
+            (
+                makeWorkPairRequest(
+                    calendarID: owned.id,
+                    sessionID: targetSessionID,
+                    clockInEventID: otherSessionClockIn.id
+                ),
+                .sessionMismatch
+            ),
+            (
+                makeWorkPairRequest(
+                    calendarID: owned.id,
+                    sessionID: targetSessionID,
+                    clockInEventID: validClockIn.id,
+                    clockOutEventID: UUID()
+                ),
+                .explicitEventNotFound
+            )
+        ]
+
+        for (request, expectedError) in cases {
+            do {
+                try await useCase.saveWorkRecordPair(request)
+                XCTFail("Invalid explicit work-clock ownership must fail")
+            } catch {
+                XCTAssertEqual(error as? WorkRecordPairSaveError, expectedError)
+            }
+        }
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        let storedValidClockIn = await repository.event(id: validClockIn.id)
+        XCTAssertEqual(applyBatchCallCount, 0)
+        XCTAssertEqual(storedValidClockIn, validClockIn)
+    }
+
+    func testCorrectExplicitWorkRecordPairUpdatesOnceAndFiresOneCallback() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let scheduler = EventNotificationSchedulerSpy()
+        let useCase = EventUseCase(
+            repository: repository,
+            notificationScheduler: scheduler,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        let sessionID = UUID()
+        let clockIn = makeWorkClockEvent(
+            kind: .clockIn,
+            calendarID: owned.id,
+            sessionID: sessionID,
+            notificationID: "old-clock-in"
+        )
+        let clockOut = makeWorkClockEvent(
+            kind: .clockOut,
+            calendarID: owned.id,
+            sessionID: sessionID,
+            notificationID: "old-clock-out"
+        )
+        try await repository.create(clockIn)
+        try await repository.create(clockOut)
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+        let request = makeWorkPairRequest(
+            calendarID: owned.id,
+            sessionID: sessionID,
+            clockInEventID: clockIn.id,
+            clockOutEventID: clockOut.id,
+            title: "Updated Work"
+        )
+
+        try await useCase.saveWorkRecordPair(request)
+
+        let storedClockInValue = await repository.event(id: clockIn.id)
+        let storedClockOutValue = await repository.event(id: clockOut.id)
+        let storedClockIn = try XCTUnwrap(storedClockInValue)
+        let storedClockOut = try XCTUnwrap(storedClockOutValue)
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        XCTAssertEqual(storedClockIn.title, "Updated Work")
+        XCTAssertEqual(storedClockOut.title, "Updated Work")
+        XCTAssertEqual(storedClockIn.workInfo?.workSessionId, sessionID)
+        XCTAssertEqual(storedClockOut.workInfo?.workSessionId, sessionID)
+        XCTAssertEqual(applyBatchCallCount, 1)
+        XCTAssertEqual(callbackCount, 1)
+        XCTAssertEqual(Set(scheduler.cancelledIDs), ["old-clock-in", "old-clock-out"])
+    }
+
+    func testWorkRecordPairBatchFailureDoesNotFireCallback() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+        await repository.failNextWrite()
+
+        do {
+            try await useCase.saveWorkRecordPair(
+                makeWorkPairRequest(calendarID: owned.id, sessionID: UUID())
+            )
+            XCTFail("The injected batch failure must propagate")
+        } catch {}
+
+        XCTAssertEqual(callbackCount, 0)
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        XCTAssertEqual(applyBatchCallCount, 1)
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertTrue(stored.isEmpty)
+    }
+
+    private func makeWorkClockEvent(
+        kind: WorkClockKind,
+        calendarID: UUID,
+        sessionID: UUID?,
+        notificationID: String? = nil
+    ) -> CalendarEvent {
+        let workDate = Date(timeIntervalSince1970: 1_700_500_000)
+        let clockDate = kind == .clockIn
+            ? workDate
+            : workDate.addingTimeInterval(8 * 3_600)
+        let workInfo: WorkInfo
+        switch kind {
+        case .clockIn:
+            workInfo = WorkInfo(
+                workInTime: clockDate,
+                restHours: 1,
+                workDate: workDate,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: true
+            )
+        case .clockOut:
+            workInfo = WorkInfo(
+                workOutTime: clockDate,
+                restHours: 1,
+                workDate: workDate,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: true
+            )
+        }
+        return makeEvent(
+            id: UUID(),
+            title: "Work",
+            calendarID: calendarID,
+            notificationID: notificationID,
+            workInfo: workInfo
+        )
+    }
+
+    private func makeWorkPairRequest(
+        calendarID: UUID,
+        sessionID: UUID,
+        clockInEventID: UUID? = nil,
+        clockOutEventID: UUID? = nil,
+        title: String = "Work"
+    ) -> WorkRecordPairSaveRequest {
+        let workDate = Date(timeIntervalSince1970: 1_700_500_000)
+        return WorkRecordPairSaveRequest(
+            clockInEventID: clockInEventID,
+            clockOutEventID: clockOutEventID,
+            calendarID: calendarID,
+            title: title,
+            workDate: workDate,
+            clockInDate: workDate,
+            clockOutDate: workDate.addingTimeInterval(8 * 3_600),
+            restHours: 1,
+            transportFee: 900,
+            hourlyRate: 2_500,
+            sessionID: sessionID,
+            isWorkOutTimeSet: true
+        )
     }
 
     private func makeStore(
@@ -3328,6 +3627,7 @@ private actor ControlledEventRepository: EventRepository {
     private var remainingReassignmentFailures = 0
     private var remainingWriteFailures = 0
     private var writesBeforeInjectedFailure: Int?
+    private var applyBatchCalls = 0
 
     func create(_ event: CalendarEvent) throws {
         try failWriteIfNeeded()
@@ -3346,6 +3646,27 @@ private actor ControlledEventRepository: EventRepository {
         }
         var updated = storage
         events.forEach { updated[$0.id] = $0 }
+        storage = updated
+    }
+
+    func applyBatch(
+        upserting events: [CalendarEvent],
+        deleting eventsToDelete: [CalendarEvent],
+        ifUnchanged expectedEvents: [CalendarEvent]
+    ) throws {
+        applyBatchCalls += 1
+        try EventRepositoryBatchValidator.validateApplyBatch(
+            currentEvents: Array(storage.values),
+            upserting: events,
+            deleting: eventsToDelete,
+            ifUnchanged: expectedEvents
+        )
+        try failWriteIfNeeded()
+        var updated = storage
+        events.forEach { updated[$0.id] = $0 }
+        for event in eventsToDelete {
+            updated[event.id] = nil
+        }
         storage = updated
     }
 
@@ -3402,6 +3723,10 @@ private actor ControlledEventRepository: EventRepository {
 
     func failWrite(afterSuccessfulWrites count: Int) {
         writesBeforeInjectedFailure = count
+    }
+
+    func applyBatchCallCount() -> Int {
+        applyBatchCalls
     }
 
     private func failWriteIfNeeded() throws {
@@ -3525,6 +3850,7 @@ private func makeParticipant(
 }
 
 private func makeEvent(
+    id: UUID = UUID(),
     title: String,
     calendarID: UUID = TimeNestCalendar.personalID,
     note: String? = nil,
@@ -3535,7 +3861,7 @@ private func makeEvent(
 ) -> CalendarEvent {
     let start = Date(timeIntervalSince1970: 1_700_000_000)
     return CalendarEvent(
-        id: UUID(),
+        id: id,
         calendarID: calendarID,
         title: title,
         note: note,

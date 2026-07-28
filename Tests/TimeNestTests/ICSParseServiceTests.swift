@@ -1,3 +1,4 @@
+import Foundation
 import XCTest
 @testable import TimeNest
 
@@ -428,6 +429,73 @@ END:VCALENDAR
         XCTAssertEqual(firstEvent.date.day, 12)
     }
 
+    func testParseLatin1DataUsesSameDecoderAsValidation() throws {
+        let icsContent = """
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        BEGIN:VEVENT
+        DTSTART;VALUE=DATE:20260714
+        SUMMARY:Fête nationale
+        END:VEVENT
+        END:VCALENDAR
+        """
+        let data = try XCTUnwrap(icsContent.data(using: .isoLatin1))
+
+        let events = try parseService.parse(
+            data: data,
+            region: .unitedStates,
+            sourceURL: "https://example.com/latin1.ics"
+        )
+
+        XCTAssertEqual(events.count, 1)
+        XCTAssertEqual(events.first?.name, "Fête nationale")
+        XCTAssertEqual(events.first?.date, DateOnly(year: 2026, month: 7, day: 14))
+    }
+
+    func testParseRejectsInvalidGregorianDate() throws {
+        let icsContent = """
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        BEGIN:VEVENT
+        DTSTART;VALUE=DATE:20260231
+        SUMMARY:Invalid Date
+        END:VEVENT
+        END:VCALENDAR
+        """
+
+        XCTAssertThrowsError(
+            try parseService.parse(
+                content: icsContent,
+                region: .japan,
+                sourceURL: "https://example.com/invalid.ics"
+            )
+        ) { error in
+            guard case EnhancedICSError.noEvents = error else {
+                return XCTFail("Expected noEvents after rejecting invalid date, got \(error)")
+            }
+        }
+    }
+
+    func testParseTZIDDateTimeKeepsWrittenCalendarDayWithoutClaimingTimezoneConversion() throws {
+        let icsContent = """
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        BEGIN:VEVENT
+        DTSTART;TZID=Pacific/Honolulu:20261231T230000
+        SUMMARY:TZID Calendar Day
+        END:VEVENT
+        END:VCALENDAR
+        """
+
+        let events = try parseService.parse(
+            content: icsContent,
+            region: .unitedStates,
+            sourceURL: "https://example.com/tzid.ics"
+        )
+
+        XCTAssertEqual(events.first?.date, DateOnly(year: 2026, month: 12, day: 31))
+    }
+
     // MARK: - Helper Methods
 
     /// 使用 Mirror 测试私有 unfoldICSLines 方法
@@ -448,4 +516,875 @@ END:VCALENDAR
 
         return result
     }
+}
+
+final class ICSDownloadServiceTests: XCTestCase {
+    override func tearDown() {
+        ICSURLProtocolStub.handler = nil
+        super.tearDown()
+    }
+
+    func testHTTPStatusErrorRemainsTyped() async throws {
+        ICSURLProtocolStub.handler = { request in
+            let response = try XCTUnwrap(
+                HTTPURLResponse(
+                    url: try XCTUnwrap(request.url),
+                    statusCode: 500,
+                    httpVersion: nil,
+                    headerFields: nil
+                )
+            )
+            return (response, Data("server error".utf8))
+        }
+
+        let service = makeService()
+
+        do {
+            _ = try await service.download(from: try XCTUnwrap(URL(string: "https://example.com/feed.ics")))
+            XCTFail("Expected invalidHTTPStatus")
+        } catch let error as EnhancedICSError {
+            guard case .invalidHTTPStatus(500) = error else {
+                return XCTFail("Expected typed HTTP 500, got \(error)")
+            }
+        }
+    }
+
+    func testEveryResponseAppliesSizeLimitBeforeReturningHTTPError() async throws {
+        ICSURLProtocolStub.handler = { request in
+            let response = try XCTUnwrap(
+                HTTPURLResponse(
+                    url: try XCTUnwrap(request.url),
+                    statusCode: 500,
+                    httpVersion: nil,
+                    headerFields: nil
+                )
+            )
+            return (response, Data(repeating: 0x41, count: 10 * 1024 * 1024 + 1))
+        }
+
+        let service = makeService()
+
+        do {
+            _ = try await service.download(from: try XCTUnwrap(URL(string: "https://example.com/large.ics")))
+            XCTFail("Expected tooLarge")
+        } catch let error as EnhancedICSError {
+            guard case .tooLarge(let size, let limit) = error else {
+                return XCTFail("Expected typed tooLarge, got \(error)")
+            }
+            XCTAssertEqual(size, 10 * 1024 * 1024 + 1)
+            XCTAssertEqual(limit, 10 * 1024 * 1024)
+        }
+    }
+
+    func testURLErrorIsMappedToNetworkError() async throws {
+        ICSURLProtocolStub.handler = { _ in
+            throw URLError(.timedOut)
+        }
+
+        let service = makeService()
+
+        do {
+            _ = try await service.download(from: try XCTUnwrap(URL(string: "https://example.com/feed.ics")))
+            XCTFail("Expected networkError")
+        } catch let error as EnhancedICSError {
+            guard case .networkError(let underlying) = error,
+                  (underlying as? URLError)?.code == .timedOut else {
+                return XCTFail("Expected typed network timeout, got \(error)")
+            }
+        }
+    }
+
+    private func makeService() -> ICSDownloadService {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [ICSURLProtocolStub.self]
+        return ICSDownloadService(session: URLSession(configuration: configuration))
+    }
+}
+
+final class HolidaySubscriptionManagerTests: XCTestCase {
+    @MainActor
+    func testBuiltInNormalURLFallsBackToCleanAndKeepsConfiguredURL() async throws {
+        let normalURL = try XCTUnwrap(HolidayRecommendedSources.preferredURL(for: .japan))
+        let cleanURL = try XCTUnwrap(HolidayRecommendedSources.cleanFallbackURL(for: .japan))
+        let downloader = ScriptedICSDownloader(script: [
+            normalURL: [.failure(EnhancedICSError.invalidHTTPStatus(500))],
+            cleanURL: [.success(makeValidICSData(summary: "Fallback Holiday"))]
+        ])
+        let cache = SpyHolidayCacheRepository()
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let fixedNow = Date(timeIntervalSince1970: 1_800_000_000)
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults,
+            now: { fixedNow }
+        )
+
+        let result = await manager.syncAllEnabled()
+
+        XCTAssertTrue(result.isSuccess)
+        XCTAssertEqual(result.totalEvents, 1)
+        XCTAssertEqual(downloader.requestedURLs, [normalURL, cleanURL])
+        XCTAssertEqual(
+            manager.subscriptions.first(where: { $0.region == .japan })?.urlString,
+            normalURL
+        )
+        XCTAssertEqual(cache.getEvents(for: [.japan]).first?.sourceURL, cleanURL)
+        XCTAssertEqual(
+            manager.subscriptions.first(where: { $0.region == .japan })?.lastUpdatedAt,
+            fixedNow
+        )
+    }
+
+    @MainActor
+    func testCustomOfficeHolidaysURLDoesNotFallback() async throws {
+        let customURL = "https://www.officeholidays.com/ics/japan?custom=1"
+        let downloader = ScriptedICSDownloader(script: [
+            customURL: [.failure(EnhancedICSError.invalidHTTPStatus(500))]
+        ])
+        let cache = SpyHolidayCacheRepository()
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults
+        )
+        try manager.updateURL(for: .japan, newURL: customURL)
+
+        let result = await manager.syncAllEnabled()
+
+        XCTAssertFalse(result.isSuccess)
+        XCTAssertEqual(downloader.requestedURLs, [customURL])
+        guard let error = result.error as? EnhancedICSError,
+              case .invalidHTTPStatus(500) = error else {
+            return XCTFail("Expected original typed HTTP 500, got \(String(describing: result.error))")
+        }
+    }
+
+    @MainActor
+    func testMissingCacheIsStaleEvenWithRecentSubscriptionMetadata() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let subscription = makeSubscription(lastUpdatedAt: now, syncStatus: .success)
+        let (defaults, suiteName) = try makeDefaults(subscriptions: [subscription])
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: ScriptedICSDownloader(),
+            parseService: ICSParseService(),
+            cacheRepository: SpyHolidayCacheRepository(),
+            userDefaults: defaults,
+            now: { now }
+        )
+
+        XCTAssertTrue(manager.shouldAutoSync(for: .japan))
+    }
+
+    @MainActor
+    func testCorruptCacheIsStaleEvenWithRecentSubscriptionMetadata() throws {
+        let fileManager = FileManager.default
+        let cacheDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("HolidaySubscriptionManagerTests-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: cacheDirectory) }
+        try Data("not-json".utf8).write(
+            to: cacheDirectory.appendingPathComponent("japan_holidays.json")
+        )
+
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let subscription = makeSubscription(lastUpdatedAt: now, syncStatus: .success)
+        let (defaults, suiteName) = try makeDefaults(subscriptions: [subscription])
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let cache = HolidayEventCacheRepository(cacheDirectory: cacheDirectory)
+        let manager = HolidaySubscriptionManager(
+            downloadService: ScriptedICSDownloader(),
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults,
+            now: { now }
+        )
+
+        XCTAssertNil(cache.getLastSyncTime(for: .japan))
+        XCTAssertTrue(manager.shouldAutoSync(for: .japan))
+    }
+
+    @MainActor
+    func testCacheTimestampControlsTwentyFourHourFreshness() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let subscription = makeSubscription(lastUpdatedAt: now, syncStatus: .success)
+        let cache = SpyHolidayCacheRepository(
+            lastSyncByRegion: [.japan: now.addingTimeInterval(-(24 * 60 * 60))]
+        )
+        let (defaults, suiteName) = try makeDefaults(subscriptions: [subscription])
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        var currentNow = now
+        let manager = HolidaySubscriptionManager(
+            downloadService: ScriptedICSDownloader(),
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults,
+            now: { currentNow }
+        )
+
+        XCTAssertFalse(manager.shouldAutoSync(for: .japan))
+        currentNow = now.addingTimeInterval(1)
+        XCTAssertTrue(manager.shouldAutoSync(for: .japan))
+    }
+
+    @MainActor
+    func testFailedSyncKeepsLastGoodEventsAndLastSuccessTime() async throws {
+        let lastSuccess = Date(timeIntervalSince1970: 1_700_000_000)
+        let oldEvent = HolidayEvent(
+            id: "last-good",
+            region: .japan,
+            date: DateOnly(year: 2026, month: 1, day: 1),
+            name: "Last Good",
+            sourceURL: "https://example.com/old.ics",
+            importedAt: lastSuccess
+        )
+        let subscription = makeSubscription(lastUpdatedAt: lastSuccess, syncStatus: .success)
+        let normalURL = try XCTUnwrap(HolidayRecommendedSources.preferredURL(for: .japan))
+        let downloader = ScriptedICSDownloader(script: [
+            normalURL: [.failure(EnhancedICSError.networkError(URLError(.notConnectedToInternet)))]
+        ])
+        let cache = SpyHolidayCacheRepository(
+            eventsByRegion: [.japan: [oldEvent]],
+            lastSyncByRegion: [.japan: lastSuccess]
+        )
+        let (defaults, suiteName) = try makeDefaults(subscriptions: [subscription])
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults,
+            now: { lastSuccess.addingTimeInterval(10_000) }
+        )
+
+        let result = await manager.syncAllEnabled()
+
+        XCTAssertFalse(result.isSuccess)
+        XCTAssertEqual(cache.getEvents(for: [.japan]), [oldEvent])
+        let updated = try XCTUnwrap(manager.subscriptions.first(where: { $0.region == .japan }))
+        XCTAssertEqual(updated.syncStatus, .failed)
+        XCTAssertEqual(updated.lastUpdatedAt, lastSuccess)
+        XCTAssertTrue(manager.hasCachedData(for: .japan))
+    }
+
+    @MainActor
+    func testEmptyCleanFallbackDoesNotReplaceLastGoodCache() async throws {
+        let lastSuccess = Date(timeIntervalSince1970: 1_700_000_000)
+        let oldEvent = HolidayEvent(
+            id: "last-good",
+            region: .japan,
+            date: DateOnly(year: 2026, month: 1, day: 1),
+            name: "Last Good",
+            sourceURL: "https://example.com/old.ics",
+            importedAt: lastSuccess
+        )
+        let subscription = makeSubscription(lastUpdatedAt: lastSuccess, syncStatus: .success)
+        let normalURL = try XCTUnwrap(HolidayRecommendedSources.preferredURL(for: .japan))
+        let cleanURL = try XCTUnwrap(HolidayRecommendedSources.cleanFallbackURL(for: .japan))
+        let emptyCalendar = Data(
+            """
+            BEGIN:VCALENDAR
+            VERSION:2.0
+            END:VCALENDAR
+            """.utf8
+        )
+        let downloader = ScriptedICSDownloader(script: [
+            normalURL: [.failure(EnhancedICSError.invalidHTTPStatus(500))],
+            cleanURL: [.success(emptyCalendar)]
+        ])
+        let cache = SpyHolidayCacheRepository(
+            eventsByRegion: [.japan: [oldEvent]],
+            lastSyncByRegion: [.japan: lastSuccess]
+        )
+        let (defaults, suiteName) = try makeDefaults(subscriptions: [subscription])
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults
+        )
+
+        let result = await manager.syncAllEnabled()
+
+        XCTAssertFalse(result.isSuccess)
+        XCTAssertEqual(downloader.requestedURLs, [normalURL, cleanURL])
+        guard let compositeError = result.error as? HolidaySourceFallbackError else {
+            return XCTFail(
+                "Expected HolidaySourceFallbackError, got \(String(describing: result.error))"
+            )
+        }
+        guard let primaryError = compositeError.primaryError as? EnhancedICSError,
+              case .invalidHTTPStatus(500) = primaryError else {
+            return XCTFail("Expected preserved typed primary HTTP 500")
+        }
+        guard let fallbackError = compositeError.fallbackError as? EnhancedICSError,
+              case .noEvents = fallbackError else {
+            return XCTFail("Expected preserved typed fallback noEvents")
+        }
+        XCTAssertFalse(compositeError.localizedDescription.contains(normalURL))
+        XCTAssertFalse(compositeError.localizedDescription.contains(cleanURL))
+        XCTAssertEqual(cache.getEvents(for: [.japan]), [oldEvent])
+        let updated = try XCTUnwrap(manager.subscriptions.first(where: { $0.region == .japan }))
+        XCTAssertEqual(updated.syncStatus, .failed)
+        XCTAssertEqual(updated.lastUpdatedAt, lastSuccess)
+    }
+
+    @MainActor
+    func testAutoSyncThrottlesFailedCachelessRetriesForFifteenMinutes() async throws {
+        let normalURL = try XCTUnwrap(HolidayRecommendedSources.preferredURL(for: .japan))
+        let failure = EnhancedICSError.networkError(URLError(.notConnectedToInternet))
+        let downloader = ScriptedICSDownloader(script: [
+            normalURL: [.failure(failure), .failure(failure)]
+        ])
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let baseNow = Date(timeIntervalSince1970: 1_800_000_000)
+        var currentNow = baseNow
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: SpyHolidayCacheRepository(),
+            userDefaults: defaults,
+            now: { currentNow },
+            autoSyncMinimumInterval: 15 * 60
+        )
+
+        await manager.performAutoSync()
+        currentNow = baseNow.addingTimeInterval(14 * 60)
+        await manager.performAutoSync()
+        XCTAssertEqual(downloader.requestedURLs.count, 1)
+
+        currentNow = baseNow.addingTimeInterval(15 * 60)
+        await manager.performAutoSync()
+        XCTAssertEqual(downloader.requestedURLs.count, 2)
+    }
+
+    @MainActor
+    func testDifferentPersistedSourcesStartConcurrently() async throws {
+        let firstURL = "https://example.com/japan.ics"
+        let secondURL = "https://example.com/us.ics"
+        let subscriptions = [
+            makeSubscription(
+                lastUpdatedAt: nil,
+                syncStatus: .neverSynced,
+                region: .japan,
+                urlString: firstURL
+            ),
+            makeSubscription(
+                lastUpdatedAt: nil,
+                syncStatus: .neverSynced,
+                region: .unitedStates,
+                urlString: secondURL
+            )
+        ]
+        let downloader = ControlledICSDownloader()
+        let (defaults, suiteName) = try makeDefaults(subscriptions: subscriptions)
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: SpyHolidayCacheRepository(),
+            userDefaults: defaults
+        )
+
+        let syncTask = Task { @MainActor in
+            await manager.syncAllEnabled()
+        }
+        await downloader.waitForRequestCount(2)
+
+        let requestedURLs = await downloader.requestedURLs
+        XCTAssertEqual(Set(requestedURLs), Set([firstURL, secondURL]))
+        XCTAssertEqual(manager.syncingRegions, Set([.japan, .unitedStates]))
+        await downloader.resumeAll(with: makeValidICSData())
+        let result = await syncTask.value
+        XCTAssertTrue(result.isSuccess)
+        XCTAssertEqual(result.totalEvents, 2)
+    }
+
+    @MainActor
+    func testIdenticalPersistedSourceCallsJoinAndDownloadOnce() async throws {
+        let downloader = ControlledICSDownloader()
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let cache = SpyHolidayCacheRepository()
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults
+        )
+
+        let first = Task { @MainActor in
+            await manager.syncAllEnabled()
+        }
+        await downloader.waitForRequestCount(1)
+        let second = Task { @MainActor in
+            await manager.syncAllEnabled()
+        }
+        for _ in 0..<10 { await Task.yield() }
+
+        let requestCountBeforeResume = await downloader.requestCount
+        XCTAssertEqual(requestCountBeforeResume, 1)
+        await downloader.resumeAll(with: makeValidICSData())
+        let firstResult = await first.value
+        let secondResult = await second.value
+        XCTAssertTrue(firstResult.isSuccess)
+        XCTAssertTrue(secondResult.isSuccess)
+        XCTAssertEqual(firstResult.totalEvents, 1)
+        XCTAssertEqual(secondResult.totalEvents, 1)
+        XCTAssertEqual(cache.saveCount, 1)
+        XCTAssertFalse(manager.syncInProgress)
+    }
+
+    @MainActor
+    func testAutoSyncAndManualSyncJoinAndManualReceivesResult() async throws {
+        let downloader = ControlledICSDownloader()
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: SpyHolidayCacheRepository(),
+            userDefaults: defaults
+        )
+
+        let autoSync = Task { @MainActor in
+            await manager.performAutoSync()
+        }
+        await downloader.waitForRequestCount(1)
+        XCTAssertFalse(manager.syncInProgress)
+        let manualSync = Task { @MainActor in
+            await manager.syncAllEnabled()
+        }
+        for _ in 0..<10 { await Task.yield() }
+
+        let requestCountBeforeResume = await downloader.requestCount
+        XCTAssertEqual(requestCountBeforeResume, 1)
+        XCTAssertTrue(manager.syncInProgress)
+        await downloader.resumeAll(with: makeValidICSData())
+        let manualResult = await manualSync.value
+        await autoSync.value
+        XCTAssertTrue(manualResult.isSuccess)
+        XCTAssertEqual(manualResult.totalEvents, 1)
+        XCTAssertEqual(
+            manager.subscriptions.first(where: { $0.region == .japan })?.syncStatus,
+            .success
+        )
+        XCTAssertFalse(manager.syncInProgress)
+    }
+
+    @MainActor
+    func testPersistedSyncAndURLValidationUseDifferentTasksAndOnlyPersistedWrites() async throws {
+        let sourceURL = "https://example.com/shared.ics"
+        let subscription = makeSubscription(
+            lastUpdatedAt: nil,
+            syncStatus: .neverSynced,
+            urlString: sourceURL
+        )
+        let downloader = ControlledICSDownloader()
+        let cache = SpyHolidayCacheRepository()
+        let (defaults, suiteName) = try makeDefaults(subscriptions: [subscription])
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults
+        )
+
+        let persisted = Task { @MainActor in
+            await manager.syncAllEnabled()
+        }
+        await downloader.waitForRequestCount(1)
+        let validation = Task { @MainActor in
+            try await manager.validateSourceURL(sourceURL, for: .japan)
+        }
+        await downloader.waitForRequestCount(2)
+
+        let requestCountBeforeResume = await downloader.requestCount
+        XCTAssertEqual(requestCountBeforeResume, 2)
+        XCTAssertEqual(cache.saveCount, 0)
+        await downloader.resumeAll(with: makeValidICSData())
+        let persistedResult = await persisted.value
+        let validationResult = try await validation.value
+        XCTAssertTrue(persistedResult.isSuccess)
+        XCTAssertEqual(validationResult.eventCount, 1)
+        XCTAssertEqual(cache.saveCount, 1)
+    }
+
+    @MainActor
+    func testIdenticalURLValidationsJoinWithoutPersistedSideEffectsOrAutoThrottle() async throws {
+        let validationURL = "https://example.com/validation.ics"
+        let downloader = ControlledICSDownloader()
+        let cache = SpyHolidayCacheRepository()
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: cache,
+            userDefaults: defaults,
+            autoSyncMinimumInterval: 15 * 60
+        )
+        let before = manager.subscriptions.first(where: { $0.region == .japan })
+
+        let first = Task { @MainActor in
+            try await manager.validateSourceURL(validationURL, for: .japan)
+        }
+        await downloader.waitForRequestCount(1)
+        let second = Task { @MainActor in
+            try await manager.validateSourceURL(validationURL, for: .japan)
+        }
+        for _ in 0..<10 { await Task.yield() }
+
+        XCTAssertFalse(manager.syncInProgress)
+        let validationRequestCount = await downloader.requestCount
+        XCTAssertEqual(validationRequestCount, 1)
+        await downloader.resumeAll(with: makeValidICSData())
+        let firstResult = try await first.value
+        let secondResult = try await second.value
+        XCTAssertEqual(firstResult.eventCount, 1)
+        XCTAssertEqual(secondResult.eventCount, 1)
+        XCTAssertEqual(cache.saveCount, 0)
+        XCTAssertEqual(manager.subscriptions.first(where: { $0.region == .japan }), before)
+        XCTAssertNil(manager.lastSyncError)
+
+        let auto = Task { @MainActor in
+            await manager.performAutoSync()
+        }
+        await downloader.waitForRequestCount(2)
+        await downloader.resumeAll(with: makeValidICSData())
+        await auto.value
+        XCTAssertEqual(cache.saveCount, 1)
+    }
+
+    @MainActor
+    func testFailedSingleFlightIsRemovedAndCanRetry() async throws {
+        let sourceURL = try XCTUnwrap(HolidayRecommendedSources.preferredURL(for: .japan))
+        let downloader = ScriptedICSDownloader(script: [
+            sourceURL: [
+                .failure(EnhancedICSError.networkError(URLError(.timedOut))),
+                .success(makeValidICSData())
+            ]
+        ])
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: SpyHolidayCacheRepository(),
+            userDefaults: defaults
+        )
+
+        let failure = await manager.syncAllEnabled()
+        let success = await manager.syncAllEnabled()
+
+        XCTAssertFalse(failure.isSuccess)
+        XCTAssertTrue(success.isSuccess)
+        XCTAssertEqual(downloader.requestedURLs.count, 2)
+        XCTAssertFalse(manager.syncInProgress)
+    }
+
+    @MainActor
+    func testCancelledValidationTaskIsRemovedAndCanRetry() async throws {
+        let sourceURL = "https://example.com/cancellable.ics"
+        let downloader = ControlledICSDownloader()
+        let (defaults, suiteName) = try makeDefaults()
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let manager = HolidaySubscriptionManager(
+            downloadService: downloader,
+            parseService: ICSParseService(),
+            cacheRepository: SpyHolidayCacheRepository(),
+            userDefaults: defaults
+        )
+
+        let cancelled = Task { @MainActor in
+            try await manager.validateSourceURL(sourceURL, for: .japan)
+        }
+        await downloader.waitForRequestCount(1)
+        cancelled.cancel()
+        do {
+            _ = try await cancelled.value
+            XCTFail("The validation task must observe cancellation")
+        } catch is CancellationError {}
+        await downloader.waitForPendingRequestCount(0)
+
+        let retry = Task { @MainActor in
+            try await manager.validateSourceURL(sourceURL, for: .japan)
+        }
+        await downloader.waitForRequestCount(2)
+        await downloader.resumeAll(with: makeValidICSData())
+        let retryResult = try await retry.value
+        XCTAssertEqual(retryResult.eventCount, 1)
+    }
+
+    private func makeDefaults(
+        subscriptions: [HolidaySubscription]? = nil
+    ) throws -> (UserDefaults, String) {
+        let suiteName = "HolidaySubscriptionManagerTests-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defaults.removePersistentDomain(forName: suiteName)
+
+        if let subscriptions {
+            let data = try JSONEncoder().encode(subscriptions)
+            defaults.set(try XCTUnwrap(String(data: data, encoding: .utf8)), forKey: "holidaySubscriptions")
+        }
+
+        return (defaults, suiteName)
+    }
+
+    private func makeSubscription(
+        lastUpdatedAt: Date?,
+        syncStatus: SyncStatus,
+        region: HolidayRegion = .japan,
+        urlString: String? = nil,
+        isEnabled: Bool = true
+    ) -> HolidaySubscription {
+        HolidaySubscription(
+            region: region,
+            displayNameKey: region.localizedKey,
+            urlString: urlString ?? HolidayRecommendedSources.preferredURL(for: region) ?? "",
+            isEnabled: isEnabled,
+            lastUpdatedAt: lastUpdatedAt,
+            syncStatus: syncStatus
+        )
+    }
+}
+
+private final class ICSURLProtocolStub: URLProtocol {
+    static var handler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
+
+    override class func canInit(with request: URLRequest) -> Bool {
+        true
+    }
+
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
+        request
+    }
+
+    override func startLoading() {
+        guard let handler = Self.handler else {
+            client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+            return
+        }
+
+        do {
+            let (response, data) = try handler(request)
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocol(self, didLoad: data)
+            client?.urlProtocolDidFinishLoading(self)
+        } catch {
+            client?.urlProtocol(self, didFailWithError: error)
+        }
+    }
+
+    override func stopLoading() {}
+}
+
+private final class ScriptedICSDownloader: ICSDownloading {
+    private var script: [String: [Result<Data, Error>]]
+    private(set) var requestedURLs: [String] = []
+
+    init(script: [String: [Result<Data, Error>]] = [:]) {
+        self.script = script
+    }
+
+    func download(
+        from url: URL,
+        timeout: TimeInterval,
+        region: String?,
+        host: String?
+    ) async throws -> Data {
+        let urlString = url.absoluteString
+        requestedURLs.append(urlString)
+        guard var responses = script[urlString], !responses.isEmpty else {
+            throw EnhancedICSError.networkError(URLError(.resourceUnavailable))
+        }
+        let response = responses.removeFirst()
+        script[urlString] = responses
+        return try response.get()
+    }
+
+    func validateURL(_ urlString: String) throws {
+        guard let url = URL(string: urlString),
+              url.scheme?.lowercased() == "https",
+              url.host?.isEmpty == false else {
+            throw EnhancedICSError.invalidURL
+        }
+    }
+
+    func validateICSContent(_ data: Data) throws {
+        try ICSDownloadService().validateICSContent(data)
+    }
+}
+
+private actor ControlledICSDownloader: ICSDownloading {
+    private struct PendingRequest {
+        let urlString: String
+        let continuation: CheckedContinuation<Data, Error>
+    }
+
+    private struct CountWaiter {
+        let target: Int
+        let continuation: CheckedContinuation<Void, Never>
+    }
+
+    private var requestedURLValues: [String] = []
+    private var pendingRequests: [UUID: PendingRequest] = [:]
+    private var requestCountWaiters: [CountWaiter] = []
+    private var pendingCountWaiters: [CountWaiter] = []
+
+    var requestCount: Int {
+        requestedURLValues.count
+    }
+
+    var requestedURLs: [String] {
+        requestedURLValues
+    }
+
+    func download(
+        from url: URL,
+        timeout: TimeInterval,
+        region: String?,
+        host: String?
+    ) async throws -> Data {
+        let requestID = UUID()
+        return try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { continuation in
+                requestedURLValues.append(url.absoluteString)
+                pendingRequests[requestID] = PendingRequest(
+                    urlString: url.absoluteString,
+                    continuation: continuation
+                )
+                resumeSatisfiedWaiters()
+            }
+        } onCancel: {
+            Task {
+                await self.cancelRequest(id: requestID)
+            }
+        }
+    }
+
+    func waitForRequestCount(_ count: Int) async {
+        guard requestedURLValues.count < count else { return }
+        await withCheckedContinuation { continuation in
+            requestCountWaiters.append(
+                CountWaiter(target: count, continuation: continuation)
+            )
+        }
+    }
+
+    func waitForPendingRequestCount(_ count: Int) async {
+        guard pendingRequests.count != count else { return }
+        await withCheckedContinuation { continuation in
+            pendingCountWaiters.append(
+                CountWaiter(target: count, continuation: continuation)
+            )
+        }
+    }
+
+    func resumeAll(with data: Data) {
+        let requests = Array(pendingRequests.values)
+        pendingRequests.removeAll()
+        resumeSatisfiedWaiters()
+        requests.forEach { $0.continuation.resume(returning: data) }
+    }
+
+    nonisolated func validateURL(_ urlString: String) throws {
+        try ICSDownloadService().validateURL(urlString)
+    }
+
+    nonisolated func validateICSContent(_ data: Data) throws {
+        try ICSDownloadService().validateICSContent(data)
+    }
+
+    private func cancelRequest(id: UUID) {
+        guard let request = pendingRequests.removeValue(forKey: id) else { return }
+        resumeSatisfiedWaiters()
+        request.continuation.resume(throwing: CancellationError())
+    }
+
+    private func resumeSatisfiedWaiters() {
+        let readyRequestWaiters = requestCountWaiters.filter {
+            requestedURLValues.count >= $0.target
+        }
+        requestCountWaiters.removeAll {
+            requestedURLValues.count >= $0.target
+        }
+        readyRequestWaiters.forEach { $0.continuation.resume() }
+
+        let readyPendingWaiters = pendingCountWaiters.filter {
+            pendingRequests.count == $0.target
+        }
+        pendingCountWaiters.removeAll {
+            pendingRequests.count == $0.target
+        }
+        readyPendingWaiters.forEach { $0.continuation.resume() }
+    }
+}
+
+private final class SpyHolidayCacheRepository: HolidayEventCacheRepositoryProtocol {
+    private var eventsByRegion: [HolidayRegion: [HolidayEvent]]
+    private var lastSyncByRegion: [HolidayRegion: Date]
+    private(set) var saveCount = 0
+
+    init(
+        eventsByRegion: [HolidayRegion: [HolidayEvent]] = [:],
+        lastSyncByRegion: [HolidayRegion: Date] = [:]
+    ) {
+        self.eventsByRegion = eventsByRegion
+        self.lastSyncByRegion = lastSyncByRegion
+    }
+
+    func saveEvents(_ events: [HolidayEvent], for region: HolidayRegion) async throws {
+        saveCount += 1
+        eventsByRegion[region] = events
+        lastSyncByRegion[region] = Date()
+    }
+
+    func getEvents(for regions: [HolidayRegion]) -> [HolidayEvent] {
+        regions.flatMap { eventsByRegion[$0] ?? [] }.sorted { $0.date < $1.date }
+    }
+
+    func getEvents(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] {
+        getEvents(for: regions).filter { $0.date == date }
+    }
+
+    func getEvents(
+        in range: ClosedRange<DateOnly>,
+        for regions: [HolidayRegion]
+    ) -> [HolidayEvent] {
+        getEvents(for: regions).filter { range.contains($0.date) }
+    }
+
+    func clearEvents() async throws {
+        eventsByRegion.removeAll()
+        lastSyncByRegion.removeAll()
+    }
+
+    func getLastSyncTime(for region: HolidayRegion) -> Date? {
+        lastSyncByRegion[region]
+    }
+}
+
+private func makeValidICSData(summary: String = "Test Holiday") -> Data {
+    Data(
+        """
+        BEGIN:VCALENDAR
+        VERSION:2.0
+        BEGIN:VEVENT
+        DTSTART;VALUE=DATE:20260101
+        SUMMARY:\(summary)
+        UID:test-holiday
+        END:VEVENT
+        END:VCALENDAR
+        """.utf8
+    )
 }

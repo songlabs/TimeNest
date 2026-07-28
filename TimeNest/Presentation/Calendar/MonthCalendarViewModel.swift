@@ -705,6 +705,33 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
+    func saveWorkRecordPair(_ request: WorkRecordPairSaveRequest) async throws {
+        try calendarSharingStore.ensureCanWrite(calendarID: request.calendarID)
+        do {
+            try await eventUseCase.saveWorkRecordPair(request)
+            await reloadMonth()
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+
+    func deleteWorkRecord(eventIDs: [UUID]) async {
+        do {
+            var events: [CalendarEvent] = []
+            for id in eventIDs {
+                if let event = try await eventUseCase.event(id: id) {
+                    events.append(event)
+                }
+            }
+            guard !events.isEmpty else { return }
+            _ = try await eventUseCase.deleteEventsBatch(expectedEvents: events)
+            await reloadMonth()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     @discardableResult
     func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo?, calendarID: UUID) async throws -> EventNotificationScheduleResult {
         try calendarSharingStore.ensureCanWrite(calendarID: calendarID)

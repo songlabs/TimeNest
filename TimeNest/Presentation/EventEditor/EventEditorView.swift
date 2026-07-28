@@ -162,7 +162,7 @@ private enum NotificationSaveAlert: Identifiable {
             self = .denied
         case .triggerDateInPast:
             self = .triggerDateInPast
-        case .failed:
+        case .failed, .failedWithCause:
             self = .failed
         case .scheduled, .noReminder:
             return nil
@@ -204,13 +204,9 @@ typealias EventEditorUpdateAction = (
     UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo?, UUID
 ) async throws -> EventNotificationScheduleResult
 
-typealias WorkRecordEventCreateAction = (
-    String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo, UUID
-) async throws -> EventNotificationScheduleResult
-
-typealias WorkRecordEventUpdateAction = (
-    UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo, UUID
-) async throws -> EventNotificationScheduleResult
+typealias WorkRecordPairSaveAction = (
+    WorkRecordPairSaveRequest
+) async throws -> Void
 
 struct EventEditorView: View {
     @Environment(\.localization) private var localization
@@ -219,6 +215,7 @@ struct EventEditorView: View {
     let mode: EventEditorMode
     let existingEvents: [EventOccurrence]
     var onSave: EventEditorSaveAction
+    private let onSaveWorkRecordPair: WorkRecordPairSaveAction?
     private let showsEntryKindPicker: Bool
     private let availableCalendars: [TimeNestCalendar]
     private let calendarContext: EntryCalendarContext
@@ -278,12 +275,14 @@ struct EventEditorView: View {
         showsEntryKindPicker: Bool = false,
         availableCalendars: [TimeNestCalendar] = [],
         calendarContext: EntryCalendarContext = .fixedWritableCalendar(TimeNestCalendar.personalID),
+        onSaveWorkRecordPair: WorkRecordPairSaveAction? = nil,
         onSave: @escaping EventEditorSaveAction
     ) {
         _isPresented = isPresented
         self.mode = mode
         self.existingEvents = existingEvents
         self.onSave = onSave
+        self.onSaveWorkRecordPair = onSaveWorkRecordPair
         self.availableCalendars = availableCalendars.filter(\.canEditContent)
         self.calendarContext = calendarContext
         _selectedCalendarID = State(
@@ -994,6 +993,10 @@ struct EventEditorView: View {
 
     private func saveWorkRecord() async {
         guard !saving else { return }
+        guard let onSaveWorkRecordPair else {
+            assertionFailure("Work record pair save action is required")
+            return
+        }
         saving = true
         errorMessage = nil
 
@@ -1001,20 +1004,10 @@ struct EventEditorView: View {
             try await WorkRecordEditorSaveLogic.save(
                 context: workRecordSaveContext,
                 defaultTitle: localization.localized(.workRecordDefaultTitle),
-                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await onSave(
-                        title,
-                        note,
-                        startDate,
-                        endDate,
-                        isAllDay,
-                        reminderOffsetMinutes,
-                        shiftTemplateID,
-                        workInfo,
-                        calendarContext.resolvedCalendarID(selectedCalendarID: selectedCalendarID)
-                    )
-                },
-                onUpdateEvent: nil
+                calendarID: calendarContext.resolvedCalendarID(
+                    selectedCalendarID: selectedCalendarID
+                ),
+                onSavePair: onSaveWorkRecordPair
             )
             saving = false
             isPresented = false
@@ -1312,7 +1305,7 @@ struct EventEditorView: View {
     }
 
     private func formatDateOnly(_ date: Date) -> String {
-        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
+        LocalizationManager.shared.formattedUserVisibleDate(for: date)
     }
 }
 
@@ -1363,13 +1356,12 @@ struct WorkRecordEditorSaveContext {
 }
 
 enum WorkRecordEditorSaveLogic {
-    @discardableResult
     static func save(
         context: WorkRecordEditorSaveContext,
         defaultTitle: String,
-        onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult,
-        onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)?
-    ) async throws -> (clockIn: EventNotificationScheduleResult, clockOut: EventNotificationScheduleResult) {
+        calendarID: UUID,
+        onSavePair: WorkRecordPairSaveAction
+    ) async throws {
         let normalizedDate = Calendar.current.startOfDay(for: context.workDate)
         let normalizedIn = date(on: normalizedDate, matchingTimeOf: context.workInDate)
         let normalizedOut = normalizedClockOutDate(
@@ -1381,74 +1373,23 @@ enum WorkRecordEditorSaveLogic {
         let recordTitle = normalizedRecordTitle(context.title, defaultTitle: defaultTitle)
         let transportFee = Int(context.transportFee.trimmingCharacters(in: .whitespacesAndNewlines))
         let hourlyRate = Int(context.hourlyRate.trimmingCharacters(in: .whitespacesAndNewlines))
-        let clockInWorkInfo = WorkInfo(
-            workInTime: normalizedIn,
-            workOutTime: nil,
-            restHours: context.restTime,
-            workDate: normalizedDate,
-            transportFee: transportFee,
-            hourlyRate: hourlyRate,
-            workSessionId: context.workSessionId,
-            isWorkOutTimeSet: context.isWorkOutTimeSet
-        )
-        let clockOutWorkInfo = WorkInfo(
-            workInTime: nil,
-            workOutTime: normalizedOut,
-            restHours: context.restTime,
-            workDate: normalizedDate,
-            transportFee: transportFee,
-            hourlyRate: hourlyRate,
-            workSessionId: context.workSessionId,
-            isWorkOutTimeSet: context.isWorkOutTimeSet
-        )
 
-        let clockInResult = try await saveClock(
-            kind: .clockIn,
-            title: recordTitle,
-            workDate: normalizedDate,
-            workInfo: clockInWorkInfo,
-            editInitialSession: context.editInitialSession,
-            onCreateEvent: onCreateEvent,
-            onUpdateEvent: onUpdateEvent
+        try await onSavePair(
+            WorkRecordPairSaveRequest(
+                clockInEventID: context.editInitialSession?.clockInEventID,
+                clockOutEventID: context.editInitialSession?.clockOutEventID,
+                calendarID: calendarID,
+                title: recordTitle,
+                workDate: normalizedDate,
+                clockInDate: normalizedIn,
+                clockOutDate: normalizedOut,
+                restHours: context.restTime,
+                transportFee: transportFee,
+                hourlyRate: hourlyRate,
+                sessionID: context.workSessionId,
+                isWorkOutTimeSet: context.isWorkOutTimeSet
+            )
         )
-        let clockOutResult = try await saveClock(
-            kind: .clockOut,
-            title: recordTitle,
-            workDate: normalizedDate,
-            workInfo: clockOutWorkInfo,
-            editInitialSession: context.editInitialSession,
-            onCreateEvent: onCreateEvent,
-            onUpdateEvent: onUpdateEvent
-        )
-        return (clockInResult, clockOutResult)
-    }
-
-    private static func saveClock(
-        kind: WorkClockKind,
-        title: String,
-        workDate: Date,
-        workInfo: WorkInfo,
-        editInitialSession: WorkRecordEditorInitialSession?,
-        onCreateEvent: (String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult,
-        onUpdateEvent: ((UUID, String, String?, Date, Date, Bool, Int?, ShiftTimeTemplateID?, WorkInfo) async throws -> EventNotificationScheduleResult)?
-    ) async throws -> EventNotificationScheduleResult {
-        let eventID: UUID?
-        let clockDate: Date
-
-        switch kind {
-        case .clockIn:
-            eventID = editInitialSession?.clockInEventID
-            clockDate = workInfo.workInTime ?? workDate
-        case .clockOut:
-            eventID = editInitialSession?.clockOutEventID
-            clockDate = workInfo.workOutTime ?? workDate
-        }
-
-        let dates = workClockSaveDates(for: clockDate)
-        if let eventID, let onUpdateEvent {
-            return try await onUpdateEvent(eventID, title, nil, dates.start, dates.end, false, nil, nil, workInfo)
-        }
-        return try await onCreateEvent(title, nil, dates.start, dates.end, false, nil, nil, workInfo)
     }
 
     private static func normalizedRecordTitle(_ title: String, defaultTitle: String) -> String {
@@ -1463,11 +1404,6 @@ enum WorkRecordEditorSaveLogic {
             normalized = calendar.date(byAdding: .day, value: 1, to: normalized) ?? normalized
         }
         return normalized
-    }
-
-    private static func workClockSaveDates(for clockDate: Date) -> (start: Date, end: Date) {
-        let end = CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false)
-        return (clockDate, end)
     }
 
     private static func date(on day: Date, matchingTimeOf sourceDate: Date) -> Date {
@@ -1487,8 +1423,7 @@ struct WorkRecordEditorView: View {
     @Binding var isPresented: Bool
     let mode: WorkRecordEditorMode
     let existingEvents: [EventOccurrence]
-    let onCreateEvent: WorkRecordEventCreateAction
-    var onUpdateEvent: WorkRecordEventUpdateAction?
+    let onSavePair: WorkRecordPairSaveAction
     var onSaved: (() -> Void)?
     private let availableCalendars: [TimeNestCalendar]
     private let calendarContext: EntryCalendarContext
@@ -1516,8 +1451,7 @@ struct WorkRecordEditorView: View {
         existingEvents: [EventOccurrence] = [],
         availableCalendars: [TimeNestCalendar] = [],
         calendarContext: EntryCalendarContext = .fixedWritableCalendar(TimeNestCalendar.personalID),
-        onCreateEvent: @escaping WorkRecordEventCreateAction,
-        onUpdateEvent: WorkRecordEventUpdateAction? = nil,
+        onSavePair: @escaping WorkRecordPairSaveAction,
         onSaved: (() -> Void)? = nil
     ) {
         _isPresented = isPresented
@@ -1528,8 +1462,7 @@ struct WorkRecordEditorView: View {
         _selectedCalendarID = State(
             initialValue: calendarContext.initialCalendarID(in: availableCalendars)
         )
-        self.onCreateEvent = onCreateEvent
-        self.onUpdateEvent = onUpdateEvent
+        self.onSavePair = onSavePair
         self.onSaved = onSaved
 
         let initialValues = WorkRecordEditorView.initialValues(for: mode)
@@ -1768,35 +1701,10 @@ struct WorkRecordEditorView: View {
             try await WorkRecordEditorSaveLogic.save(
                 context: workRecordSaveContext,
                 defaultTitle: localization.localized(.workRecordDefaultTitle),
-                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                    try await onCreateEvent(
-                        title,
-                        note,
-                        startDate,
-                        endDate,
-                        isAllDay,
-                        reminderOffsetMinutes,
-                        shiftTemplateID,
-                        workInfo,
-                        calendarContext.resolvedCalendarID(selectedCalendarID: selectedCalendarID)
-                    )
-                },
-                onUpdateEvent: onUpdateEvent.map { update in
-                    { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo in
-                        try await update(
-                            eventID,
-                            title,
-                            note,
-                            startDate,
-                            endDate,
-                            isAllDay,
-                            reminderOffsetMinutes,
-                            shiftTemplateID,
-                            workInfo,
-                            calendarContext.resolvedCalendarID(selectedCalendarID: selectedCalendarID)
-                        )
-                    }
-                }
+                calendarID: calendarContext.resolvedCalendarID(
+                    selectedCalendarID: selectedCalendarID
+                ),
+                onSavePair: onSavePair
             )
             saving = false
             isPresented = false
@@ -1808,7 +1716,7 @@ struct WorkRecordEditorView: View {
     }
 
     private func formatDateOnly(_ date: Date) -> String {
-        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
+        LocalizationManager.shared.formattedUserVisibleDate(for: date)
     }
 
     fileprivate static func initialValues(for mode: WorkRecordEditorMode) -> (title: String, workDate: Date, workInTime: Date, workOutTime: Date, restHours: Double, transportFee: Int?, hourlyRate: Int?, workSessionId: UUID, isWorkOutTimeSet: Bool) {
@@ -2275,7 +2183,7 @@ private struct EventTimeSection: View {
     }
 
     private func formatDateOnly(_ date: Date) -> String {
-        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
+        LocalizationManager.shared.formattedUserVisibleDate(for: date)
     }
 
     private func formatTimeOnly(_ date: Date) -> String {
@@ -2655,7 +2563,7 @@ private struct WorkRecordTimeSection: View {
     }
 
     private func formatDateOnly(_ date: Date) -> String {
-        LocalizationManager.shared.dateFormatter(dateFormat: "yyyy/MM/dd").string(from: date)
+        LocalizationManager.shared.formattedUserVisibleDate(for: date)
     }
 
     private func formatWorkTime(_ date: Date) -> String {

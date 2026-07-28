@@ -21,16 +21,17 @@ private struct HolidaySubscriptionCompactDetent: CustomPresentationDetent {
 struct HolidaySubscriptionSettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
+    @ObservedObject private var subscriptionManager: HolidaySubscriptionManager
     @StateObject private var viewModel: HolidaySubscriptionSettingsViewModel
     @ObservedObject private var tabBarVisibility = TabBarVisibilityState.shared
 
-    @State private var showingSyncError = false
     @State private var showingSyncResult = false
     @State private var syncResultTitle = ""
     @State private var syncResultMessage = ""
     @State private var didHideTabBar = false
 
     init(subscriptionManager: HolidaySubscriptionManager) {
+        _subscriptionManager = ObservedObject(wrappedValue: subscriptionManager)
         _viewModel = StateObject(
             wrappedValue: HolidaySubscriptionSettingsViewModel(
                 subscriptionManager: subscriptionManager
@@ -48,7 +49,7 @@ struct HolidaySubscriptionSettingsView: View {
 
             Spacer()
 
-            if viewModel.isSyncing {
+            if subscriptionManager.syncInProgress {
                 ProgressView()
                     .scaleEffect(0.8)
                     .frame(
@@ -75,7 +76,7 @@ struct HolidaySubscriptionSettingsView: View {
                     Text(localization.localized(.holidaySubscriptionRefresh))
                 }
                 .buttonStyle(ShiftToggleActiveButtonStyle.workAction)
-                .disabled(viewModel.isSyncing)
+                .disabled(subscriptionManager.syncInProgress)
             }
 
             ModalHeaderCloseButton {
@@ -98,7 +99,7 @@ struct HolidaySubscriptionSettingsView: View {
 
                 List {
                     // 订阅列表
-                    if viewModel.allAvailableSubscriptions.isEmpty {
+                    if subscriptionManager.allAvailableSubscriptions.isEmpty {
                         ContentUnavailableView {
                             Label(localization.localized(.holidaySubscriptionNoSubscriptions), systemImage: "calendar.badge.exclamationmark")
                         } description: {
@@ -106,7 +107,7 @@ struct HolidaySubscriptionSettingsView: View {
                         }
                     } else {
                         Section {
-                            ForEach(viewModel.allAvailableSubscriptions) { subscription in
+                            ForEach(subscriptionManager.allAvailableSubscriptions) { subscription in
                                 NavigationLink {
                                     HolidaySourceEditView(
                                         region: subscription.region,
@@ -118,6 +119,8 @@ struct HolidaySubscriptionSettingsView: View {
                                         subscription: subscription,
                                         isEnabled: viewModel.isEnabled(subscription.region),
                                         canToggle: viewModel.canToggle(subscription.region),
+                                        isSyncing: subscriptionManager.syncingRegions.contains(subscription.region),
+                                        hasCachedData: subscriptionManager.hasCachedData(for: subscription.region),
                                         onToggle: {
                                             Task {
                                                 await viewModel.toggleSubscription(subscription.region)
@@ -160,19 +163,7 @@ struct HolidaySubscriptionSettingsView: View {
         } message: {
             Text(syncResultMessage)
         }
-        .alert(localization.localized(.holidaySubscriptionSyncError), isPresented: $showingSyncError) {
-        } message: {
-            Text(viewModel.lastSyncError?.localizedDescription ?? "")
-        }
-        .onChange(of: viewModel.isSyncing) { _, newValue in
-            if !newValue {
-                // 同步完成后检查是否有错误
-                if let _ = viewModel.lastSyncError {
-                    showingSyncError = true
-                }
-            }
-        }
-        .environmentObject(viewModel.subscriptionManager)
+        .environmentObject(subscriptionManager)
     }
 }
 
@@ -182,6 +173,8 @@ struct SubscriptionRowView: View {
     let subscription: HolidaySubscription
     let isEnabled: Bool
     let canToggle: Bool
+    let isSyncing: Bool
+    let hasCachedData: Bool
     let onToggle: () -> Void
 
     @EnvironmentObject private var localization: LocalizationManager
@@ -201,14 +194,84 @@ struct SubscriptionRowView: View {
             .buttonStyle(.plain)
             .frame(width: 28, height: 28)
 
-            Text(localization.localized(subscription.displayNameKey))
-                .foregroundColor(.primary)
-                .font(.body)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(localization.localized(subscription.displayNameKey))
+                    .foregroundColor(.primary)
+                    .font(.body)
+
+                HStack(spacing: 4) {
+                    if isSyncing {
+                        ProgressView()
+                            .controlSize(.mini)
+                    } else {
+                        Image(systemName: statusSystemImage)
+                    }
+
+                    Text(localization.localized(statusKey))
+                }
+                .font(.caption)
+                .foregroundColor(statusColor)
+
+                if let lastUpdatedAt = subscription.lastUpdatedAt {
+                    Text(
+                        String(
+                            format: localization.localized(.holidaySubscriptionLastSuccessfulSyncFormat),
+                            locale: localization.currentLocale,
+                            localization.formattedUserVisibleDateTime(for: lastUpdatedAt)
+                        )
+                    )
+                    .font(.caption2)
+                    .foregroundColor(SettingsModalSurface.secondaryText)
+                }
+            }
 
             Spacer()
         }
         .padding(.vertical, HolidaySubscriptionLayout.rowVerticalPadding)
         .opacity(canToggle ? 1.0 : 0.6)
+    }
+
+    private var statusKey: LocalizedString {
+        if isSyncing {
+            return .holidaySubscriptionSyncing
+        }
+
+        switch subscription.syncStatus {
+        case .neverSynced:
+            return .holidaySubscriptionNotSynced
+        case .success:
+            return .holidaySubscriptionSynced
+        case .failed:
+            return hasCachedData
+                ? .holidaySubscriptionUsingCachedData
+                : .holidaySubscriptionSyncFailed
+        }
+    }
+
+    private var statusColor: Color {
+        if isSyncing {
+            return .accentColor
+        }
+
+        switch subscription.syncStatus {
+        case .neverSynced:
+            return SettingsModalSurface.secondaryText
+        case .success:
+            return .green
+        case .failed:
+            return hasCachedData ? .orange : .red
+        }
+    }
+
+    private var statusSystemImage: String {
+        switch subscription.syncStatus {
+        case .neverSynced:
+            return "circle"
+        case .success:
+            return "checkmark.circle.fill"
+        case .failed:
+            return hasCachedData ? "clock.arrow.circlepath" : "xmark.circle.fill"
+        }
     }
 }
 
@@ -216,15 +279,10 @@ struct SubscriptionRowView: View {
 
 @MainActor
 class HolidaySubscriptionSettingsViewModel: ObservableObject {
-    @Published private(set) var allAvailableSubscriptions: [HolidaySubscription] = []
-    @Published private(set) var isSyncing = false
-    @Published private(set) var lastSyncError: Error?
-    
     let subscriptionManager: HolidaySubscriptionManager
     
     init(subscriptionManager: HolidaySubscriptionManager) {
         self.subscriptionManager = subscriptionManager
-        updateSubscriptions()
     }
     
     func isEnabled(_ region: HolidayRegion) -> Bool {
@@ -232,6 +290,10 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
     }
     
     func canToggle(_ region: HolidayRegion) -> Bool {
+        guard !subscriptionManager.syncInProgress else {
+            return false
+        }
+
         guard let subscription = subscriptionManager.subscriptions.first(where: { $0.region == region }) else {
             return false
         }
@@ -258,7 +320,6 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
             } else {
                 try subscriptionManager.enable(subscription: subscription)
             }
-            updateSubscriptions()
 
             if shouldSyncAfterEnabling {
                 _ = await syncAll()
@@ -268,19 +329,6 @@ class HolidaySubscriptionSettingsViewModel: ObservableObject {
     }
     
     func syncAll() async -> SyncResult {
-        isSyncing = true
-        lastSyncError = nil
-        
-        let result = await subscriptionManager.syncAllEnabled()
-        
-        isSyncing = false
-        lastSyncError = result.error
-        updateSubscriptions()
-        
-        return result
-    }
-    
-    private func updateSubscriptions() {
-        allAvailableSubscriptions = subscriptionManager.allAvailableSubscriptions
+        await subscriptionManager.syncAllEnabled()
     }
 }

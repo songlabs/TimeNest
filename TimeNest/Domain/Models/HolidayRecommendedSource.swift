@@ -156,4 +156,39 @@ enum HolidayRecommendedSources {
     static func cleanFallbackURL(for region: HolidayRegion) -> String? {
         allSources.first { $0.region == region && $0.isCleanVersion }?.urlString
     }
+
+    /// Return a clean fallback only when the requested URL is exactly the
+    /// built-in normal source for the same region. A matching provider host is
+    /// intentionally insufficient because users may enter custom provider
+    /// paths or query parameters.
+    static func cleanFallbackURL(
+        forRequestedURL requestedURLString: String,
+        region: HolidayRegion
+    ) -> String? {
+        guard let preferredURLString = preferredURL(for: region),
+              let requestedIdentity = sourceIdentity(requestedURLString),
+              let preferredIdentity = sourceIdentity(preferredURLString),
+              requestedIdentity == preferredIdentity else {
+            return nil
+        }
+        return cleanFallbackURL(for: region)
+    }
+
+    private static func sourceIdentity(_ urlString: String) -> String? {
+        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard var components = URLComponents(string: trimmed),
+              components.user == nil,
+              components.password == nil,
+              components.query == nil,
+              components.fragment == nil,
+              components.scheme?.lowercased() == "https",
+              let host = components.host?.lowercased(),
+              !host.isEmpty else {
+            return nil
+        }
+
+        components.scheme = "https"
+        components.host = host
+        return components.string
+    }
 }

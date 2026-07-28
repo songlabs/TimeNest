@@ -143,7 +143,7 @@ Calendar events, shifts, work records, settings, and holiday choices are stored 
 - Voice memo input uses the microphone and Apple's Speech framework only when the user starts voice input in the memo field; recognized text is inserted into the local memo.
 - Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true` and the ATT decision completes. Ad personalization is disabled through Publisher Privacy Treatment; denying ATT keeps the calendar usable and permits non-IDFA ad requests when UMP allows ads.
 - Remove Ads is a one-time Apple In-App Purchase handled by StoreKit. TimeNest does not collect or store payment card details, and purchase restoration uses Apple transaction entitlements.
-- The app has no TimeNest account, developer-operated backend, or general-purpose cloud sync. Optional shared calendars use the user's Apple iCloud account and CloudKit; recipients are read-only and only the selected event, shift, and work-record fields enter the shared zone.
+- The app has no TimeNest account, developer-operated backend, or general-purpose cloud sync. Optional shared calendars use the user's Apple iCloud account and CloudKit; events, shifts, and work records assigned to an owned shared calendar enter its shared zone automatically, and recipients are read-only.
 
 Uninstalling the app removes its local container under normal iOS behavior. Existing SwiftData entities and decoding compatibility must be treated as user-data migration code and should not be removed as ordinary cleanup.
 

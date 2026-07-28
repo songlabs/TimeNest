@@ -1,5 +1,22 @@
 import Foundation
 
+/// Shared ICS body decoder used by validation and parsing.
+///
+/// RFC 5545 content is commonly UTF-8, while some legacy feeds still use
+/// ISO-8859-1. Keeping this policy in one place prevents validation from
+/// accepting data that the parser cannot decode.
+enum ICSContentDecoder {
+    static func decode(_ data: Data) throws -> String {
+        if let utf8Content = String(data: data, encoding: .utf8) {
+            return utf8Content
+        }
+        if let latin1Content = String(data: data, encoding: .isoLatin1) {
+            return latin1Content
+        }
+        throw EnhancedICSError.invalidEncoding
+    }
+}
+
 /// ICS 下载/解析错误类型
 enum EnhancedICSError: Error, LocalizedError {
     case invalidURL
@@ -49,9 +66,6 @@ protocol ICSDownloading {
 /// ICS 下载服务实现
 class ICSDownloadService: ICSDownloading {
 
-    // 默认超时时间
-    private let defaultTimeout: TimeInterval = 30
-
     // 最大文件大小限制 (10MB)
     private let maxFileSize: Int = 10 * 1024 * 1024
 
@@ -86,22 +100,7 @@ class ICSDownloadService: ICSDownloading {
             throw EnhancedICSError.emptyResponse
         }
 
-        // 尝试用 UTF-8 解码
-        guard let body = String(data: data, encoding: .utf8) else {
-            // 尝试其他常见编码
-            guard let bodyAlt = String(data: data, encoding: .isoLatin1) else {
-                throw EnhancedICSError.invalidEncoding
-            }
-            // 使用备用 body 检查
-            if !bodyAlt.contains("BEGIN:VCALENDAR") || !bodyAlt.contains("END:VCALENDAR") {
-                throw EnhancedICSError.invalidICSContent
-            }
-            // 检查 VEVENT
-            if !bodyAlt.contains("BEGIN:VEVENT") {
-                throw EnhancedICSError.noEvents
-            }
-            return
-        }
+        let body = try ICSContentDecoder.decode(data)
 
         // 检查是否包含 iCalendar 必需的结构
         if !body.contains("BEGIN:VCALENDAR") || !body.contains("END:VCALENDAR") {
@@ -112,26 +111,6 @@ class ICSDownloadService: ICSDownloading {
         if !body.contains("BEGIN:VEVENT") {
             throw EnhancedICSError.noEvents
         }
-
-    }
-
-    /// 检查是否为 Office Holidays URL
-    private func isOfficeHolidaysURL(_ url: URL) -> Bool {
-        guard let host = url.host else { return false }
-        return host == "www.officeholidays.com" || host == "officeholidays.com"
-    }
-
-    /// 生成带 nocache 参数的 fallback URL
-    private func appendNoCacheQuery(to url: URL) -> URL {
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        let timestamp = Int(Date().timeIntervalSince1970)
-        let nocacheValue = "\(timestamp)"
-
-        var queryItems = components?.queryItems ?? []
-        queryItems.append(URLQueryItem(name: "nocache", value: nocacheValue))
-        components?.queryItems = queryItems
-
-        return components?.url ?? url
     }
 
     /// 下载 ICS 数据（内部方法，带 headers 的单个请求）
@@ -154,6 +133,20 @@ class ICSDownloadService: ICSDownloading {
             throw EnhancedICSError.emptyResponse
         }
 
+        if httpResponse.expectedContentLength > Int64(maxFileSize) {
+            throw EnhancedICSError.tooLarge(
+                size: Int(httpResponse.expectedContentLength),
+                limit: maxFileSize
+            )
+        }
+
+        // Apply the same limit to every HTTP response, including non-2xx
+        // responses. URLSession.data(for:) buffers the body before this check;
+        // strict streaming limits are intentionally outside this minimal fix.
+        if data.count > maxFileSize {
+            throw EnhancedICSError.tooLarge(size: data.count, limit: maxFileSize)
+        }
+
         return (data, httpResponse)
     }
 
@@ -165,35 +158,17 @@ class ICSDownloadService: ICSDownloading {
         }
 
         do {
-            // 第一次请求
             let (data, httpResponse) = try await fetchICS(from: url, timeout: timeout)
 
             // 检查 HTTP 状态码
             guard (200...299).contains(httpResponse.statusCode) else {
-                // 对 HTTP 500 增加 Office Holidays fallback
-                if httpResponse.statusCode == 500 && isOfficeHolidaysURL(url) {
-                    let fallbackURL = appendNoCacheQuery(to: url)
-
-                    // 重试带 nocache 参数的 URL
-                    let (retryData, retryHTTPResponse) = try await fetchICS(from: fallbackURL, timeout: timeout)
-
-                    guard (200...299).contains(retryHTTPResponse.statusCode) else {
-                        throw EnhancedICSError.invalidHTTPStatus(retryHTTPResponse.statusCode)
-                    }
-
-                    return retryData
-                }
-
                 throw EnhancedICSError.invalidHTTPStatus(httpResponse.statusCode)
-            }
-
-            // 检查文件大小
-            if data.count > maxFileSize {
-                throw EnhancedICSError.tooLarge(size: data.count, limit: maxFileSize)
             }
 
             return data
 
+        } catch let error as EnhancedICSError {
+            throw error
         } catch let error as URLError {
             throw EnhancedICSError.networkError(error)
         } catch {

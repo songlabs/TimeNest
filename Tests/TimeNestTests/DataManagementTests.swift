@@ -3,6 +3,613 @@ import UserNotifications
 import XCTest
 @testable import TimeNest
 
+final class WorkRecordSessionAssemblerTests: XCTestCase {
+    func testModernSessionIDsAreAuthoritativeAndNeverCrossPaired() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 20)))
+        let clockIn = makeAssemblerEvent(
+            kind: .clockIn,
+            clockDate: assemblerDate(day, hour: 9),
+            workDate: day,
+            sessionID: UUID()
+        )
+        let clockOut = makeAssemblerEvent(
+            kind: .clockOut,
+            clockDate: assemblerDate(day, hour: 18),
+            workDate: day,
+            sessionID: UUID()
+        )
+
+        let sessions = WorkRecordSessionAssembler.sessions(
+            from: [clockIn, clockOut].compactMap(WorkRecordClockEntry.init(event:)),
+            calendar: calendar
+        )
+        let calculated = WorkRecordSessionCalculator.sessions(
+            from: [clockIn, clockOut],
+            in: try XCTUnwrap(calendar.dateInterval(of: .month, for: day)),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertTrue(sessions.allSatisfy { !$0.isComplete })
+        XCTAssertTrue(calculated.isEmpty)
+    }
+
+    func testLegacyPairingStaysWithinWorkDayAndCalendar() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let firstDay = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 20)))
+        let secondDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: firstDay))
+        let otherCalendarID = UUID()
+        let values = [
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(firstDay, hour: 9), workDate: firstDay),
+            makeAssemblerEvent(
+                kind: .clockOut,
+                clockDate: assemblerDate(firstDay, hour: 18),
+                workDate: firstDay,
+                calendarID: otherCalendarID
+            ),
+            makeAssemblerEvent(
+                kind: .clockOut,
+                clockDate: assemblerDate(secondDay, hour: 18),
+                workDate: secondDay
+            )
+        ]
+
+        let sessions = WorkRecordSessionAssembler.sessions(
+            from: values.compactMap(WorkRecordClockEntry.init(event:)),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(sessions.count, 3)
+        XCTAssertTrue(sessions.allSatisfy { !$0.isComplete })
+    }
+
+    func testLegacySameDaySupportsMultipleSessionsAndOvernightClockOut() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 20)))
+        let nextDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: day))
+        let values = [
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 9), workDate: day),
+            makeAssemblerEvent(kind: .clockOut, clockDate: assemblerDate(day, hour: 12), workDate: day),
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 22), workDate: day),
+            makeAssemblerEvent(kind: .clockOut, clockDate: assemblerDate(nextDay, hour: 6), workDate: day)
+        ]
+
+        let sessions = WorkRecordSessionAssembler.sessions(
+            from: values.compactMap(WorkRecordClockEntry.init(event:)),
+            calendar: calendar
+        )
+
+        XCTAssertEqual(sessions.count, 2)
+        XCTAssertTrue(sessions.allSatisfy(\.isComplete))
+        let overnight = try XCTUnwrap(sessions.max { $0.sortDate < $1.sortDate })
+        let clockOut = try XCTUnwrap(overnight.clockOut)
+        let end = clockOut.clockDate
+        let effectiveEnd = WorkRecordSessionAssembler.effectiveClockOutDate(
+            clockOut,
+            clockInDate: try XCTUnwrap(overnight.clockIn).clockDate,
+            calendar: calendar
+        )
+        XCTAssertEqual(effectiveEnd, end)
+    }
+
+    func testLegacyRealClockOutWinsOverEarlierAndSameTimePlaceholdersStably() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 21)))
+        let clockIn = makeAssemblerEvent(
+            id: UUID(uuidString: "10000000-0000-0000-0000-000000000001")!,
+            kind: .clockIn,
+            clockDate: assemblerDate(day, hour: 9),
+            workDate: day
+        )
+        let earlierPlaceholder = makeAssemblerEvent(
+            id: UUID(uuidString: "20000000-0000-0000-0000-000000000001")!,
+            kind: .clockOut,
+            clockDate: assemblerDate(day, hour: 10),
+            workDate: day,
+            isWorkOutTimeSet: false
+        )
+        let sameTimePlaceholder = makeAssemblerEvent(
+            id: UUID(uuidString: "30000000-0000-0000-0000-000000000001")!,
+            kind: .clockOut,
+            clockDate: assemblerDate(day, hour: 17),
+            workDate: day,
+            isWorkOutTimeSet: false
+        )
+        let realClockOut = makeAssemblerEvent(
+            id: UUID(uuidString: "40000000-0000-0000-0000-000000000001")!,
+            kind: .clockOut,
+            clockDate: assemblerDate(day, hour: 17),
+            workDate: day,
+            isWorkOutTimeSet: true
+        )
+        let entries = [earlierPlaceholder, realClockOut, clockIn, sameTimePlaceholder]
+            .compactMap(WorkRecordClockEntry.init(event:))
+
+        let forward = WorkRecordSessionAssembler.sessions(from: entries, calendar: calendar)
+        let reversed = WorkRecordSessionAssembler.sessions(
+            from: Array(entries.reversed()),
+            calendar: calendar
+        )
+        let complete = try XCTUnwrap(forward.first(where: \.isComplete))
+
+        XCTAssertEqual(complete.clockOut?.eventID, realClockOut.id)
+        XCTAssertEqual(forward, reversed)
+        XCTAssertEqual(forward.filter(\.isComplete).count, 1)
+    }
+
+    func testLegacyMultiplePlaceholdersWithoutRealClockOutRemainIncomplete() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 22)))
+        let values = [
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 9), workDate: day),
+            makeAssemblerEvent(
+                kind: .clockOut,
+                clockDate: assemblerDate(day, hour: 12),
+                workDate: day,
+                isWorkOutTimeSet: false
+            ),
+            makeAssemblerEvent(
+                kind: .clockOut,
+                clockDate: assemblerDate(day, hour: 17),
+                workDate: day,
+                isWorkOutTimeSet: false
+            )
+        ]
+
+        let sessions = WorkRecordSessionAssembler.sessions(
+            from: values.compactMap(WorkRecordClockEntry.init(event:)),
+            calendar: calendar
+        )
+
+        XCTAssertFalse(sessions.contains(where: \.isComplete))
+        XCTAssertEqual(sessions.compactMap(\.clockOut).filter(\.isWorkOutTimeSet).count, 0)
+    }
+
+    func testLegacyAdjacentAndSeparatedSessionsUseBoundaryClockOutExactlyOnce() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 23)))
+        let adjacent = [
+            makeAssemblerEvent(kind: .clockOut, clockDate: assemblerDate(day, hour: 17), workDate: day),
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 12), workDate: day),
+            makeAssemblerEvent(kind: .clockOut, clockDate: assemblerDate(day, hour: 12), workDate: day),
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 9), workDate: day)
+        ]
+        let separated = [
+            makeAssemblerEvent(kind: .clockOut, clockDate: assemblerDate(day, hour: 17), workDate: day),
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 13), workDate: day),
+            makeAssemblerEvent(kind: .clockOut, clockDate: assemblerDate(day, hour: 12), workDate: day),
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 9), workDate: day)
+        ]
+
+        for (values, expectedHours) in [(adjacent, [(9, 12), (12, 17)]), (separated, [(9, 12), (13, 17)])] {
+            let sessions = WorkRecordSessionAssembler.sessions(
+                from: values.compactMap(WorkRecordClockEntry.init(event:)),
+                calendar: calendar
+            ).filter(\.isComplete)
+
+            XCTAssertEqual(sessions.count, 2)
+            XCTAssertEqual(
+                sessions.map {
+                    (
+                        calendar.component(.hour, from: $0.clockIn!.clockDate),
+                        calendar.component(.hour, from: $0.clockOut!.clockDate)
+                    )
+                }.map { [$0.0, $0.1] },
+                expectedHours.map { [$0.0, $0.1] }
+            )
+        }
+    }
+
+    func testLegacyRejectsSameTimeEarlierSameDayAndOverTwentyFourHours() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 24)))
+        let nextDay = try XCTUnwrap(calendar.date(byAdding: .day, value: 1, to: day))
+        let twoDaysLater = try XCTUnwrap(calendar.date(byAdding: .day, value: 2, to: day))
+        let cases: [(Date, Date)] = [
+            (assemblerDate(day, hour: 9), assemblerDate(day, hour: 9)),
+            (assemblerDate(day, hour: 9), assemblerDate(day, hour: 8)),
+            (assemblerDate(day, hour: 9), assemblerDate(twoDaysLater, hour: 10))
+        ]
+
+        for (clockInDate, clockOutDate) in cases {
+            let values = [
+                makeAssemblerEvent(kind: .clockIn, clockDate: clockInDate, workDate: day),
+                makeAssemblerEvent(kind: .clockOut, clockDate: clockOutDate, workDate: day)
+            ]
+            let sessions = WorkRecordSessionAssembler.sessions(
+                from: values.compactMap(WorkRecordClockEntry.init(event:)),
+                calendar: calendar
+            )
+            XCTAssertFalse(sessions.contains(where: \.isComplete))
+        }
+
+        let exactTwentyFourHours = [
+            makeAssemblerEvent(kind: .clockIn, clockDate: assemblerDate(day, hour: 9), workDate: day),
+            makeAssemblerEvent(kind: .clockOut, clockDate: assemblerDate(nextDay, hour: 9), workDate: day)
+        ]
+        let exactSessions = WorkRecordSessionAssembler.sessions(
+            from: exactTwentyFourHours.compactMap(WorkRecordClockEntry.init(event:)),
+            calendar: calendar
+        )
+        XCTAssertEqual(exactSessions.filter(\.isComplete).count, 1)
+    }
+
+    func testLegacySameTimestampOrderingDoesNotDependOnInputOrder() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 25)))
+        let values = [
+            makeAssemblerEvent(
+                id: UUID(uuidString: "10000000-0000-0000-0000-000000000010")!,
+                kind: .clockIn,
+                clockDate: assemblerDate(day, hour: 9),
+                workDate: day
+            ),
+            makeAssemblerEvent(
+                id: UUID(uuidString: "10000000-0000-0000-0000-000000000020")!,
+                kind: .clockIn,
+                clockDate: assemblerDate(day, hour: 9),
+                workDate: day
+            ),
+            makeAssemblerEvent(
+                id: UUID(uuidString: "20000000-0000-0000-0000-000000000010")!,
+                kind: .clockOut,
+                clockDate: assemblerDate(day, hour: 12),
+                workDate: day
+            )
+        ]
+        let entries = values.compactMap(WorkRecordClockEntry.init(event:))
+
+        XCTAssertEqual(
+            WorkRecordSessionAssembler.sessions(from: entries, calendar: calendar),
+            WorkRecordSessionAssembler.sessions(from: entries.shuffled(), calendar: calendar)
+        )
+    }
+
+    private func makeAssemblerEvent(
+        id: UUID = UUID(),
+        kind: WorkClockKind,
+        clockDate: Date,
+        workDate: Date,
+        sessionID: UUID? = nil,
+        calendarID: UUID = TimeNestCalendar.personalID,
+        isWorkOutTimeSet: Bool = true
+    ) -> CalendarEvent {
+        let workInfo: WorkInfo
+        switch kind {
+        case .clockIn:
+            workInfo = WorkInfo(
+                workInTime: clockDate,
+                restHours: 0,
+                workDate: workDate,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: isWorkOutTimeSet
+            )
+        case .clockOut:
+            workInfo = WorkInfo(
+                workOutTime: clockDate,
+                restHours: 0,
+                workDate: workDate,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: isWorkOutTimeSet
+            )
+        }
+        return CalendarEvent(
+            id: id,
+            calendarID: calendarID,
+            title: kind == .clockIn ? "Clock In" : "Clock Out",
+            note: nil,
+            startDate: clockDate,
+            endDate: clockDate.addingTimeInterval(3_600),
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: clockDate,
+            updatedAt: clockDate,
+            workInfo: workInfo
+        )
+    }
+
+    private func assemblerDate(_ day: Date, hour: Int) -> Date {
+        Calendar(identifier: .gregorian).date(
+            bySettingHour: hour,
+            minute: 0,
+            second: 0,
+            of: day
+        )!
+    }
+}
+
+@MainActor
+final class EventRepositoryApplyBatchContractTests: XCTestCase {
+    private var temporaryDirectories: [URL] = []
+
+    override func tearDown() {
+        temporaryDirectories.forEach { try? FileManager.default.removeItem(at: $0) }
+        temporaryDirectories.removeAll()
+        super.tearDown()
+    }
+
+    func testSwiftDataBatchInsertsTwoEventsAtomically() async throws {
+        let (_, repository) = try makeSwiftDataRepository()
+        let first = makeEvent(title: "First", reminderOffsetMinutes: nil)
+        let second = makeEvent(title: "Second", reminderOffsetMinutes: nil)
+
+        try await repository.applyBatch(
+            upserting: [first, second],
+            deleting: [],
+            ifUnchanged: []
+        )
+
+        let storedFirst = try await repository.event(id: first.id)
+        let storedSecond = try await repository.event(id: second.id)
+        let hasPendingChanges = await repository.hasPendingChangesForTests()
+        XCTAssertEqual(storedFirst, first)
+        XCTAssertEqual(storedSecond, second)
+        XCTAssertFalse(hasPendingChanges)
+    }
+
+    func testSwiftDataDuplicateInsertAndInvalidSecondItemLeaveNoPartialWrite() async throws {
+        let (_, repository) = try makeSwiftDataRepository()
+        let existing = makeEvent(title: "Existing", reminderOffsetMinutes: nil)
+        try await repository.applyBatch(
+            upserting: [existing],
+            deleting: [],
+            ifUnchanged: []
+        )
+        let firstNewEvent = makeEvent(title: "Must Roll Back", reminderOffsetMinutes: nil)
+
+        do {
+            try await repository.applyBatch(
+                upserting: [firstNewEvent, existing],
+                deleting: [],
+                ifUnchanged: []
+            )
+            XCTFail("An existing upsert without an expected snapshot must fail")
+        } catch {
+            XCTAssertEqual(error as? EventRepositoryBatchError, .duplicateEvent)
+        }
+
+        let storedFirstNewEvent = try await repository.event(id: firstNewEvent.id)
+        let storedExisting = try await repository.event(id: existing.id)
+        XCTAssertNil(storedFirstNewEvent)
+        XCTAssertEqual(storedExisting, existing)
+
+        do {
+            try await repository.applyBatch(
+                upserting: [firstNewEvent, firstNewEvent],
+                deleting: [],
+                ifUnchanged: []
+            )
+            XCTFail("Duplicate IDs in one batch must fail")
+        } catch {
+            XCTAssertEqual(error as? EventRepositoryBatchError, .duplicateEvent)
+        }
+        let storedAfterDuplicateInput = try await repository.event(id: firstNewEvent.id)
+        XCTAssertNil(storedAfterDuplicateInput)
+    }
+
+    func testSwiftDataStaleUpdateIsAtomicAndCorrectRetrySucceeds() async throws {
+        let (_, repository) = try makeSwiftDataRepository()
+        let original = makeEvent(title: "Original", reminderOffsetMinutes: nil)
+        try await repository.applyBatch(
+            upserting: [original],
+            deleting: [],
+            ifUnchanged: []
+        )
+        var staleSnapshot = original
+        staleSnapshot.title = "Stale"
+        var updated = original
+        updated.title = "Updated"
+        let newEvent = makeEvent(title: "New", reminderOffsetMinutes: nil)
+
+        do {
+            try await repository.applyBatch(
+                upserting: [updated, newEvent],
+                deleting: [],
+                ifUnchanged: [staleSnapshot]
+            )
+            XCTFail("A stale expected snapshot must reject the whole batch")
+        } catch {
+            XCTAssertEqual(error as? EventRepositoryBatchError, .staleData)
+        }
+        let originalAfterFailure = try await repository.event(id: original.id)
+        let newAfterFailure = try await repository.event(id: newEvent.id)
+        XCTAssertEqual(originalAfterFailure, original)
+        XCTAssertNil(newAfterFailure)
+
+        try await repository.applyBatch(
+            upserting: [updated, newEvent],
+            deleting: [],
+            ifUnchanged: [original]
+        )
+        let storedUpdated = try await repository.event(id: original.id)
+        let storedNew = try await repository.event(id: newEvent.id)
+        XCTAssertEqual(storedUpdated, updated)
+        XCTAssertEqual(storedNew, newEvent)
+    }
+
+    func testSwiftDataDeleteMismatchFailsThenUpdateAndDeleteCommitTogether() async throws {
+        let (_, repository) = try makeSwiftDataRepository()
+        let toUpdate = makeEvent(title: "Update", reminderOffsetMinutes: nil)
+        let toDelete = makeEvent(title: "Delete", reminderOffsetMinutes: nil)
+        try await repository.applyBatch(
+            upserting: [toUpdate, toDelete],
+            deleting: [],
+            ifUnchanged: []
+        )
+        var staleDelete = toDelete
+        staleDelete.title = "Stale delete"
+
+        do {
+            try await repository.applyBatch(
+                upserting: [],
+                deleting: [toDelete],
+                ifUnchanged: [staleDelete]
+            )
+            XCTFail("A stale delete snapshot must fail")
+        } catch {
+            XCTAssertEqual(error as? EventRepositoryBatchError, .staleData)
+        }
+        let storedAfterDeleteFailure = try await repository.event(id: toDelete.id)
+        XCTAssertEqual(storedAfterDeleteFailure, toDelete)
+
+        var updated = toUpdate
+        updated.title = "Updated"
+        try await repository.applyBatch(
+            upserting: [updated],
+            deleting: [toDelete],
+            ifUnchanged: [toUpdate, toDelete]
+        )
+        let storedAfterUpdate = try await repository.event(id: updated.id)
+        let deletedAfterSuccess = try await repository.event(id: toDelete.id)
+        XCTAssertEqual(storedAfterUpdate, updated)
+        XCTAssertNil(deletedAfterSuccess)
+    }
+
+    func testSwiftDataSaveFailureRollsBackPendingChanges() async throws {
+        let (_, repository, _) = try makeReadOnlySwiftDataRepository()
+        let event = makeEvent(title: "Read only", reminderOffsetMinutes: nil)
+
+        do {
+            try await repository.applyBatch(
+                upserting: [event],
+                deleting: [],
+                ifUnchanged: []
+            )
+            XCTFail("A read-only ModelConfiguration must reject save")
+        } catch {
+            XCTAssertFalse(error is EventRepositoryBatchError)
+        }
+
+        let storedAfterFailure = try await repository.event(id: event.id)
+        let hasPendingChanges = await repository.hasPendingChangesForTests()
+        XCTAssertNil(storedAfterFailure)
+        XCTAssertFalse(hasPendingChanges)
+    }
+
+    func testInMemoryMatchesSwiftDataDuplicateStaleAndDeletePreconditions() async throws {
+        let repository = InMemoryEventRepository()
+        let original = makeEvent(title: "Original", reminderOffsetMinutes: nil)
+        try await repository.applyBatch(
+            upserting: [original],
+            deleting: [],
+            ifUnchanged: []
+        )
+        let newEvent = makeEvent(title: "New", reminderOffsetMinutes: nil)
+
+        do {
+            try await repository.applyBatch(
+                upserting: [newEvent, original],
+                deleting: [],
+                ifUnchanged: []
+            )
+            XCTFail("InMemory must reject an existing upsert without expected state")
+        } catch {
+            XCTAssertEqual(error as? EventRepositoryBatchError, .duplicateEvent)
+        }
+        let storedNewEvent = try await repository.event(id: newEvent.id)
+        XCTAssertNil(storedNewEvent)
+
+        var stale = original
+        stale.title = "Stale"
+        do {
+            try await repository.applyBatch(
+                upserting: [],
+                deleting: [original],
+                ifUnchanged: [stale]
+            )
+            XCTFail("InMemory must reject stale deletes")
+        } catch {
+            XCTAssertEqual(error as? EventRepositoryBatchError, .staleData)
+        }
+        let storedOriginal = try await repository.event(id: original.id)
+        XCTAssertEqual(storedOriginal, original)
+    }
+
+    private func makeSwiftDataRepository() throws -> (
+        ModelContainer,
+        SwiftDataEventRepository
+    ) {
+        let schema = Schema([SwiftDataCalendarEventEntity.self])
+        let configuration = ModelConfiguration(
+            "EventRepositoryApplyBatchContractTests-\(UUID().uuidString)",
+            schema: schema,
+            isStoredInMemoryOnly: true,
+            allowsSave: true,
+            groupContainer: .none,
+            cloudKitDatabase: .none
+        )
+        let container = try ModelContainer(
+            for: schema,
+            configurations: [configuration]
+        )
+        return (container, SwiftDataEventRepository(modelContainer: container))
+    }
+
+    private func makeReadOnlySwiftDataRepository() throws -> (
+        ModelContainer,
+        SwiftDataEventRepository,
+        URL
+    ) {
+        let schema = Schema([SwiftDataCalendarEventEntity.self])
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent(
+                "EventRepositoryApplyBatchContractTests-\(UUID().uuidString)",
+                isDirectory: true
+            )
+        try FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        let storeURL = directory.appendingPathComponent("readonly.store")
+        temporaryDirectories.append(directory)
+        try autoreleasepool {
+            let writableConfiguration = ModelConfiguration(
+                "EventRepositorySaveFailure",
+                schema: schema,
+                url: storeURL,
+                allowsSave: true,
+                cloudKitDatabase: .none
+            )
+            let writableContainer = try ModelContainer(
+                for: schema,
+                configurations: [writableConfiguration]
+            )
+            let seed = makeEvent(title: "Seed", reminderOffsetMinutes: nil)
+            writableContainer.mainContext.insert(
+                SwiftDataEventMapper.makeEntity(from: seed)
+            )
+            try writableContainer.mainContext.save()
+        }
+
+        let readOnlyConfiguration = ModelConfiguration(
+            "EventRepositorySaveFailure",
+            schema: schema,
+            url: storeURL,
+            allowsSave: false,
+            cloudKitDatabase: .none
+        )
+        let readOnlyContainer = try ModelContainer(
+            for: schema,
+            configurations: [readOnlyConfiguration]
+        )
+        return (
+            readOnlyContainer,
+            SwiftDataEventRepository(modelContainer: readOnlyContainer),
+            directory
+        )
+    }
+}
+
+private extension SwiftDataEventRepository {
+    func hasPendingChangesForTests() -> Bool {
+        modelContext.hasChanges
+    }
+}
+
 @MainActor
 final class TimeNestBackupServiceTests: XCTestCase {
     private var temporaryURLs: [URL] = []
@@ -785,7 +1392,8 @@ final class WorkRecordCSVExporterTests: XCTestCase {
         let calendar = Calendar(identifier: .gregorian)
         let day = calendar.date(from: DateComponents(year: 2026, month: 7, day: 18))!
         let start = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: day)!
-        let end = calendar.date(bySettingHour: 6, minute: 0, second: 0, of: day)!
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: day)!
+        let end = calendar.date(bySettingHour: 6, minute: 0, second: 0, of: nextDay)!
         let sessionID = UUID()
         let clockIn = makeEvent(
             title: "Overnight",
@@ -802,7 +1410,7 @@ final class WorkRecordCSVExporterTests: XCTestCase {
             workInfo: WorkInfo(
                 workOutTime: end,
                 restHours: 1,
-                workDate: day,
+                workDate: nextDay,
                 workSessionId: sessionID,
                 isWorkOutTimeSet: true
             )
@@ -859,6 +1467,79 @@ final class WorkRecordCSVExporterTests: XCTestCase {
             XCTAssertFalse(text.contains("R8"), localeID)
             XCTAssertEqual(export.fileName, "TimeNest_WorkRecords_2026-07.csv")
         }
+    }
+
+    func testPlaceholderAndRealClockOutProduceSameCompletedSessionForCSVStatisticsAndSharing() throws {
+        let calendar = Calendar(identifier: .gregorian)
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 7, day: 26)))
+        let clockInDate = try XCTUnwrap(
+            calendar.date(bySettingHour: 9, minute: 0, second: 0, of: day)
+        )
+        let placeholderDate = try XCTUnwrap(
+            calendar.date(bySettingHour: 10, minute: 0, second: 0, of: day)
+        )
+        let realClockOutDate = try XCTUnwrap(
+            calendar.date(bySettingHour: 17, minute: 0, second: 0, of: day)
+        )
+        let clockIn = makeEvent(
+            title: "Legacy work",
+            workInfo: WorkInfo(
+                workInTime: clockInDate,
+                restHours: 1,
+                workDate: day,
+                workSessionId: nil,
+                isWorkOutTimeSet: true
+            ),
+            startDate: clockInDate
+        )
+        let placeholder = makeEvent(
+            title: "Legacy work",
+            workInfo: WorkInfo(
+                workOutTime: placeholderDate,
+                restHours: 1,
+                workDate: day,
+                workSessionId: nil,
+                isWorkOutTimeSet: false
+            ),
+            startDate: placeholderDate
+        )
+        let realClockOut = makeEvent(
+            title: "Legacy work",
+            workInfo: WorkInfo(
+                workOutTime: realClockOutDate,
+                restHours: 1,
+                workDate: day,
+                workSessionId: nil,
+                isWorkOutTimeSet: true
+            ),
+            startDate: realClockOutDate
+        )
+        let events = [placeholder, realClockOut, clockIn]
+        let range = try XCTUnwrap(calendar.dateInterval(of: .month, for: day))
+
+        let calculated = WorkRecordSessionCalculator.sessions(
+            from: events,
+            in: range,
+            calendar: calendar
+        )
+        let export = try WorkRecordCSVExporter.makeExport(
+            events: events,
+            monthContaining: day,
+            headers: headers,
+            locale: Locale(identifier: "en_US"),
+            calendar: calendar
+        )
+        let completeSharedSnapshots = SharedWorkRecordMapper.snapshots(from: events).filter {
+            $0.workInTime != nil && $0.isWorkOutTimeSet
+        }
+
+        XCTAssertEqual(calculated.count, 1)
+        XCTAssertEqual(calculated.first?.clockOut.id, realClockOut.id)
+        XCTAssertEqual(calculated.first?.workedMinutes, 420)
+        XCTAssertEqual(export.recordCount, calculated.count)
+        XCTAssertTrue(String(decoding: export.data, as: UTF8.self).contains("09:00,17:00"))
+        XCTAssertEqual(completeSharedSnapshots.count, calculated.count)
+        XCTAssertEqual(completeSharedSnapshots.first?.workOutTime, realClockOutDate)
     }
 
     private var headers: WorkRecordCSVHeaders {

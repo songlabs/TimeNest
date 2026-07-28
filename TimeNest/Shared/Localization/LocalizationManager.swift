@@ -183,6 +183,47 @@ final class LocalizationManager: ObservableObject {
         return formatter
     }
 
+    /// 创建跟随 App 内语言排列年月日的 formatter。
+    /// 与 `dateFormatter(dateFormat:)` 的固定格式用途分开，避免 UI 日期被锁定为单一地区顺序。
+    func localizedDateFormatter(
+        template: String,
+        language: DisplayLanguage? = nil
+    ) -> DateFormatter {
+        let displayLanguage = language ?? currentLanguage
+        let locale = locale(for: displayLanguage)
+        let calendar = calendar(for: displayLanguage)
+        let cacheKey = "\(locale.identifier)|\(calendar.timeZone.identifier)|template:\(template)" as NSString
+
+        if let cachedFormatter = dateFormatterCache.object(forKey: cacheKey) {
+            return cachedFormatter
+        }
+
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.setLocalizedDateFormatFromTemplate(template)
+        dateFormatterCache.setObject(formatter, forKey: cacheKey)
+        return formatter
+    }
+
+    /// 用户可见的完整日期。年月日顺序和分隔符跟随 App 内语言。
+    func formattedUserVisibleDate(
+        for date: Date,
+        language: DisplayLanguage? = nil
+    ) -> String {
+        localizedDateFormatter(template: "yyyyMMdd", language: language).string(from: date)
+    }
+
+    /// 用户可见的日期与 24 小时时间。日期顺序本地化，时间继续遵守产品的 HH:mm 规则。
+    func formattedUserVisibleDateTime(
+        for date: Date,
+        language: DisplayLanguage? = nil
+    ) -> String {
+        let dateText = formattedUserVisibleDate(for: date, language: language)
+        let timeText = dateFormatter(dateFormat: "HH:mm", language: language).string(from: date)
+        return "\(dateText) \(timeText)"
+    }
+
     /// 获取当前语言对应的星期短符号
     /// - Parameter weekStartPolicy: 每周开始日策略
     /// - Returns: 7 个星期短符号数组

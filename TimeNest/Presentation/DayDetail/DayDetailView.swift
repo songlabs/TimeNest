@@ -17,8 +17,10 @@ struct DayDetailView: View {
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
+    let onDeleteWorkRecord: ([UUID]) -> Void
     let onCreateEvent: EventEditorSaveAction
     let onUpdateEvent: EventEditorUpdateAction
+    let onSaveWorkRecordPair: WorkRecordPairSaveAction
     var availableCalendars: [TimeNestCalendar] = []
     var entryCalendarContext: EntryCalendarContext = .fixedWritableCalendar(TimeNestCalendar.personalID)
 
@@ -61,6 +63,7 @@ struct DayDetailView: View {
                 showsEntryKindPicker: true,
                 availableCalendars: availableCalendars,
                 calendarContext: entryCalendarContext,
+                onSaveWorkRecordPair: onSaveWorkRecordPair,
                 onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
                     try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
                 }
@@ -95,12 +98,7 @@ struct DayDetailView: View {
                 existingEvents: cell.events,
                 availableCalendars: availableCalendars,
                 calendarContext: .fixedWritableCalendar(session.calendarID),
-                onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
-                    try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
-                },
-                onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
-                    try await onUpdateEvent(eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
-                }
+                onSavePair: onSaveWorkRecordPair
             )
         }
     }
@@ -170,7 +168,7 @@ struct DayDetailView: View {
                             editingWorkRecord = session.editorInitialSession(selectedDate: cell.date.toDate())
                         },
                         onDelete: {
-                            session.eventIDs.forEach(onDeleteEvent)
+                            onDeleteWorkRecord(session.eventIDs)
                         }
                     )
                 }
@@ -329,49 +327,35 @@ struct WorkRecordDisplaySession: Identifiable {
     }
 
     static func make(from events: [EventOccurrence], selectedDate: Date) -> [WorkRecordDisplaySession] {
-        var eventsBySession: [UUID: [EventOccurrence]] = [:]
-        var fallbackClockIns: [EventOccurrence] = []
-        var fallbackClockOuts: [EventOccurrence] = []
-
-        for event in events {
-            guard let sessionId = event.workInfo?.workSessionId else {
-                appendFallback(event, clockIns: &fallbackClockIns, clockOuts: &fallbackClockOuts)
-                continue
-            }
-            eventsBySession[sessionId, default: []].append(event)
+        _ = selectedDate
+        let occurrencesByID = Dictionary(uniqueKeysWithValues: events.map { ($0.id, $0) })
+        let entries = events.compactMap(WorkRecordClockEntry.init(occurrence:))
+        return WorkRecordSessionAssembler.sessions(from: entries).compactMap { session in
+            let clockIn = occurrence(for: session.clockIn, in: occurrencesByID)
+            let clockOut = occurrence(for: session.clockOut, in: occurrencesByID)
+            guard clockIn != nil || clockOut != nil else { return nil }
+            let fallbackID = [
+                clockIn?.id ?? "missing-in",
+                clockOut?.id ?? "missing-out"
+            ].joined(separator: "-")
+            return WorkRecordDisplaySession(
+                id: session.sessionID?.uuidString ?? "legacy-\(fallbackID)",
+                clockIn: clockIn,
+                clockOut: clockOut,
+                workSessionId: session.sessionID
+            )
         }
+    }
 
-        var sessions: [WorkRecordDisplaySession] = []
-        for (sessionId, sessionEvents) in eventsBySession {
-            let clockIns = sessionEvents
-                .filter(\.isClockInEvent)
-                .sorted { $0.actualWorkClockDate < $1.actualWorkClockDate }
-            let clockOuts = sessionEvents
-                .filter(\.isClockOutEvent)
-                .sorted { $0.actualWorkClockDate < $1.actualWorkClockDate }
-
-            if let clockIn = clockIns.first, let clockOut = clockOuts.last {
-                sessions.append(
-                    WorkRecordDisplaySession(
-                        id: sessionId.uuidString,
-                        clockIn: clockIn,
-                        clockOut: clockOut,
-                        workSessionId: sessionId
-                    )
-                )
-                fallbackClockIns.append(contentsOf: clockIns.dropFirst())
-                fallbackClockOuts.append(contentsOf: clockOuts.dropLast())
-            } else {
-                fallbackClockIns.append(contentsOf: clockIns)
-                fallbackClockOuts.append(contentsOf: clockOuts)
-            }
+    private static func occurrence(
+        for entry: WorkRecordClockEntry?,
+        in occurrencesByID: [String: EventOccurrence]
+    ) -> EventOccurrence? {
+        guard let entry,
+              case .occurrence(let id) = entry.sourceID else {
+            return nil
         }
-
-        sessions.append(contentsOf: makeFallbackSessions(clockIns: fallbackClockIns, clockOuts: fallbackClockOuts))
-        return sessions.sorted {
-            if $0.sortDate != $1.sortDate { return $0.sortDate < $1.sortDate }
-            return $0.id < $1.id
-        }
+        return occurrencesByID[id]
     }
 
     func editorInitialSession(selectedDate: Date) -> WorkRecordEditorInitialSession {
@@ -416,69 +400,6 @@ struct WorkRecordDisplaySession: Identifiable {
         return defaultTitle
     }
 
-    private static func appendFallback(_ event: EventOccurrence, clockIns: inout [EventOccurrence], clockOuts: inout [EventOccurrence]) {
-        if event.isClockInEvent {
-            clockIns.append(event)
-        } else if event.isClockOutEvent {
-            clockOuts.append(event)
-        }
-    }
-
-    private static func makeFallbackSessions(clockIns: [EventOccurrence], clockOuts: [EventOccurrence]) -> [WorkRecordDisplaySession] {
-        let sortedClockIns = clockIns.sorted { $0.actualWorkClockDate < $1.actualWorkClockDate }
-        let sortedClockOuts = clockOuts.sorted { $0.actualWorkClockDate < $1.actualWorkClockDate }
-        var usedClockOutIDs = Set<UUID>()
-        var sessions: [WorkRecordDisplaySession] = []
-
-        for clockIn in sortedClockIns {
-            let clockInTime = clockIn.actualWorkClockDate
-            if let clockOut = sortedClockOuts.first(where: { candidate in
-                guard !usedClockOutIDs.contains(candidate.eventID) else { return false }
-                return effectiveClockOutDate(candidate, clockInTime: clockInTime) >= clockInTime
-            }) {
-                usedClockOutIDs.insert(clockOut.eventID)
-                sessions.append(
-                    WorkRecordDisplaySession(
-                        id: "fallback-\(clockIn.id)-\(clockOut.id)",
-                        clockIn: clockIn,
-                        clockOut: clockOut,
-                        workSessionId: clockIn.workInfo?.workSessionId ?? clockOut.workInfo?.workSessionId
-                    )
-                )
-            } else {
-                sessions.append(
-                    WorkRecordDisplaySession(
-                        id: "fallback-\(clockIn.id)-missing-out",
-                        clockIn: clockIn,
-                        clockOut: nil,
-                        workSessionId: clockIn.workInfo?.workSessionId
-                    )
-                )
-            }
-        }
-
-        for clockOut in sortedClockOuts where !usedClockOutIDs.contains(clockOut.eventID) {
-            sessions.append(
-                WorkRecordDisplaySession(
-                    id: "fallback-missing-in-\(clockOut.id)",
-                    clockIn: nil,
-                    clockOut: clockOut,
-                    workSessionId: clockOut.workInfo?.workSessionId
-                )
-            )
-        }
-
-        return sessions
-    }
-
-    private static func effectiveClockOutDate(_ clockOut: EventOccurrence, clockInTime: Date) -> Date {
-        let outTime = clockOut.actualWorkClockDate
-        let calendar = Calendar.current
-        guard calendar.isDate(outTime, inSameDayAs: clockInTime), outTime < clockInTime else {
-            return outTime
-        }
-        return calendar.date(byAdding: .day, value: 1, to: outTime) ?? outTime
-    }
 }
 
 private struct WorkRecordSessionRowView: View {

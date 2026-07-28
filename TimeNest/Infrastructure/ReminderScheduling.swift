@@ -16,12 +16,34 @@ protocol LocalNotificationScheduling {
     func cancelDailyScheduleCheck()
 }
 
+struct EventNotificationScheduleFailure: Error, LocalizedError, Equatable {
+    let underlyingError: Error
+
+    var errorDescription: String? {
+        underlyingError.localizedDescription
+    }
+
+    static func == (
+        lhs: EventNotificationScheduleFailure,
+        rhs: EventNotificationScheduleFailure
+    ) -> Bool {
+        let lhsError = lhs.underlyingError as NSError
+        let rhsError = rhs.underlyingError as NSError
+        return String(reflecting: type(of: lhs.underlyingError))
+                == String(reflecting: type(of: rhs.underlyingError))
+            && lhsError.domain == rhsError.domain
+            && lhsError.code == rhsError.code
+            && lhsError.localizedDescription == rhsError.localizedDescription
+    }
+}
+
 enum EventNotificationScheduleResult: Equatable {
     case scheduled(String)
     case noReminder
     case triggerDateInPast
     case denied
     case failed
+    case failedWithCause(EventNotificationScheduleFailure)
 
     var notificationID: String? {
         if case .scheduled(let id) = self {
@@ -34,7 +56,7 @@ enum EventNotificationScheduleResult: Equatable {
 private enum LocalNotificationAuthorizationResult: Equatable {
     case authorized
     case denied
-    case failed
+    case failed(EventNotificationScheduleFailure)
 }
 
 extension LocalNotificationScheduling {
@@ -53,7 +75,9 @@ extension LocalNotificationScheduling {
             }
             return .failed
         } catch {
-            return .failed
+            return .failedWithCause(
+                EventNotificationScheduleFailure(underlyingError: error)
+            )
         }
     }
 }
@@ -90,7 +114,11 @@ final class LocalNotificationService: LocalNotificationScheduling {
     }
 
     func scheduleEventNotification(event: CalendarEvent) async throws -> String? {
-        return await scheduleEventNotificationResult(event: event).notificationID
+        let result = await scheduleEventNotificationResult(event: event)
+        if case .failedWithCause(let failure) = result {
+            throw failure.underlyingError
+        }
+        return result.notificationID
     }
 
     func scheduleEventNotificationResult(event: CalendarEvent) async -> EventNotificationScheduleResult {
@@ -108,8 +136,8 @@ final class LocalNotificationService: LocalNotificationScheduling {
             return await addEventNotification(event: event, triggerDate: triggerDate)
         case .denied:
             return .denied
-        case .failed:
-            return .failed
+        case .failed(let failure):
+            return .failedWithCause(failure)
         }
     }
 
@@ -124,10 +152,16 @@ final class LocalNotificationService: LocalNotificationScheduling {
             do {
                 return try await center.requestAuthorization(options: [.alert, .sound, .badge]) ? .authorized : .denied
             } catch {
-                return .failed
+                return .failed(
+                    EventNotificationScheduleFailure(underlyingError: error)
+                )
             }
         @unknown default:
-            return .failed
+            return .failed(
+                EventNotificationScheduleFailure(
+                    underlyingError: LocalNotificationSchedulingError.unknownAuthorizationStatus
+                )
+            )
         }
     }
 
@@ -145,7 +179,9 @@ final class LocalNotificationService: LocalNotificationScheduling {
             try await center.add(request)
             return .scheduled(notificationID)
         } catch {
-            return .failed
+            return .failedWithCause(
+                EventNotificationScheduleFailure(underlyingError: error)
+            )
         }
     }
 
@@ -191,4 +227,8 @@ final class LocalNotificationService: LocalNotificationScheduling {
 
         return LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: event.startDate)
     }
+}
+
+private enum LocalNotificationSchedulingError: Error {
+    case unknownAuthorizationStatus
 }

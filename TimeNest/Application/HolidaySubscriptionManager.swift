@@ -44,6 +44,50 @@ struct SyncResult {
     }
 }
 
+struct HolidaySourceValidationResult: Sendable {
+    let eventCount: Int
+    let effectiveSourceURL: String
+}
+
+/// Preserves both failures when the exact built-in source and its clean
+/// fallback fail. The user-facing description intentionally avoids source
+/// URLs; callers that need diagnostics can inspect the two typed errors.
+struct HolidaySourceFallbackError: Error, LocalizedError {
+    let primaryError: Error
+    let fallbackError: Error
+
+    var errorDescription: String? {
+        LocalizationManager.shared.localized(.holidaySubscriptionSyncFailed)
+    }
+}
+
+private struct LoadedHolidayEvents {
+    let events: [HolidayEvent]
+    let effectiveSourceURL: String
+}
+
+private enum HolidaySyncOperationKind: Hashable {
+    case persistedSync
+    case validation
+}
+
+private enum HolidaySyncPersistencePolicy: Hashable {
+    case persistedCache
+    case validationOnly
+}
+
+private struct HolidaySyncTaskKey: Hashable {
+    let operationKind: HolidaySyncOperationKind
+    let sourceIdentity: String
+    let region: HolidayRegion
+    let normalizedURL: String
+    let persistencePolicy: HolidaySyncPersistencePolicy
+}
+
+private enum HolidaySyncControlError: Error {
+    case superseded
+}
+
 /// 节假日订阅管理器
 @MainActor
 class HolidaySubscriptionManager: ObservableObject {
@@ -61,6 +105,7 @@ class HolidaySubscriptionManager: ObservableObject {
 
     @Published private(set) var subscriptions: [HolidaySubscription] = []
     @Published private(set) var syncInProgress = false
+    @Published private(set) var syncingRegions: Set<HolidayRegion> = []
     @Published private(set) var lastSyncError: Error?
     
     // MARK: - Computed Properties
@@ -76,6 +121,14 @@ class HolidaySubscriptionManager: ObservableObject {
     private let parseService: ICSParsing
     private let cacheRepository: HolidayEventCacheRepositoryProtocol
     private let userDefaults: UserDefaults
+    private let now: () -> Date
+    private let autoSyncMinimumInterval: TimeInterval
+    private var lastAutoSyncAttemptAt: Date?
+    private var syncAllCallCount = 0
+    private var persistedSyncTasks: [HolidaySyncTaskKey: Task<Int, Error>] = [:]
+    private var validationTasks: [
+        HolidaySyncTaskKey: Task<HolidaySourceValidationResult, Error>
+    ] = [:]
 
     // MARK: - Keys
 
@@ -89,12 +142,16 @@ class HolidaySubscriptionManager: ObservableObject {
         downloadService: ICSDownloading = ICSDownloadService(),
         parseService: ICSParsing = ICSParseService(),
         cacheRepository: HolidayEventCacheRepositoryProtocol = HolidayEventCacheRepository.shared,
-        userDefaults: UserDefaults = .standard
+        userDefaults: UserDefaults = .standard,
+        now: @escaping () -> Date = Date.init,
+        autoSyncMinimumInterval: TimeInterval = 15 * 60
     ) {
         self.downloadService = downloadService
         self.parseService = parseService
         self.cacheRepository = cacheRepository
         self.userDefaults = userDefaults
+        self.now = now
+        self.autoSyncMinimumInterval = max(0, autoSyncMinimumInterval)
 
         loadSubscriptions()
     }
@@ -199,32 +256,155 @@ class HolidaySubscriptionManager: ObservableObject {
     /// 手动同步所有启用的订阅
     /// - Returns: 同步结果，包含成功解析的事件总数和错误信息（如果有）
     func syncAllEnabled() async -> SyncResult {
-        guard !syncInProgress else {
-            return SyncResult(totalEvents: 0, error: SubscriptionManagerError.syncInProgress)
-        }
-
-        syncInProgress = true
-        lastSyncError = nil
-
-        defer {
-            Task { @MainActor in
-                self.syncInProgress = false
-            }
-        }
-
         let enabled = enabledSubscriptions
 
         guard !enabled.isEmpty else {
             return SyncResult(totalEvents: 0, error: nil)
         }
 
+        syncAllCallCount += 1
+        refreshSyncActivityState()
+        defer {
+            syncAllCallCount -= 1
+            refreshSyncActivityState()
+        }
+        lastSyncError = nil
+        let result = await syncSubscriptions(enabled)
+
+        NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
+        return result
+    }
+
+    /// Validate a candidate source using the exact same download, fallback,
+    /// content validation, and parsing pipeline used by persisted sync.
+    func validateSourceURL(
+        _ rawURLString: String,
+        for region: HolidayRegion
+    ) async throws -> HolidaySourceValidationResult {
+        let trimmedURLString = rawURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        try downloadService.validateURL(trimmedURLString)
+        guard validHTTPSURL(from: trimmedURLString) != nil else {
+            throw SubscriptionManagerError.invalidURL
+        }
+
+        let sourceIdentity = subscriptions.first(where: { $0.region == region })
+            .map { "subscription:\($0.id.uuidString.lowercased())" }
+            ?? "region:\(region.rawValue)"
+        let key = HolidaySyncTaskKey(
+            operationKind: .validation,
+            sourceIdentity: sourceIdentity,
+            region: region,
+            normalizedURL: normalizedTaskURLString(trimmedURLString),
+            persistencePolicy: .validationOnly
+        )
+        return try await runValidationSingleFlight(
+            key: key,
+            sourceURLString: trimmedURLString,
+            region: region
+        )
+    }
+
+    func hasCachedData(for region: HolidayRegion) -> Bool {
+        cacheRepository.getLastSyncTime(for: region) != nil
+    }
+
+    private func syncSubscription(_ subscription: HolidaySubscription) async throws -> Int {
+        let syncURLString: String
+        do {
+            syncURLString = try resolvedURLString(for: subscription)
+        } catch {
+            markFailed(subscriptionID: subscription.id, error: error)
+            throw error
+        }
+
+        let key = HolidaySyncTaskKey(
+            operationKind: .persistedSync,
+            sourceIdentity: "subscription:\(subscription.id.uuidString.lowercased())",
+            region: subscription.region,
+            normalizedURL: normalizedTaskURLString(syncURLString),
+            persistencePolicy: .persistedCache
+        )
+        return try await runPersistedSingleFlight(
+            key: key,
+            subscription: subscription,
+            sourceURLString: syncURLString
+        )
+    }
+
+    /// 同步单个订阅并返回事件数量
+    private func syncSingleWithResult(
+        subscription: HolidaySubscription,
+        sourceURLString: String
+    ) async throws -> Int {
+        do {
+            let loaded = try await loadEvents(
+                from: sourceURLString,
+                region: subscription.region
+            )
+
+            // A URL/toggle edit can happen while the network request is
+            // suspended. Never commit a result for a superseded configuration.
+            guard isCurrentConfiguration(
+                subscriptionID: subscription.id,
+                expectedURLString: sourceURLString,
+                requiresEnabled: true
+            ) else {
+                throw HolidaySyncControlError.superseded
+            }
+
+            try await cacheRepository.saveEvents(loaded.events, for: subscription.region)
+
+            guard isCurrentConfiguration(
+                subscriptionID: subscription.id,
+                expectedURLString: sourceURLString,
+                requiresEnabled: true
+            ) else {
+                throw HolidaySyncControlError.superseded
+            }
+
+            let successfulSyncTime = now()
+            updateSubscription(subscription.id) {
+                $0.syncStatus = .success
+                $0.lastUpdatedAt = successfulSyncTime
+                $0.errorMessage = nil
+            }
+
+            NotificationCenter.default.post(name: .holidayEventsDidUpdate, object: nil)
+            return loaded.events.count
+        } catch HolidaySyncControlError.superseded {
+            throw HolidaySyncControlError.superseded
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            if isCurrentConfiguration(
+                subscriptionID: subscription.id,
+                expectedURLString: sourceURLString,
+                requiresEnabled: true
+            ) {
+                markFailed(subscriptionID: subscription.id, error: error)
+            }
+            throw error
+        }
+    }
+
+    private func syncSubscriptions(
+        _ subscriptions: [HolidaySubscription]
+    ) async -> SyncResult {
+        let tasks: [Task<Int, Error>] = subscriptions.map { subscription in
+            Task { @MainActor [weak self] in
+                guard let self else { throw CancellationError() }
+                return try await self.syncSubscription(subscription)
+            }
+        }
+        defer { tasks.forEach { $0.cancel() } }
+
         var totalEvents = 0
         var firstError: Error?
-
-        for subscription in enabled {
+        for task in tasks {
             do {
-                let events = try await syncSingleWithResult(subscription: subscription)
-                totalEvents += events
+                totalEvents += try await value(of: task)
+            } catch HolidaySyncControlError.superseded {
+                continue
             } catch {
                 if firstError == nil {
                     firstError = error
@@ -232,63 +412,142 @@ class HolidaySubscriptionManager: ObservableObject {
                 }
             }
         }
-
-        NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
-        
         return SyncResult(totalEvents: totalEvents, error: firstError)
     }
-    
-    /// 同步单个订阅并返回事件数量
-    private func syncSingleWithResult(subscription: HolidaySubscription) async throws -> Int {
-        do {
-            let syncURLString = try resolvedURLString(for: subscription)
-            guard let url = validHTTPSURL(from: syncURLString) else {
-                throw SubscriptionManagerError.invalidSubscriptionURL(
-                    region: subscription.region,
-                    rawURL: subscription.urlString
-                )
-            }
 
-            let host = url.host ?? ""
-            let regionName = subscription.region.localizedKey
+    private func runPersistedSingleFlight(
+        key: HolidaySyncTaskKey,
+        subscription: HolidaySubscription,
+        sourceURLString: String
+    ) async throws -> Int {
+        if let existingTask = persistedSyncTasks[key] {
+            return try await value(of: existingTask)
+        }
 
-            // 下载并验证 ICS 数据
-            let data = try await downloadService.download(from: url, timeout: 30, region: regionName, host: host)
-            try downloadService.validateICSContent(data)
+        let task = Task { @MainActor [weak self] in
+            guard let self else { throw CancellationError() }
+            return try await self.syncSingleWithResult(
+                subscription: subscription,
+                sourceURLString: sourceURLString
+            )
+        }
+        persistedSyncTasks[key] = task
+        refreshSyncActivityState()
+        defer {
+            persistedSyncTasks.removeValue(forKey: key)
+            refreshSyncActivityState()
+        }
+        return try await value(of: task)
+    }
 
-            // 解析 ICS
-            let events = try await Task.detached { [parseService] in
-                try parseService.parse(data: data, region: subscription.region, sourceURL: syncURLString)
-            }.value
+    private func runValidationSingleFlight(
+        key: HolidaySyncTaskKey,
+        sourceURLString: String,
+        region: HolidayRegion
+    ) async throws -> HolidaySourceValidationResult {
+        if let existingTask = validationTasks[key] {
+            return try await value(of: existingTask)
+        }
 
-            // 只有至少一个有效事件时才允许覆盖最后一次成功缓存。
-            guard !events.isEmpty else {
-                throw EnhancedICSError.noEvents
-            }
+        let task = Task { @MainActor [weak self] in
+            guard let self else { throw CancellationError() }
+            let loaded = try await self.loadEvents(
+                from: sourceURLString,
+                region: region
+            )
+            return HolidaySourceValidationResult(
+                eventCount: loaded.events.count,
+                effectiveSourceURL: loaded.effectiveSourceURL
+            )
+        }
+        validationTasks[key] = task
+        refreshSyncActivityState()
+        defer {
+            validationTasks.removeValue(forKey: key)
+            refreshSyncActivityState()
+        }
+        return try await value(of: task)
+    }
 
-            try await cacheRepository.saveEvents(events, for: subscription.region)
-
-            updateSubscription(subscription.id) {
-                $0.syncStatus = .success
-                $0.lastUpdatedAt = Date()
-                $0.errorMessage = nil
-            }
-
-            NotificationCenter.default.post(name: .holidayEventsDidUpdate, object: nil)
-
-            return events.count
-        } catch {
-            updateSubscription(subscription.id) {
-                $0.syncStatus = .failed
-                $0.errorMessage = error.localizedDescription
-            }
-            throw error
+    private func value<Success: Sendable>(
+        of task: Task<Success, Error>
+    ) async throws -> Success {
+        try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            task.cancel()
         }
     }
 
-    /// 同步单个订阅（不返回事件数量）
-    private func syncSingle(subscription: HolidaySubscription) async throws {
-        _ = try await syncSingleWithResult(subscription: subscription)
+    private func refreshSyncActivityState() {
+        syncInProgress = syncAllCallCount > 0
+        syncingRegions = Set(
+            persistedSyncTasks.keys.map(\.region)
+                + validationTasks.keys.map(\.region)
+        )
+    }
+
+    private func loadEvents(
+        from sourceURLString: String,
+        region: HolidayRegion
+    ) async throws -> LoadedHolidayEvents {
+        do {
+            return try await loadEventsOnce(from: sourceURLString, region: region)
+        } catch let primaryError as EnhancedICSError {
+            guard case .invalidHTTPStatus(500) = primaryError,
+                  let cleanURLString = HolidayRecommendedSources.cleanFallbackURL(
+                forRequestedURL: sourceURLString,
+                region: region
+            ) else {
+                throw primaryError
+            }
+
+            do {
+                return try await loadEventsOnce(from: cleanURLString, region: region)
+            } catch {
+                throw HolidaySourceFallbackError(
+                    primaryError: primaryError,
+                    fallbackError: error
+                )
+            }
+        }
+    }
+
+    private func loadEventsOnce(
+        from sourceURLString: String,
+        region: HolidayRegion
+    ) async throws -> LoadedHolidayEvents {
+        guard let url = validHTTPSURL(from: sourceURLString) else {
+            throw SubscriptionManagerError.invalidSubscriptionURL(
+                region: region,
+                rawURL: sourceURLString
+            )
+        }
+
+        let data = try await downloadService.download(
+            from: url,
+            timeout: 30,
+            region: region.localizedKey,
+            host: url.host ?? ""
+        )
+        try downloadService.validateICSContent(data)
+
+        let events = try await Task.detached { [parseService] in
+            try parseService.parse(
+                data: data,
+                region: region,
+                sourceURL: sourceURLString
+            )
+        }.value
+
+        guard !events.isEmpty else {
+            throw EnhancedICSError.noEvents
+        }
+
+        return LoadedHolidayEvents(
+            events: events,
+            effectiveSourceURL: sourceURLString
+        )
     }
 
     /// 检查是否需要自动同步
@@ -303,31 +562,42 @@ class HolidaySubscriptionManager: ObservableObject {
             return true
         }
 
-        // 超过 24 小时
-        if let lastSynced = subscription.lastUpdatedAt {
-            return Date().timeIntervalSince(lastSynced) > syncCacheThresholdHours
+        // Cache presence and its own successful write timestamp are the source
+        // of truth. A recent UserDefaults timestamp must not hide a missing or
+        // corrupt cache file.
+        guard let cacheLastSyncedAt = cacheRepository.getLastSyncTime(for: region) else {
+            return true
         }
 
-        return false
+        return now().timeIntervalSince(cacheLastSyncedAt) > syncCacheThresholdHours
     }
 
     /// 执行启动时的自动同步
     func performAutoSync() async {
+        let attemptTime = now()
+        if let lastAttempt = lastAutoSyncAttemptAt {
+            let elapsed = attemptTime.timeIntervalSince(lastAttempt)
+            if elapsed >= 0 && elapsed < autoSyncMinimumInterval {
+                return
+            }
+        }
+        // Record checks as well as network attempts so rapid active/inactive
+        // transitions cannot repeatedly hit a failing, cache-less source.
+        lastAutoSyncAttemptAt = attemptTime
+
         let regionsNeedingSync = HolidayRegion.allCases.filter { shouldAutoSync(for: $0) }
 
         guard !regionsNeedingSync.isEmpty else {
             return
         }
 
-        for region in regionsNeedingSync {
-            if let subscription = subscriptions.first(where: { $0.region == region }) {
-                do {
-                    try await syncSingle(subscription: subscription)
-                } catch {
-                    // 静默失败，继续使用缓存
-                }
-            }
+        lastSyncError = nil
+        let subscriptionsToSync = regionsNeedingSync.compactMap { region in
+            subscriptions.first(where: { $0.region == region })
         }
+        _ = await syncSubscriptions(subscriptionsToSync)
+
+        NotificationCenter.default.post(name: .holidaySubscriptionsDidChange, object: nil)
     }
 
     /// 获取指定地区的节假日（从缓存）
@@ -447,6 +717,19 @@ class HolidaySubscriptionManager: ObservableObject {
         return trimmedURL
     }
 
+    private func normalizedTaskURLString(_ urlString: String) -> String {
+        let trimmedURL = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard var components = URLComponents(string: trimmedURL) else {
+            return trimmedURL
+        }
+        components.scheme = components.scheme?.lowercased()
+        components.host = components.host?.lowercased()
+        if components.scheme == "https", components.port == 443 {
+            components.port = nil
+        }
+        return components.url?.absoluteString ?? components.string ?? trimmedURL
+    }
+
     private func validHTTPSURL(from urlString: String) -> URL? {
         guard let url = URL(string: urlString),
               let scheme = url.scheme,
@@ -456,6 +739,32 @@ class HolidaySubscriptionManager: ObservableObject {
             return nil
         }
         return url
+    }
+
+    private func isCurrentConfiguration(
+        subscriptionID: UUID,
+        expectedURLString: String,
+        requiresEnabled: Bool
+    ) -> Bool {
+        guard let current = subscriptions.first(where: { $0.id == subscriptionID }) else {
+            return false
+        }
+
+        let currentURLString = current.urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let expected = expectedURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard currentURLString == expected else {
+            return false
+        }
+
+        return !requiresEnabled || current.isEnabled
+    }
+
+    private func markFailed(subscriptionID: UUID, error: Error) {
+        updateSubscription(subscriptionID) {
+            $0.syncStatus = .failed
+            // lastUpdatedAt intentionally remains the last successful sync.
+            $0.errorMessage = error.localizedDescription
+        }
     }
 
     private func updateSubscription(_ id: UUID, update: (inout HolidaySubscription) -> Void) {

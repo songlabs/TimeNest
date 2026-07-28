@@ -23,6 +23,7 @@ struct HolidaySourceEditView: View {
     @State private var showingSyncTestSuccess = false
     @State private var syncTestSuccessMessage = ""
     @State private var didHideTabBar = false
+    @State private var isTestingSource = false
     @FocusState private var isURLFieldFocused: Bool
 
     private var subscription: HolidaySubscription? {
@@ -87,7 +88,7 @@ struct HolidaySourceEditView: View {
                                     validateURL(newValue)
                                 }
                                 .onChange(of: isURLFieldFocused) { _, newValue in
-                                    if !newValue {
+                                    if !newValue, !isTestingSource {
                                         Task {
                                             await saveIfNeeded()
                                         }
@@ -108,9 +109,7 @@ struct HolidaySourceEditView: View {
                                 )
 
                                 Button(localization.localized(.holidaySourceTestSync)) {
-                                    Task {
-                                        await testSync()
-                                    }
+                                    startTestSync()
                                 }
                                 .buttonStyle(
                                     HolidaySourceBlueButtonStyle(
@@ -246,31 +245,10 @@ struct HolidaySourceEditView: View {
 
         // 尝试保存
         do {
-            let downloadService = ICSDownloadService()
-            try downloadService.validateURL(trimmed)
-
-            guard let url = URL(string: trimmed) else {
-                throw EnhancedICSError.invalidURL
-            }
-            let host = url.host ?? ""
-            let regionName = region.localizedKey
-            let (data, savedURL) = try await downloadWithFallback(
-                url: url,
-                regionName: regionName,
-                host: host,
-                downloadService: downloadService
-            )
-
-            try downloadService.validateICSContent(data)
-
-            let parseService = ICSParseService()
-            let events = try parseService.parse(data: data, region: region, sourceURL: savedURL)
-
-            guard !events.isEmpty else {
-                throw EnhancedICSError.noEvents
-            }
-
-            try subscriptionManager.updateURL(for: region, newURL: savedURL)
+            _ = try await subscriptionManager.validateSourceURL(trimmed, for: region)
+            // Preserve the configured normal/custom URL. A clean URL is a
+            // per-request fallback and must not replace source identity.
+            try subscriptionManager.updateURL(for: region, newURL: trimmed)
             _ = await subscriptionManager.syncAllEnabled()
 
         } catch {
@@ -310,107 +288,18 @@ struct HolidaySourceEditView: View {
         await saveCurrentURL(trimmed)
     }
 
-    private func saveURL() {
-        let trimmed = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
-
-        Task {
-            do {
-                // 1. URL 格式检查
-                let downloadService = ICSDownloadService()
-                try downloadService.validateURL(trimmed)
-
-                // 2. 下载 ICS（带 fallback 逻辑）
-                guard let url = URL(string: trimmed) else {
-                    throw EnhancedICSError.invalidURL
-                }
-                let host = url.host ?? ""
-                let regionName = region.localizedKey
-                let (data, savedURL) = try await downloadWithFallback(
-                    url: url,
-                    regionName: regionName,
-                    host: host,
-                    downloadService: downloadService
-                )
-
-
-                // 3. 验证 ICS 内容（包括 VEVENT 检查）
-                try downloadService.validateICSContent(data)
-
-                // 4. 解析 ICS 以确认可以提取出节假日事件
-                let parseService = ICSParseService()
-                let events = try parseService.parse(data: data, region: region, sourceURL: savedURL)
-
-
-                // 5. 确保至少解析出一个事件才允许保存
-                guard !events.isEmpty else {
-                    throw EnhancedICSError.noEvents
-                }
-
-                // 6. 保存 URL（保存实际成功的 URL）
-                try subscriptionManager.updateURL(for: region, newURL: savedURL)
-
-
-                // 7. 成功后自动同步
-                _ = await subscriptionManager.syncAllEnabled()
-
-                await MainActor.run {
-                    dismiss()
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    showError = true
-                }
-            }
-        }
-    }
-
-    /// 下载 ICS 并自动尝试 fallback URL
-    /// - 如果 normal URL 返回 500，自动尝试 clean URL
-    /// - 返回实际成功的 URL
-    /// - clean URL 也必须通过 VEVENT 检查，否则抛出错误
-    private func downloadWithFallback(
-        url: URL,
-        regionName: String,
-        host: String,
-        downloadService: ICSDownloadService
-    ) async throws -> (Data, String) {
-
-        do {
-            let data = try await downloadService.download(from: url, region: regionName, host: host)
-            
-            // 验证 ICS 内容（包括 VEVENT 检查）
-            try downloadService.validateICSContent(data)
-            
-            return (data, url.absoluteString)
-        } catch EnhancedICSError.invalidHTTPStatus(let statusCode) where statusCode == 500 {
-            // HTTP 500 时尝试 fallback 到 clean URL
-
-            guard isOfficeHolidaysURL(url),
-                  let cleanURLString = HolidayRecommendedSources.cleanFallbackURL(for: region),
-                  let cleanURL = URL(string: cleanURLString) else {
-                // 没有 clean URL，直接抛出错误
-                throw EnhancedICSError.invalidHTTPStatus(statusCode)
-            }
-
-            let data = try await downloadService.download(from: cleanURL, region: regionName, host: host)
-            
-            // 验证 clean URL 的 ICS 内容（包括 VEVENT 检查）
-            // 如果 clean URL 没有事件，抛出错误而不是保存
-            try downloadService.validateICSContent(data)
-            
-            return (data, cleanURL.absoluteString)
-        }
-    }
-
-    private func isOfficeHolidaysURL(_ url: URL) -> Bool {
-        guard let host = url.host?.lowercased() else { return false }
-        return host == "www.officeholidays.com" || host == "officeholidays.com"
-    }
-
-    private func testSync() async {
-        // 使用输入框中的 URL 进行测试，而不是已保存的 URL
+    private func startTestSync() {
         let testURLString = urlString.trimmingCharacters(in: .whitespacesAndNewlines)
+        isTestingSource = true
+        isURLFieldFocused = false
+        Task { @MainActor in
+            defer { isTestingSource = false }
+            await testSync(testURLString)
+        }
+    }
+
+    private func testSync(_ testURLString: String) async {
+        // 使用点击 Test 时输入框中的 URL，而不是已保存的 URL。
         guard !testURLString.isEmpty else {
             errorMessage = localization.localized(.holidaySubscriptionNoURL)
             showError = true
@@ -418,31 +307,14 @@ struct HolidaySourceEditView: View {
         }
 
         do {
-            let downloadService = ICSDownloadService()
-            try downloadService.validateURL(testURLString)
-
-            // 下载并解析测试
-            guard let url = URL(string: testURLString) else {
-                throw EnhancedICSError.invalidURL
-            }
-
-            let parseService = ICSParseService()
-
-            let host = url.host ?? ""
-            let regionName = region.localizedKey
-            let data = try await downloadService.download(from: url, region: regionName, host: host)
-
-
-            // 验证 ICS 内容
-            try downloadService.validateICSContent(data)
-
-            let events = try parseService.parse(data: data, region: region, sourceURL: testURLString)
-
-            guard !events.isEmpty else {
-                throw EnhancedICSError.noEvents
-            }
-
-            syncTestSuccessMessage = String(format: localization.localized(.holidaySourceTestSuccess), events.count)
+            let result = try await subscriptionManager.validateSourceURL(
+                testURLString,
+                for: region
+            )
+            syncTestSuccessMessage = String(
+                format: localization.localized(.holidaySourceTestSuccess),
+                result.eventCount
+            )
             showingSyncTestSuccess = true
 
         } catch {

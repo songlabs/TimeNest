@@ -14,7 +14,7 @@ Please test the following areas:
 4. Enter, replace, and remove shifts. Confirm shift actions do not remove unrelated schedules or work records.
 5. Add work records, including clock-in, clock-out, and break information, then review work statistics for a selected date range.
 6. Enable and refresh a supported public-holiday subscription. Confirm downloaded holidays display correctly, and verify that an unavailable or invalid ICS source does not affect existing local schedules.
-7. On two devices with separate Apple IDs, create and accept a shared-calendar invitation. Verify that the owner can choose events, shifts, and work records; the recipient remains read-only; calendar-name changes synchronize; and stopping or leaving the share behaves correctly.
+7. On two devices with separate Apple IDs, create and accept a shared-calendar invitation. Verify that events, shifts, and work records assigned to the owned shared calendar synchronize automatically; the recipient remains read-only; calendar-name changes synchronize; and stopping or leaving the share behaves correctly.
 8. Add the TimeNest Widget and check that schedule, shift, holiday, date, and language changes refresh within normal WidgetKit timing. Tap supported Widget content and confirm TimeNest opens to the expected date.
 9. Switch among Japanese, Simplified Chinese, Traditional Chinese, English, Korean, and System language modes. Check key screens for untranslated keys, unexpected mixed language, or clipped text.
 10. Test both light and dark appearance, including calendar views, editors, sheets, settings, statistics, Widget content, and any banner area.
@@ -25,7 +25,7 @@ Important flows include fresh-install startup, local data persistence after forc
 
 Known limitations and pending release items:
 
-- There is no TimeNest account system, developer-operated general cloud sync, or collaborative editing. Optional CloudKit shared calendars synchronize only the owner-selected content, and recipients are read-only.
+- There is no TimeNest account system, developer-operated general cloud sync, or collaborative editing. Optional CloudKit shared calendars automatically synchronize events, shifts, and work records assigned to an owned shared calendar; recipients are read-only, and there are no per-category sharing switches.
 - Public-holiday refresh and ad loading require network access; existing local calendar data should remain usable without network access.
 - The current first release offers a one-time Remove Ads In-App Purchase through Apple StoreKit. Please verify purchase and restore behavior in the uploaded TestFlight/Sandbox environment.
 - Final production advertising identifiers, App Privacy/Tracking answers, export-compliance answers, App Store screenshots, and physical-device ATT/TestFlight sign-off remain release checks until explicitly completed.

@@ -479,10 +479,12 @@ enum SharedWorkRecordMapper {
     }
 
     static func snapshots(from events: [CalendarEvent]) -> [SharedWorkRecordSnapshot] {
-        let workEvents = events.filter(isCandidate)
-        let groups = Dictionary(grouping: workEvents, by: groupKey(for:))
-
-        return groups.values.compactMap(makeSnapshot(from:)).sorted { lhs, rhs in
+        let entries = events
+            .filter(isCandidate)
+            .compactMap(WorkRecordClockEntry.init(event:))
+        return WorkRecordSessionAssembler.sessions(from: entries)
+            .compactMap(makeSnapshot(from:))
+            .sorted { lhs, rhs in
             if lhs.workDate != rhs.workDate { return lhs.workDate < rhs.workDate }
             return lhs.id.uuidString < rhs.id.uuidString
         }
@@ -543,40 +545,24 @@ enum SharedWorkRecordMapper {
         .sorted { $0.actualWorkClockDate < $1.actualWorkClockDate }
     }
 
-    private static func groupKey(for event: CalendarEvent) -> String {
-        if let sessionID = event.workInfo?.workSessionId {
-            return "session-\(sessionID.uuidString)"
-        }
-        let date = event.workInfo?.workDate ?? event.startDate
-        let dateOnly = DateOnly(from: date) ?? DateOnly(year: 2000, month: 1, day: 1)
-        return "legacy-\(dateOnly.id)"
-    }
-
-    private static func makeSnapshot(from events: [CalendarEvent]) -> SharedWorkRecordSnapshot? {
-        guard let source = events.first,
-              let sourceInfo = source.workInfo else { return nil }
-        let clockIn = events
-            .filter(\.isClockInEvent)
-            .sorted { $0.actualWorkClockDate < $1.actualWorkClockDate }
-            .first
-        let clockOut = events
-            .filter(\.isClockOutEvent)
-            .sorted { $0.actualWorkClockDate < $1.actualWorkClockDate }
-            .last
-        let stableID = sourceInfo.workSessionId ?? clockIn?.id ?? clockOut?.id ?? source.id
-        let calendar = Calendar(identifier: .gregorian)
-        let workDate = calendar.startOfDay(
-            for: sourceInfo.workDate ?? clockIn?.workDate ?? clockOut?.workDate ?? source.startDate
-        )
-        let clockOutIsSet = clockOut?.workInfo?.isWorkOutTimeSet ?? sourceInfo.isWorkOutTimeSet
+    private static func makeSnapshot(
+        from session: AssembledWorkRecordSession
+    ) -> SharedWorkRecordSnapshot? {
+        guard let source = session.clockIn ?? session.clockOut else { return nil }
+        let stableID = session.sessionID ?? source.eventID
+        let clockOutIsSet = session.clockOut?.isWorkOutTimeSet
+            ?? session.clockIn?.isWorkOutTimeSet
+            ?? false
         return SharedWorkRecordSnapshot(
             id: stableID,
-            workDate: workDate,
-            workInTime: clockIn.map(\.actualWorkClockDate),
-            workOutTime: clockOut?.workInfo?.workOutTime ?? clockOut.map(\.actualWorkClockDate),
+            workDate: session.workDate,
+            workInTime: session.clockIn?.clockDate,
+            workOutTime: session.clockOut?.clockDate,
             isWorkOutTimeSet: clockOutIsSet,
-            restHours: sourceInfo.restHours,
-            updatedAt: events.map(\.updatedAt).max() ?? source.updatedAt
+            restHours: session.clockIn?.restHours ?? session.clockOut?.restHours ?? 0,
+            updatedAt: [session.clockIn, session.clockOut]
+                .compactMap { $0?.updatedAt }
+                .max() ?? source.updatedAt
         )
     }
 

@@ -408,8 +408,10 @@ private struct AppStoreScreenshotDayDetailView: View {
         DayDetailView(
             cell: AppStoreScreenshotSampleData.dayCell(),
             onDeleteEvent: { _ in },
+            onDeleteWorkRecord: { _ in },
             onCreateEvent: { _, _, _, _, _, _, _, _, _ in .noReminder },
-            onUpdateEvent: { _, _, _, _, _, _, _, _, _, _ in .noReminder }
+            onUpdateEvent: { _, _, _, _, _, _, _, _, _, _ in .noReminder },
+            onSaveWorkRecordPair: { _ in }
         )
         .environmentObject(localization)
     }
@@ -444,8 +446,7 @@ private struct AppStoreScreenshotWorkRecordEditorView: View {
             isPresented: $isPresented,
             mode: .edit(AppStoreScreenshotSampleData.workRecordInitialSession),
             existingEvents: AppStoreScreenshotSampleData.dayCell().events,
-            onCreateEvent: { _, _, _, _, _, _, _, _, _ in .noReminder },
-            onUpdateEvent: { _, _, _, _, _, _, _, _, _, _ in .noReminder }
+            onSavePair: { _ in }
         )
     }
 }

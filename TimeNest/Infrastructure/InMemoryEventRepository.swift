@@ -32,6 +32,28 @@ actor InMemoryEventRepository: EventRepository {
         }
         newEvents.forEach { events[$0.id] = $0 }
     }
+
+    func applyBatch(
+        upserting newEvents: [CalendarEvent],
+        deleting eventsToDelete: [CalendarEvent],
+        ifUnchanged expectedEvents: [CalendarEvent]
+    ) async throws {
+        try EventRepositoryBatchValidator.validateApplyBatch(
+            currentEvents: Array(events.values),
+            upserting: newEvents,
+            deleting: eventsToDelete,
+            ifUnchanged: expectedEvents
+        )
+
+        var updated = events
+        for event in newEvents {
+            updated[event.id] = event
+        }
+        for event in eventsToDelete {
+            updated.removeValue(forKey: event.id)
+        }
+        events = updated
+    }
     
     func update(_ event: CalendarEvent) async throws {
         events[event.id] = event

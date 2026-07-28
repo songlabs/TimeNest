@@ -18,6 +18,8 @@ struct WorkStatisticsView: View {
 
                     if viewModel.isLoading {
                         loadingView
+                    } else if let errorMessage = viewModel.errorMessage {
+                        errorView(message: errorMessage)
                     } else if viewModel.statisticsData.isEmpty {
                         emptyView
                     } else {
@@ -75,6 +77,7 @@ struct WorkStatisticsView: View {
                     .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
             }
             .buttonStyle(PlainButtonStyle())
+            .disabled(viewModel.isLoading)
         }
         .padding(14)
         .background(WorkStatisticsColors.sectionBackground)
@@ -233,6 +236,30 @@ struct WorkStatisticsView: View {
                 .font(.system(size: 14, weight: .regular))
                 .foregroundColor(WorkStatisticsColors.secondaryText)
                 .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity, minHeight: 240)
+        .background(WorkStatisticsColors.sectionBackground)
+        .clipShape(RoundedRectangle(cornerRadius: WorkStatisticsLayout.cardCornerRadius, style: .continuous))
+    }
+
+    private func errorView(message: String) -> some View {
+        VStack(spacing: 14) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 36, weight: .medium))
+                .foregroundColor(.orange)
+
+            Text(message)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(WorkStatisticsColors.primaryText)
+                .multilineTextAlignment(.center)
+
+            Button(action: { viewModel.calculateStatistics() }) {
+                Label(localizedKey(.calendarSharingRetry), systemImage: "arrow.clockwise")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(ShiftCalendarColors.primaryBlue)
         }
         .padding(24)
         .frame(maxWidth: .infinity, minHeight: 240)

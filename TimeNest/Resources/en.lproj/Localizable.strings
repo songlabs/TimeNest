@@ -155,7 +155,7 @@
 "editor.restTime" = "Break Time";
 "editor.transportFee" = "Transport Fee";
 "editor.hourlyRate" = "Hourly Rate";
-"editor.currencyUnit" = "Yuan";
+"editor.currencyUnit" = "JPY";
 "event.memo.title" = "Memo";
 "event.memo.voice.placeholder" = "Enter a memo by voice";
 "event.memo.voice.start" = "Start voice input";
@@ -194,6 +194,9 @@
 "holiday_subscription.synced" = "Synced";
 "holiday_subscription.sync_failed" = "Sync Failed";
 "holiday_subscription.not_synced" = "Not Synced";
+"holiday_subscription.syncing" = "Syncing";
+"holiday_subscription.using_cached_data" = "Using last successful data";
+"holiday_subscription.last_successful_sync_format" = "Last successful sync: %@";
 "holiday_subscription.sync_error" = "Sync Error";
 "holiday_subscription.no_url" = "Not Set";
 
@@ -326,6 +329,8 @@
 "work_statistics.loading" = "Loading...";
 "work_statistics.empty_title" = "No statistics yet";
 "work_statistics.empty_message" = "Adjust the filters and tap the statistics button";
+"work_statistics.received_unavailable_title" = "Work Statistics Unavailable";
+"work_statistics.received_unavailable_message" = "Received shared calendars do not include hourly rates or transport costs, so TimeNest cannot calculate reliable work statistics. Switch to My Calendar or an owned shared calendar.";
 
 "work.nextDayPrefix" = "Next day";
 
@@ -384,7 +389,7 @@
 "help.shifts.overnight.question" = "How is an overnight clock-out handled?";
 "help.shifts.overnight.answer" = "For overnight work such as a night shift, the clock-out time can be recorded on the following day. Statistics use the actual time from clock-in to the next-day clock-out, minus break time.";
 "help.shifts.statistics.question" = "How are work statistics calculated?";
-"help.shifts.statistics.answer" = "Work statistics use recorded clock-in and clock-out times, break time, hourly rate, and transport cost. The basic rules are: work time = clock-out - clock-in - break; pay = work time × hourly rate; total = pay + transport cost.";
+"help.shifts.statistics.answer" = "Work statistics use recorded clock-in and clock-out times, break time, hourly rate, and transport cost. All amounts are in Japanese yen (JPY). The basic rules are: work time = clock-out - clock-in - break; pay = work time × hourly rate; total = pay + transport cost.";
 "help.shifts.statistics_missing.question" = "Why are no statistics shown?";
 "help.shifts.statistics_missing.answer" = "Check that clock-in and clock-out records were saved within the selected period and that required information such as the hourly rate was entered. A shift alone does not create pay statistics.";
 

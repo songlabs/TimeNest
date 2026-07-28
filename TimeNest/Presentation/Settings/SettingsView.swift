@@ -56,12 +56,6 @@ struct SettingsView: View {
                     .navigationTitle(localization.localized(.settingsTitle))
             }
         }
-        .onAppear {
-            // 执行启动时的自动同步检查
-            Task {
-                await subscriptionManager.performAutoSync()
-            }
-        }
         .presentationDetents([.custom(SettingsCompactDetent.self)])
     }
 

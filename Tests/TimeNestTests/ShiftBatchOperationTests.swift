@@ -813,6 +813,25 @@ private actor BatchEventRepositorySpy: EventRepository {
         events.forEach { storage[$0.id] = $0 }
     }
 
+    func applyBatch(
+        upserting events: [CalendarEvent],
+        deleting eventsToDelete: [CalendarEvent],
+        ifUnchanged expectedEvents: [CalendarEvent]
+    ) throws {
+        try EventRepositoryBatchValidator.validateApplyBatch(
+            currentEvents: Array(storage.values),
+            upserting: events,
+            deleting: eventsToDelete,
+            ifUnchanged: expectedEvents
+        )
+        var updated = storage
+        events.forEach { updated[$0.id] = $0 }
+        for event in eventsToDelete {
+            updated[event.id] = nil
+        }
+        storage = updated
+    }
+
     func update(_ event: CalendarEvent) {
         storage[event.id] = event
     }

@@ -36,10 +36,7 @@ class ICSParseService: ICSParsing {
     private let maxEventCount: Int = 1000
 
     func parse(data: Data, region: HolidayRegion, sourceURL: String) throws -> [HolidayEvent] {
-
-        guard let content = String(data: data, encoding: .utf8) else {
-            throw ICSParseError.invalidFormat
-        }
+        let content = try ICSContentDecoder.decode(data)
         return try parse(content: content, region: region, sourceURL: sourceURL)
     }
 
@@ -115,24 +112,40 @@ class ICSParseService: ICSParsing {
         return result
     }
 
-    /// 解析 VEVENT 属性（新方法，支持完整 RFC5545 格式）
-    private func parseVEventPropertyAdvanced(line: String, into dict: inout [String: String]) {
+    private struct ICSPropertyValue {
+        let value: String
+        let parameters: [String: String]
+    }
+
+    private typealias ICSProperties = [String: ICSPropertyValue]
+
+    /// Parse a VEVENT property while retaining parameters such as
+    /// VALUE=DATE and TZID=Asia/Tokyo.
+    private func parseVEventPropertyAdvanced(line: String, into dict: inout ICSProperties) {
         // 必须包含冒号
         guard let colonIndex = line.firstIndex(of: ":") else { return }
 
         let keyPart = String(line[..<colonIndex])
         let value = String(line[line.index(after: colonIndex)...])
+        let keyComponents = keyPart.split(separator: ";", omittingEmptySubsequences: false)
 
-        // 提取属性名（去掉参数部分，如 DTSTART;VALUE=DATE -> DTSTART）
-        let key = keyPart.split(separator: ";").first.map(String.init) ?? keyPart
+        guard let rawName = keyComponents.first, !rawName.isEmpty else { return }
+        let key = rawName.uppercased()
+        var parameters: [String: String] = [:]
 
-        // 存储值（累加，以防值被拆分）
-        dict[key] = (dict[key] ?? "") + value
+        for component in keyComponents.dropFirst() {
+            let pair = component.split(separator: "=", maxSplits: 1, omittingEmptySubsequences: false)
+            guard pair.count == 2 else { continue }
+            parameters[String(pair[0]).uppercased()] = String(pair[1])
+                .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+        }
+
+        dict[key] = ICSPropertyValue(value: value, parameters: parameters)
     }
 
     /// 解析单个 VEVENT（新方法，基于 lines）
     private func parseVEventLines(lines: [String], region: HolidayRegion, sourceURL: String) throws -> HolidayEvent? {
-        var properties: [String: String] = [:]
+        var properties: ICSProperties = [:]
 
         for line in lines {
             parseVEventPropertyAdvanced(line: line, into: &properties)
@@ -142,9 +155,9 @@ class ICSParseService: ICSParsing {
     }
 
     /// 解析单个 VEVENT
-    private func parseVEvent(properties: [String: String], region: HolidayRegion, sourceURL: String) throws -> HolidayEvent? {
+    private func parseVEvent(properties: ICSProperties, region: HolidayRegion, sourceURL: String) throws -> HolidayEvent? {
         // 必填字段
-        guard let summary = properties["SUMMARY"]?.trimmingCharacters(in: .whitespacesAndNewlines),
+        guard let summary = properties["SUMMARY"]?.value.trimmingCharacters(in: .whitespacesAndNewlines),
               !summary.isEmpty else {
             return nil  // 没有 SUMMARY 的事件跳过
         }
@@ -155,7 +168,8 @@ class ICSParseService: ICSParsing {
         }
 
         // 生成唯一 ID
-        let uid = properties["UID"] ?? "\(region.rawValue)_\(date.year)_\(date.month)_\(date.day)_\(summary.hashValue)"
+        let uid = properties["UID"]?.value
+            ?? "\(region.rawValue)_\(date.year)_\(date.month)_\(date.day)_\(summary.hashValue)"
 
         // 解析事件类型
         let type = parseEventType(from: properties, summary: summary)
@@ -186,77 +200,104 @@ class ICSParseService: ICSParsing {
     }
 
     /// 解析日期（支持 DATE 和 DATE-TIME 格式）
-    private func parseDate(from properties: [String: String]) -> DateOnly? {
-        // 尝试多种 DTSTART 键名（按优先级）
-        // Office Holidays 使用：DTSTART;VALUE=DATE
-        // Google Calendar 使用：DTSTART
-        let possibleKeys = ["DTSTART;VALUE=DATE", "DTSTART"]
-
-        for key in possibleKeys {
-            if let dateStr = properties[key] {
-                let date = parseICSDate(dateStr)
-                if date != nil {
-                    return date
-                }
-            }
+    private func parseDate(from properties: ICSProperties) -> DateOnly? {
+        guard let start = properties["DTSTART"] else {
+            return nil
         }
 
+        let valueType = start.parameters["VALUE"]?.uppercased()
+        if valueType == "DATE" {
+            return parseGregorianDate(start.value)
+        }
+        guard valueType == nil || valueType == "DATE-TIME" else {
+            return nil
+        }
+        return parseICSDateTimeOrDate(start.value)
+    }
 
-        // 尝试从 RRULE 解析（跳过重复事件）
+    /// Parse DATE-TIME using its written calendar day.
+    ///
+    /// The TZID parameter is retained by the property parser, but this holiday
+    /// cache stores DateOnly and does not claim full RFC 5545 VTIMEZONE,
+    /// recurrence, alias, or historical DST support.
+    private func parseICSDateTimeOrDate(_ text: String) -> DateOnly? {
+        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if cleaned.count == 8 {
+            return parseGregorianDate(cleaned)
+        }
+
+        if cleaned.count == 16, cleaned.hasSuffix("Z") {
+            let localDateTime = String(cleaned.dropLast())
+            guard isValidTime(in: localDateTime) else { return nil }
+            return parseGregorianDate(String(localDateTime.prefix(8)))
+        }
+
+        if cleaned.count == 15 {
+            guard isValidTime(in: cleaned) else { return nil }
+            return parseGregorianDate(String(cleaned.prefix(8)))
+        }
+
+        if cleaned.count == 10,
+           cleaned[cleaned.index(cleaned.startIndex, offsetBy: 4)] == "-",
+           cleaned[cleaned.index(cleaned.startIndex, offsetBy: 7)] == "-" {
+            return parseGregorianDate(cleaned.replacingOccurrences(of: "-", with: ""))
+        }
+
         return nil
     }
 
-    /// 从 ICS 文本解析日期（支持多种格式）
-    private func parseICSDate(_ text: String) -> DateOnly? {
+    private func parseGregorianDate(_ text: String) -> DateOnly? {
         let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
-
-
-        // 1. 格式：YYYYMMDD (DATE 格式) - Office Holidays 标准格式
-        if cleaned.count == 8, cleaned.allSatisfy({ $0.isNumber }) {
-            if let year = Int(cleaned.prefix(4)),
-               let month = Int(cleaned.substring(from: 4, length: 2) ?? ""),
-               let day = Int(cleaned.substring(from: 6, length: 2) ?? ""),
-               month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-                return DateOnly(year: year, month: month, day: day)
-            }
+        guard cleaned.count == 8,
+              cleaned.allSatisfy(\.isNumber),
+              let year = Int(cleaned.prefix(4)),
+              let month = Int(cleaned.substring(from: 4, length: 2) ?? ""),
+              let day = Int(cleaned.substring(from: 6, length: 2) ?? "") else {
+            return nil
         }
 
-        // 2. 格式：YYYYMMDDTHHMMSSZ (DATE-TIME 格式 with Z)
-        if cleaned.count == 16,
-           cleaned.hasSuffix("Z"),
-           cleaned.contains("T"),
-           let year = Int(cleaned.prefix(4)),
-           let month = Int(cleaned.substring(from: 4, length: 2) ?? ""),
-           let day = Int(cleaned.substring(from: 6, length: 2) ?? ""),
-           month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-            return DateOnly(year: year, month: month, day: day)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0) ?? .gmt
+        var components = DateComponents()
+        components.calendar = calendar
+        components.timeZone = calendar.timeZone
+        components.year = year
+        components.month = month
+        components.day = day
+
+        guard let date = calendar.date(from: components) else { return nil }
+        let validated = calendar.dateComponents([.year, .month, .day], from: date)
+        guard validated.year == year,
+              validated.month == month,
+              validated.day == day else {
+            return nil
         }
 
-        // 3. 格式：YYYYMMDDTHHMMSS (DATE-TIME 格式 without Z)
-        if cleaned.count == 15,
-           cleaned.contains("T"),
-           let year = Int(cleaned.prefix(4)),
-           let month = Int(cleaned.substring(from: 4, length: 2) ?? ""),
-           let day = Int(cleaned.substring(from: 6, length: 2) ?? ""),
-           month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-            return DateOnly(year: year, month: month, day: day)
+        return DateOnly(year: year, month: month, day: day)
+    }
+
+    private func isValidTime(in text: String) -> Bool {
+        guard text.count == 15,
+              text[text.index(text.startIndex, offsetBy: 8)] == "T" else {
+            return false
         }
 
-        // 4. 格式：YYYY-MM-DD (带连字符)
-        if cleaned.count == 10,
-           cleaned.contains("-"),
-           let year = Int(cleaned.prefix(4)),
-           let month = Int(cleaned.substring(from: 5, length: 2) ?? ""),
-           let day = Int(cleaned.substring(from: 8, length: 2) ?? ""),
-           month >= 1 && month <= 12 && day >= 1 && day <= 31 {
-            return DateOnly(year: year, month: month, day: day)
+        let timeText = String(text.suffix(6))
+        guard timeText.allSatisfy(\.isNumber),
+              let hour = Int(timeText.prefix(2)),
+              let minute = Int(timeText.substring(from: 2, length: 2) ?? ""),
+              let second = Int(timeText.substring(from: 4, length: 2) ?? "") else {
+            return false
         }
 
-        return nil
+        return (0...23).contains(hour)
+            && (0...59).contains(minute)
+            && (0...60).contains(second)
     }
 
     /// 从属性或摘要推断事件类型
-    private func parseEventType(from properties: [String: String], summary: String) -> HolidayEventType {
+    private func parseEventType(from properties: ICSProperties, summary: String) -> HolidayEventType {
         let lowerSummary = summary.lowercased()
 
         // 根据关键词判断类型
@@ -265,7 +306,7 @@ class ICSParseService: ICSParsing {
         }
 
         // 传统节假日（根据地区判断）
-        switch properties["X-WR-CALNAME"]?.lowercased() {
+        switch properties["X-WR-CALNAME"]?.value.lowercased() {
         case "china", "chinese":
             if lowerSummary.contains("lunar") || lowerSummary.contains("spring festival") ||
                lowerSummary.contains("dragon boat") || lowerSummary.contains("mid-autumn") {
