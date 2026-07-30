@@ -2442,16 +2442,6 @@ private actor FailingMutationEventRepository: EventRepository {
         storedEvents[event.id] = event
     }
 
-    func createBatch(
-        _ events: [CalendarEvent],
-        ifUnchanged expectedEvents: [CalendarEvent]
-    ) async throws {
-        if case .create = failingOperation {
-            throw EventRepositoryMutationFailure.create
-        }
-        events.forEach { storedEvents[$0.id] = $0 }
-    }
-
     func applyBatch(
         upserting events: [CalendarEvent],
         deleting eventsToDelete: [CalendarEvent],

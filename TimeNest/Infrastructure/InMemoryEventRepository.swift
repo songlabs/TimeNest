@@ -9,30 +9,6 @@ actor InMemoryEventRepository: EventRepository {
         events[event.id] = event
     }
 
-    func createBatch(_ newEvents: [CalendarEvent], ifUnchanged expectedEvents: [CalendarEvent]) async throws {
-        let ids = newEvents.map(\.id)
-        guard Set(ids).count == ids.count,
-              ids.allSatisfy({ events[$0] == nil }) else {
-            throw EventRepositoryBatchError.duplicateEvent
-        }
-        guard expectedEvents.allSatisfy({ events[$0.id] == $0 }) else {
-            throw EventRepositoryBatchError.staleData
-        }
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = .current
-        guard newEvents.allSatisfy({ newEvent in
-            guard newEvent.shiftTemplateID != nil else { return true }
-            return !events.values.contains {
-                $0.calendarID == newEvent.calendarID
-                    && $0.shiftTemplateID != nil
-                    && calendar.isDate($0.startDate, inSameDayAs: newEvent.startDate)
-            }
-        }) else {
-            throw EventRepositoryBatchError.shiftConflict
-        }
-        newEvents.forEach { events[$0.id] = $0 }
-    }
-
     func applyBatch(
         upserting newEvents: [CalendarEvent],
         deleting eventsToDelete: [CalendarEvent],

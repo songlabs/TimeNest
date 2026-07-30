@@ -580,7 +580,7 @@
 "calendar_sharing.state.unavailable" = "공유를 사용할 수 없음";
 "calendar_sharing.error.icloud_status_unavailable" = "현재 iCloud 상태를 확인할 수 없습니다. 나중에 다시 시도해 주세요.";
 
-/* Shift Batch */
+/* Shift Templates */
 "shift_template.favorites" = "자주 쓰는 근무조";
 "shift_template.empty.title" = "근무조 템플릿이 아직 없습니다";
 "shift_template.empty.message" = "주간·야간 등 자주 쓰는 템플릿을 만들면 여러 날짜에 더 빠르게 근무조를 배정할 수 있습니다.";
@@ -589,33 +589,3 @@
 "shift_template.delete_confirmation.title" = "근무조 템플릿을 삭제할까요?";
 "shift_template.delete_confirmation.referenced" = "이 템플릿은 기존 근무조 %d개에서 사용 중입니다. 저장된 근무조 내용은 그대로 유지됩니다.";
 "shift_template.delete_confirmation.unused" = "이미 만든 근무조는 삭제되지 않습니다.";
-"shift_batch.title" = "근무조 일괄 설정";
-"shift_batch.selected_count" = "%d개 날짜 선택됨";
-"shift_batch.clear_selection" = "선택 해제";
-"shift_batch.mode" = "작업";
-"shift_batch.use_template" = "템플릿 사용";
-"shift_batch.copy_previous_day" = "전날 복사";
-"shift_batch.copy_previous_week" = "지난주 복사";
-"shift_batch.rotation" = "교대 순환";
-"shift_batch.rest_day" = "휴무";
-"shift_batch.start_date" = "시작 날짜";
-"shift_batch.end_date" = "종료 날짜";
-"shift_batch.add_rotation_item" = "순환 항목 추가";
-"shift_batch.rotation_start" = "시작 위치";
-"shift_batch.preview" = "미리보기";
-"shift_batch.will_create" = "생성 예정";
-"shift_batch.skipped" = "건너뜀";
-"shift_batch.existing_shift" = "기존 근무조 있음";
-"shift_batch.no_source" = "복사할 근무조 없음";
-"shift_batch.invalid_template" = "유효하지 않은 템플릿";
-"shift_batch.completed" = "근무조 %d개를 만들었습니다";
-"shift_batch.auxiliary_failure" = "일부 알림 또는 새로 고침을 완료하지 못했습니다.";
-"shift_batch.undo" = "실행 취소";
-"shift_batch.undo_completed" = "근무조 %d개를 삭제했습니다";
-"shift_batch.undo_edited" = "수정된 근무조 %d개는 실행 취소할 수 없습니다.";
-"shift_batch.plan_changed" = "미리보기 후 근무조 정보가 변경되었습니다. 다시 미리 확인해 주세요.";
-"shift_batch.empty_selection" = "날짜를 하나 이상 선택해 주세요.";
-"shift_batch.confirm" = "확인";
-"shift_batch.remove_date" = "날짜 선택 해제";
-"shift_batch.previous_month" = "이전 달";
-"shift_batch.next_month" = "다음 달";

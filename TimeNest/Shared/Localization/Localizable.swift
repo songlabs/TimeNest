@@ -361,7 +361,7 @@ enum LocalizedString: String {
     case shiftInputTitle = "shift_input.title"
     case shiftInputEmpty = "shift_input.empty"
 
-    // MARK: - Shift Batch
+    // MARK: - Shift Templates
 
     case shiftTemplateFavorites = "shift_template.favorites"
     case shiftTemplateEmptyTitle = "shift_template.empty.title"
@@ -371,36 +371,6 @@ enum LocalizedString: String {
     case shiftTemplateDeleteConfirmationTitle = "shift_template.delete_confirmation.title"
     case shiftTemplateDeleteReferencedMessage = "shift_template.delete_confirmation.referenced"
     case shiftTemplateDeleteUnusedMessage = "shift_template.delete_confirmation.unused"
-    case shiftBatchTitle = "shift_batch.title"
-    case shiftBatchSelectedCount = "shift_batch.selected_count"
-    case shiftBatchClearSelection = "shift_batch.clear_selection"
-    case shiftBatchMode = "shift_batch.mode"
-    case shiftBatchUseTemplate = "shift_batch.use_template"
-    case shiftBatchCopyPreviousDay = "shift_batch.copy_previous_day"
-    case shiftBatchCopyPreviousWeek = "shift_batch.copy_previous_week"
-    case shiftBatchRotation = "shift_batch.rotation"
-    case shiftBatchRestDay = "shift_batch.rest_day"
-    case shiftBatchStartDate = "shift_batch.start_date"
-    case shiftBatchEndDate = "shift_batch.end_date"
-    case shiftBatchAddRotationItem = "shift_batch.add_rotation_item"
-    case shiftBatchRotationStart = "shift_batch.rotation_start"
-    case shiftBatchPreview = "shift_batch.preview"
-    case shiftBatchWillCreate = "shift_batch.will_create"
-    case shiftBatchSkipped = "shift_batch.skipped"
-    case shiftBatchExistingShift = "shift_batch.existing_shift"
-    case shiftBatchNoSource = "shift_batch.no_source"
-    case shiftBatchInvalidTemplate = "shift_batch.invalid_template"
-    case shiftBatchCompleted = "shift_batch.completed"
-    case shiftBatchAuxiliaryFailure = "shift_batch.auxiliary_failure"
-    case shiftBatchUndo = "shift_batch.undo"
-    case shiftBatchUndoCompleted = "shift_batch.undo_completed"
-    case shiftBatchUndoEdited = "shift_batch.undo_edited"
-    case shiftBatchPlanChanged = "shift_batch.plan_changed"
-    case shiftBatchEmptySelection = "shift_batch.empty_selection"
-    case shiftBatchConfirm = "shift_batch.confirm"
-    case shiftBatchRemoveDate = "shift_batch.remove_date"
-    case shiftBatchPreviousMonth = "shift_batch.previous_month"
-    case shiftBatchNextMonth = "shift_batch.next_month"
 
     // MARK: - Event Marker
 

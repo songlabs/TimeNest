@@ -1,6 +1,6 @@
 import XCTest
 
-final class TimeNestShiftBatchUITests: XCTestCase {
+final class TimeNestShiftTemplateFavoritesUITests: XCTestCase {
     override func setUp() {
         super.setUp()
         continueAfterFailure = false
@@ -29,179 +29,28 @@ final class TimeNestShiftBatchUITests: XCTestCase {
         XCTAssertFalse(element(in: app, identifier: "shiftTemplate.favoriteSection").waitForExistence(timeout: 2))
     }
 
-    func testSelectMultipleDatesAndApplyTemplate() {
+    func testOnlyOrdinaryShiftInputRemainsInCalendarMenu() {
         let app = launchApp()
-        openShiftBatch(in: app)
-        selectAdditionalDate(in: app)
+        app.buttons["calendar.moreMenu"].tap()
 
-        app.buttons["shiftBatch.previewButton"].tap()
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.preview").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["shiftBatch.confirm"].isEnabled)
-        app.buttons["shiftBatch.confirm"].tap()
-
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.result").waitForExistence(timeout: 8))
-    }
-
-    func testCopyPreviousDayPreviewShowsConflictAsSkipped() {
-        let app = launchApp(seedBatchScenario: true)
-        openShiftBatch(in: app)
-        app.buttons["shiftBatch.copyPreviousDay"].tap()
-        app.buttons["shiftBatch.previewButton"].tap()
-
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.preview").waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["shiftBatch.confirm"].isEnabled)
-    }
-
-    func testCopyPreviousWeekPreviewShowsNoSource() {
-        let app = launchApp(seedBatchScenario: true)
-        openShiftBatch(in: app)
-        app.buttons["shiftBatch.copyPreviousWeek"].tap()
-        app.buttons["shiftBatch.previewButton"].tap()
-
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.preview").waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["shiftBatch.confirm"].isEnabled)
-    }
-
-    func testRotationPreviewIncludesRangeAndCanCreateRows() {
-        let app = launchApp(seedBatchScenario: true)
-        openShiftBatch(in: app)
-        app.buttons["shiftBatch.rotation"].firstMatch.tap()
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.rotation").waitForExistence(timeout: 5))
-        app.buttons["shiftBatch.previewButton"].tap()
-
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.preview").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["shiftBatch.confirm"].isEnabled)
-    }
-
-    func testExistingShiftTemplatePreviewDisablesConfirm() {
-        let app = launchApp(seedBatchScenario: true)
-        openShiftBatch(in: app)
-        app.buttons["shiftBatch.previewButton"].tap()
-
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.preview").waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["shiftBatch.confirm"].isEnabled)
-    }
-
-    func testConfirmCreatesBatchAndShowsResultBanner() {
-        let app = launchApp()
-        openShiftBatch(in: app)
-        app.buttons["shiftBatch.previewButton"].tap()
-        XCTAssertTrue(app.buttons["shiftBatch.confirm"].waitForExistence(timeout: 5))
-
-        app.buttons["shiftBatch.confirm"].tap()
-
-        let result = element(in: app, identifier: "shiftBatch.result")
-        XCTAssertTrue(result.waitForExistence(timeout: 8))
-        XCTAssertFalse(result.label.contains("shift_batch."))
-    }
-
-    func testUndoRemovesLatestBatch() {
-        let app = launchApp()
-        openShiftBatch(in: app)
-        app.buttons["shiftBatch.previewButton"].tap()
-        app.buttons["shiftBatch.confirm"].tap()
-        let undo = app.buttons["shiftBatch.undo"]
-        XCTAssertTrue(undo.waitForExistence(timeout: 8))
-
-        undo.tap()
-
-        XCTAssertFalse(app.buttons["shiftBatch.undo"].waitForExistence(timeout: 5))
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.result").exists)
-    }
-
-    func testCancelDoesNotShowResultOrWriteData() {
-        let app = launchApp()
-        openShiftBatch(in: app)
-
-        app.buttons["shiftBatch.cancel"].tap()
-
-        XCTAssertTrue(app.buttons["calendar.moreMenu"].waitForExistence(timeout: 5))
-        XCTAssertFalse(element(in: app, identifier: "shiftBatch.result").exists)
-    }
-
-    func testSmallScreenXXXLKeepsPreviewAndCancelAccessible() {
-        let app = launchApp(
-            theme: "light",
-            contentSizeCategory: "UICTContentSizeCategoryXXXL"
+        XCTAssertTrue(app.buttons["Shift Input"].waitForExistence(timeout: 5))
+        let shiftActions = app.buttons.matching(
+            NSPredicate(format: "label CONTAINS[c] %@", "Shift")
         )
-        openShiftBatch(in: app)
-
-        XCTAssertTrue(app.buttons["shiftBatch.previewButton"].isHittable)
-        XCTAssertTrue(app.buttons["shiftBatch.cancel"].isHittable)
-
-        app.buttons["shiftBatch.previewButton"].tap()
-        let confirm = app.buttons["shiftBatch.confirm"]
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
-        XCTAssertTrue(confirm.isHittable)
-        confirm.tap()
-
-        let undo = app.buttons["shiftBatch.undo"]
-        XCTAssertTrue(undo.waitForExistence(timeout: 8))
-        XCTAssertTrue(undo.isHittable)
+        XCTAssertEqual(shiftActions.count, 1)
     }
 
-    func testDarkAccessibilityTextKeepsPreviewAndCancelAccessible() {
-        let app = launchApp(
-            theme: "dark",
-            contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"
-        )
-        openShiftBatch(in: app)
-
-        XCTAssertTrue(app.buttons["shiftBatch.previewButton"].isHittable)
-        XCTAssertTrue(app.buttons["shiftBatch.cancel"].isHittable)
-    }
-
-    func testFiveLanguagesDoNotExposeLocalizationKeys() {
-        for language in ["ja", "zhHans", "zh-Hant", "enUS", "ko"] {
-            let app = launchApp(language: language)
-            openShiftBatch(in: app)
-
-            for identifier in ["shiftBatch.selectedCount", "shiftBatch.previewButton", "shiftBatch.cancel"] {
-                let target = element(in: app, identifier: identifier)
-                XCTAssertTrue(target.waitForExistence(timeout: 5), "\(language)-\(identifier)")
-                XCTAssertFalse(target.label.isEmpty, "\(language)-\(identifier)")
-                XCTAssertFalse(target.label.contains("shift_batch."), "\(language)-\(identifier)")
-            }
-            app.terminate()
-        }
-    }
-
-    private func launchApp(
-        language: String = "enUS",
-        seedBatchScenario: Bool = false,
-        theme: String? = nil,
-        contentSizeCategory: String? = nil
-    ) -> XCUIApplication {
+    private func launchApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "-uiTesting",
             "-resetUITestData",
             "-mockCloudKitState", "available",
-            "-uiTestLanguage", language
+            "-uiTestLanguage", "enUS"
         ]
-        if seedBatchScenario {
-            app.launchArguments.append("-seedShiftBatchScenario")
-        }
-        if let theme {
-            app.launchArguments += ["-uiTestTheme", theme]
-        }
-        if let contentSizeCategory {
-            app.launchArguments += [
-                "-UIPreferredContentSizeCategoryName",
-                contentSizeCategory
-            ]
-        }
         app.launch()
         XCTAssertTrue(app.buttons["calendar.moreMenu"].waitForExistence(timeout: 10))
         return app
-    }
-
-    private func openShiftBatch(in app: XCUIApplication) {
-        app.buttons["calendar.moreMenu"].tap()
-        let open = app.buttons["shiftBatch.open"]
-        XCTAssertTrue(open.waitForExistence(timeout: 5))
-        open.tap()
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.selectedCount").waitForExistence(timeout: 8))
     }
 
     private func openShiftTemplates(in app: XCUIApplication) {
@@ -212,20 +61,6 @@ final class TimeNestShiftBatchUITests: XCTestCase {
         scrollUntilHittable(row, in: app)
         row.tap()
         XCTAssertTrue(element(in: app, identifier: "shiftTemplate.list").waitForExistence(timeout: 8))
-    }
-
-    private func selectAdditionalDate(in app: XCUIApplication) {
-        let predicate = NSPredicate(format: "identifier BEGINSWITH 'shiftBatch.date.'")
-        let buttons = app.buttons.matching(predicate)
-        XCTAssertGreaterThan(buttons.count, 1)
-        for index in 0..<buttons.count {
-            let button = buttons.element(boundBy: index)
-            if button.isHittable && !button.isSelected {
-                button.tap()
-                return
-            }
-        }
-        XCTFail("No additional date button was hittable")
     }
 
     private func element(in app: XCUIApplication, identifier: String) -> XCUIElement {
@@ -256,7 +91,7 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         continueAfterFailure = false
     }
 
-    func testCoreOnlyCreateShowsCoreFieldsAndIsSelectableInBatch() {
+    func testCoreOnlyCreateShowsCoreFieldsAndIsSelectableInShiftInput() {
         let app = launchApp()
         openShiftTemplates(in: app)
         app.buttons["shiftTemplate.add"].tap()
@@ -284,14 +119,11 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         app.buttons["shiftTemplate.edit.cancel"].tap()
 
         closeTemplatesAndSettings(in: app)
-        openShiftBatch(in: app)
-        let option = button(
-            identifier: "shiftBatch.templateOption",
-            value: "Core Only Shift",
-            in: app
-        )
-        scrollUntilHittable(option, in: app)
+        openShiftInput(in: app)
+        let option = app.buttons["Core Only Shift"]
+        XCTAssertTrue(option.waitForExistence(timeout: 5))
         XCTAssertTrue(option.isHittable)
+        app.buttons["modal.close"].tap()
     }
 
     func testTemplateCreationPersistsNoteTimesAndNonDefaultColorWhenReopened() {
@@ -502,19 +334,28 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         XCTAssertTrue(element(in: app, identifier: "shiftTemplate.favoriteSection").waitForExistence(timeout: 5))
         closeTemplatesAndSettings(in: app)
 
-        openShiftBatch(in: app)
-        let option = button(
-            identifier: "shiftBatch.templateOption",
-            value: "History Snapshot Template",
-            in: app
-        )
-        scrollUntilHittable(option, in: app)
+        openShiftInput(in: app)
+        let option = app.buttons["History Snapshot Template"]
+        XCTAssertTrue(option.waitForExistence(timeout: 5))
         option.tap()
-        app.buttons["shiftBatch.previewButton"].tap()
-        XCTAssertTrue(app.buttons["shiftBatch.confirm"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["shiftBatch.confirm"].isEnabled)
-        app.buttons["shiftBatch.confirm"].tap()
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.result").waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["modal.close"].waitForExistence(timeout: 5))
+        app.buttons["modal.close"].tap()
+        XCTAssertTrue(app.staticTexts["History Snapshot Template"].waitForExistence(timeout: 8))
+
+        app.buttons["Week"].tap()
+        XCTAssertTrue(app.staticTexts["History Snapshot Template"].waitForExistence(timeout: 8))
+        app.buttons["Month"].tap()
+        let historicalShift = app.staticTexts["History Snapshot Template"]
+        XCTAssertTrue(historicalShift.waitForExistence(timeout: 8))
+        historicalShift.tap()
+        XCTAssertTrue(element(in: app, identifier: "dayDetail.content").waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["\(history.start) - \(history.end)"].waitForExistence(timeout: 5))
+        app.buttons["event.edit"].firstMatch.tap()
+        XCTAssertTrue(element(in: app, identifier: "entry.editor").waitForExistence(timeout: 5))
+        let updatedStart = adjustEventStartTime(currentLabel: history.start, in: app)
+        app.buttons["entry.editor.save"].tap()
+        XCTAssertTrue(app.staticTexts["\(updatedStart) - \(history.end)"].waitForExistence(timeout: 8))
+        app.buttons["modal.close"].tap()
         XCTAssertTrue(app.staticTexts["History Snapshot Template"].waitForExistence(timeout: 8))
 
         openShiftTemplates(in: app)
@@ -534,13 +375,16 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         XCTAssertTrue(waitForDisappearance(element(in: app, identifier: "shiftTemplate.favoriteSection")))
         closeTemplatesAndSettings(in: app)
 
-        let historicalShift = app.staticTexts["History Snapshot Template"]
-        XCTAssertTrue(historicalShift.waitForExistence(timeout: 8))
-        historicalShift.tap()
+        let preservedShift = app.staticTexts["History Snapshot Template"]
+        XCTAssertTrue(preservedShift.waitForExistence(timeout: 8))
+        preservedShift.tap()
         XCTAssertTrue(app.staticTexts["History Snapshot Template"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["\(history.start) - \(history.end)"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["\(updatedStart) - \(history.end)"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.alerts.count, 0)
         attachScreenshot(named: "shift-template-referenced-event-preserved", app: app)
+        app.buttons["event.delete"].firstMatch.tap()
+        app.buttons["modal.close"].tap()
+        XCTAssertFalse(app.staticTexts["History Snapshot Template"].waitForExistence(timeout: 5))
     }
 
     private func launchApp(
@@ -578,11 +422,12 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         XCTAssertTrue(element(in: app, identifier: "shiftTemplate.list").waitForExistence(timeout: 8))
     }
 
-    private func openShiftBatch(in app: XCUIApplication) {
+    private func openShiftInput(in app: XCUIApplication) {
         app.buttons["calendar.moreMenu"].tap()
-        XCTAssertTrue(app.buttons["shiftBatch.open"].waitForExistence(timeout: 5))
-        app.buttons["shiftBatch.open"].tap()
-        XCTAssertTrue(element(in: app, identifier: "shiftBatch.selectedCount").waitForExistence(timeout: 8))
+        let open = app.buttons["Shift Input"]
+        XCTAssertTrue(open.waitForExistence(timeout: 5))
+        open.tap()
+        XCTAssertTrue(app.buttons["modal.close"].waitForExistence(timeout: 5))
     }
 
     private func createTemplate(
@@ -781,6 +626,32 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         let adjustedValue = button.label
         XCTAssertNotEqual(adjustedValue, initialValue)
         return adjustedValue
+    }
+
+    private func adjustEventStartTime(
+        currentLabel: String,
+        in app: XCUIApplication
+    ) -> String {
+        let editor = element(in: app, identifier: "entry.editor")
+        let button = editor.buttons[currentLabel]
+        let scrollView = editor.scrollViews.firstMatch
+        XCTAssertTrue(scrollView.waitForExistence(timeout: 5))
+        for _ in 0..<12 where !button.isHittable {
+            scrollView.swipeUp()
+        }
+        XCTAssertTrue(button.isHittable)
+        button.tap()
+
+        let hourWheel = app.pickerWheels.element(boundBy: 0)
+        XCTAssertTrue(hourWheel.waitForExistence(timeout: 5))
+        let currentHour = Int(hourWheel.value as? String ?? "") ?? 0
+        let nextHour = String(format: "%02d", (currentHour + 1) % 24)
+        hourWheel.adjust(toPickerWheelValue: nextHour)
+        XCTAssertEqual(hourWheel.value as? String, nextHour)
+        app.buttons["picker.confirm"].tap()
+
+        let minute = currentLabel.split(separator: ":").last.map(String.init) ?? "00"
+        return "\(nextHour):\(minute)"
     }
 
     private func closeTemplatesAndSettings(in app: XCUIApplication) {

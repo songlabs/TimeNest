@@ -412,11 +412,6 @@ private actor StatisticsEventRepositoryStub: EventRepository {
 
     func create(_ event: CalendarEvent) async throws {}
 
-    func createBatch(
-        _ events: [CalendarEvent],
-        ifUnchanged expectedEvents: [CalendarEvent]
-    ) async throws {}
-
     func applyBatch(
         upserting events: [CalendarEvent],
         deleting eventsToDelete: [CalendarEvent],

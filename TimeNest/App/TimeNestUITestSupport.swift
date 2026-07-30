@@ -19,10 +19,6 @@ enum TimeNestUITestSupport {
         arguments.contains("-seedDataManagementScenario")
     }
 
-    static var shouldSeedShiftBatchScenario: Bool {
-        arguments.contains("-seedShiftBatchScenario")
-    }
-
     static var preserveExportedTestFile: Bool {
         arguments.contains("-preserveExportedTestFile")
     }
@@ -117,7 +113,7 @@ enum TimeNestUITestSupport {
     }
 
     static func seedDataManagementScenario(in container: ModelContainer) throws {
-        guard isEnabled, shouldSeedDataManagementScenario || shouldSeedShiftBatchScenario else { return }
+        guard isEnabled, shouldSeedDataManagementScenario else { return }
         let context = ModelContext(container)
         context.autosaveEnabled = false
 
@@ -195,7 +191,7 @@ enum TimeNestUITestSupport {
             )
         ]
 
-        var shiftEvents = [
+        let shiftEvents = [
             event(
                 id: "20000000-0000-0000-0000-000000000001",
                 calendarID: TimeNestCalendar.personalID,
@@ -215,30 +211,6 @@ enum TimeNestUITestSupport {
                 shiftTemplateID: .night
             )
         ]
-
-        if shouldSeedShiftBatchScenario {
-            let today = calendar.startOfDay(for: now)
-            shiftEvents += [
-                event(
-                    id: "20000000-0000-0000-0000-000000000003",
-                    calendarID: TimeNestCalendar.personalID,
-                    title: "Previous day shift",
-                    note: "Batch copy source",
-                    start: calendar.date(byAdding: .day, value: -1, to: today)!,
-                    reminderOffsetMinutes: nil,
-                    shiftTemplateID: .day
-                ),
-                event(
-                    id: "20000000-0000-0000-0000-000000000004",
-                    calendarID: TimeNestCalendar.personalID,
-                    title: "Existing shift",
-                    note: nil,
-                    start: today,
-                    reminderOffsetMinutes: nil,
-                    shiftTemplateID: .night
-                )
-            ]
-        }
 
         let workEvents = [
             workSession(dayOffset: 8, startHour: 9, endHour: 17, restHours: 1, monthStart: monthStart, calendar: calendar, suffix: "1"),

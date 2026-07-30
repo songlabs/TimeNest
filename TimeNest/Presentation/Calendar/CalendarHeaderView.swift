@@ -13,7 +13,6 @@ struct CalendarHeaderView: View {
     let onCalendarTapped: () -> Void
     let onStatisticsTapped: () -> Void
     let onShiftInputTapped: () -> Void
-    let onShiftBatchTapped: () -> Void
     let onPrevious: () -> Void
     let onNext: () -> Void
     let onTitleTapped: () -> Void
@@ -28,7 +27,6 @@ struct CalendarHeaderView: View {
         onCalendarTapped: @escaping () -> Void = {},
         onStatisticsTapped: @escaping () -> Void,
         onShiftInputTapped: @escaping () -> Void,
-        onShiftBatchTapped: @escaping () -> Void = {},
         onPrevious: @escaping () -> Void,
         onNext: @escaping () -> Void,
         onTitleTapped: @escaping () -> Void,
@@ -42,7 +40,6 @@ struct CalendarHeaderView: View {
         self.onCalendarTapped = onCalendarTapped
         self.onStatisticsTapped = onStatisticsTapped
         self.onShiftInputTapped = onShiftInputTapped
-        self.onShiftBatchTapped = onShiftBatchTapped
         self.onPrevious = onPrevious
         self.onNext = onNext
         self.onTitleTapped = onTitleTapped
@@ -155,11 +152,6 @@ struct CalendarHeaderView: View {
                 Button(action: onShiftInputTapped) {
                     Label(localization.localized(.shiftInputTitle), systemImage: "calendar.badge.plus")
                 }
-
-                Button(action: onShiftBatchTapped) {
-                    Label(localization.localized(.shiftBatchTitle), systemImage: "calendar.badge.clock")
-                }
-                .accessibilityIdentifier("shiftBatch.open")
             }
 
             if !isReadOnlyCalendar {

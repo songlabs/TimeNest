@@ -580,7 +580,7 @@
 "calendar_sharing.state.unavailable" = "共有を利用できません";
 "calendar_sharing.error.icloud_status_unavailable" = "iCloudの状態を現在確認できません。時間をおいて再試行してください。";
 
-/* Shift Batch */
+/* Shift Templates */
 "shift_template.favorites" = "よく使うシフト";
 "shift_template.empty.title" = "シフトテンプレートはまだありません";
 "shift_template.empty.message" = "早番や遅番などのテンプレートを作成すると、複数の日付にすばやくシフトを設定できます。";
@@ -589,33 +589,3 @@
 "shift_template.delete_confirmation.title" = "シフトテンプレートを削除しますか？";
 "shift_template.delete_confirmation.referenced" = "このテンプレートは既存のシフト%d件で使用されています。保存済みの内容はそのまま残ります。";
 "shift_template.delete_confirmation.unused" = "作成済みのシフトは削除されません。";
-"shift_batch.title" = "シフトを一括設定";
-"shift_batch.selected_count" = "%d日を選択中";
-"shift_batch.clear_selection" = "選択解除";
-"shift_batch.mode" = "操作";
-"shift_batch.use_template" = "テンプレートを使用";
-"shift_batch.copy_previous_day" = "前日をコピー";
-"shift_batch.copy_previous_week" = "前週をコピー";
-"shift_batch.rotation" = "ローテーション";
-"shift_batch.rest_day" = "休み";
-"shift_batch.start_date" = "開始日";
-"shift_batch.end_date" = "終了日";
-"shift_batch.add_rotation_item" = "ローテーション項目を追加";
-"shift_batch.rotation_start" = "開始位置";
-"shift_batch.preview" = "プレビュー";
-"shift_batch.will_create" = "作成予定";
-"shift_batch.skipped" = "スキップ";
-"shift_batch.existing_shift" = "シフト登録済み";
-"shift_batch.no_source" = "コピー元なし";
-"shift_batch.invalid_template" = "無効なテンプレート";
-"shift_batch.completed" = "%d件のシフトを作成しました";
-"shift_batch.auxiliary_failure" = "一部の通知または更新処理を完了できませんでした。";
-"shift_batch.undo" = "元に戻す";
-"shift_batch.undo_completed" = "%d件のシフトを削除しました";
-"shift_batch.undo_edited" = "編集済みのシフト%d件は元に戻せませんでした。";
-"shift_batch.plan_changed" = "プレビュー後にシフト情報が変更されました。もう一度プレビューしてください。";
-"shift_batch.empty_selection" = "日付を1日以上選択してください。";
-"shift_batch.confirm" = "確定";
-"shift_batch.remove_date" = "日付を選択解除";
-"shift_batch.previous_month" = "前の月";
-"shift_batch.next_month" = "次の月";

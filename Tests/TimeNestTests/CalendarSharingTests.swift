@@ -737,7 +737,7 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(descriptor.ownerDisplayName)
     }
 
-    func testProjectKeepsMarketingVersionOnePointSevenAndBuildThirteen() throws {
+    func testProjectKeepsMarketingVersionOnePointEightAndBuildFourteen() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -747,8 +747,8 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(project.contains("let marketingVersion = \"1.7\""))
-        XCTAssertTrue(project.contains("let buildNumber = \"13\""))
+        XCTAssertTrue(project.contains("let marketingVersion = \"1.8\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"14\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {
@@ -3645,21 +3645,6 @@ private actor ControlledEventRepository: EventRepository {
     func create(_ event: CalendarEvent) throws {
         try failWriteIfNeeded()
         storage[event.id] = event
-    }
-
-    func createBatch(_ events: [CalendarEvent], ifUnchanged expectedEvents: [CalendarEvent]) throws {
-        try failWriteIfNeeded()
-        let ids = events.map(\.id)
-        guard Set(ids).count == ids.count,
-              ids.allSatisfy({ storage[$0] == nil }) else {
-            throw EventRepositoryBatchError.duplicateEvent
-        }
-        guard expectedEvents.allSatisfy({ storage[$0.id] == $0 }) else {
-            throw EventRepositoryBatchError.staleData
-        }
-        var updated = storage
-        events.forEach { updated[$0.id] = $0 }
-        storage = updated
     }
 
     func applyBatch(

@@ -580,7 +580,7 @@
 "calendar_sharing.state.unavailable" = "共享不可用";
 "calendar_sharing.error.icloud_status_unavailable" = "暂时无法确认 iCloud 状态，请稍后重试。";
 
-/* Shift Batch */
+/* Shift Templates */
 "shift_template.favorites" = "常用班次";
 "shift_template.empty.title" = "还没有班次模板";
 "shift_template.empty.message" = "创建早班、晚班等常用模板后，可以更快安排多个日期。";
@@ -589,33 +589,3 @@
 "shift_template.delete_confirmation.title" = "删除班次模板？";
 "shift_template.delete_confirmation.referenced" = "该模板正被 %d 个已有班次使用。已有班次会保留保存时的内容。";
 "shift_template.delete_confirmation.unused" = "已创建的班次不会被删除。";
-"shift_batch.title" = "批量设置班次";
-"shift_batch.selected_count" = "已选择 %d 个日期";
-"shift_batch.clear_selection" = "清空";
-"shift_batch.mode" = "操作方式";
-"shift_batch.use_template" = "使用模板";
-"shift_batch.copy_previous_day" = "复制前一天";
-"shift_batch.copy_previous_week" = "复制上一周";
-"shift_batch.rotation" = "轮班循环";
-"shift_batch.rest_day" = "休息日";
-"shift_batch.start_date" = "开始日期";
-"shift_batch.end_date" = "结束日期";
-"shift_batch.add_rotation_item" = "添加循环项目";
-"shift_batch.rotation_start" = "循环起始位置";
-"shift_batch.preview" = "预览";
-"shift_batch.will_create" = "将创建";
-"shift_batch.skipped" = "已跳过";
-"shift_batch.existing_shift" = "已有班次";
-"shift_batch.no_source" = "来源无数据";
-"shift_batch.invalid_template" = "模板无效";
-"shift_batch.completed" = "已创建 %d 个班次";
-"shift_batch.auxiliary_failure" = "部分提醒或刷新操作未能完成。";
-"shift_batch.undo" = "撤销";
-"shift_batch.undo_completed" = "已移除 %d 个班次";
-"shift_batch.undo_edited" = "%d 个已编辑班次无法撤销。";
-"shift_batch.plan_changed" = "预览后班次数据发生变化，请重新预览后再确认。";
-"shift_batch.empty_selection" = "请至少选择一个日期。";
-"shift_batch.confirm" = "确认";
-"shift_batch.remove_date" = "取消选择日期";
-"shift_batch.previous_month" = "上个月";
-"shift_batch.next_month" = "下个月";

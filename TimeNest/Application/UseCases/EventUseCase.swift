@@ -110,57 +110,6 @@ class EventUseCase {
         return notificationResult
     }
 
-    struct BatchCreateResult {
-        let savedEvents: [CalendarEvent]
-        let notificationResults: [EventNotificationScheduleResult]
-
-        var auxiliaryFailureCount: Int {
-            notificationResults.filter {
-                switch $0 {
-                case .scheduled, .noReminder:
-                    return false
-                case .triggerDateInPast, .denied, .failed, .failedWithCause:
-                    return true
-                }
-            }.count
-        }
-    }
-
-    func createEventsBatch(
-        _ events: [CalendarEvent],
-        ifUnchanged expectedEvents: [CalendarEvent] = []
-    ) async throws -> BatchCreateResult {
-        for event in events {
-            try validate(event)
-            try await validateWriteAccess(calendarID: event.calendarID)
-        }
-
-        var savedEvents: [CalendarEvent] = []
-        var notificationResults: [EventNotificationScheduleResult] = []
-        for event in events {
-            var eventToSave = event
-            let notificationResult = await scheduleNotification(for: eventToSave)
-            eventToSave.notificationID = notificationResult.notificationID
-            savedEvents.append(eventToSave)
-            notificationResults.append(notificationResult)
-        }
-
-        do {
-            try await repository.createBatch(savedEvents, ifUnchanged: expectedEvents)
-        } catch {
-            savedEvents.compactMap(\.notificationID).forEach {
-                notificationScheduler?.cancelNotification(id: $0)
-            }
-            throw error
-        }
-
-        onEventsChanged?()
-        return BatchCreateResult(
-            savedEvents: savedEvents,
-            notificationResults: notificationResults
-        )
-    }
-
     @discardableResult
     func updateEvent(_ event: CalendarEvent) async throws -> EventNotificationScheduleResult {
         try validate(event)

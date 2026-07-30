@@ -580,7 +580,7 @@
 "calendar_sharing.state.unavailable" = "Sharing unavailable";
 "calendar_sharing.error.icloud_status_unavailable" = "The iCloud status cannot be determined right now. Try again later.";
 
-/* Shift Batch */
+/* Shift Templates */
 "shift_template.favorites" = "Favorite Shifts";
 "shift_template.empty.title" = "No shift templates yet";
 "shift_template.empty.message" = "Create common day or night shift templates to schedule multiple dates faster.";
@@ -589,33 +589,3 @@
 "shift_template.delete_confirmation.title" = "Delete Shift Template?";
 "shift_template.delete_confirmation.referenced" = "This template is used by %d existing shifts. The shifts will remain with their saved details.";
 "shift_template.delete_confirmation.unused" = "Existing shifts will not be deleted.";
-"shift_batch.title" = "Set Shifts in Bulk";
-"shift_batch.selected_count" = "%d dates selected";
-"shift_batch.clear_selection" = "Clear";
-"shift_batch.mode" = "Action";
-"shift_batch.use_template" = "Use Template";
-"shift_batch.copy_previous_day" = "Copy Previous Day";
-"shift_batch.copy_previous_week" = "Copy Previous Week";
-"shift_batch.rotation" = "Shift Rotation";
-"shift_batch.rest_day" = "Day Off";
-"shift_batch.start_date" = "Start Date";
-"shift_batch.end_date" = "End Date";
-"shift_batch.add_rotation_item" = "Add Rotation Item";
-"shift_batch.rotation_start" = "Starting Position";
-"shift_batch.preview" = "Preview";
-"shift_batch.will_create" = "Will Create";
-"shift_batch.skipped" = "Skipped";
-"shift_batch.existing_shift" = "Existing Shift";
-"shift_batch.no_source" = "Nothing to Copy";
-"shift_batch.invalid_template" = "Invalid Template";
-"shift_batch.completed" = "%d shifts created";
-"shift_batch.auxiliary_failure" = "Some reminders or refresh tasks could not be completed.";
-"shift_batch.undo" = "Undo";
-"shift_batch.undo_completed" = "%d shifts removed";
-"shift_batch.undo_edited" = "%d edited shifts could not be undone.";
-"shift_batch.plan_changed" = "Shift data changed after the preview. Preview again before confirming.";
-"shift_batch.empty_selection" = "Select at least one date.";
-"shift_batch.confirm" = "Confirm";
-"shift_batch.remove_date" = "Remove date";
-"shift_batch.previous_month" = "Previous month";
-"shift_batch.next_month" = "Next month";

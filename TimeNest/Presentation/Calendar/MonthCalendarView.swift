@@ -11,7 +11,6 @@ struct MonthCalendarView: View {
     @State private var showingSettings = false
     @State private var showingStatistics = false
     @State private var showingReceivedStatisticsUnavailable = false
-    @State private var showingShiftBatch = false
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
     @ObservedObject private var purchaseManager = RemoveAdsPurchaseManager.shared
@@ -20,8 +19,6 @@ struct MonthCalendarView: View {
     @State private var showingCalendarSelection = false
     @State private var readOnlyDetail: ReadOnlyCalendarDetail?
     @State private var showingReadOnlyCreateAlert = false
-    @State private var shiftBatchUndoSnapshot: ShiftBatchUndoSnapshot?
-    @State private var shiftBatchResultMessage: String?
 
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
@@ -68,12 +65,6 @@ struct MonthCalendarView: View {
                     onShiftInputTapped: {
                         viewModel.enterShiftInputMode()
                     },
-                    onShiftBatchTapped: {
-                        if viewModel.isShiftInputMode {
-                            viewModel.exitShiftInputMode()
-                        }
-                        showingShiftBatch = true
-                    },
                     onPrevious: handlePrevious,
                     onNext: handleNext,
                     onTitleTapped: {
@@ -111,21 +102,6 @@ struct MonthCalendarView: View {
                 yearMonthPickerOverlay
             }
 
-            if let message = shiftBatchResultMessage {
-                ShiftBatchResultBanner(
-                    message: message,
-                    showsUndo: shiftBatchUndoSnapshot != nil,
-                    onUndo: undoLastShiftBatch,
-                    onDismiss: {
-                        shiftBatchResultMessage = nil
-                        shiftBatchUndoSnapshot = nil
-                    }
-                )
-                .padding(.horizontal, 12)
-                .padding(.bottom, calendarBottomSectionHeight + 8)
-                .frame(maxHeight: .infinity, alignment: .bottom)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
-            }
         }
         .animation(.easeInOut(duration: 0.2), value: viewModel.isShiftInputMode)
         .onAppear {
@@ -187,15 +163,6 @@ struct MonthCalendarView: View {
                     }
                     statisticsViewModel.setDefaultRange(for: viewModel.displayMode, anchorDate: anchorDate)
                 }
-        }
-        .sheet(isPresented: $showingShiftBatch) {
-            ShiftBatchView(
-                useCase: viewModel.shiftBatchOperationUseCase,
-                calendarID: calendarSharingStore.selection.calendarID,
-                initialDate: viewModel.selectedDate,
-                onCompleted: handleShiftBatchCompleted
-            )
-            .environmentObject(localization)
         }
         .sheet(isPresented: $viewModel.showingDayDetail) {
             if let cell = viewModel.selectedDayCell {
@@ -333,43 +300,6 @@ struct MonthCalendarView: View {
             calendarID: calendarSharingStore.selection.calendarID
         )
         openModal(.statistics)
-    }
-
-    private func handleShiftBatchCompleted(_ result: ShiftBatchOperationResult) {
-        shiftBatchUndoSnapshot = result.undoSnapshot
-        var message = String(
-            format: localization.localized(.shiftBatchCompleted),
-            result.createdCount
-        )
-        if result.auxiliaryFailureCount > 0 {
-            message += " " + localization.localized(.shiftBatchAuxiliaryFailure)
-        }
-        shiftBatchResultMessage = message
-        Task { await viewModel.reloadMonth() }
-    }
-
-    private func undoLastShiftBatch() {
-        guard let snapshot = shiftBatchUndoSnapshot else { return }
-        Task {
-            do {
-                let result = try await viewModel.shiftBatchOperationUseCase.undo(snapshot: snapshot)
-                var message = String(
-                    format: localization.localized(.shiftBatchUndoCompleted),
-                    result.deletedCount
-                )
-                if result.editedCount > 0 {
-                    message += " " + String(
-                        format: localization.localized(.shiftBatchUndoEdited),
-                        result.editedCount
-                    )
-                }
-                shiftBatchResultMessage = message
-                shiftBatchUndoSnapshot = nil
-                await viewModel.reloadMonth()
-            } catch {
-                shiftBatchResultMessage = error.localizedDescription
-            }
-        }
     }
 
     private func openSettings() {
@@ -907,47 +837,6 @@ private struct ShiftInputPanelView: View {
         ShiftCalendarColors.primaryText
     }
 
-}
-
-private struct ShiftBatchResultBanner: View {
-    @EnvironmentObject private var localization: LocalizationManager
-
-    let message: String
-    let showsUndo: Bool
-    let onUndo: () -> Void
-    let onDismiss: () -> Void
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Text(message)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityIdentifier("shiftBatch.result")
-
-            if showsUndo {
-                Button(localization.localized(.shiftBatchUndo), action: onUndo)
-                    .font(.subheadline.bold())
-                    .foregroundStyle(ShiftCalendarColors.primaryBlue)
-                    .accessibilityIdentifier("shiftBatch.undo")
-            }
-
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.caption.bold())
-                    .frame(width: 32, height: 32)
-            }
-            .accessibilityLabel(localization.localized(.done))
-        }
-        .padding(12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
-        .overlay {
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(ShiftCalendarColors.separatorColor, lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
-        .accessibilityElement(children: .contain)
-    }
 }
 
 private struct ShiftInputHeaderView: View {
