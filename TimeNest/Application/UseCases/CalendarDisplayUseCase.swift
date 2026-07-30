@@ -4,15 +4,18 @@ class CalendarDisplayUseCase {
     private let holidayUseCase: HolidayUseCase
     private let localizationUseCase: CalendarLocalizationUseCase
     private let eventUseCase: EventUseCase
+    private let traditionalCalendarProvider: TraditionalCalendarProvider
 
     init(
         holidayUseCase: HolidayUseCase,
         localizationUseCase: CalendarLocalizationUseCase,
-        eventUseCase: EventUseCase
+        eventUseCase: EventUseCase,
+        traditionalCalendarProvider: TraditionalCalendarProvider = TraditionalCalendarProvider()
     ) {
         self.holidayUseCase = holidayUseCase
         self.localizationUseCase = localizationUseCase
         self.eventUseCase = eventUseCase
+        self.traditionalCalendarProvider = traditionalCalendarProvider
     }
 
     func monthGrid(
@@ -75,14 +78,35 @@ class CalendarDisplayUseCase {
         )) ?? []
         let holidaysByDate = Dictionary(grouping: holidays, by: \.date)
 
+        let gridDates: [(date: Date, dateOnly: DateOnly)] = (0..<totalCells).map { dayOffset in
+            let date = calendar.date(byAdding: .day, value: dayOffset, to: gridStartDate) ?? gridStartDate
+            let dateOnly = DateOnly(from: date, in: calendar.timeZone)
+                ?? DateOnly(year: year, month: month, day: 1)
+            return (date, dateOnly)
+        }
+
+        let traditionalPreferences = TraditionalCalendarPreferences(
+            showLunarCalendar: setting.showLunarCalendar,
+            showRokuyo: setting.showRokuyo,
+            showSolarTerms: setting.showSolarTerms
+        )
+        let currentMonthDates = gridDates
+            .map(\.dateOnly)
+            .filter { $0.year == year && $0.month == month }
+        let traditionalDisplays = traditionalCalendarProvider.displays(
+            for: currentMonthDates,
+            preferences: traditionalPreferences,
+            language: setting.displayLanguage,
+            timeZone: calendar.timeZone
+        )
+
         var cells: [CalendarDayCell] = []
+        cells.reserveCapacity(totalCells)
 
         let today = Date()
         let todayOnly = DateOnly(from: today)
 
-        for dayOffset in 0..<totalCells {
-            let date = calendar.date(byAdding: .day, value: dayOffset, to: gridStartDate) ?? gridStartDate
-            let dateOnly = DateOnly(from: date) ?? DateOnly(year: year, month: month, day: 1)
+        for (date, dateOnly) in gridDates {
             let dayText = "\(dateOnly.day)"
             let weekdayIndex = (calendar.component(.weekday, from: date) - 1 + 7) % 7
             let weekdayText = dateWeekdaySymbols[weekdayIndex]
@@ -105,7 +129,8 @@ class CalendarDisplayUseCase {
                 isWeekend: isWeekend,
                 isInCurrentMonth: isInCurrentMonth,
                 shiftType: nil,
-                eventMarkers: []
+                eventMarkers: [],
+                traditionalCalendar: traditionalDisplays[dateOnly] ?? .empty
             ))
         }
 

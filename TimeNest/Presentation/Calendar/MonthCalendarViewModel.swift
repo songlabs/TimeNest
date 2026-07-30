@@ -41,11 +41,12 @@ class MonthCalendarViewModel: ObservableObject {
     private let calendarSharingStore: CalendarSharingStore
     private var currentSetting: CalendarDisplaySetting
     private let subscriptionManager: HolidaySubscriptionManager
+    private let userDefaults: UserDefaults
     private var reloadGeneration = 0
 
     private var languageObserver: AnyCancellable?
     private var subscriptionObserver: AnyCancellable?
-    private var weekStartObserver: AnyCancellable?
+    private var preferencesObserver: AnyCancellable?
     private var sharingObserver: AnyCancellable?
 
     private var notificationObservers: [AnyCancellable] = []
@@ -53,25 +54,36 @@ class MonthCalendarViewModel: ObservableObject {
         calendarDisplayUseCase: CalendarDisplayUseCase,
         eventUseCase: EventUseCase,
         calendarSharingStore: CalendarSharingStore,
-        subscriptionManager: HolidaySubscriptionManager? = nil
+        subscriptionManager: HolidaySubscriptionManager? = nil,
+        userDefaults: UserDefaults = .standard
     ) {
         self.calendarDisplayUseCase = calendarDisplayUseCase
         self.eventUseCase = eventUseCase
         self.shiftBatchOperationUseCase = ShiftBatchOperationUseCase(eventUseCase: eventUseCase)
         self.calendarSharingStore = calendarSharingStore
         self.subscriptionManager = subscriptionManager ?? .shared
+        self.userDefaults = userDefaults
 
         // 初始化时从 LocalizationManager 读取当前语言，从订阅管理器读取已启用的地区
         let initialLanguage = LocalizationManager.shared.currentLanguage
         let enabledRegions = self.subscriptionManager.enabledRegions  // 允许空数组
-        let initialWeekStart = WeekStartPolicy(rawValue: UserDefaults.standard.string(forKey: "weekStart") ?? "system") ?? .system
+        let initialWeekStart = WeekStartPolicy(rawValue: userDefaults.string(forKey: "weekStart") ?? "system") ?? .system
+        let traditionalPreferences = TraditionalCalendarPreferences(defaults: userDefaults)
 
         self.currentSetting = .init(
             displayLanguage: initialLanguage,
             selectedHolidayRegions: enabledRegions,
             weekStartPolicy: initialWeekStart,
-            showLunarCalendar: false
+            showLunarCalendar: traditionalPreferences.showLunarCalendar,
+            showRokuyo: traditionalPreferences.showRokuyo,
+            showSolarTerms: traditionalPreferences.showSolarTerms
         )
+
+#if DEBUG
+        if let initialDate = TimeNestUITestSupport.initialCalendarDate {
+            selectedDate = initialDate
+        }
+#endif
 
         // 监听 LocalizationManager 的语言变化
         setupLanguageObserver()
@@ -79,8 +91,8 @@ class MonthCalendarViewModel: ObservableObject {
         setupNotificationObserver()
         // 监听订阅管理器的 region 变化
         setupSubscriptionObserver()
-        // 监听 weekStart 设置变化
-        setupWeekStartObserver()
+        // 监听周起始日和传统历法开关变化
+        setupPreferencesObserver()
         setupSharingObserver()
     }
 
@@ -130,12 +142,11 @@ class MonthCalendarViewModel: ObservableObject {
         subscriptionObserver = nil
     }
 
-    private func setupWeekStartObserver() {
-        // 监听 weekStart AppStorage 变化
-        weekStartObserver = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+    private func setupPreferencesObserver() {
+        preferencesObserver = NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
             .sink { [weak self] _ in
                 Task { @MainActor in
-                    self?.updateWeekStartPolicy()
+                    self?.updatePersistedCalendarSettings()
                 }
             }
     }
@@ -159,13 +170,30 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
-    private func updateWeekStartPolicy() {
-        let newWeekStart = WeekStartPolicy(rawValue: UserDefaults.standard.string(forKey: "weekStart") ?? "system") ?? .system
+    private func updatePersistedCalendarSettings() {
+        let newWeekStart = WeekStartPolicy(rawValue: userDefaults.string(forKey: "weekStart") ?? "system") ?? .system
+        let traditionalPreferences = TraditionalCalendarPreferences(defaults: userDefaults)
+        var needsReload = false
+
         if currentSetting.weekStartPolicy != newWeekStart {
             currentSetting.weekStartPolicy = newWeekStart
-            Task {
-                await reloadMonth()
-            }
+            needsReload = true
+        }
+        if currentSetting.showLunarCalendar != traditionalPreferences.showLunarCalendar {
+            currentSetting.showLunarCalendar = traditionalPreferences.showLunarCalendar
+            needsReload = true
+        }
+        if currentSetting.showRokuyo != traditionalPreferences.showRokuyo {
+            currentSetting.showRokuyo = traditionalPreferences.showRokuyo
+            needsReload = true
+        }
+        if currentSetting.showSolarTerms != traditionalPreferences.showSolarTerms {
+            currentSetting.showSolarTerms = traditionalPreferences.showSolarTerms
+            needsReload = true
+        }
+
+        if needsReload {
+            Task { await reloadMonth() }
         }
     }
 
@@ -233,7 +261,8 @@ class MonthCalendarViewModel: ObservableObject {
                 isWeekend: day.isWeekend,
                 isInCurrentMonth: day.isInCurrentMonth,
                 shiftType: nil,
-                eventMarkers: []
+                eventMarkers: [],
+                traditionalCalendar: day.traditionalCalendar
             )
         }
         return MonthGrid(title: baseGrid.title, weekdaySymbols: baseGrid.weekdaySymbols, days: days)

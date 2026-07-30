@@ -37,6 +37,35 @@ struct CalendarDayCell: Identifiable, Hashable {
     // 排班相关字段
     let shiftType: ShiftType?
     let eventMarkers: [EventMarkerType]
+    let traditionalCalendar: TraditionalCalendarDisplay
+
+    init(
+        id: String,
+        date: DateOnly,
+        dayText: String,
+        weekdayText: String,
+        holidays: [Holiday],
+        events: [EventOccurrence],
+        isToday: Bool,
+        isWeekend: Bool,
+        isInCurrentMonth: Bool,
+        shiftType: ShiftType?,
+        eventMarkers: [EventMarkerType],
+        traditionalCalendar: TraditionalCalendarDisplay = .empty
+    ) {
+        self.id = id
+        self.date = date
+        self.dayText = dayText
+        self.weekdayText = weekdayText
+        self.holidays = holidays
+        self.events = events
+        self.isToday = isToday
+        self.isWeekend = isWeekend
+        self.isInCurrentMonth = isInCurrentMonth
+        self.shiftType = shiftType
+        self.eventMarkers = eventMarkers
+        self.traditionalCalendar = traditionalCalendar
+    }
 
     // 空 cell（用于占位）
     static let empty = CalendarDayCell(

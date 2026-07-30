@@ -67,7 +67,15 @@ final class LocalizationManager: ObservableObject {
     /// - Parameter key: 本地化字符串的 key
     /// - Returns: 本地化后的字符串
     func localized(_ key: String) -> String {
-        let bundle = bundle(for: selectedLanguageCode)
+        localized(key, languageCode: selectedLanguageCode)
+    }
+
+    func localized(_ key: String, language: DisplayLanguage) -> String {
+        localized(key, languageCode: language.rawValue)
+    }
+
+    private func localized(_ key: String, languageCode: String) -> String {
+        let bundle = bundle(for: languageCode)
         return NSLocalizedString(key, tableName: "Localizable", bundle: bundle, value: "", comment: "")
     }
 
@@ -76,6 +84,10 @@ final class LocalizationManager: ObservableObject {
     /// - Returns: 本地化后的字符串
     func localized(_ key: LocalizedString) -> String {
         localized(key.rawValue)
+    }
+
+    func localized(_ key: LocalizedString, language: DisplayLanguage) -> String {
+        localized(key.rawValue, language: language)
     }
 
     /// 根据语言代码获取对应的 Bundle 名称

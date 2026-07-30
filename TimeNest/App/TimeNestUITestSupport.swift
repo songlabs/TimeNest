@@ -35,6 +35,27 @@ enum TimeNestUITestSupport {
         value(after: "-mockSharingScenario")
     }
 
+    static var initialCalendarDate: Date? {
+        guard isEnabled,
+              let value = value(after: "-uiTestCalendarDate") else {
+            return nil
+        }
+        let parts = value.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar.date(
+            from: DateComponents(
+                timeZone: calendar.timeZone,
+                year: parts[0],
+                month: parts[1],
+                day: parts[2],
+                hour: 12
+            )
+        )
+    }
+
     static func configureDefaults() {
         guard isEnabled else { return }
         let defaults = UserDefaults.standard
@@ -44,6 +65,9 @@ enum TimeNestUITestSupport {
                 "themeMode",
                 "preferredLanguageCode",
                 "holidaySubscriptions",
+                TraditionalCalendarPreferences.showLunarCalendarKey,
+                TraditionalCalendarPreferences.showRokuyoKey,
+                TraditionalCalendarPreferences.showSolarTermsKey,
                 ShiftTemplateFavoritesStore.storageKey,
                 CalendarSharingSyncMetadataPersistence.defaultKey
             ] {
@@ -67,6 +91,15 @@ enum TimeNestUITestSupport {
         }
         if let theme = value(after: "-uiTestTheme") {
             defaults.set(theme, forKey: "themeMode")
+        }
+        if arguments.contains("-uiTestShowLunarCalendar") {
+            defaults.set(true, forKey: TraditionalCalendarPreferences.showLunarCalendarKey)
+        }
+        if arguments.contains("-uiTestShowRokuyo") {
+            defaults.set(true, forKey: TraditionalCalendarPreferences.showRokuyoKey)
+        }
+        if arguments.contains("-uiTestShowSolarTerms") {
+            defaults.set(true, forKey: TraditionalCalendarPreferences.showSolarTermsKey)
         }
     }
 

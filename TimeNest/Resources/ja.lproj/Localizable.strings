@@ -21,6 +21,17 @@
 "settings.calendar_display_customize.event_background" = "予定の背景色";
 "settings.calendar_display_customize.work_record_background" = "勤務記録の背景色";
 "settings.calendar_display_customize.reset_defaults" = "初期値に戻す";
+"settings.traditional_calendar" = "伝統暦";
+"settings.traditional_calendar.show_lunar" = "旧暦を表示";
+"settings.traditional_calendar.show_rokuyo" = "六曜を表示";
+"settings.traditional_calendar.show_solar_terms" = "二十四節気を表示";
+
+/* Traditional Calendar */
+"traditional_calendar.lunar.month_names" = "正月|二月|三月|四月|五月|六月|七月|八月|九月|十月|十一月|十二月";
+"traditional_calendar.lunar.day_names" = "1日|2日|3日|4日|5日|6日|7日|8日|9日|10日|11日|12日|13日|14日|15日|16日|17日|18日|19日|20日|21日|22日|23日|24日|25日|26日|27日|28日|29日|30日";
+"traditional_calendar.lunar.leap_prefix" = "閏";
+"traditional_calendar.rokuyo.names" = "大安|赤口|先勝|友引|先負|仏滅";
+"traditional_calendar.solar_term.names" = "立春|雨水|啓蟄|春分|清明|穀雨|立夏|小満|芒種|夏至|小暑|大暑|立秋|処暑|白露|秋分|寒露|霜降|立冬|小雪|大雪|冬至|小寒|大寒";
 
 /* Language Options */
 "language.system" = "システム標準";

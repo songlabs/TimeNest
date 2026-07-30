@@ -988,6 +988,8 @@ struct DayCellView: View {
     let isSelected: Bool
 
     var body: some View {
+        let traditionalLabelWidth = max(0, cellWidth - 32)
+
         ZStack(alignment: .topLeading) {
             // 背景
             Rectangle()
@@ -1038,10 +1040,79 @@ struct DayCellView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+            if !cell.traditionalCalendar.isEmpty {
+                traditionalCalendarLabelsView
+                    .frame(width: traditionalLabelWidth, alignment: .trailing)
+                    .offset(x: 28, y: 5)
+            }
         }
         .frame(width: cellWidth, height: cellHeight)
         .opacity(cell.isInCurrentMonth ? 1.0 : 0.5)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("calendar.day.\(cell.id)")
+    }
+
+    private enum TraditionalCalendarLabelKind {
+        case solarTerm
+        case lunar
+        case rokuyo
+
+        var accessibilityIdentifier: String {
+            switch self {
+            case .solarTerm:
+                "calendar.traditional.solarTerm"
+            case .lunar:
+                "calendar.traditional.lunar"
+            case .rokuyo:
+                "calendar.traditional.rokuyo"
+            }
+        }
+    }
+
+    private struct TraditionalCalendarLabel: Identifiable {
+        let kind: TraditionalCalendarLabelKind
+        let text: String
+
+        var id: String { kind.accessibilityIdentifier }
+    }
+
+    private var traditionalCalendarLabels: [TraditionalCalendarLabel] {
+        var labels: [TraditionalCalendarLabel] = []
+        if let text = cell.traditionalCalendar.solarTermText {
+            labels.append(.init(kind: .solarTerm, text: text))
+        }
+        if let text = cell.traditionalCalendar.lunarText {
+            labels.append(.init(kind: .lunar, text: text))
+        }
+        if let text = cell.traditionalCalendar.rokuyoText {
+            labels.append(.init(kind: .rokuyo, text: text))
+        }
+        return labels
+    }
+
+    private var traditionalCalendarLabelsView: some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            ForEach(traditionalCalendarLabels) { label in
+                Text(label.text)
+                    .font(.system(
+                        size: label.kind == .solarTerm ? 8.5 : 8,
+                        weight: label.kind == .solarTerm ? .semibold : .regular
+                    ))
+                    .foregroundColor(
+                        label.kind == .solarTerm
+                            ? ShiftCalendarColors.primaryBlueDark
+                            : ShiftCalendarColors.secondaryText
+                    )
+                    .lineLimit(1)
+                    .allowsTightening(true)
+                    .minimumScaleFactor(0.55)
+                    .frame(maxWidth: .infinity, minHeight: 9, alignment: .trailing)
+                    .accessibilityIdentifier(
+                        "\(label.kind.accessibilityIdentifier).\(cell.id)"
+                    )
+            }
+        }
     }
 
 

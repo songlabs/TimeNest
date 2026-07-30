@@ -1102,6 +1102,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let theme = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.theme")
     /// Settings
     public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.title")
+    /// Traditional Calendars
+    public static let traditionalCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.traditional_calendar")
     /// Week Start
     public static let weekStart = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.week_start")
 
@@ -1112,6 +1114,15 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       public static let resetDefaults = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar_display_customize.reset_defaults")
       /// Work Record Background
       public static let workRecordBackground = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar_display_customize.work_record_background")
+    }
+
+    public enum TraditionalCalendar: Sendable {
+      /// Show Chinese Lunar Calendar
+      public static let showLunar = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.traditional_calendar.show_lunar")
+      /// Show Rokuyo
+      public static let showRokuyo = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.traditional_calendar.show_rokuyo")
+      /// Show 24 Solar Terms
+      public static let showSolarTerms = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.traditional_calendar.show_solar_terms")
     }
   }
 
@@ -1316,6 +1327,28 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.title")
     /// Google User Messaging Platform Swift Package Manager wrapper
     public static let userMessagingPlatform = TimeNestWidgetExtensionStrings.tr("Localizable", "third_party_licenses.user_messaging_platform")
+  }
+
+  public enum TraditionalCalendar: Sendable {
+
+    public enum Lunar: Sendable {
+      /// D1|D2|D3|D4|D5|D6|D7|D8|D9|D10|D11|D12|D13|D14|D15|D16|D17|D18|D19|D20|D21|D22|D23|D24|D25|D26|D27|D28|D29|D30
+      public static let dayNames = TimeNestWidgetExtensionStrings.tr("Localizable", "traditional_calendar.lunar.day_names")
+      /// Leap·
+      public static let leapPrefix = TimeNestWidgetExtensionStrings.tr("Localizable", "traditional_calendar.lunar.leap_prefix")
+      /// L1|L2|L3|L4|L5|L6|L7|L8|L9|L10|L11|L12
+      public static let monthNames = TimeNestWidgetExtensionStrings.tr("Localizable", "traditional_calendar.lunar.month_names")
+    }
+
+    public enum Rokuyo: Sendable {
+      /// Tai|Sha|Sho|Tomo|Sen|Butsu
+      public static let names = TimeNestWidgetExtensionStrings.tr("Localizable", "traditional_calendar.rokuyo.names")
+    }
+
+    public enum SolarTerm: Sendable {
+      /// SprBeg|Rain|Awake|SprEq|Clear|Grain|SumBeg|Full|Ear|SumSol|MinHt|MajHt|AutBeg|EndHt|W.Dew|AutEq|C.Dew|Frost|WinBeg|MinSn|MajSn|WinSol|MinCl|MajCl
+      public static let names = TimeNestWidgetExtensionStrings.tr("Localizable", "traditional_calendar.solar_term.names")
+    }
   }
 
   public enum Validation: Sendable {

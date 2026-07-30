@@ -21,6 +21,17 @@
 "settings.calendar_display_customize.event_background" = "일정 배경색";
 "settings.calendar_display_customize.work_record_background" = "근무 기록 배경색";
 "settings.calendar_display_customize.reset_defaults" = "기본값으로 재설정";
+"settings.traditional_calendar" = "전통 달력";
+"settings.traditional_calendar.show_lunar" = "중국 음력 표시";
+"settings.traditional_calendar.show_rokuyo" = "육요 표시";
+"settings.traditional_calendar.show_solar_terms" = "24절기 표시";
+
+/* Traditional Calendar */
+"traditional_calendar.lunar.month_names" = "1월|2월|3월|4월|5월|6월|7월|8월|9월|10월|11월|12월";
+"traditional_calendar.lunar.day_names" = "1일|2일|3일|4일|5일|6일|7일|8일|9일|10일|11일|12일|13일|14일|15일|16일|17일|18일|19일|20일|21일|22일|23일|24일|25일|26일|27일|28일|29일|30일";
+"traditional_calendar.lunar.leap_prefix" = "윤";
+"traditional_calendar.rokuyo.names" = "대안|적구|선승|우인|선부|불멸";
+"traditional_calendar.solar_term.names" = "입춘|우수|경칩|춘분|청명|곡우|입하|소만|망종|하지|소서|대서|입추|처서|백로|추분|한로|상강|입동|소설|대설|동지|소한|대한";
 
 /* Language Options */
 "language.system" = "시스템 기본";

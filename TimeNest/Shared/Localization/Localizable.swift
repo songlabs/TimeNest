@@ -24,8 +24,20 @@ enum LocalizedString: String {
     case settingsCalendarDisplayCustomizeEventBackground = "settings.calendar_display_customize.event_background"
     case settingsCalendarDisplayCustomizeWorkRecordBackground = "settings.calendar_display_customize.work_record_background"
     case settingsCalendarDisplayCustomizeResetDefaults = "settings.calendar_display_customize.reset_defaults"
+    case settingsTraditionalCalendar = "settings.traditional_calendar"
+    case settingsTraditionalCalendarShowLunar = "settings.traditional_calendar.show_lunar"
+    case settingsTraditionalCalendarShowRokuyo = "settings.traditional_calendar.show_rokuyo"
+    case settingsTraditionalCalendarShowSolarTerms = "settings.traditional_calendar.show_solar_terms"
     case settingsDataManagement = "settings.data_management"
     case shiftTimeSettingsTitle = "shift_time.settings_title"
+
+    // MARK: - Traditional Calendar
+
+    case traditionalCalendarLunarMonthNames = "traditional_calendar.lunar.month_names"
+    case traditionalCalendarLunarDayNames = "traditional_calendar.lunar.day_names"
+    case traditionalCalendarLunarLeapPrefix = "traditional_calendar.lunar.leap_prefix"
+    case traditionalCalendarRokuyoNames = "traditional_calendar.rokuyo.names"
+    case traditionalCalendarSolarTermNames = "traditional_calendar.solar_term.names"
 
     // MARK: - Data Management
 

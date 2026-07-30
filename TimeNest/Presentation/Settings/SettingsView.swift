@@ -12,6 +12,9 @@ struct SettingsView: View {
     @EnvironmentObject private var calendarSharingStore: CalendarSharingStore
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
+    @AppStorage(TraditionalCalendarPreferences.showLunarCalendarKey) private var showLunarCalendar = false
+    @AppStorage(TraditionalCalendarPreferences.showRokuyoKey) private var showRokuyo = false
+    @AppStorage(TraditionalCalendarPreferences.showSolarTermsKey) private var showSolarTerms = false
 
     @State private var showVersionInfo: Bool = false
     @State private var showingHelp = false
@@ -201,6 +204,35 @@ struct SettingsView: View {
                         ]
                     )
                 }
+
+                SettingsCard {
+                    SettingsCardTitle(localization.localized(.settingsTraditionalCalendar))
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: localization.localized(.settingsTraditionalCalendarShowLunar),
+                        isOn: $showLunarCalendar,
+                        accessibilityIdentifier: "settings.traditionalCalendar.showLunar"
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: localization.localized(.settingsTraditionalCalendarShowRokuyo),
+                        isOn: $showRokuyo,
+                        accessibilityIdentifier: "settings.traditionalCalendar.showRokuyo"
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: localization.localized(.settingsTraditionalCalendarShowSolarTerms),
+                        isOn: $showSolarTerms,
+                        accessibilityIdentifier: "settings.traditionalCalendar.showSolarTerms"
+                    )
+                }
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("settings.traditionalCalendar")
 
                 SettingsCard {
                     SettingsNavigationRow(
@@ -895,6 +927,20 @@ private struct SettingsPickerRow: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .tint(SettingsStyle.secondaryText)
+        }
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+    let accessibilityIdentifier: String
+
+    var body: some View {
+        SettingsRow(title: title) {
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .accessibilityIdentifier(accessibilityIdentifier)
         }
     }
 }

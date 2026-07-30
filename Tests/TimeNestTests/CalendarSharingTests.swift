@@ -1629,6 +1629,9 @@ final class CalendarSharingStoreTests: XCTestCase {
         let defaults = UserDefaults(
             suiteName: "CalendarSharingHolidayTests-\(UUID().uuidString)"
         )!
+        defaults.set(true, forKey: TraditionalCalendarPreferences.showLunarCalendarKey)
+        defaults.set(true, forKey: TraditionalCalendarPreferences.showRokuyoKey)
+        defaults.set(true, forKey: TraditionalCalendarPreferences.showSolarTermsKey)
         let subscriptionManager = HolidaySubscriptionManager(
             cacheRepository: holidayCache,
             userDefaults: defaults
@@ -1642,7 +1645,8 @@ final class CalendarSharingStoreTests: XCTestCase {
             calendarDisplayUseCase: calendarDisplayUseCase,
             eventUseCase: eventUseCase,
             calendarSharingStore: store,
-            subscriptionManager: subscriptionManager
+            subscriptionManager: subscriptionManager,
+            userDefaults: defaults
         )
         viewModel.selectedDate = sharedEventStart
 
@@ -1654,6 +1658,14 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(monthCell.holidays.map(\.localizedNames.ja), ["海の日"])
         XCTAssertEqual(monthCell.holidays.map(\.localizedNames.zhHans), ["海の日"])
         XCTAssertEqual(monthCell.events.map(\.eventID), [sharedEventID])
+        XCTAssertNotNil(monthCell.traditionalCalendar.lunarText)
+        XCTAssertNotNil(monthCell.traditionalCalendar.rokuyoText)
+        let solarTermCell = try XCTUnwrap(
+            viewModel.grid?.days.first {
+                $0.date == DateOnly(year: 2026, month: 7, day: 23)
+            }
+        )
+        XCTAssertNotNil(solarTermCell.traditionalCalendar.solarTermText)
         XCTAssertEqual(
             viewModel.weekCells.first { $0.date == holidayDate }?.holidays.map(\.id),
             ["japan-2026-07-20"]
@@ -1668,7 +1680,8 @@ final class CalendarSharingStoreTests: XCTestCase {
             calendarDisplayUseCase: calendarDisplayUseCase,
             eventUseCase: eventUseCase,
             calendarSharingStore: store,
-            subscriptionManager: subscriptionManager
+            subscriptionManager: subscriptionManager,
+            userDefaults: defaults
         )
         hiddenHolidayViewModel.selectedDate = sharedEventStart
 
