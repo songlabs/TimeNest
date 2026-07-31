@@ -343,7 +343,7 @@ final class TimeNestShiftTemplateUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["History Snapshot Template"].waitForExistence(timeout: 8))
 
         app.buttons["Week"].tap()
-        XCTAssertTrue(app.staticTexts["History Snapshot Template"].waitForExistence(timeout: 8))
+        XCTAssertTrue(app.buttons["History Snapshot Template"].waitForExistence(timeout: 8))
         app.buttons["Month"].tap()
         let historicalShift = app.staticTexts["History Snapshot Template"]
         XCTAssertTrue(historicalShift.waitForExistence(timeout: 8))

@@ -141,8 +141,18 @@
 
 /* Event Editor */
 "entry.create.title" = "新增";
+"entry.edit.title" = "編輯記錄";
 "entry.kind.event" = "行程";
 "entry.kind.work_record" = "工作記錄";
+"entry.add.event" = "新增行程";
+"entry.add.work_record" = "新增工作記錄";
+"entry.validation.enable_at_least_one" = "請至少啟用行程或工作記錄";
+"entry.save.failed_format" = "無法儲存記錄：%@";
+"entry.linked.invalid_group" = "關聯記錄的資料異常。";
+"entry.linked.duplicate_records" = "關聯資料中存在重複記錄。";
+"entry.linked.event_load_failed" = "無法載入關聯的行程。";
+"entry.linked.work_record_load_failed" = "無法載入關聯的工作記錄。";
+"entry.linked.reopen" = "記錄已發生變更，請重新開啟後再試。";
 "editor.note" = "備註";
 "editor.title" = "標題";
 "editor.basic_info" = "基本資訊";

@@ -12,6 +12,8 @@ protocol EventRepository {
     func deleteBatch(_ expectedEvents: [CalendarEvent]) async throws
     func events(in range: DateInterval) async throws -> [CalendarEvent]
     func event(id: UUID) async throws -> CalendarEvent?
+    func events(unifiedEntryID: UUID) async throws -> [CalendarEvent]
+    func workRecordEvents(workSessionID: UUID) async throws -> [CalendarEvent]
     func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws
 }
 
@@ -67,6 +69,23 @@ enum EventRepositoryBatchValidator {
                   currentEventsByID[event.id] != nil else {
                 throw EventRepositoryBatchError.eventNotFound
             }
+        }
+
+        var projectedEventsByID = currentEventsByID
+        eventsToDelete.forEach { projectedEventsByID[$0.id] = nil }
+        events.forEach { projectedEventsByID[$0.id] = $0 }
+        let affectedUnifiedEntryIDs = Set(
+            (events + eventsToDelete + expectedEvents)
+                .compactMap(\.unifiedEntryID)
+        )
+        for unifiedEntryID in affectedUnifiedEntryIDs {
+            let groupEvents = projectedEventsByID.values.filter {
+                $0.unifiedEntryID == unifiedEntryID
+            }
+            _ = try UnifiedEntryGroupAssembler.assemble(
+                unifiedEntryID: unifiedEntryID,
+                events: groupEvents
+            )
         }
     }
 }

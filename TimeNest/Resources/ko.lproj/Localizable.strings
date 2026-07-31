@@ -141,8 +141,18 @@
 
 /* Event Editor */
 "entry.create.title" = "새로 만들기";
+"entry.edit.title" = "기록 편집";
 "entry.kind.event" = "일정";
 "entry.kind.work_record" = "근무 기록";
+"entry.add.event" = "일정 추가";
+"entry.add.work_record" = "근무 기록 추가";
+"entry.validation.enable_at_least_one" = "일정 또는 근무 기록을 하나 이상 활성화해 주세요.";
+"entry.save.failed_format" = "기록을 저장할 수 없습니다: %@";
+"entry.linked.invalid_group" = "연결된 기록 데이터가 올바르지 않습니다.";
+"entry.linked.duplicate_records" = "연결된 기록에 중복 데이터가 있습니다.";
+"entry.linked.event_load_failed" = "연결된 일정을 불러올 수 없습니다.";
+"entry.linked.work_record_load_failed" = "연결된 근무 기록을 불러올 수 없습니다.";
+"entry.linked.reopen" = "기록이 변경되었습니다. 다시 열고 시도해 주세요.";
 "editor.note" = "메모";
 "editor.title" = "제목";
 "editor.basic_info" = "기본 정보";

@@ -198,6 +198,7 @@ enum LegacyStoreMigrator {
             createdAt: source.createdAt,
             updatedAt: source.updatedAt
         )
+        copy.unifiedEntryID = source.unifiedEntryID
         copy.calendarID = source.calendarID
         copy.note = source.note
         copy.categoryID = source.categoryID

@@ -221,9 +221,14 @@ private struct WeekAllDayColumn: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(visibleEvents, id: \.id) { event in
-                AllDayEventChipView(event: event, compact: true)
-                    .contentShape(Rectangle())
-                    .onTapGesture { onEventTapped(event) }
+                Button {
+                    onEventTapped(event)
+                } label: {
+                    AllDayEventChipView(event: event, compact: true)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(event.localizedDisplayTitle)
             }
 
             if hiddenCount > 0 {
@@ -399,22 +404,28 @@ struct WeekTimeAxisView: View {
         ZStack(alignment: .topLeading) {
             ForEach(Array(cells.enumerated()), id: \.element.id) { index, cell in
                 ForEach(timedEvents(in: cell), id: \.id) { event in
-                    CalendarEventBlockView(
-                        event: event,
-                        timeText: eventTimeText(for: event),
-                        compact: columnWidth < 64
-                    )
-                    .frame(
-                        width: max(0, columnWidth - 6),
-                        height: eventHeight(for: event),
-                        alignment: .topLeading
-                    )
+                    Button {
+                        onEventTapped(event)
+                    } label: {
+                        CalendarEventBlockView(
+                            event: event,
+                            timeText: eventTimeText(for: event),
+                            compact: columnWidth < 64
+                        )
+                        .frame(
+                            width: max(0, columnWidth - 6),
+                            height: eventHeight(for: event),
+                            alignment: .topLeading
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(event.localizedDisplayTitle)
+                    .accessibilityValue(eventTimeText(for: event))
                     .offset(
                         x: CGFloat(index) * columnWidth + 3,
                         y: eventOffset(for: event)
                     )
-                    .contentShape(Rectangle())
-                    .onTapGesture { onEventTapped(event) }
                 }
             }
         }

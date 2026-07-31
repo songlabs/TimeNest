@@ -141,8 +141,18 @@
 
 /* Event Editor */
 "entry.create.title" = "新規作成";
+"entry.edit.title" = "記録を編集";
 "entry.kind.event" = "予定";
 "entry.kind.work_record" = "勤務記録";
+"entry.add.event" = "予定を追加";
+"entry.add.work_record" = "勤務記録を追加";
+"entry.validation.enable_at_least_one" = "予定または勤務記録を有効にしてください";
+"entry.save.failed_format" = "記録を保存できませんでした：%@";
+"entry.linked.invalid_group" = "関連付けられた記録のデータが不正です。";
+"entry.linked.duplicate_records" = "関連付けられた記録が重複しています。";
+"entry.linked.event_load_failed" = "関連する予定を読み込めませんでした。";
+"entry.linked.work_record_load_failed" = "関連する勤務記録を読み込めませんでした。";
+"entry.linked.reopen" = "記録が変更されています。画面を開き直してお試しください。";
 "editor.note" = "メモ";
 "editor.title" = "タイトル";
 "editor.basic_info" = "基本情報";

@@ -12,22 +12,38 @@ private enum DayDetailLayout {
     static let actionButtonHeight: CGFloat = 44
 }
 
+private struct DayDetailAddEntryRoute: Identifiable {
+    let kind: EntryEditorKind
+
+    var id: EntryEditorKind {
+        kind
+    }
+}
+
+struct DayDetailEventSectionVisibility: Equatable {
+    let showsSection: Bool
+    let showsAddButton: Bool
+
+    init(hasEvents: Bool, allowsCreating: Bool) {
+        showsSection = hasEvents || allowsCreating
+        showsAddButton = allowsCreating
+    }
+}
+
 struct DayDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var localization: LocalizationManager
     let cell: CalendarDayCell
     let onDeleteEvent: (UUID) -> Void
     let onDeleteWorkRecord: ([UUID]) -> Void
-    let onCreateEvent: EventEditorSaveAction
-    let onUpdateEvent: EventEditorUpdateAction
-    let onSaveWorkRecordPair: WorkRecordPairSaveAction
+    let onLoadEntry: UnifiedEntryEditorLoadAction
+    let onSaveEntry: UnifiedEntryEditorSaveAction
     var availableCalendars: [TimeNestCalendar] = []
     var entryCalendarContext: EntryCalendarContext = .fixedWritableCalendar(TimeNestCalendar.personalID)
 
-    @State private var editingEvent: EditingEvent?
-    @State private var showingAddEntry: Bool = false
-    @State private var addEntryInitialKind: EntryEditorKind = .event
-    @State private var editingWorkRecord: WorkRecordEditorInitialSession?
+    @State private var editingUnifiedEntry: UnifiedEntryEditorInitialState?
+    @State private var addEntryRoute: DayDetailAddEntryRoute?
+    @State private var entryLoadErrorMessage: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,9 +57,13 @@ struct DayDetailView: View {
                         holidaySection
                     }
 
-                    eventsSection
+                    if shouldShowEventsSection {
+                        eventsSection
+                    }
 
-                    workRecordsSection
+                    if shouldShowWorkRecordsSection {
+                        workRecordsSection
+                    }
                 }
                 .padding(.horizontal, DayDetailLayout.horizontalPadding)
                 .padding(.top, DayDetailLayout.contentTopPadding)
@@ -53,53 +73,44 @@ struct DayDetailView: View {
         }
         .background(SettingsModalSurface.background)
         .presentationDetents([.fraction(DayDetailLayout.presentationHeightFraction)])
-        .sheet(isPresented: $showingAddEntry) {
+        .sheet(item: $addEntryRoute) { route in
             let initialDate = cell.date.toDate()
             EventEditorView(
-                isPresented: $showingAddEntry,
+                isPresented: addEntryPresentationBinding,
                 mode: .create(initialDate: initialDate),
                 existingEvents: cell.events,
-                initialEntryKind: addEntryInitialKind,
-                showsEntryKindPicker: true,
+                initialEntryKind: route.kind,
                 availableCalendars: availableCalendars,
                 calendarContext: entryCalendarContext,
-                onSaveWorkRecordPair: onSaveWorkRecordPair,
-                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
-                    try await onCreateEvent(title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID)
-                }
+                onSaveEntry: onSaveEntry
             )
         }
-        .sheet(item: $editingEvent) { event in
+        .sheet(item: $editingUnifiedEntry) { state in
             EventEditorView(
                 isPresented: editingPresentationBinding,
-                mode: .edit(
-                    eventID: event.eventID,
-                    initialTitle: event.title,
-                    initialNote: event.note,
-                    initialStartDate: event.startDate,
-                    initialEndDate: event.endDate,
-                    initialIsAllDay: event.isAllDay,
-                    initialReminderOffsetMinutes: event.reminderOffsetMinutes,
-                    initialWorkInfo: event.workInfo,
-                    initialShiftTemplateID: event.shiftTemplateID
-                ),
+                mode: .editUnified(state),
                 existingEvents: cell.events,
                 availableCalendars: availableCalendars,
-                calendarContext: .fixedWritableCalendar(event.calendarID),
-                onSave: { newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo, calendarID in
-                    try await onUpdateEvent(event.eventID, newTitle, newNote, newStartDate, newEndDate, newIsAllDay, newReminderOffsetMinutes, newShiftTemplateID, workInfo, calendarID)
-                }
+                calendarContext: .fixedWritableCalendar(
+                    state.event?.calendarID
+                        ?? state.workRecord?.calendarID
+                        ?? TimeNestCalendar.personalID
+                ),
+                onSaveEntry: onSaveEntry
             )
         }
-        .sheet(item: $editingWorkRecord) { session in
-            WorkRecordEditorView(
-                isPresented: workRecordEditingPresentationBinding,
-                mode: .edit(session),
-                existingEvents: cell.events,
-                availableCalendars: availableCalendars,
-                calendarContext: .fixedWritableCalendar(session.calendarID),
-                onSavePair: onSaveWorkRecordPair
+        .alert(
+            localization.localized(.calendarSharingErrorTitle),
+            isPresented: Binding(
+                get: { entryLoadErrorMessage != nil },
+                set: { if !$0 { entryLoadErrorMessage = nil } }
             )
+        ) {
+            Button(localization.localized(.ok)) {
+                entryLoadErrorMessage = nil
+            }
+        } message: {
+            Text(entryLoadErrorMessage ?? "")
         }
     }
 
@@ -120,28 +131,38 @@ struct DayDetailView: View {
             Text(localization.localized(.dayDetailTitle))
                 .font(.title3.weight(.bold))
                 .foregroundColor(.primary)
+                .accessibilityIdentifier("event.list")
 
-            if regularEvents.isEmpty {
-                EmptyView()
-            } else {
-                ForEach(regularEvents, id: \.id) { event in
+            ForEach(eventDisplayItems) { item in
+                if let event = item.event {
                     EventRowView(
                         event: event,
+                        workRecord: item.workRecord,
                         selectedDate: cell.date.toDate(),
-                        dayEvents: regularEvents,
+                        dayEvents: cell.events,
                         onDelete: {
                             onDeleteEvent(event.eventID)
                         },
                         onEdit: {
                             openEditor(for: event)
+                        },
+                        onDeleteWorkRecord: {
+                            guard let workRecord = item.workRecord else { return }
+                            onDeleteWorkRecord(workRecord.eventIDs)
+                        },
+                        onEditWorkRecord: {
+                            guard let workRecord = item.workRecord else { return }
+                            openEditor(for: workRecord)
                         }
                     )
                 }
             }
 
-            addEventButton
-                .frame(maxWidth: .infinity)
-                .padding(.top, DayDetailLayout.sectionButtonTopSpacing)
+            if eventSectionVisibility.showsAddButton {
+                addEventButton
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, DayDetailLayout.sectionButtonTopSpacing)
+            }
         }
     }
 
@@ -152,7 +173,7 @@ struct DayDetailView: View {
                 .foregroundColor(.primary)
                 .accessibilityIdentifier("workRecord.list")
 
-            if workRecordSessions.isEmpty {
+            if standaloneWorkRecordSessions.isEmpty {
                 TimeNestActionableEmptyStateView(
                     actionTitle: localization.localized(.workRecordAdd),
                     containerIdentifier: "workRecord.empty",
@@ -160,22 +181,18 @@ struct DayDetailView: View {
                     action: { presentAddEntry(kind: .workRecord) }
                 )
             } else {
-                ForEach(workRecordSessions) { session in
+                ForEach(standaloneWorkRecordSessions) { session in
                     WorkRecordSessionRowView(
                         session: session,
                         selectedDate: cell.date.toDate(),
                         onEdit: {
-                            editingWorkRecord = session.editorInitialSession(selectedDate: cell.date.toDate())
+                            openEditor(for: session)
                         },
                         onDelete: {
                             onDeleteWorkRecord(session.eventIDs)
                         }
                     )
                 }
-
-                addWorkRecordButton
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, DayDetailLayout.sectionButtonTopSpacing)
             }
         }
     }
@@ -193,58 +210,90 @@ struct DayDetailView: View {
                 .foregroundColor(.white)
                 .clipShape(RoundedRectangle(cornerRadius: TimeNestTheme.controlCornerRadius, style: .continuous))
         }
+        .accessibilityIdentifier("event.add")
     }
 
-    private var addWorkRecordButton: some View {
-        Button(action: {
-            presentAddEntry(kind: .workRecord)
-        }) {
-            Text(localization.localized(.workRecordAdd))
-                .font(.headline.weight(.semibold))
-                .frame(minWidth: DayDetailLayout.actionButtonMinWidth)
-                .frame(height: DayDetailLayout.actionButtonHeight)
-                .padding(.horizontal, 12)
-                .background(ShiftCalendarColors.primaryBlue)
-                .foregroundColor(.white)
-                .clipShape(RoundedRectangle(cornerRadius: TimeNestTheme.controlCornerRadius, style: .continuous))
+    private var displayItems: [LinkedEntryDisplayItem] {
+        LinkedEntryDisplayAssembler.make(
+            from: cell.events,
+            selectedDate: cell.date.toDate()
+        )
+    }
+
+    private var eventDisplayItems: [LinkedEntryDisplayItem] {
+        displayItems.filter { $0.event != nil }
+    }
+
+    private var standaloneWorkRecordSessions: [WorkRecordDisplaySession] {
+        displayItems.compactMap { item in
+            guard item.event == nil else { return nil }
+            return item.workRecord
         }
-        .accessibilityIdentifier("workRecord.add")
     }
 
-    private var regularEvents: [EventOccurrence] {
-        cell.events.filter { !$0.isWorkClockEvent }
+    private var shouldShowEventsSection: Bool {
+        eventSectionVisibility.showsSection
     }
 
-    private var workRecordSessions: [WorkRecordDisplaySession] {
-        WorkRecordDisplaySession.make(from: cell.events.filter { $0.isWorkClockEvent }, selectedDate: cell.date.toDate())
+    private var eventSectionVisibility: DayDetailEventSectionVisibility {
+        DayDetailEventSectionVisibility(
+            hasEvents: !eventDisplayItems.isEmpty,
+            allowsCreating: entryCalendarContext.allowsEditing
+        )
+    }
+
+    private var shouldShowWorkRecordsSection: Bool {
+        displayItems.isEmpty || !standaloneWorkRecordSessions.isEmpty
     }
 
     private func openEditor(for event: EventOccurrence) {
-        editingEvent = EditingEvent(event)
+        loadEditor(
+            for: .event(eventID: event.eventID)
+        )
+    }
+
+    private func openEditor(for session: WorkRecordDisplaySession) {
+        loadEditor(
+            for: .workRecord(
+                clockInEventID: session.clockIn?.eventID,
+                clockOutEventID: session.clockOut?.eventID,
+                workSessionID: session.workSessionId
+            )
+        )
+    }
+
+    private func loadEditor(for request: UnifiedEntryLoadRequest) {
+        entryLoadErrorMessage = nil
+        Task {
+            do {
+                editingUnifiedEntry = try await onLoadEntry(request)
+            } catch {
+                entryLoadErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     private func presentAddEntry(kind: EntryEditorKind) {
-        addEntryInitialKind = kind
-        showingAddEntry = true
+        addEntryRoute = DayDetailAddEntryRoute(kind: kind)
     }
 
-    private var editingPresentationBinding: Binding<Bool> {
+    private var addEntryPresentationBinding: Binding<Bool> {
         Binding(
-            get: { editingEvent != nil },
+            get: { addEntryRoute != nil },
             set: { isPresented in
                 if !isPresented {
-                    editingEvent = nil
+                    addEntryRoute = nil
                 }
             }
         )
     }
 
-    private var workRecordEditingPresentationBinding: Binding<Bool> {
+    private var editingPresentationBinding: Binding<Bool> {
         Binding(
-            get: { editingWorkRecord != nil },
+            get: { editingUnifiedEntry != nil },
             set: { isPresented in
                 if !isPresented {
-                    editingWorkRecord = nil
+                    editingUnifiedEntry = nil
                 }
             }
         )
@@ -277,131 +326,6 @@ struct DayDetailView: View {
     }
 }
 
-private struct EditingEvent: Identifiable {
-    let id: String
-    let eventID: UUID
-    let calendarID: UUID
-    let title: String
-    let note: String?
-    let startDate: Date
-    let endDate: Date
-    let isAllDay: Bool
-    let reminderOffsetMinutes: Int?
-    let shiftTemplateID: ShiftTimeTemplateID?
-    let workInfo: WorkInfo?
-
-    init(_ event: EventOccurrence) {
-        id = event.id
-        eventID = event.eventID
-        calendarID = event.calendarID
-        title = event.title
-        note = event.note
-        startDate = event.startDate
-        endDate = event.endDate
-        isAllDay = event.isAllDay
-        reminderOffsetMinutes = event.reminderOffsetMinutes
-        shiftTemplateID = event.shiftTemplateID
-        workInfo = event.workInfo
-    }
-}
-
-struct WorkRecordDisplaySession: Identifiable {
-    let id: String
-    let clockIn: EventOccurrence?
-    let clockOut: EventOccurrence?
-    let workSessionId: UUID?
-
-    var eventIDs: [UUID] {
-        var ids: [UUID] = []
-        if let clockIn, !ids.contains(clockIn.eventID) {
-            ids.append(clockIn.eventID)
-        }
-        if let clockOut, !ids.contains(clockOut.eventID) {
-            ids.append(clockOut.eventID)
-        }
-        return ids
-    }
-
-    var sortDate: Date {
-        clockIn?.actualWorkClockDate ?? clockOut?.actualWorkClockDate ?? .distantPast
-    }
-
-    static func make(from events: [EventOccurrence], selectedDate: Date) -> [WorkRecordDisplaySession] {
-        _ = selectedDate
-        let occurrencesByID = Dictionary(uniqueKeysWithValues: events.map { ($0.id, $0) })
-        let entries = events.compactMap(WorkRecordClockEntry.init(occurrence:))
-        return WorkRecordSessionAssembler.sessions(from: entries).compactMap { session in
-            let clockIn = occurrence(for: session.clockIn, in: occurrencesByID)
-            let clockOut = occurrence(for: session.clockOut, in: occurrencesByID)
-            guard clockIn != nil || clockOut != nil else { return nil }
-            let fallbackID = [
-                clockIn?.id ?? "missing-in",
-                clockOut?.id ?? "missing-out"
-            ].joined(separator: "-")
-            return WorkRecordDisplaySession(
-                id: session.sessionID?.uuidString ?? "legacy-\(fallbackID)",
-                clockIn: clockIn,
-                clockOut: clockOut,
-                workSessionId: session.sessionID
-            )
-        }
-    }
-
-    private static func occurrence(
-        for entry: WorkRecordClockEntry?,
-        in occurrencesByID: [String: EventOccurrence]
-    ) -> EventOccurrence? {
-        guard let entry,
-              case .occurrence(let id) = entry.sourceID else {
-            return nil
-        }
-        return occurrencesByID[id]
-    }
-
-    func editorInitialSession(selectedDate: Date) -> WorkRecordEditorInitialSession {
-        let sourceWorkInfo = clockIn?.workInfo ?? clockOut?.workInfo
-        return WorkRecordEditorInitialSession(
-            clockInEventID: clockIn?.eventID,
-            clockOutEventID: clockOut?.eventID,
-            title: editorTitle(defaultTitle: LocalizationManager.shared.localized(.workRecordDefaultTitle)),
-            workDate: clockIn?.workDate ?? clockOut?.workDate ?? selectedDate,
-            workInTime: clockIn?.actualWorkClockDate,
-            workOutTime: clockOut?.actualWorkClockDate,
-            restHours: sourceWorkInfo?.restHours ?? 1.0,
-            transportFee: sourceWorkInfo?.transportFee,
-            hourlyRate: sourceWorkInfo?.hourlyRate,
-            workSessionId: workSessionId ?? clockIn?.workInfo?.workSessionId ?? clockOut?.workInfo?.workSessionId,
-            isWorkOutTimeSet: clockOut?.isWorkOutTimeSet ?? false,
-            calendarID: calendarID
-        )
-    }
-
-    var calendarID: UUID {
-        clockIn?.calendarID ?? clockOut?.calendarID ?? TimeNestCalendar.personalID
-    }
-
-    func displayTitle(defaultTitle: String) -> String {
-        for title in [clockIn?.title, clockOut?.title].compactMap({ $0 }) {
-            let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmedTitle.isEmpty, WorkClockTitleMatcher.kind(for: trimmedTitle) == nil {
-                return trimmedTitle
-            }
-        }
-        return defaultTitle
-    }
-
-    func editorTitle(defaultTitle: String) -> String {
-        for title in [clockIn?.title, clockOut?.title].compactMap({ $0 }) {
-            let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmedTitle.isEmpty {
-                return trimmedTitle
-            }
-        }
-        return defaultTitle
-    }
-
-}
-
 private struct WorkRecordSessionRowView: View {
     let session: WorkRecordDisplaySession
     let selectedDate: Date
@@ -416,12 +340,15 @@ private struct WorkRecordSessionRowView: View {
                     .fontWeight(.medium)
                     .foregroundColor(.primary)
                     .lineLimit(1)
+                    .accessibilityIdentifier("workRecord.primaryContent")
 
-                Text(timeRangeText)
+                Text(session.timeRangeText(selectedDate: selectedDate))
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onEdit)
 
             Spacer()
 
@@ -440,95 +367,100 @@ private struct WorkRecordSessionRowView: View {
         .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("workRecord.row")
     }
 
-    private var timeRangeText: String {
-        "\(clockInText) → \(clockOutText)"
-    }
-
-    private var clockInText: String {
-        guard let clockIn = session.clockIn else {
-            return LocalizationManager.shared.localized(.workRecordMissingClockIn)
-        }
-        return "\(LocalizationManager.shared.localized(.editorWorkIn)) \(formatTime(clockIn.actualWorkClockDate))"
-    }
-
-    private var clockOutText: String {
-        guard let clockOut = session.clockOut, clockOut.isWorkOutTimeSet else {
-            return LocalizationManager.shared.localized(.workRecordMissingClockOut)
-        }
-        let clockOutTime = effectiveClockOutTime(clockOut)
-        let time = formatTime(clockOutTime)
-        if isNextDay(clockOutTime) {
-            return "\(LocalizationManager.shared.localized(.editorWorkOut)) \(LocalizationManager.shared.localized(.workNextDayPrefix)) \(time)"
-        }
-        return "\(LocalizationManager.shared.localized(.editorWorkOut)) \(time)"
-    }
-
-    private func effectiveClockOutTime(_ clockOut: EventOccurrence) -> Date {
-        let outTime = clockOut.actualWorkClockDate
-        guard let clockInTime = session.clockIn?.actualWorkClockDate else {
-            return outTime
-        }
-        let calendar = Calendar.current
-        guard calendar.isDate(outTime, inSameDayAs: clockInTime), outTime <= clockInTime else {
-            return outTime
-        }
-        return calendar.date(byAdding: .day, value: 1, to: outTime) ?? outTime
-    }
-
-    private func isNextDay(_ date: Date) -> Bool {
-        let calendar = Calendar.current
-        return calendar.startOfDay(for: date) > calendar.startOfDay(for: selectedDate)
-    }
-
-    private func formatTime(_ date: Date) -> String {
-        LocalizationManager.shared.dateFormatter(dateFormat: "HH:mm").string(from: date)
-    }
 }
 
 struct EventRowView: View {
     let event: EventOccurrence
+    let workRecord: WorkRecordDisplaySession?
     let selectedDate: Date
     let dayEvents: [EventOccurrence]
     let onDelete: () -> Void
     let onEdit: () -> Void
+    let onDeleteWorkRecord: () -> Void
+    let onEditWorkRecord: () -> Void
 
     var body: some View {
-        HStack {
-            HStack(spacing: 8) {
-                Text(event.localizedDisplayTitle)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
+        VStack(spacing: 10) {
+            HStack {
+                HStack(spacing: 8) {
+                    Text(event.localizedDisplayTitle)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .accessibilityIdentifier("event.primaryContent")
+                        .accessibilityValue(event.eventID.uuidString)
 
-                if event.isAllDay {
-                    Text(LocalizationManager.shared.localized(.editorAllDay))
+                    if event.isAllDay {
+                        Text(LocalizationManager.shared.localized(.editorAllDay))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(eventTimeText(for: event))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .contentShape(Rectangle())
+                .onTapGesture(perform: onEdit)
+
+                Spacer()
+
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .foregroundColor(.blue)
+                }
+                .accessibilityLabel(LocalizationManager.shared.localized(.editorEditEvent))
+                .accessibilityIdentifier("event.edit")
+                .accessibilityValue(event.eventID.uuidString)
+
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .foregroundColor(.red)
+                }
+                .accessibilityIdentifier("event.delete")
+                .accessibilityValue(event.eventID.uuidString)
+            }
+
+            if let workRecord {
+                Divider()
+
+                HStack(spacing: 8) {
+                    Image(systemName: "briefcase")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                } else {
-                    Text(eventTimeText(for: event))
+
+                    Text(workRecord.timeRangeText(selectedDate: selectedDate))
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("event.linkedWorkRecord")
+                        .contentShape(Rectangle())
+                        .onTapGesture(perform: onEditWorkRecord)
+
+                    Button(action: onEditWorkRecord) {
+                        Image(systemName: "pencil")
+                            .foregroundColor(.blue)
+                    }
+                    .accessibilityLabel(LocalizationManager.shared.localized(.workRecordEdit))
+                    .accessibilityIdentifier("workRecord.edit")
+
+                    Button(action: onDeleteWorkRecord) {
+                        Image(systemName: "trash")
+                            .foregroundColor(.red)
+                    }
+                    .accessibilityIdentifier("workRecord.delete")
                 }
             }
-
-            Spacer()
-
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
-                    .foregroundColor(.blue)
-            }
-            .accessibilityIdentifier("event.edit")
-
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .foregroundColor(.red)
-            }
-            .accessibilityIdentifier("event.delete")
         }
         .padding()
         .background(Color.gray.opacity(0.1))
         .cornerRadius(8)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("event.row")
     }
 
     private func eventTimeText(for event: EventOccurrence) -> String {

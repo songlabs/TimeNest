@@ -67,9 +67,14 @@ struct DayAllDayEventsSection: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 ForEach(events, id: \.id) { event in
-                    AllDayEventChipView(event: event, compact: false)
-                        .contentShape(Rectangle())
-                        .onTapGesture { onEventTapped(event) }
+                    Button {
+                        onEventTapped(event)
+                    } label: {
+                        AllDayEventChipView(event: event, compact: false)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(event.localizedDisplayTitle)
                 }
             }
             .padding(.vertical, 8)
@@ -168,19 +173,25 @@ struct DayTimeAxisView: View {
     private var eventBlocks: some View {
         ZStack(alignment: .topLeading) {
             ForEach(timedEvents, id: \.id) { event in
-                CalendarEventBlockView(
-                    event: event,
-                    timeText: eventTimeText(for: event),
-                    compact: false
-                )
-                .frame(
-                    width: max(0, contentWidth - 10),
-                    height: eventHeight(for: event),
-                    alignment: .topLeading
-                )
+                Button {
+                    onEventTapped(event)
+                } label: {
+                    CalendarEventBlockView(
+                        event: event,
+                        timeText: eventTimeText(for: event),
+                        compact: false
+                    )
+                    .frame(
+                        width: max(0, contentWidth - 10),
+                        height: eventHeight(for: event),
+                        alignment: .topLeading
+                    )
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(event.localizedDisplayTitle)
+                .accessibilityValue(eventTimeText(for: event))
                 .offset(x: 5, y: eventOffset(for: event))
-                .contentShape(Rectangle())
-                .onTapGesture { onEventTapped(event) }
             }
         }
         .frame(width: contentWidth, height: contentHeight, alignment: .topLeading)

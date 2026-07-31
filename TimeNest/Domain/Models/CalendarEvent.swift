@@ -392,10 +392,63 @@ struct WorkRecordPairSaveRequest: Hashable {
     let hourlyRate: Int?
     let sessionID: UUID
     let isWorkOutTimeSet: Bool
+    let unifiedEntryID: UUID?
+
+    init(
+        clockInEventID: UUID?,
+        clockOutEventID: UUID?,
+        calendarID: UUID,
+        title: String,
+        workDate: Date,
+        clockInDate: Date,
+        clockOutDate: Date,
+        restHours: Double,
+        transportFee: Int?,
+        hourlyRate: Int?,
+        sessionID: UUID,
+        isWorkOutTimeSet: Bool,
+        unifiedEntryID: UUID? = nil
+    ) {
+        self.clockInEventID = clockInEventID
+        self.clockOutEventID = clockOutEventID
+        self.calendarID = calendarID
+        self.title = title
+        self.workDate = workDate
+        self.clockInDate = clockInDate
+        self.clockOutDate = clockOutDate
+        self.restHours = restHours
+        self.transportFee = transportFee
+        self.hourlyRate = hourlyRate
+        self.sessionID = sessionID
+        self.isWorkOutTimeSet = isWorkOutTimeSet
+        self.unifiedEntryID = unifiedEntryID
+    }
+
+    func resolvingExistingWorkRecord(
+        _ workRecord: UnifiedEntryWorkRecord?,
+        unifiedEntryID: UUID
+    ) -> WorkRecordPairSaveRequest {
+        WorkRecordPairSaveRequest(
+            clockInEventID: workRecord?.clockIn.id ?? clockInEventID,
+            clockOutEventID: workRecord?.clockOut.id ?? clockOutEventID,
+            calendarID: calendarID,
+            title: title,
+            workDate: workDate,
+            clockInDate: clockInDate,
+            clockOutDate: clockOutDate,
+            restHours: restHours,
+            transportFee: transportFee,
+            hourlyRate: hourlyRate,
+            sessionID: workRecord?.sessionID ?? sessionID,
+            isWorkOutTimeSet: isWorkOutTimeSet,
+            unifiedEntryID: unifiedEntryID
+        )
+    }
 }
 
 struct CalendarEvent: Identifiable, Codable, Hashable {
     let id: UUID
+    var unifiedEntryID: UUID?
     var calendarID: UUID
     var title: String
     var note: String?
@@ -415,6 +468,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
 
     init(
         id: UUID,
+        unifiedEntryID: UUID? = nil,
         calendarID: UUID = TimeNestCalendar.personalID,
         title: String,
         note: String?,
@@ -433,6 +487,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
         workInfo: WorkInfo? = nil
     ) {
         self.id = id
+        self.unifiedEntryID = unifiedEntryID
         self.calendarID = calendarID
         self.title = title
         self.note = note
@@ -453,6 +508,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case unifiedEntryID
         case calendarID
         case title
         case note
@@ -474,6 +530,7 @@ struct CalendarEvent: Identifiable, Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
+        unifiedEntryID = try container.decodeIfPresent(UUID.self, forKey: .unifiedEntryID)
         calendarID = try container.decodeIfPresent(UUID.self, forKey: .calendarID)
             ?? TimeNestCalendar.personalID
         title = try container.decode(String.self, forKey: .title)

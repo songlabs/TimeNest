@@ -124,6 +124,36 @@ actor SwiftDataEventRepository: EventRepository {
         }
     }
 
+    func events(unifiedEntryID: UUID) async throws -> [CalendarEvent] {
+        do {
+            let context = ModelContext(modelContext.container)
+            let descriptor = FetchDescriptor<SwiftDataCalendarEventEntity>(
+                predicate: #Predicate { $0.unifiedEntryID == unifiedEntryID },
+                sortBy: [SortDescriptor(\.createdAt)]
+            )
+            return try context.fetch(descriptor)
+                .map(SwiftDataEventMapper.makeDomainModel)
+        } catch {
+            SwiftDataRepositoryLogger.log("fetch unified entry", error: error)
+            throw error
+        }
+    }
+
+    func workRecordEvents(workSessionID: UUID) async throws -> [CalendarEvent] {
+        do {
+            let context = ModelContext(modelContext.container)
+            let descriptor = FetchDescriptor<SwiftDataCalendarEventEntity>(
+                predicate: #Predicate { $0.workSessionID == workSessionID },
+                sortBy: [SortDescriptor(\.createdAt)]
+            )
+            return try context.fetch(descriptor)
+                .map(SwiftDataEventMapper.makeDomainModel)
+        } catch {
+            SwiftDataRepositoryLogger.log("fetch work session", error: error)
+            throw error
+        }
+    }
+
     func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
         do {
             let descriptor = FetchDescriptor<SwiftDataCalendarEventEntity>(

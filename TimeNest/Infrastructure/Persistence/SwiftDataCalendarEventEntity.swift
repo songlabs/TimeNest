@@ -4,6 +4,8 @@ import SwiftData
 @Model
 final class SwiftDataCalendarEventEntity {
     @Attribute(.unique) var id: UUID
+    /// Optional stable identity shared by an event and its associated work-record pair.
+    var unifiedEntryID: UUID?
     /// Optional only at the persistence boundary so pre-v2 rows can migrate without data loss.
     var calendarID: UUID?
     var title: String

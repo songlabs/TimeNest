@@ -737,7 +737,7 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(descriptor.ownerDisplayName)
     }
 
-    func testProjectKeepsMarketingVersionOnePointEightAndBuildFourteen() throws {
+    func testProjectKeepsMarketingVersionOnePointNineAndBuildFifteen() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -747,8 +747,8 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(project.contains("let marketingVersion = \"1.8\""))
-        XCTAssertTrue(project.contains("let buildNumber = \"14\""))
+        XCTAssertTrue(project.contains("let marketingVersion = \"1.9\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"15\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {
@@ -3173,6 +3173,218 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertTrue(stored.isEmpty)
     }
 
+    func testUnifiedEventAndWorkRecordCreateUsesOneAtomicBatch() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        let event = makeEvent(title: "Appointment", calendarID: owned.id)
+        let sessionID = UUID()
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+
+        let result = try await useCase.saveEventAndWorkRecordAtomically(
+            event: event,
+            existingEvent: nil,
+            workRecord: makeWorkPairRequest(
+                calendarID: owned.id,
+                sessionID: sessionID,
+                title: "Work"
+            )
+        )
+
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        let workClocks = stored.filter { $0.workInfo?.workSessionId == sessionID }
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        XCTAssertEqual(result, .noReminder)
+        XCTAssertEqual(stored.count, 3)
+        XCTAssertEqual(stored.first { $0.id == event.id }?.title, "Appointment")
+        XCTAssertEqual(workClocks.filter { $0.workClockKind == .clockIn }.count, 1)
+        XCTAssertEqual(workClocks.filter { $0.workClockKind == .clockOut }.count, 1)
+        XCTAssertEqual(applyBatchCallCount, 1)
+        XCTAssertEqual(callbackCount, 1)
+    }
+
+    func testUnifiedEventAndWorkRecordBatchFailureLeavesNeitherSideSaved() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        var callbackCount = 0
+        useCase.onEventsChanged = { callbackCount += 1 }
+        await repository.failNextWrite()
+
+        do {
+            _ = try await useCase.saveEventAndWorkRecordAtomically(
+                event: makeEvent(title: "Appointment", calendarID: owned.id),
+                existingEvent: nil,
+                workRecord: makeWorkPairRequest(
+                    calendarID: owned.id,
+                    sessionID: UUID()
+                )
+            )
+            XCTFail("The injected batch failure must reject the event and work record together")
+        } catch {}
+
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        XCTAssertTrue(stored.isEmpty)
+        XCTAssertEqual(applyBatchCallCount, 1)
+        XCTAssertEqual(callbackCount, 0)
+    }
+
+    func testEditingExistingEventCanAddWorkRecordInSameBatch() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        let original = makeEvent(title: "Original", calendarID: owned.id)
+        try await repository.create(original)
+        var updated = original
+        updated.title = "Updated"
+        updated.updatedAt = original.updatedAt.addingTimeInterval(60)
+        let sessionID = UUID()
+
+        _ = try await useCase.saveEventAndWorkRecordAtomically(
+            event: updated,
+            existingEvent: original,
+            workRecord: makeWorkPairRequest(
+                calendarID: owned.id,
+                sessionID: sessionID
+            )
+        )
+
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertEqual(stored.first { $0.id == original.id }?.title, "Updated")
+        XCTAssertEqual(
+            stored.filter { $0.workInfo?.workSessionId == sessionID }.count,
+            2
+        )
+    }
+
+    func testEditingExistingWorkRecordCanAddEventWithoutReplacingClockIDs() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            calendarRepository: ControlledCalendarRepository(
+                calendars: [.personal(name: "My Calendar"), owned]
+            )
+        )
+        let sessionID = UUID()
+        try await useCase.saveWorkRecordPair(
+            makeWorkPairRequest(calendarID: owned.id, sessionID: sessionID)
+        )
+        let originalClocks = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        let clockInID = try XCTUnwrap(
+            originalClocks.first { $0.workClockKind == .clockIn }?.id
+        )
+        let clockOutID = try XCTUnwrap(
+            originalClocks.first { $0.workClockKind == .clockOut }?.id
+        )
+        let event = makeEvent(title: "Added Event", calendarID: owned.id)
+
+        _ = try await useCase.saveEventAndWorkRecordAtomically(
+            event: event,
+            existingEvent: nil,
+            workRecord: makeWorkPairRequest(
+                calendarID: owned.id,
+                sessionID: sessionID,
+                clockInEventID: clockInID,
+                clockOutEventID: clockOutID,
+                title: "Updated Work"
+            )
+        )
+
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        let storedClockIDs = Set(
+            stored
+                .filter { $0.workInfo?.workSessionId == sessionID }
+                .map(\.id)
+        )
+        XCTAssertEqual(storedClockIDs, Set([clockInID, clockOutID]))
+        XCTAssertEqual(stored.first { $0.id == event.id }?.title, "Added Event")
+    }
+
+    func testDeletingEventDoesNotDeleteWorkRecord() async throws {
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(repository: repository)
+        let event = makeEvent(title: "Appointment")
+        let sessionID = UUID()
+        _ = try await useCase.saveEventAndWorkRecordAtomically(
+            event: event,
+            existingEvent: nil,
+            workRecord: makeWorkPairRequest(
+                calendarID: TimeNestCalendar.personalID,
+                sessionID: sessionID
+            )
+        )
+
+        try await useCase.deleteEvent(id: event.id)
+
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertNil(stored.first { $0.id == event.id })
+        XCTAssertEqual(
+            stored.filter { $0.workInfo?.workSessionId == sessionID }.count,
+            2
+        )
+    }
+
+    func testDeletingWorkRecordDoesNotDeleteEvent() async throws {
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(repository: repository)
+        let event = makeEvent(title: "Appointment")
+        let sessionID = UUID()
+        _ = try await useCase.saveEventAndWorkRecordAtomically(
+            event: event,
+            existingEvent: nil,
+            workRecord: makeWorkPairRequest(
+                calendarID: TimeNestCalendar.personalID,
+                sessionID: sessionID
+            )
+        )
+        let storedBeforeDelete = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        let workEvents = storedBeforeDelete.filter {
+            $0.workInfo?.workSessionId == sessionID
+        }
+
+        _ = try await useCase.deleteEventsBatch(expectedEvents: workEvents)
+
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertEqual(stored.first { $0.id == event.id }, event)
+        XCTAssertTrue(
+            stored.filter { $0.workInfo?.workSessionId == sessionID }.isEmpty
+        )
+    }
+
     private func makeWorkClockEvent(
         kind: WorkClockKind,
         calendarID: UUID,
@@ -3696,6 +3908,18 @@ private actor ControlledEventRepository: EventRepository {
 
     func event(id: UUID) -> CalendarEvent? {
         storage[id]
+    }
+
+    func events(unifiedEntryID: UUID) -> [CalendarEvent] {
+        storage.values.filter {
+            $0.unifiedEntryID == unifiedEntryID
+        }
+    }
+
+    func workRecordEvents(workSessionID: UUID) -> [CalendarEvent] {
+        storage.values.filter {
+            $0.workInfo?.workSessionId == workSessionID
+        }
     }
 
     func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) throws {

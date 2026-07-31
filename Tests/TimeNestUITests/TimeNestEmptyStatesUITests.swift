@@ -47,29 +47,41 @@ final class TimeNestEmptyStatesUITests: XCTestCase {
 
     func testWorkRecordEmptyStateLifecycle() {
         let app = launchApp(seedData: true)
-        openSeededDayWithoutWorkRecords(in: app)
+        openSeededEventOnlyDay(in: app)
 
         let emptyState = element(in: app, identifier: "workRecord.empty")
-        let emptyAction = app.buttons["workRecord.empty.create"]
-        scrollUntilHittable(emptyAction, in: app)
-        XCTAssertTrue(emptyState.exists)
+        XCTAssertFalse(emptyState.exists)
+        XCTAssertFalse(element(in: app, identifier: "workRecord.list").exists)
+        XCTAssertTrue(app.buttons["event.add"].waitForExistence(timeout: 5))
+        let eventEdit = app.buttons["event.edit"].firstMatch
+        XCTAssertTrue(eventEdit.waitForExistence(timeout: 5))
+        eventEdit.tap()
 
-        emptyAction.tap()
-        XCTAssertTrue(app.buttons["entry.editor.cancel"].waitForExistence(timeout: 5))
-        app.buttons["entry.editor.cancel"].tap()
-        XCTAssertTrue(emptyState.waitForExistence(timeout: 5))
-
-        scrollUntilHittable(emptyAction, in: app)
-        emptyAction.tap()
-        XCTAssertTrue(app.buttons["entry.editor.save"].waitForExistence(timeout: 5))
+        let workToggle = app.switches["entry.workRecord.toggle"].firstMatch
+        scrollUntilHittable(workToggle, in: app)
+        workToggle.tap()
         app.buttons["entry.editor.save"].tap()
 
-        XCTAssertTrue(waitForDisappearance(emptyState, timeout: 8))
+        XCTAssertTrue(
+            element(in: app, identifier: "event.linkedWorkRecord")
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertFalse(emptyState.exists)
+        XCTAssertFalse(element(in: app, identifier: "workRecord.list").exists)
+        XCTAssertTrue(app.buttons["event.add"].exists)
         let delete = app.buttons["workRecord.delete"].firstMatch
         scrollUntilHittable(delete, in: app)
         delete.tap()
 
-        XCTAssertTrue(emptyState.waitForExistence(timeout: 8))
+        XCTAssertTrue(
+            element(in: app, identifier: "event.primaryContent")
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertFalse(
+            element(in: app, identifier: "event.linkedWorkRecord").exists
+        )
+        XCTAssertFalse(emptyState.exists)
+        XCTAssertTrue(app.buttons["event.add"].exists)
     }
 
     func testSharingEmptyStateActionAndStatePriority() {
@@ -142,8 +154,8 @@ final class TimeNestEmptyStatesUITests: XCTestCase {
             seedData: true,
             contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL"
         )
-        openSeededDayWithoutWorkRecords(in: app)
-        action = app.buttons["workRecord.empty.create"]
+        openSeededEventOnlyDay(in: app)
+        action = app.buttons["event.edit"].firstMatch
         scrollUntilHittable(action, in: app)
         action.tap()
         XCTAssertTrue(app.buttons["entry.editor.cancel"].waitForExistence(timeout: 5))
@@ -199,10 +211,16 @@ final class TimeNestEmptyStatesUITests: XCTestCase {
         let row = element(in: app, identifier: "settings.shiftTemplates")
         scrollUntilHittable(row, in: app)
         row.tap()
-        XCTAssertTrue(element(in: app, identifier: "shiftTemplate.list").waitForExistence(timeout: 8))
+        let list = element(in: app, identifier: "shiftTemplate.list")
+        if !list.waitForExistence(timeout: 4) {
+            let button = app.buttons["settings.shiftTemplates"].firstMatch
+            scrollUntilHittable(button, in: app)
+            button.tap()
+        }
+        XCTAssertTrue(list.waitForExistence(timeout: 8))
     }
 
-    private func openSeededDayWithoutWorkRecords(in app: XCUIApplication) {
+    private func openSeededEventOnlyDay(in app: XCUIApplication) {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = .current
         let now = Date()
@@ -277,14 +295,4 @@ final class TimeNestEmptyStatesUITests: XCTestCase {
         return app
     }
 
-    private func waitForDisappearance(
-        _ element: XCUIElement,
-        timeout: TimeInterval
-    ) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == false"),
-            object: element
-        )
-        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
-    }
 }

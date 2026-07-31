@@ -413,11 +413,13 @@ enum CalendarTimelineEventMetrics {
     private static let calendar = Calendar(identifier: .gregorian)
 
     static func allDayEvents(in events: [EventOccurrence]) -> [EventOccurrence] {
-        events.filter(\.isAllDay).sorted { $0.title < $1.title }
+        LinkedEntryDisplayAssembler.collapsedOccurrences(from: events)
+            .filter(\.isAllDay)
+            .sorted { $0.title < $1.title }
     }
 
     static func timedEvents(in events: [EventOccurrence]) -> [EventOccurrence] {
-        events
+        LinkedEntryDisplayAssembler.collapsedOccurrences(from: events)
             .filter { event in
                 !event.isAllDay && (!event.isClockOutEvent || event.isWorkOutTimeSet)
             }
@@ -425,7 +427,8 @@ enum CalendarTimelineEventMetrics {
     }
 
     static func allDayEventCount(in events: [EventOccurrence]) -> Int {
-        events.reduce(into: 0) { count, event in
+        LinkedEntryDisplayAssembler.collapsedOccurrences(from: events)
+            .reduce(into: 0) { count, event in
             if event.isAllDay {
                 count += 1
             }

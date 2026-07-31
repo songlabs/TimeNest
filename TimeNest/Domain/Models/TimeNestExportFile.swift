@@ -11,6 +11,7 @@ struct TimeNestExportFile: Codable {
 /// .timenest 导出文件中的单个事件
 struct TimeNestExportEvent: Codable {
     let id: UUID
+    let unifiedEntryID: UUID?
     let title: String
     let note: String?
     let startDate: Date
@@ -25,6 +26,7 @@ struct TimeNestExportEvent: Codable {
 
     private enum CodingKeys: String, CodingKey {
         case id
+        case unifiedEntryID
         case title
         case note
         case startDate
@@ -40,6 +42,7 @@ struct TimeNestExportEvent: Codable {
 
     init(
         id: UUID,
+        unifiedEntryID: UUID? = nil,
         title: String,
         note: String?,
         startDate: Date,
@@ -53,6 +56,7 @@ struct TimeNestExportEvent: Codable {
         workInfo: WorkInfo? = nil
     ) {
         self.id = id
+        self.unifiedEntryID = unifiedEntryID
         self.title = title
         self.note = note
         self.startDate = startDate
@@ -69,6 +73,10 @@ struct TimeNestExportEvent: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
+        unifiedEntryID = try container.decodeIfPresent(
+            UUID.self,
+            forKey: .unifiedEntryID
+        )
         title = try container.decode(String.self, forKey: .title)
         note = try container.decodeIfPresent(String.self, forKey: .note)
         startDate = try container.decode(Date.self, forKey: .startDate)
@@ -92,6 +100,7 @@ extension TimeNestExportEvent {
     init(from event: CalendarEvent) {
         self.init(
             id: event.id,
+            unifiedEntryID: event.unifiedEntryID,
             title: event.title,
             note: event.note,
             startDate: event.startDate,
@@ -110,6 +119,7 @@ extension TimeNestExportEvent {
     func toCalendarEvent() -> CalendarEvent {
         CalendarEvent(
             id: id,
+            unifiedEntryID: unifiedEntryID,
             title: title,
             note: note,
             startDate: startDate,

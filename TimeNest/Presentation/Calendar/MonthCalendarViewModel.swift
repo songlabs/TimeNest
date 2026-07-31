@@ -319,7 +319,18 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     @discardableResult
-    func createEvent(title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo?, calendarID: UUID) async throws -> EventNotificationScheduleResult {
+    func createEvent(
+        title: String,
+        note: String?,
+        startDate: Date,
+        endDate: Date,
+        isAllDay: Bool,
+        reminderOffsetMinutes: Int?,
+        shiftTemplateID: ShiftTimeTemplateID?,
+        workInfo: WorkInfo?,
+        calendarID: UUID,
+        unifiedEntryID: UUID? = nil
+    ) async throws -> EventNotificationScheduleResult {
         try calendarSharingStore.ensureCanWrite(calendarID: calendarID)
         let adjustedWorkInfo = try await adjustedWorkInfoForSave(
             title: title,
@@ -332,6 +343,7 @@ class MonthCalendarViewModel: ObservableObject {
 
         let event = CalendarEvent(
             id: UUID(),
+            unifiedEntryID: unifiedEntryID,
             calendarID: calendarID,
             title: title,
             note: note,
@@ -440,6 +452,7 @@ class MonthCalendarViewModel: ObservableObject {
                 // 已有班次：覆盖旧班次
                 let updatedEvent = CalendarEvent(
                     id: existingEvent.id,
+                    unifiedEntryID: existingEvent.unifiedEntryID,
                     calendarID: existingEvent.calendarID,
                     title: template.displayName,
                     note: existingEvent.note,
@@ -582,6 +595,7 @@ class MonthCalendarViewModel: ObservableObject {
         let now = Date()
         let updatedEvent = CalendarEvent(
             id: existingEvent.id,
+            unifiedEntryID: event.unifiedEntryID ?? existingEvent.unifiedEntryID,
             calendarID: existingEvent.calendarID,
             title: event.title,
             note: event.note,
@@ -622,6 +636,7 @@ class MonthCalendarViewModel: ObservableObject {
 
             let syncedEvent = CalendarEvent(
                 id: event.id,
+                unifiedEntryID: event.unifiedEntryID,
                 calendarID: event.calendarID,
                 title: event.title,
                 note: event.note,
@@ -743,6 +758,159 @@ class MonthCalendarViewModel: ObservableObject {
         }
     }
 
+    func loadUnifiedEntry(
+        _ request: UnifiedEntryLoadRequest
+    ) async throws -> UnifiedEntryEditorInitialState {
+        guard calendarSharingStore.accessPolicy.canEdit else {
+            throw CalendarSharingError.permissionDenied
+        }
+        do {
+            let group = try await eventUseCase.unifiedEntryGroup(for: request)
+            return UnifiedEntryEditorInitialState(
+                group: group,
+                initialEntryKind: request.initialEntryKind
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+
+    @discardableResult
+    func saveUnifiedEntry(
+        _ request: UnifiedEntrySaveRequest
+    ) async throws -> EventNotificationScheduleResult? {
+        guard request.hasEnabledEntry else {
+            throw UnifiedEntrySaveError.noEnabledEntry
+        }
+
+        do {
+            let resolution = try await eventUseCase.resolveUnifiedEntrySave(request)
+            let resolvedWorkRecord = request.workRecord?.resolvingExistingWorkRecord(
+                resolution.existingWorkRecord,
+                unifiedEntryID: resolution.unifiedEntryID
+            )
+
+            switch (request.event, resolvedWorkRecord) {
+            case (.some(let event), nil):
+                if let existingEvent = resolution.existingEvent {
+                    return try await updateEvent(
+                        id: existingEvent.id,
+                        title: event.title,
+                        note: event.note,
+                        startDate: event.startDate,
+                        endDate: event.endDate,
+                        isAllDay: event.isAllDay,
+                        reminderOffsetMinutes: event.reminderOffsetMinutes,
+                        shiftTemplateID: event.shiftTemplateID,
+                        workInfo: event.workInfo,
+                        calendarID: event.calendarID,
+                        unifiedEntryID: resolution.unifiedEntryID
+                    )
+                }
+                return try await createEvent(
+                    title: event.title,
+                    note: event.note,
+                    startDate: event.startDate,
+                    endDate: event.endDate,
+                    isAllDay: event.isAllDay,
+                    reminderOffsetMinutes: event.reminderOffsetMinutes,
+                    shiftTemplateID: event.shiftTemplateID,
+                    workInfo: event.workInfo,
+                    calendarID: event.calendarID,
+                    unifiedEntryID: resolution.unifiedEntryID
+                )
+            case (nil, .some(let workRecord)):
+                try await saveWorkRecordPair(workRecord)
+                return nil
+            case (.some(let event), .some(let workRecord)):
+                return try await saveEventAndWorkRecordAtomically(
+                    eventRequest: event,
+                    workRecordRequest: workRecord,
+                    resolution: resolution
+                )
+            case (nil, nil):
+                throw UnifiedEntrySaveError.noEnabledEntry
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+
+    private func saveEventAndWorkRecordAtomically(
+        eventRequest: EventEntrySaveRequest,
+        workRecordRequest: WorkRecordPairSaveRequest,
+        resolution: UnifiedEntrySaveResolution
+    ) async throws -> EventNotificationScheduleResult {
+        try calendarSharingStore.ensureCanWrite(calendarID: eventRequest.calendarID)
+        try calendarSharingStore.ensureCanWrite(calendarID: workRecordRequest.calendarID)
+
+        do {
+            let adjustedWorkInfo = try await adjustedWorkInfoForSave(
+                title: eventRequest.title,
+                startDate: eventRequest.startDate,
+                workInfo: eventRequest.workInfo,
+                calendarID: eventRequest.calendarID
+            )
+            let saveDates = eventDatesForSave(
+                title: eventRequest.title,
+                startDate: eventRequest.startDate,
+                endDate: eventRequest.endDate,
+                isAllDay: eventRequest.isAllDay,
+                workInfo: adjustedWorkInfo
+            )
+            let existingEvent = resolution.existingEvent
+            let now = Date()
+            let finalShiftTemplateID = eventRequest.shiftTemplateID
+                ?? existingEvent?.shiftTemplateID
+            let shiftEventToReplace: CalendarEvent?
+            if eventRequest.shiftTemplateID != nil {
+                let existingShift = try await existingAnyShiftEvent(
+                    on: saveDates.start,
+                    calendarID: eventRequest.calendarID
+                )
+                shiftEventToReplace = existingShift?.id != existingEvent?.id
+                    ? existingShift
+                    : nil
+            } else {
+                shiftEventToReplace = nil
+            }
+            let event = CalendarEvent(
+                id: existingEvent?.id ?? UUID(),
+                unifiedEntryID: resolution.unifiedEntryID,
+                calendarID: eventRequest.calendarID,
+                title: eventRequest.title,
+                note: eventRequest.note,
+                startDate: saveDates.start,
+                endDate: saveDates.end,
+                isAllDay: eventRequest.isAllDay,
+                categoryID: existingEvent?.categoryID,
+                recurrenceRule: existingEvent?.recurrenceRule ?? .none,
+                reminderTemplateID: existingEvent?.reminderTemplateID,
+                reminderOffsetMinutes: eventRequest.reminderOffsetMinutes,
+                notificationID: existingEvent?.notificationID,
+                importSource: existingEvent?.importSource,
+                createdAt: existingEvent?.createdAt ?? now,
+                updatedAt: now,
+                shiftTemplateID: finalShiftTemplateID,
+                workInfo: adjustedWorkInfo
+            )
+
+            let notificationResult = try await eventUseCase.saveEventAndWorkRecordAtomically(
+                event: event,
+                existingEvent: existingEvent,
+                workRecord: workRecordRequest,
+                deleting: [shiftEventToReplace].compactMap { $0 }
+            )
+            await reloadMonth()
+            return notificationResult
+        } catch {
+            errorMessage = error.localizedDescription
+            throw error
+        }
+    }
+
     func deleteWorkRecord(eventIDs: [UUID]) async {
         do {
             var events: [CalendarEvent] = []
@@ -760,7 +928,19 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     @discardableResult
-    func updateEvent(id: UUID, title: String, note: String?, startDate: Date, endDate: Date, isAllDay: Bool, reminderOffsetMinutes: Int?, shiftTemplateID: ShiftTimeTemplateID?, workInfo: WorkInfo?, calendarID: UUID) async throws -> EventNotificationScheduleResult {
+    func updateEvent(
+        id: UUID,
+        title: String,
+        note: String?,
+        startDate: Date,
+        endDate: Date,
+        isAllDay: Bool,
+        reminderOffsetMinutes: Int?,
+        shiftTemplateID: ShiftTimeTemplateID?,
+        workInfo: WorkInfo?,
+        calendarID: UUID,
+        unifiedEntryID: UUID? = nil
+    ) async throws -> EventNotificationScheduleResult {
         try calendarSharingStore.ensureCanWrite(calendarID: calendarID)
         do {
             let adjustedWorkInfo = try await adjustedWorkInfoForSave(
@@ -789,6 +969,7 @@ class MonthCalendarViewModel: ObservableObject {
 
             let updatedEvent = CalendarEvent(
                 id: id,
+                unifiedEntryID: unifiedEntryID ?? existingEvent?.unifiedEntryID,
                 calendarID: calendarID,
                 title: title,
                 note: note,

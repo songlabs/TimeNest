@@ -19,6 +19,10 @@ enum TimeNestUITestSupport {
         arguments.contains("-seedDataManagementScenario")
     }
 
+    static var shouldSeedUnifiedEntryScenario: Bool {
+        arguments.contains("-seedUnifiedEntryScenario")
+    }
+
     static var preserveExportedTestFile: Bool {
         arguments.contains("-preserveExportedTestFile")
     }
@@ -224,6 +228,170 @@ enum TimeNestUITestSupport {
         try context.save()
     }
 
+    static func seedUnifiedEntryScenario(in container: ModelContainer) throws {
+        guard isEnabled, shouldSeedUnifiedEntryScenario else { return }
+        let context = ModelContext(container)
+        context.autosaveEnabled = false
+
+        for event in try context.fetch(FetchDescriptor<SwiftDataCalendarEventEntity>()) {
+            context.delete(event)
+        }
+        for reminder in try context.fetch(FetchDescriptor<SwiftDataReminderEntity>()) {
+            context.delete(reminder)
+        }
+        for calendar in try context.fetch(FetchDescriptor<SwiftDataCalendarEntity>()) {
+            context.delete(calendar)
+        }
+
+        let now = Date()
+        context.insert(
+            SwiftDataCalendarEntity(
+                id: TimeNestCalendar.personalID,
+                name: LocalizationManager.shared.localized(.calendarSharingMyCalendar),
+                kindRawValue: TimeNestCalendarKind.personal.rawValue,
+                createdAt: now,
+                updatedAt: now
+            )
+        )
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        let workDate = calendar.startOfDay(for: now)
+        let eventStart = calendar.date(
+            bySettingHour: 10,
+            minute: 0,
+            second: 0,
+            of: workDate
+        )!
+        let clockInDate = calendar.date(
+            bySettingHour: 22,
+            minute: 0,
+            second: 0,
+            of: workDate
+        )!
+        let nextWorkDate = calendar.date(
+            byAdding: .day,
+            value: 1,
+            to: workDate
+        )!
+        let clockOutDate = calendar.date(
+            bySettingHour: 6,
+            minute: 0,
+            second: 0,
+            of: nextWorkDate
+        )!
+        let unifiedEntryID = UUID(
+            uuidString: "60000000-0000-0000-0000-000000000001"
+        )!
+        let workSessionID = UUID(
+            uuidString: "70000000-0000-0000-0000-000000000001"
+        )!
+        let standaloneUnifiedEntryID = UUID(
+            uuidString: "60000000-0000-0000-0000-000000000002"
+        )!
+        let standaloneWorkSessionID = UUID(
+            uuidString: "70000000-0000-0000-0000-000000000002"
+        )!
+        let standaloneClockInDate = calendar.date(
+            bySettingHour: 9,
+            minute: 0,
+            second: 0,
+            of: nextWorkDate
+        )!
+        let standaloneClockOutDate = calendar.date(
+            bySettingHour: 17,
+            minute: 0,
+            second: 0,
+            of: nextWorkDate
+        )!
+        let seededEvents = [
+            event(
+                id: "61000000-0000-0000-0000-000000000001",
+                unifiedEntryID: unifiedEntryID,
+                calendarID: TimeNestCalendar.personalID,
+                title: "Linked UI Event",
+                note: "Linked UI note",
+                start: eventStart,
+                reminderOffsetMinutes: nil
+            ),
+            event(
+                id: "62000000-0000-0000-0000-000000000001",
+                unifiedEntryID: unifiedEntryID,
+                calendarID: TimeNestCalendar.personalID,
+                title: LocalizationManager.shared.localized(.editorWorkIn),
+                note: nil,
+                start: clockInDate,
+                reminderOffsetMinutes: nil,
+                workInfo: WorkInfo(
+                    workInTime: clockInDate,
+                    restHours: 1,
+                    workDate: workDate,
+                    transportFee: 500,
+                    hourlyRate: 2_000,
+                    workSessionId: workSessionID,
+                    isWorkOutTimeSet: true
+                )
+            ),
+            event(
+                id: "63000000-0000-0000-0000-000000000001",
+                unifiedEntryID: unifiedEntryID,
+                calendarID: TimeNestCalendar.personalID,
+                title: LocalizationManager.shared.localized(.editorWorkOut),
+                note: nil,
+                start: clockOutDate,
+                reminderOffsetMinutes: nil,
+                workInfo: WorkInfo(
+                    workOutTime: clockOutDate,
+                    restHours: 1,
+                    workDate: workDate,
+                    transportFee: 500,
+                    hourlyRate: 2_000,
+                    workSessionId: workSessionID,
+                    isWorkOutTimeSet: true
+                )
+            ),
+            event(
+                id: "64000000-0000-0000-0000-000000000001",
+                unifiedEntryID: standaloneUnifiedEntryID,
+                calendarID: TimeNestCalendar.personalID,
+                title: LocalizationManager.shared.localized(.editorWorkIn),
+                note: nil,
+                start: standaloneClockInDate,
+                reminderOffsetMinutes: nil,
+                workInfo: WorkInfo(
+                    workInTime: standaloneClockInDate,
+                    restHours: 1,
+                    workDate: nextWorkDate,
+                    transportFee: 500,
+                    hourlyRate: 2_000,
+                    workSessionId: standaloneWorkSessionID,
+                    isWorkOutTimeSet: true
+                )
+            ),
+            event(
+                id: "65000000-0000-0000-0000-000000000001",
+                unifiedEntryID: standaloneUnifiedEntryID,
+                calendarID: TimeNestCalendar.personalID,
+                title: LocalizationManager.shared.localized(.editorWorkOut),
+                note: nil,
+                start: standaloneClockOutDate,
+                reminderOffsetMinutes: nil,
+                workInfo: WorkInfo(
+                    workOutTime: standaloneClockOutDate,
+                    restHours: 1,
+                    workDate: nextWorkDate,
+                    transportFee: 500,
+                    hourlyRate: 2_000,
+                    workSessionId: standaloneWorkSessionID,
+                    isWorkOutTimeSet: true
+                )
+            )
+        ]
+        for event in seededEvents {
+            context.insert(SwiftDataEventMapper.makeEntity(from: event))
+        }
+        try context.save()
+    }
+
     static func makeCalendarSharingClient() -> any CalendarSharingClientProtocol {
         TimeNestUITestCalendarSharingClient(
             status: mockICloudStatus,
@@ -254,6 +422,7 @@ enum TimeNestUITestSupport {
 
     private static func event(
         id: String,
+        unifiedEntryID: UUID? = nil,
         calendarID: UUID,
         title: String,
         note: String?,
@@ -264,6 +433,7 @@ enum TimeNestUITestSupport {
     ) -> CalendarEvent {
         CalendarEvent(
             id: UUID(uuidString: id)!,
+            unifiedEntryID: unifiedEntryID,
             calendarID: calendarID,
             title: title,
             note: note,

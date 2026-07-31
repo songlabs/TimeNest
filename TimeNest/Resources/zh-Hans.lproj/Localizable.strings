@@ -141,8 +141,18 @@
 
 /* Event Editor */
 "entry.create.title" = "新建";
+"entry.edit.title" = "编辑记录";
 "entry.kind.event" = "日程";
 "entry.kind.work_record" = "工作记录";
+"entry.add.event" = "添加日程";
+"entry.add.work_record" = "添加工作记录";
+"entry.validation.enable_at_least_one" = "请至少启用日程或工作记录";
+"entry.save.failed_format" = "无法保存记录：%@";
+"entry.linked.invalid_group" = "关联记录的数据异常。";
+"entry.linked.duplicate_records" = "关联数据中存在重复记录。";
+"entry.linked.event_load_failed" = "无法加载关联的日程。";
+"entry.linked.work_record_load_failed" = "无法加载关联的工作记录。";
+"entry.linked.reopen" = "记录已发生变化，请重新打开后再试。";
 "editor.note" = "备注";
 "editor.title" = "标题";
 "editor.basic_info" = "基本信息";

@@ -99,6 +99,7 @@ struct TimeNestApp: App {
 #if DEBUG
         do {
             try TimeNestUITestSupport.seedDataManagementScenario(in: modelContainer)
+            try TimeNestUITestSupport.seedUnifiedEntryScenario(in: modelContainer)
         } catch {
             fatalError("Failed to seed UI test data: \(error)")
         }

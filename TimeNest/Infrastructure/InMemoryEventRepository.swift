@@ -63,6 +63,18 @@ actor InMemoryEventRepository: EventRepository {
         events[id]
     }
 
+    func events(unifiedEntryID: UUID) async throws -> [CalendarEvent] {
+        events.values
+            .filter { $0.unifiedEntryID == unifiedEntryID }
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+    }
+
+    func workRecordEvents(workSessionID: UUID) async throws -> [CalendarEvent] {
+        events.values
+            .filter { $0.workInfo?.workSessionId == workSessionID }
+            .sorted { $0.id.uuidString < $1.id.uuidString }
+    }
+
     func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
         let now = Date()
         for (id, var event) in events where event.calendarID == sourceCalendarID {

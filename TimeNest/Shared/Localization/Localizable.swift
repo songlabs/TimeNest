@@ -467,8 +467,18 @@ enum LocalizedString: String {
     // MARK: - Event Editor
 
     case entryCreateTitle = "entry.create.title"
+    case entryEditTitle = "entry.edit.title"
     case entryKindEvent = "entry.kind.event"
     case entryKindWorkRecord = "entry.kind.work_record"
+    case entryAddEvent = "entry.add.event"
+    case entryAddWorkRecord = "entry.add.work_record"
+    case entryEnableAtLeastOne = "entry.validation.enable_at_least_one"
+    case entrySaveFailedFormat = "entry.save.failed_format"
+    case entryLinkedInvalidGroup = "entry.linked.invalid_group"
+    case entryLinkedDuplicateRecords = "entry.linked.duplicate_records"
+    case entryLinkedEventLoadFailed = "entry.linked.event_load_failed"
+    case entryLinkedWorkRecordLoadFailed = "entry.linked.work_record_load_failed"
+    case entryLinkedReopen = "entry.linked.reopen"
     case editorTitle = "editor.title"
     case editorNote = "editor.note"
     case editorBasicInfo = "editor.basic_info"

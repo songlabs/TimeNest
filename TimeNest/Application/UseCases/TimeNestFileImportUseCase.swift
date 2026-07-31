@@ -56,11 +56,19 @@ class TimeNestFileImportUseCase {
 
         var importedCount = 0
         var skippedCount = 0
+        let unifiedEntryIDMap = Dictionary(
+            uniqueKeysWithValues: Set(events.compactMap(\.unifiedEntryID)).map {
+                ($0, UUID())
+            }
+        )
 
         for event in events {
             // 重新生成 ID 避免冲突
             let newEvent = CalendarEvent(
                 id: UUID(),
+                unifiedEntryID: event.unifiedEntryID.flatMap {
+                    unifiedEntryIDMap[$0]
+                },
                 title: event.title,
                 note: event.note,
                 startDate: event.startDate,

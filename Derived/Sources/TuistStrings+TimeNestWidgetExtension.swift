@@ -411,7 +411,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let basicInfo = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.basic_info")
     /// Cancel
     public static let cancel = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.cancel")
-    /// Yuan
+    /// JPY
     public static let currencyUnit = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.currencyUnit")
     /// Date
     public static let date = TimeNestWidgetExtensionStrings.tr("Localizable", "editor.date")
@@ -451,9 +451,21 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
 
   public enum Entry: Sendable {
   
+    public enum Add: Sendable {
+      /// Add Event
+      public static let event = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.add.event")
+      /// Add Work Record
+      public static let workRecord = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.add.work_record")
+    }
+
     public enum Create: Sendable {
       /// New Entry
       public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.create.title")
+    }
+
+    public enum Edit: Sendable {
+      /// Edit Entry
+      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.edit.title")
     }
 
     public enum Kind: Sendable {
@@ -461,6 +473,31 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       public static let event = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.kind.event")
       /// Work Record
       public static let workRecord = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.kind.work_record")
+    }
+
+    public enum Linked: Sendable {
+      /// The linked entry contains duplicate records.
+      public static let duplicateRecords = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.linked.duplicate_records")
+      /// The linked event couldn’t be loaded.
+      public static let eventLoadFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.linked.event_load_failed")
+      /// The linked entry data is invalid.
+      public static let invalidGroup = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.linked.invalid_group")
+      /// The entry changed. Reopen it and try again.
+      public static let reopen = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.linked.reopen")
+      /// The linked work record couldn’t be loaded.
+      public static let workRecordLoadFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.linked.work_record_load_failed")
+    }
+
+    public enum Save: Sendable {
+      /// Couldn’t save the entry: %@
+      public static func failedFormat(_ p1: Any) -> String {
+        return TimeNestWidgetExtensionStrings.tr("Localizable", "entry.save.failed_format",String(describing: p1))
+      }
+    }
+
+    public enum Validation: Sendable {
+      /// Enable an event or work record before saving.
+      public static let enableAtLeastOne = TimeNestWidgetExtensionStrings.tr("Localizable", "entry.validation.enable_at_least_one")
     }
   }
 
@@ -789,7 +826,7 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       }
 
       public enum Statistics: Sendable {
-        /// Work statistics use recorded clock-in and clock-out times, break time, hourly rate, and transport cost. The basic rules are: work time = clock-out - clock-in - break; pay = work time × hourly rate; total = pay + transport cost.
+        /// Work statistics use recorded clock-in and clock-out times, break time, hourly rate, and transport cost. All amounts are in Japanese yen (JPY). The basic rules are: work time = clock-out - clock-in - break; pay = work time × hourly rate; total = pay + transport cost.
         public static let answer = TimeNestWidgetExtensionStrings.tr("Localizable", "help.shifts.statistics.answer")
         /// How are work statistics calculated?
         public static let question = TimeNestWidgetExtensionStrings.tr("Localizable", "help.shifts.statistics.question")
@@ -879,6 +916,10 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
   }
 
   public enum HolidaySubscription: Sendable {
+    /// Last successful sync: %@
+    public static func lastSuccessfulSyncFormat(_ p1: Any) -> String {
+      return TimeNestWidgetExtensionStrings.tr("Localizable", "holiday_subscription.last_successful_sync_format",String(describing: p1))
+    }
     /// Subscribed Regions
     public static let listHeader = TimeNestWidgetExtensionStrings.tr("Localizable", "holiday_subscription.list_header")
     /// Up to 2 subscriptions can be enabled
@@ -913,6 +954,10 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let syncSuccessTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "holiday_subscription.sync_success_title")
     /// Synced
     public static let synced = TimeNestWidgetExtensionStrings.tr("Localizable", "holiday_subscription.synced")
+    /// Syncing
+    public static let syncing = TimeNestWidgetExtensionStrings.tr("Localizable", "holiday_subscription.syncing")
+    /// Using last successful data
+    public static let usingCachedData = TimeNestWidgetExtensionStrings.tr("Localizable", "holiday_subscription.using_cached_data")
 
     public enum Error: Sendable {
       /// Download failed: %@
@@ -1412,6 +1457,10 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let endDateMonth = TimeNestWidgetExtensionStrings.tr("Localizable", "work_statistics.end_date_month")
     /// Loading...
     public static let loading = TimeNestWidgetExtensionStrings.tr("Localizable", "work_statistics.loading")
+    /// Received shared calendars do not include hourly rates or transport costs, so TimeNest cannot calculate reliable work statistics. Switch to My Calendar or an owned shared calendar.
+    public static let receivedUnavailableMessage = TimeNestWidgetExtensionStrings.tr("Localizable", "work_statistics.received_unavailable_message")
+    /// Work Statistics Unavailable
+    public static let receivedUnavailableTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "work_statistics.received_unavailable_title")
     /// Start Date
     public static let startDateMonth = TimeNestWidgetExtensionStrings.tr("Localizable", "work_statistics.start_date_month")
     /// Work Statistics

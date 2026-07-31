@@ -409,9 +409,10 @@ private struct AppStoreScreenshotDayDetailView: View {
             cell: AppStoreScreenshotSampleData.dayCell(),
             onDeleteEvent: { _ in },
             onDeleteWorkRecord: { _ in },
-            onCreateEvent: { _, _, _, _, _, _, _, _, _ in .noReminder },
-            onUpdateEvent: { _, _, _, _, _, _, _, _, _, _ in .noReminder },
-            onSaveWorkRecordPair: { _ in }
+            onLoadEntry: { request in
+                AppStoreScreenshotSampleData.unifiedEditorState(for: request)
+            },
+            onSaveEntry: { _ in nil }
         )
         .environmentObject(localization)
     }
@@ -423,17 +424,15 @@ private struct AppStoreScreenshotEventEditorView: View {
     var body: some View {
         EventEditorView(
             isPresented: $isPresented,
-            mode: .edit(
-                eventID: AppStoreScreenshotSampleData.teamMeetingID,
-                initialTitle: "チームMTG",
-                initialNote: "週次の予定確認とメモ",
-                initialStartDate: AppStoreScreenshotSampleData.date(year: 2026, month: 7, day: 7, hour: 10, minute: 0),
-                initialEndDate: AppStoreScreenshotSampleData.date(year: 2026, month: 7, day: 7, hour: 11, minute: 0),
-                initialIsAllDay: false,
-                initialReminderOffsetMinutes: 10
+            mode: .editUnified(
+                AppStoreScreenshotSampleData.unifiedEditorState(
+                    for: .event(
+                        eventID: AppStoreScreenshotSampleData.teamMeetingID
+                    )
+                )
             ),
             existingEvents: AppStoreScreenshotSampleData.dayCell().events,
-            onSave: { _, _, _, _, _, _, _, _, _ in .noReminder }
+            onSaveEntry: { _ in .noReminder }
         )
     }
 }
@@ -442,11 +441,20 @@ private struct AppStoreScreenshotWorkRecordEditorView: View {
     @State private var isPresented = true
 
     var body: some View {
-        WorkRecordEditorView(
+        EventEditorView(
             isPresented: $isPresented,
-            mode: .edit(AppStoreScreenshotSampleData.workRecordInitialSession),
+            mode: .editUnified(
+                AppStoreScreenshotSampleData.unifiedEditorState(
+                    for: .workRecord(
+                        clockInEventID: AppStoreScreenshotSampleData.workRecordInitialSession.clockInEventID,
+                        clockOutEventID: AppStoreScreenshotSampleData.workRecordInitialSession.clockOutEventID,
+                        workSessionID: AppStoreScreenshotSampleData.workRecordInitialSession.workSessionId
+                    )
+                )
+            ),
             existingEvents: AppStoreScreenshotSampleData.dayCell().events,
-            onSavePair: { _ in }
+            initialEntryKind: .workRecord,
+            onSaveEntry: { _ in nil }
         )
     }
 }
@@ -639,6 +647,9 @@ private enum AppStoreScreenshotSampleData {
     static let selectedDate = date(year: 2026, month: 7, day: 7, hour: 9, minute: 0)
     static let selectedDateOnly = DateOnly(year: 2026, month: 7, day: 7)
     static let teamMeetingID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+    private static let unifiedEntryID = UUID(
+        uuidString: "12121212-3434-5656-7878-909090909090"
+    )!
     private static let workSessionID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
     private static let clockInID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
     private static let clockOutID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
@@ -657,6 +668,50 @@ private enum AppStoreScreenshotSampleData {
             workSessionId: workSessionID,
             isWorkOutTimeSet: true,
             calendarID: TimeNestCalendar.personalID
+        )
+    }
+
+    static func unifiedEditorState(
+        for request: UnifiedEntryLoadRequest
+    ) -> UnifiedEntryEditorInitialState {
+        let anchor: CalendarEvent?
+        switch request {
+        case .event(let eventID):
+            anchor = sampleEvents.first { $0.id == eventID }
+        case .workRecord(let clockInEventID, let clockOutEventID, let workSessionID):
+            anchor = sampleEvents.first {
+                $0.id == clockInEventID
+                    || $0.id == clockOutEventID
+                    || $0.workInfo?.workSessionId == workSessionID
+            }
+        }
+        guard let anchor else {
+            return UnifiedEntryEditorInitialState(
+                unifiedEntryID: nil,
+                event: nil,
+                workRecord: nil
+            )
+        }
+        let groupEvents: [CalendarEvent]
+        if let unifiedEntryID = anchor.unifiedEntryID {
+            groupEvents = sampleEvents.filter {
+                $0.unifiedEntryID == unifiedEntryID
+            }
+        } else if anchor.workClockKind != nil,
+                  let sessionID = anchor.workInfo?.workSessionId {
+            groupEvents = sampleEvents.filter {
+                $0.workInfo?.workSessionId == sessionID
+            }
+        } else {
+            groupEvents = [anchor]
+        }
+        let group = try! UnifiedEntryGroupAssembler.assemble(
+            unifiedEntryID: anchor.unifiedEntryID,
+            events: groupEvents
+        )
+        return UnifiedEntryEditorInitialState(
+            group: group,
+            initialEntryKind: request.initialEntryKind
         )
     }
 
@@ -777,6 +832,7 @@ private enum AppStoreScreenshotSampleData {
         return EventOccurrence(
             id: "\(event.id)-\(dateOnly.id)",
             eventID: event.id,
+            unifiedEntryID: event.unifiedEntryID,
             occurrenceDate: dateOnly,
             startDate: event.startDate,
             endDate: event.endDate,
@@ -809,6 +865,7 @@ private enum AppStoreScreenshotSampleData {
             ),
             event(
                 id: teamMeetingID,
+                unifiedEntryID: unifiedEntryID,
                 title: "チームMTG",
                 note: "週次の予定確認とメモ",
                 start: date(year: 2026, month: 7, day: 7, hour: 10, minute: 0),
@@ -877,6 +934,7 @@ private enum AppStoreScreenshotSampleData {
 
     private static func event(
         id: UUID,
+        unifiedEntryID: UUID? = nil,
         title: String,
         note: String?,
         start: Date,
@@ -886,6 +944,7 @@ private enum AppStoreScreenshotSampleData {
     ) -> CalendarEvent {
         CalendarEvent(
             id: id,
+            unifiedEntryID: unifiedEntryID,
             title: title,
             note: note,
             startDate: start,
@@ -936,6 +995,7 @@ private enum AppStoreScreenshotSampleData {
 
         return CalendarEvent(
             id: id,
+            unifiedEntryID: unifiedEntryID,
             title: title,
             note: nil,
             startDate: clockDate,

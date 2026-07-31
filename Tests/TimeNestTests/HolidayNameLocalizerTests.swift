@@ -2491,6 +2491,18 @@ private actor FailingMutationEventRepository: EventRepository {
         storedEvents[id]
     }
 
+    func events(unifiedEntryID: UUID) async throws -> [CalendarEvent] {
+        storedEvents.values.filter {
+            $0.unifiedEntryID == unifiedEntryID
+        }
+    }
+
+    func workRecordEvents(workSessionID: UUID) async throws -> [CalendarEvent] {
+        storedEvents.values.filter {
+            $0.workInfo?.workSessionId == workSessionID
+        }
+    }
+
     func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {
         for (id, var event) in storedEvents where event.calendarID == sourceCalendarID {
             event.calendarID = targetCalendarID

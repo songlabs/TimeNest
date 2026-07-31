@@ -141,8 +141,18 @@
 
 /* Event Editor */
 "entry.create.title" = "New Entry";
+"entry.edit.title" = "Edit Entry";
 "entry.kind.event" = "Event";
 "entry.kind.work_record" = "Work Record";
+"entry.add.event" = "Add Event";
+"entry.add.work_record" = "Add Work Record";
+"entry.validation.enable_at_least_one" = "Enable an event or work record before saving.";
+"entry.save.failed_format" = "Couldn’t save the entry: %@";
+"entry.linked.invalid_group" = "The linked entry data is invalid.";
+"entry.linked.duplicate_records" = "The linked entry contains duplicate records.";
+"entry.linked.event_load_failed" = "The linked event couldn’t be loaded.";
+"entry.linked.work_record_load_failed" = "The linked work record couldn’t be loaded.";
+"entry.linked.reopen" = "The entry changed. Reopen it and try again.";
 "editor.note" = "Note";
 "editor.title" = "Title";
 "editor.basic_info" = "Basic Info";

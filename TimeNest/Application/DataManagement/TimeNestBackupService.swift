@@ -91,6 +91,7 @@ struct TimeNestBackupEvent: Codable, Equatable {
     }
 
     let id: UUID
+    let unifiedEntryID: UUID?
     let calendarID: UUID
     let title: String
     let note: String?
@@ -109,6 +110,7 @@ struct TimeNestBackupEvent: Codable, Equatable {
 
     init(event: CalendarEvent) {
         id = event.id
+        unifiedEntryID = event.unifiedEntryID
         calendarID = event.calendarID
         title = event.title
         note = event.note
@@ -157,6 +159,7 @@ struct TimeNestBackupEvent: Codable, Equatable {
     func restoredEvent(calendarID: UUID) -> CalendarEvent {
         CalendarEvent(
             id: id,
+            unifiedEntryID: unifiedEntryID,
             calendarID: calendarID,
             title: title,
             note: note,

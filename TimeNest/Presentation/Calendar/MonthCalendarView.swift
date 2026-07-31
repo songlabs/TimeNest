@@ -19,6 +19,8 @@ struct MonthCalendarView: View {
     @State private var showingCalendarSelection = false
     @State private var readOnlyDetail: ReadOnlyCalendarDetail?
     @State private var showingReadOnlyCreateAlert = false
+    @State private var editingUnifiedEntry: UnifiedEntryEditorInitialState?
+    @State private var entryLoadErrorMessage: String?
 
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
@@ -178,35 +180,11 @@ struct MonthCalendarView: View {
                             await viewModel.deleteWorkRecord(eventIDs: eventIDs)
                         }
                     },
-                    onCreateEvent: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
-                        try await viewModel.createEvent(
-                            title: title,
-                            note: note,
-                            startDate: startDate,
-                            endDate: endDate,
-                            isAllDay: isAllDay,
-                            reminderOffsetMinutes: reminderOffsetMinutes,
-                            shiftTemplateID: shiftTemplateID,
-                            workInfo: workInfo,
-                            calendarID: calendarID
-                        )
+                    onLoadEntry: { request in
+                        try await viewModel.loadUnifiedEntry(request)
                     },
-                    onUpdateEvent: { eventID, title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
-                        try await viewModel.updateEvent(
-                            id: eventID,
-                            title: title,
-                            note: note,
-                            startDate: startDate,
-                            endDate: endDate,
-                            isAllDay: isAllDay,
-                            reminderOffsetMinutes: reminderOffsetMinutes,
-                            shiftTemplateID: shiftTemplateID,
-                            workInfo: workInfo,
-                            calendarID: calendarID
-                        )
-                    },
-                    onSaveWorkRecordPair: { request in
-                        try await viewModel.saveWorkRecordPair(request)
+                    onSaveEntry: { request in
+                        try await viewModel.saveUnifiedEntry(request)
                     },
                     availableCalendars: calendarSharingStore.writableCalendars,
                     entryCalendarContext: .fixedWritableCalendar(
@@ -222,26 +200,28 @@ struct MonthCalendarView: View {
                 mode: .create(initialDate: initialDate),
                 existingEvents: viewModel.selectedDayCell?.events ?? [],
                 initialEntryKind: .event,
-                showsEntryKindPicker: true,
                 availableCalendars: calendarSharingStore.writableCalendars,
                 calendarContext: .fixedWritableCalendar(
                     calendarSharingStore.selection.calendarID
                 ),
-                onSaveWorkRecordPair: { request in
-                    try await viewModel.saveWorkRecordPair(request)
-                },
-                onSave: { title, note, startDate, endDate, isAllDay, reminderOffsetMinutes, shiftTemplateID, workInfo, calendarID in
-                    try await viewModel.createEvent(
-                        title: title,
-                        note: note,
-                        startDate: startDate,
-                        endDate: endDate,
-                        isAllDay: isAllDay,
-                        reminderOffsetMinutes: reminderOffsetMinutes,
-                        shiftTemplateID: shiftTemplateID,
-                        workInfo: workInfo,
-                        calendarID: calendarID
-                    )
+                onSaveEntry: { request in
+                    try await viewModel.saveUnifiedEntry(request)
+                }
+            )
+        }
+        .sheet(item: $editingUnifiedEntry) { state in
+            EventEditorView(
+                isPresented: unifiedEntryEditingPresentationBinding,
+                mode: .editUnified(state),
+                existingEvents: existingEvents(for: state),
+                availableCalendars: calendarSharingStore.writableCalendars,
+                calendarContext: .fixedWritableCalendar(
+                    state.event?.calendarID
+                        ?? state.workRecord?.calendarID
+                        ?? calendarSharingStore.selection.calendarID
+                ),
+                onSaveEntry: { request in
+                    try await viewModel.saveUnifiedEntry(request)
                 }
             )
         }
@@ -266,6 +246,19 @@ struct MonthCalendarView: View {
             }
         } message: {
             Text(localization.localized(.workStatisticsReceivedUnavailableMessage))
+        }
+        .alert(
+            localization.localized(.calendarSharingErrorTitle),
+            isPresented: Binding(
+                get: { entryLoadErrorMessage != nil },
+                set: { if !$0 { entryLoadErrorMessage = nil } }
+            )
+        ) {
+            Button(localization.localized(.ok)) {
+                entryLoadErrorMessage = nil
+            }
+        } message: {
+            Text(entryLoadErrorMessage ?? "")
         }
     }
 
@@ -664,7 +657,7 @@ struct MonthCalendarView: View {
                 onDateSelected: { date in
                     viewModel.selectDate(date)
                 },
-                onEventTapped: presentReadOnlyEventIfNeeded
+                onEventTapped: handleEventTap
             )
             .environmentObject(localization)
         }
@@ -679,7 +672,7 @@ struct MonthCalendarView: View {
             DayCalendarView(
                 selectedDate: viewModel.selectedDate,
                 cell: viewModel.dayCell,
-                onEventTapped: presentReadOnlyEventIfNeeded
+                onEventTapped: handleEventTap
             )
             .environmentObject(localization)
         }
@@ -710,6 +703,77 @@ struct MonthCalendarView: View {
         } else {
             readOnlyDetail = ReadOnlyCalendarDetail(date: cell.date.toDate(), events: cell.events)
         }
+    }
+
+    private func handleEventTap(_ event: EventOccurrence) {
+        if calendarSharingStore.accessPolicy.isReadOnly {
+            presentReadOnlyEventIfNeeded(event)
+            return
+        }
+
+        entryLoadErrorMessage = nil
+        let request: UnifiedEntryLoadRequest
+        if event.isWorkClockEvent {
+            request = workRecordLoadRequest(for: event)
+        } else {
+            request = .event(eventID: event.eventID)
+        }
+        Task {
+            do {
+                editingUnifiedEntry = try await viewModel.loadUnifiedEntry(request)
+            } catch {
+                entryLoadErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func workRecordLoadRequest(
+        for event: EventOccurrence
+    ) -> UnifiedEntryLoadRequest {
+        let dayEvents = viewModel.grid?.days
+            .first(where: { $0.date == event.occurrenceDate })?
+            .events ?? [event]
+        let session = WorkRecordDisplaySession.make(
+            from: dayEvents.filter(\.isWorkClockEvent),
+            selectedDate: event.occurrenceDate.toDate()
+        )
+        .first {
+            $0.clockIn?.eventID == event.eventID
+                || $0.clockOut?.eventID == event.eventID
+        }
+        return .workRecord(
+            clockInEventID: session?.clockIn?.eventID
+                ?? (event.isClockInEvent ? event.eventID : nil),
+            clockOutEventID: session?.clockOut?.eventID
+                ?? (event.isClockOutEvent ? event.eventID : nil),
+            workSessionID: event.workInfo?.workSessionId
+        )
+    }
+
+    private func existingEvents(
+        for state: UnifiedEntryEditorInitialState
+    ) -> [EventOccurrence] {
+        let eventIDs = Set(
+            [state.event?.id,
+             state.workRecord?.clockInEventID,
+             state.workRecord?.clockOutEventID]
+                .compactMap { $0 }
+        )
+        var seen = Set<String>()
+        return (viewModel.grid?.days.flatMap(\.events) ?? [])
+            .filter { eventIDs.contains($0.eventID) }
+            .filter { seen.insert($0.id).inserted }
+    }
+
+    private var unifiedEntryEditingPresentationBinding: Binding<Bool> {
+        Binding(
+            get: { editingUnifiedEntry != nil },
+            set: { isPresented in
+                if !isPresented {
+                    editingUnifiedEntry = nil
+                }
+            }
+        )
     }
 
     private func presentReadOnlyEventIfNeeded(_ event: EventOccurrence) {
@@ -1034,25 +1098,25 @@ struct DayCellView: View {
     }
 
     private var eventLabelRows: [EventLabelRow] {
-        var workClockEvents: [EventOccurrence] = []
         var shiftRows: [EventLabelRow] = []
+        var workRecordRows: [EventLabelRow] = []
         var normalRows: [EventLabelRow] = []
 
-        for event in cell.events {
-            if event.isWorkClockEvent {
-                workClockEvents.append(event)
-                continue
-            }
-            if event.shiftTemplateID != nil {
-                shiftRows.append(.event(event))
-            } else {
-                normalRows.append(.event(event))
+        let displayItems = LinkedEntryDisplayAssembler.make(
+            from: cell.events,
+            selectedDate: cell.date.toDate()
+        )
+        for item in displayItems {
+            if let event = item.event {
+                if event.shiftTemplateID != nil {
+                    shiftRows.append(.event(event))
+                } else {
+                    normalRows.append(.event(event))
+                }
+            } else if let workRecord = item.workRecord {
+                workRecordRows.append(.workRecord(workRecord))
             }
         }
-
-        let workRecordRows = WorkRecordDisplaySession
-            .make(from: workClockEvents, selectedDate: cell.date.toDate())
-            .map(EventLabelRow.workRecord)
 
         return shiftRows + workRecordRows + normalRows
     }

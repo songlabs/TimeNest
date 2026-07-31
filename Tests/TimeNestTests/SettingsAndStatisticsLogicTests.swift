@@ -453,6 +453,18 @@ private actor StatisticsEventRepositoryStub: EventRepository {
         mutationStorage[id]
     }
 
+    func events(unifiedEntryID: UUID) async throws -> [CalendarEvent] {
+        mutationStorage.values.filter {
+            $0.unifiedEntryID == unifiedEntryID
+        }
+    }
+
+    func workRecordEvents(workSessionID: UUID) async throws -> [CalendarEvent] {
+        mutationStorage.values.filter {
+            $0.workInfo?.workSessionId == workSessionID
+        }
+    }
+
     func reassignEvents(from sourceCalendarID: UUID, to targetCalendarID: UUID) async throws {}
 }
 

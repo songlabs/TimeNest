@@ -202,21 +202,335 @@ class EventUseCase {
         try await repository.event(id: id)
     }
 
+    func unifiedEntryGroup(
+        for request: UnifiedEntryLoadRequest
+    ) async throws -> UnifiedEntryGroup {
+        switch request {
+        case .event(let eventID):
+            guard let event = try await repository.event(id: eventID) else {
+                throw UnifiedEntryGroupError.linkedEventNotFound
+            }
+            guard let unifiedEntryID = event.unifiedEntryID else {
+                return try UnifiedEntryGroupAssembler.assemble(
+                    unifiedEntryID: nil,
+                    events: [event]
+                )
+            }
+            let group = try await unifiedEntryGroup(id: unifiedEntryID)
+            guard group.event?.id == event.id else {
+                throw UnifiedEntryGroupError.linkedEventNotFound
+            }
+            return group
+
+        case .workRecord(
+            let clockInEventID,
+            let clockOutEventID,
+            let workSessionID
+        ):
+            let workEvents = try await workRecordEvents(
+                clockInEventID: clockInEventID,
+                clockOutEventID: clockOutEventID,
+                workSessionID: workSessionID
+            )
+            guard !workEvents.isEmpty else {
+                throw UnifiedEntryGroupError.linkedWorkRecordNotFound
+            }
+            let workOnlyGroup = try UnifiedEntryGroupAssembler.assemble(
+                unifiedEntryID: nil,
+                events: workEvents
+            )
+            guard let workRecord = workOnlyGroup.workRecord else {
+                throw UnifiedEntryGroupError.linkedWorkRecordNotFound
+            }
+            guard let unifiedEntryID = workOnlyGroup.unifiedEntryID else {
+                return workOnlyGroup
+            }
+
+            let group = try await unifiedEntryGroup(id: unifiedEntryID)
+            guard let linkedWorkRecord = group.workRecord,
+                  Set(linkedWorkRecord.events.map(\.id))
+                    == Set(workRecord.events.map(\.id)) else {
+                throw UnifiedEntryGroupError.linkedWorkRecordNotFound
+            }
+            return group
+        }
+    }
+
+    func resolveUnifiedEntrySave(
+        _ request: UnifiedEntrySaveRequest
+    ) async throws -> UnifiedEntrySaveResolution {
+        guard request.hasEnabledEntry else {
+            throw UnifiedEntrySaveError.noEnabledEntry
+        }
+
+        let requestedEvent: CalendarEvent?
+        if let eventID = request.event?.eventID {
+            guard let event = try await repository.event(id: eventID) else {
+                throw UnifiedEntryGroupError.linkedEventNotFound
+            }
+            requestedEvent = event
+        } else {
+            requestedEvent = nil
+        }
+
+        let requestedWorkEvents: [CalendarEvent]
+        if let workRecord = request.workRecord,
+           workRecord.clockInEventID != nil || workRecord.clockOutEventID != nil {
+            requestedWorkEvents = try await workRecordEvents(
+                clockInEventID: workRecord.clockInEventID,
+                clockOutEventID: workRecord.clockOutEventID,
+                workSessionID: workRecord.sessionID
+            )
+        } else {
+            requestedWorkEvents = []
+        }
+        let requestedWorkRecord = try UnifiedEntryGroupAssembler.assembleWorkRecord(
+            from: requestedWorkEvents
+        )
+
+        let candidateIDs = Set(
+            [request.unifiedEntryID, requestedEvent?.unifiedEntryID]
+                .compactMap { $0 }
+                + requestedWorkEvents.compactMap(\.unifiedEntryID)
+        )
+        guard candidateIDs.count <= 1 else {
+            throw UnifiedEntryGroupError.mismatchedUnifiedEntryID
+        }
+
+        let unifiedEntryID: UUID
+        let currentGroup: UnifiedEntryGroup
+        if let persistedID = candidateIDs.first {
+            unifiedEntryID = persistedID
+            currentGroup = try await unifiedEntryGroup(id: persistedID)
+            guard !currentGroup.allEvents.isEmpty else {
+                throw UnifiedEntryGroupError.staleEditorState
+            }
+        } else {
+            unifiedEntryID = UUID()
+            currentGroup = try UnifiedEntryGroupAssembler.assemble(
+                unifiedEntryID: nil,
+                events: [requestedEvent].compactMap { $0 } + requestedWorkEvents
+            )
+        }
+
+        if let requestedEvent,
+           let groupedEvent = currentGroup.event,
+           groupedEvent.id != requestedEvent.id {
+            throw UnifiedEntryGroupError.staleEditorState
+        }
+        if let requestedWorkRecord,
+           let groupedWorkRecord = currentGroup.workRecord,
+           Set(groupedWorkRecord.events.map(\.id))
+                != Set(requestedWorkRecord.events.map(\.id)) {
+            throw UnifiedEntryGroupError.staleEditorState
+        }
+        if currentGroup.event != nil, request.event == nil {
+            throw UnifiedEntryGroupError.staleEditorState
+        }
+        if currentGroup.workRecord != nil, request.workRecord == nil {
+            throw UnifiedEntryGroupError.staleEditorState
+        }
+
+        let existingEvent = currentGroup.event ?? requestedEvent
+        let existingWorkRecord = currentGroup.workRecord ?? requestedWorkRecord
+        let requestedCalendarIDs = Set(
+            [request.event?.calendarID, request.workRecord?.calendarID]
+                .compactMap { $0 }
+        )
+        let persistedCalendarIDs = Set(
+            [existingEvent?.calendarID]
+                .compactMap { $0 }
+                + (existingWorkRecord?.events.map(\.calendarID) ?? [])
+        )
+        guard requestedCalendarIDs.count <= 1,
+              persistedCalendarIDs.count <= 1,
+              requestedCalendarIDs.isEmpty
+                || persistedCalendarIDs.isEmpty
+                || requestedCalendarIDs == persistedCalendarIDs else {
+            throw UnifiedEntryGroupError.calendarMismatch
+        }
+
+        return UnifiedEntrySaveResolution(
+            unifiedEntryID: unifiedEntryID,
+            existingEvent: existingEvent,
+            existingWorkRecord: existingWorkRecord
+        )
+    }
+
+    private func unifiedEntryGroup(id: UUID) async throws -> UnifiedEntryGroup {
+        let events = try await repository.events(unifiedEntryID: id)
+        return try UnifiedEntryGroupAssembler.assemble(
+            unifiedEntryID: id,
+            events: events
+        )
+    }
+
+    private func workRecordEvents(
+        clockInEventID: UUID?,
+        clockOutEventID: UUID?,
+        workSessionID: UUID?
+    ) async throws -> [CalendarEvent] {
+        if let clockInEventID,
+           clockInEventID == clockOutEventID {
+            throw WorkRecordPairSaveError.duplicateExplicitEventID
+        }
+
+        var eventsByID: [UUID: CalendarEvent] = [:]
+        if let workSessionID {
+            for event in try await repository.workRecordEvents(
+                workSessionID: workSessionID
+            ) {
+                eventsByID[event.id] = event
+            }
+        }
+        for id in [clockInEventID, clockOutEventID].compactMap({ $0 }) {
+            guard let event = try await repository.event(id: id) else {
+                throw UnifiedEntryGroupError.linkedWorkRecordNotFound
+            }
+            eventsByID[event.id] = event
+        }
+
+        let events = Array(eventsByID.values)
+        for event in events {
+            guard event.workInfo != nil, event.workClockKind != nil else {
+                throw UnifiedEntryGroupError.linkedWorkRecordNotFound
+            }
+        }
+        if let clockInEventID,
+           !events.contains(where: {
+               $0.id == clockInEventID && $0.workClockKind == .clockIn
+           }) {
+            throw UnifiedEntryGroupError.linkedWorkRecordNotFound
+        }
+        if let clockOutEventID,
+           !events.contains(where: {
+               $0.id == clockOutEventID && $0.workClockKind == .clockOut
+           }) {
+            throw UnifiedEntryGroupError.linkedWorkRecordNotFound
+        }
+        return events
+    }
+
     func saveWorkRecordPair(_ request: WorkRecordPairSaveRequest) async throws {
         try await validateWriteAccess(calendarID: request.calendarID)
+        let batch = try await prepareWorkRecordPair(request)
 
+        try await repository.applyBatch(
+            upserting: batch.upserting,
+            deleting: batch.deleting,
+            ifUnchanged: batch.expectedEvents
+        )
+        batch.expectedEvents.compactMap(\.notificationID).forEach {
+            notificationScheduler?.cancelNotification(id: $0)
+        }
+        onEventsChanged?()
+    }
+
+    @discardableResult
+    func saveEventAndWorkRecordAtomically(
+        event: CalendarEvent,
+        existingEvent: CalendarEvent?,
+        workRecord request: WorkRecordPairSaveRequest,
+        deleting additionalEvents: [CalendarEvent] = []
+    ) async throws -> EventNotificationScheduleResult {
+        try validate(event)
+        try await validateWriteAccess(calendarID: event.calendarID)
+        try await validateWriteAccess(calendarID: request.calendarID)
+        for eventToDelete in additionalEvents {
+            try await validateWriteAccess(calendarID: eventToDelete.calendarID)
+        }
+        if let existingEvent, existingEvent.id != event.id {
+            throw EventUseCaseError.eventNotFound
+        }
+
+        let workRecordBatch = try await prepareWorkRecordPair(request)
+        var eventToSave = event
+        let oldNotificationID = existingEvent?.notificationID
+        let notificationResult: EventNotificationScheduleResult
+
+        if existingEvent != nil, eventToSave.reminderOffsetMinutes == nil {
+            notificationResult = .noReminder
+            eventToSave.notificationID = nil
+        } else {
+            if existingEvent != nil {
+                eventToSave.notificationID = oldNotificationID
+            }
+            notificationResult = await scheduleNotification(for: eventToSave)
+            eventToSave.notificationID = notificationResult.notificationID
+        }
+
+        let expectedEvents = Dictionary(
+            (
+                workRecordBatch.expectedEvents
+                    + [existingEvent].compactMap { $0 }
+                    + additionalEvents
+            ).map { ($0.id, $0) },
+            uniquingKeysWith: { current, _ in current }
+        ).values.map { $0 }
+        let deletingEvents = Dictionary(
+            (workRecordBatch.deleting + additionalEvents).map { ($0.id, $0) },
+            uniquingKeysWith: { current, _ in current }
+        ).values.map { $0 }
+
+        do {
+            try await repository.applyBatch(
+                upserting: [eventToSave] + workRecordBatch.upserting,
+                deleting: deletingEvents,
+                ifUnchanged: expectedEvents
+            )
+        } catch {
+            if let newNotificationID = notificationResult.notificationID {
+                if newNotificationID != oldNotificationID {
+                    notificationScheduler?.cancelNotification(id: newNotificationID)
+                }
+                if let existingEvent, oldNotificationID != nil {
+                    let compensationResult = await scheduleNotification(for: existingEvent)
+                    guard case .scheduled = compensationResult else {
+                        EventUseCaseDiagnostics.notificationRestorationFailed(
+                            primaryError: error,
+                            compensationResult: compensationResult
+                        )
+                        throw EventNotificationCompensationError(
+                            primaryError: error,
+                            compensationResult: compensationResult
+                        )
+                    }
+                }
+            }
+            throw error
+        }
+
+        if let oldNotificationID, oldNotificationID != eventToSave.notificationID {
+            notificationScheduler?.cancelNotification(id: oldNotificationID)
+        }
+        let retainedNotificationID = eventToSave.notificationID
+        expectedEvents.compactMap(\.notificationID)
+            .filter { $0 != retainedNotificationID && $0 != oldNotificationID }
+            .forEach {
+                notificationScheduler?.cancelNotification(id: $0)
+            }
+        onEventsChanged?()
+        return notificationResult
+    }
+
+    private struct PreparedWorkRecordPairBatch {
+        let upserting: [CalendarEvent]
+        let deleting: [CalendarEvent]
+        let expectedEvents: [CalendarEvent]
+    }
+
+    private func prepareWorkRecordPair(
+        _ request: WorkRecordPairSaveRequest
+    ) async throws -> PreparedWorkRecordPairBatch {
         if let clockInEventID = request.clockInEventID,
            clockInEventID == request.clockOutEventID {
             throw WorkRecordPairSaveError.duplicateExplicitEventID
         }
 
-        var existingEvents = try await repository.events(
-            in: DateInterval(start: .distantPast, end: .distantFuture)
-        )
-        existingEvents = existingEvents.filter {
-            $0.calendarID == request.calendarID
-                && $0.workInfo?.workSessionId == request.sessionID
-                && $0.workClockKind != nil
+        var existingEvents = try await repository.workRecordEvents(
+            workSessionID: request.sessionID
+        ).filter {
+            $0.calendarID == request.calendarID && $0.workClockKind != nil
         }
 
         let explicitClockIn = try await validatedExplicitWorkClockEvent(
@@ -268,16 +582,11 @@ class EventUseCase {
             existingEvents.map { ($0.id, $0) },
             uniquingKeysWith: { current, _ in current }
         ).values.map { $0 }
-
-        try await repository.applyBatch(
+        return PreparedWorkRecordPairBatch(
             upserting: [clockIn, clockOut],
             deleting: duplicates,
-            ifUnchanged: expectedEvents
+            expectedEvents: expectedEvents
         )
-        expectedEvents.compactMap(\.notificationID).forEach {
-            notificationScheduler?.cancelNotification(id: $0)
-        }
-        onEventsChanged?()
     }
 
     private func validatedExplicitWorkClockEvent(
@@ -391,6 +700,7 @@ class EventUseCase {
         return EventOccurrence(
             id: "\(event.id)-\(dateOnly.id)",
             eventID: event.id,
+            unifiedEntryID: event.unifiedEntryID,
             calendarID: event.calendarID,
             occurrenceDate: dateOnly,
             startDate: event.startDate,
@@ -486,6 +796,7 @@ class EventUseCase {
         }
         return CalendarEvent(
             id: id,
+            unifiedEntryID: request.unifiedEntryID,
             calendarID: request.calendarID,
             title: request.title,
             note: nil,
