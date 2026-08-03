@@ -737,7 +737,7 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(descriptor.ownerDisplayName)
     }
 
-    func testProjectKeepsMarketingVersionOnePointNineAndBuildFifteen() throws {
+    func testProjectKeepsMarketingVersionOnePointNineOneAndBuildSixteen() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -747,8 +747,8 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(project.contains("let marketingVersion = \"1.9\""))
-        XCTAssertTrue(project.contains("let buildNumber = \"15\""))
+        XCTAssertTrue(project.contains("let marketingVersion = \"1.9.1\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"16\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {

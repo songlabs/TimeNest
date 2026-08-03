@@ -62,13 +62,6 @@ struct AppStoreScreenshotSharedMonthView: View {
             )
             .environmentObject(localization)
 
-            Text(AppStoreScreenshotSharedCalendarData.statusText)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 4)
-                .background(ShiftCalendarColors.primaryBlue.opacity(0.06))
-
             AppStoreScreenshotSharedMonthGridView(
                 cells: AppStoreScreenshotSharedCalendarData.monthCells,
                 selectedDate: AppStoreScreenshotSharedCalendarData.selectedDateOnly
@@ -199,18 +192,9 @@ private struct AppStoreScreenshotSharedGridLines: View {
 enum AppStoreScreenshotSharedCalendarData {
     static let calendarID = UUID(uuidString: "99999999-9999-9999-9999-999999999999")!
     static let calendarName = "家族の予定"
-    static let ownerDisplayName = "共有メンバー"
     static let selectedDateOnly = DateOnly(year: 2026, month: 7, day: 14)
     static let selectedDate = date(day: selectedDateOnly.day, hour: 9)
     static let detailDate = date(day: 14)
-
-    static var statusText: String {
-        String(
-            format: LocalizationManager.shared.localized(.calendarSharingStatusFormat),
-            locale: LocalizationManager.shared.currentLocale,
-            ownerDisplayName
-        )
-    }
 
     static var detailEvents: [EventOccurrence] {
         let range = DateInterval(start: detailDate, end: date(day: 15))
