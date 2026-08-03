@@ -58,6 +58,7 @@ struct MonthCalendarView: View {
                     title: currentTitle,
                     displayMode: viewModel.displayMode,
                     calendarAvatarInitial: calendarAvatarInitial,
+                    calendarSource: calendarSharingStore.selectedCalendar.kind,
                     calendarDisplayName: calendarSharingStore.selectedCalendarDisplayName,
                     isReadOnlyCalendar: calendarSharingStore.accessPolicy.isReadOnly,
                     onCalendarTapped: {
@@ -76,16 +77,6 @@ struct MonthCalendarView: View {
                     },
                     onSettingsTapped: openSettings
                 )
-
-                if let statusText = sharedCalendarStatusText {
-                    Text(statusText)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 4)
-                        .background(ShiftCalendarColors.primaryBlue.opacity(0.06))
-                        .accessibilityLabel(statusText)
-                }
 
                 calendarContent
                     .overlay {
@@ -686,14 +677,6 @@ struct MonthCalendarView: View {
             displayName: calendar.name,
             fallback: localization.localized(.calendarSharingUnknownCalendar)
         )
-    }
-
-    private var sharedCalendarStatusText: String? {
-        guard calendarSharingStore.selectedCalendar.kind == .sharedReceived else { return nil }
-        return [
-            localization.localized(.calendarSharingReadOnly),
-            localization.localized(.workStatisticsReceivedUnavailableMessage)
-        ].joined(separator: " · ")
     }
 
     private func presentReadOnlyDetailIfNeeded(for cell: CalendarDayCell) {

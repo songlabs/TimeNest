@@ -49,6 +49,7 @@ struct AppStoreScreenshotSharedMonthView: View {
                 ),
                 displayMode: .month,
                 calendarAvatarInitial: "共",
+                calendarSource: .sharedReceived,
                 calendarDisplayName: AppStoreScreenshotSharedCalendarData.calendarName,
                 isReadOnlyCalendar: true,
                 onCalendarTapped: {},

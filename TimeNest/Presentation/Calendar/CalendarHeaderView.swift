@@ -1,13 +1,20 @@
 import SwiftUI
 
+private struct CalendarSourceColors {
+    let background: Color
+    let foreground: Color
+}
+
 /// 日历 Header - 月/周/日共用同一套导航布局。
 /// 结构统一为：中间（左箭头 + 标题 + 右箭头）+ 右侧更多菜单。
 struct CalendarHeaderView: View {
     @EnvironmentObject private var localization: LocalizationManager
+    @Environment(\.colorScheme) private var colorScheme
 
     let title: String
     let displayMode: CalendarViewMode
     let calendarAvatarInitial: String?
+    let calendarSource: TimeNestCalendarKind
     let calendarDisplayName: String
     let isReadOnlyCalendar: Bool
     let onCalendarTapped: () -> Void
@@ -22,6 +29,7 @@ struct CalendarHeaderView: View {
         title: String,
         displayMode: CalendarViewMode,
         calendarAvatarInitial: String? = nil,
+        calendarSource: TimeNestCalendarKind = .personal,
         calendarDisplayName: String = "",
         isReadOnlyCalendar: Bool = false,
         onCalendarTapped: @escaping () -> Void = {},
@@ -35,6 +43,7 @@ struct CalendarHeaderView: View {
         self.title = title
         self.displayMode = displayMode
         self.calendarAvatarInitial = calendarAvatarInitial
+        self.calendarSource = calendarSource
         self.calendarDisplayName = calendarDisplayName
         self.isReadOnlyCalendar = isReadOnlyCalendar
         self.onCalendarTapped = onCalendarTapped
@@ -98,7 +107,12 @@ struct CalendarHeaderView: View {
     private var calendarSelectionButton: some View {
         Button(action: onCalendarTapped) {
             ZStack(alignment: .bottomTrailing) {
-                CalendarIdentityAvatarView(initial: calendarAvatarInitial, size: 36)
+                CalendarIdentityAvatarView(
+                    initial: calendarAvatarInitial,
+                    size: 36,
+                    backgroundColor: calendarSourceColors.background,
+                    foregroundColor: calendarSourceColors.foreground
+                )
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .bold))
@@ -142,6 +156,41 @@ struct CalendarHeaderView: View {
             return 0.85
         case .day:
             return 0.70
+        }
+    }
+
+    private var calendarSourceColors: CalendarSourceColors {
+        switch (calendarSource, colorScheme) {
+        case (.personal, .dark):
+            return CalendarSourceColors(
+                background: Color(red: 23.0 / 255.0, green: 58.0 / 255.0, blue: 94.0 / 255.0),
+                foreground: Color(red: 140.0 / 255.0, green: 200.0 / 255.0, blue: 255.0 / 255.0)
+            )
+        case (.personal, _):
+            return CalendarSourceColors(
+                background: Color(red: 220.0 / 255.0, green: 238.0 / 255.0, blue: 255.0 / 255.0),
+                foreground: Color(red: 47.0 / 255.0, green: 128.0 / 255.0, blue: 201.0 / 255.0)
+            )
+        case (.sharedOwned, .dark):
+            return CalendarSourceColors(
+                background: Color(red: 25.0 / 255.0, green: 69.0 / 255.0, blue: 47.0 / 255.0),
+                foreground: Color(red: 138.0 / 255.0, green: 214.0 / 255.0, blue: 168.0 / 255.0)
+            )
+        case (.sharedOwned, _):
+            return CalendarSourceColors(
+                background: Color(red: 223.0 / 255.0, green: 244.0 / 255.0, blue: 229.0 / 255.0),
+                foreground: Color(red: 46.0 / 255.0, green: 139.0 / 255.0, blue: 87.0 / 255.0)
+            )
+        case (.sharedReceived, .dark):
+            return CalendarSourceColors(
+                background: Color(red: 59.0 / 255.0, green: 40.0 / 255.0, blue: 88.0 / 255.0),
+                foreground: Color(red: 197.0 / 255.0, green: 163.0 / 255.0, blue: 255.0 / 255.0)
+            )
+        case (.sharedReceived, _):
+            return CalendarSourceColors(
+                background: Color(red: 242.0 / 255.0, green: 232.0 / 255.0, blue: 255.0 / 255.0),
+                foreground: Color(red: 122.0 / 255.0, green: 75.0 / 255.0, blue: 194.0 / 255.0)
+            )
         }
     }
 

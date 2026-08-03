@@ -4,18 +4,32 @@ import UIKit
 struct CalendarIdentityAvatarView: View {
     let initial: String?
     let size: CGFloat
+    let backgroundColor: Color
+    let foregroundColor: Color
+
+    init(
+        initial: String?,
+        size: CGFloat,
+        backgroundColor: Color = ShiftCalendarColors.primaryBlue.opacity(0.16),
+        foregroundColor: Color = ShiftCalendarColors.primaryBlue
+    ) {
+        self.initial = initial
+        self.size = size
+        self.backgroundColor = backgroundColor
+        self.foregroundColor = foregroundColor
+    }
 
     var body: some View {
         ZStack {
-            Circle().fill(ShiftCalendarColors.primaryBlue.opacity(0.16))
+            Circle().fill(backgroundColor)
             if let initial, !initial.isEmpty {
                 Text(initial)
                     .font(.system(size: size * 0.42, weight: .semibold))
-                    .foregroundStyle(ShiftCalendarColors.primaryBlue)
+                    .foregroundStyle(foregroundColor)
             } else {
                 Image(systemName: "person.crop.circle.fill")
                     .font(.system(size: size * 0.7))
-                    .foregroundStyle(ShiftCalendarColors.primaryBlue)
+                    .foregroundStyle(foregroundColor)
             }
         }
         .frame(width: size, height: size)
