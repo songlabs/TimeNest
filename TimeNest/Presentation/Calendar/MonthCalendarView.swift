@@ -931,6 +931,27 @@ private struct ShiftInputHeaderView: View {
 
 // MARK: - DayCellView
 
+struct MonthDayCellContentVisibility<Item> {
+    let visibleItems: [Item]
+    let hiddenCount: Int
+}
+
+enum MonthDayCellEventLayout {
+    static let directContentLimit = 4
+    private static let overflowContentLimit = 3
+
+    static func visibility<Item>(for items: [Item]) -> MonthDayCellContentVisibility<Item> {
+        guard items.count > directContentLimit else {
+            return MonthDayCellContentVisibility(visibleItems: items, hiddenCount: 0)
+        }
+
+        return MonthDayCellContentVisibility(
+            visibleItems: Array(items.prefix(overflowContentLimit)),
+            hiddenCount: items.count - overflowContentLimit
+        )
+    }
+}
+
 struct DayCellView: View {
     @EnvironmentObject private var localization: LocalizationManager
     @AppStorage(CalendarItemColorSettings.eventBackgroundColorKey) private var eventBackgroundColorHex = CalendarItemColorSettings.defaultEventBackgroundColorHex
@@ -940,9 +961,15 @@ struct DayCellView: View {
     let cellHeight: CGFloat
     let isSelected: Bool
 
-    var body: some View {
-        let traditionalLabelWidth = max(0, cellWidth - 32)
+    private enum Layout {
+        static let headerTopPadding: CGFloat = 3
+        static let headerHeight: CGFloat = 30
+        static let eventTopSpacing: CGFloat = 2
+        static let eventRowSpacing: CGFloat = 1
+        static let eventRowVerticalPadding: CGFloat = 1
+    }
 
+    var body: some View {
         ZStack(alignment: .topLeading) {
             // 背景
             Rectangle()
@@ -956,18 +983,11 @@ struct DayCellView: View {
 
             // 内容区域 - 统一从顶部对齐
             VStack(alignment: .leading, spacing: 0) {
-                // 顶部区域：日期数字
-                Text(cell.dayText)
-                    .font(.system(
-                        size: cell.isToday ? ShiftCalendarLayout.dayNumberFontSizeToday : ShiftCalendarLayout.dayNumberFontSize,
-                        weight: cell.isToday ? .semibold : .medium
-                    ))
-                    .foregroundColor(dayNumberColor)
-                    .padding(.leading, 8)
-                    .padding(.top, 8)
+                // 日期和农历/六曜/节气共用顶部信息区，避免辅助信息覆盖事件区。
+                topInformationView
 
                 eventLabelsView
-                    .padding(.top, 4)
+                    .padding(.top, Layout.eventTopSpacing)
 
                 // 弹性空间 - 将底部标签推到底部
                 Spacer(minLength: 2)
@@ -993,12 +1013,6 @@ struct DayCellView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-
-            if !cell.traditionalCalendar.isEmpty {
-                traditionalCalendarLabelsView
-                    .frame(width: traditionalLabelWidth, alignment: .trailing)
-                    .offset(x: 28, y: 5)
-            }
         }
         .frame(width: cellWidth, height: cellHeight)
         .opacity(cell.isInCurrentMonth ? 1.0 : 0.5)
@@ -1044,6 +1058,31 @@ struct DayCellView: View {
         return labels
     }
 
+    private var topInformationView: some View {
+        HStack(alignment: .top, spacing: 0) {
+            Text(cell.dayText)
+                .font(.system(
+                    size: cell.isToday ? ShiftCalendarLayout.dayNumberFontSizeToday : ShiftCalendarLayout.dayNumberFontSize,
+                    weight: cell.isToday ? .semibold : .medium
+                ))
+                .foregroundColor(dayNumberColor)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .padding(.leading, 8)
+                .padding(.top, Layout.headerTopPadding)
+
+            if !cell.traditionalCalendar.isEmpty {
+                traditionalCalendarLabelsView
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.top, Layout.headerTopPadding)
+                    .padding(.trailing, 3)
+            } else {
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: Layout.headerHeight, maxHeight: Layout.headerHeight, alignment: .topLeading)
+    }
+
     private var traditionalCalendarLabelsView: some View {
         VStack(alignment: .trailing, spacing: 0) {
             ForEach(traditionalCalendarLabels) { label in
@@ -1071,12 +1110,12 @@ struct DayCellView: View {
 
     @ViewBuilder
     private var eventLabelsView: some View {
-        let rows = eventLabelRows
-        let visibleRows = Array(rows.prefix(3))
-        let hiddenCount = max(0, rows.count - visibleRows.count)
+        let visibility = MonthDayCellEventLayout.visibility(for: eventLabelRows)
+        let visibleRows = visibility.visibleItems
+        let hiddenCount = visibility.hiddenCount
 
         if !visibleRows.isEmpty {
-            VStack(alignment: .center, spacing: 2) {
+            VStack(alignment: .center, spacing: Layout.eventRowSpacing) {
                 ForEach(Array(visibleRows.enumerated()), id: \.offset) { _, row in
                     eventLabelRowView(row)
                 }
@@ -1139,7 +1178,7 @@ struct DayCellView: View {
             .lineLimit(1)
             .truncationMode(.tail)
             .padding(.horizontal, 4)
-            .padding(.vertical, 2)
+            .padding(.vertical, Layout.eventRowVerticalPadding)
             .frame(maxWidth: .infinity)
             .background(eventLabelBackgroundColor(for: event))
             .overlay(
@@ -1157,7 +1196,7 @@ struct DayCellView: View {
             .lineLimit(1)
             .truncationMode(.tail)
             .padding(.horizontal, 4)
-            .padding(.vertical, 2)
+            .padding(.vertical, Layout.eventRowVerticalPadding)
             .frame(maxWidth: .infinity)
             .background(workRecordLabelBackgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
