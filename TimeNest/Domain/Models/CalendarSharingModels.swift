@@ -169,12 +169,92 @@ struct SharedCalendarDescriptor: Codable, Identifiable, Hashable {
     let kind: TimeNestCalendarKind
     var rootRecordName: String
     var shareRecordName: String
+    var eventEditingAllowed: Bool
+    /// Version 0 uses the legacy owner-only SharedEvent snapshot protocol.
+    /// Version 1 stores jointly editable events in CollaborativeEvent records.
+    var collaborationProtocolVersion: Int
+    var participantPermission: SharedCalendarParticipantPermission
+
+    init(
+        id: UUID,
+        zoneName: String,
+        ownerName: String,
+        ownerDisplayName: String? = nil,
+        calendarName: String,
+        participantCount: Int,
+        kind: TimeNestCalendarKind,
+        rootRecordName: String,
+        shareRecordName: String,
+        eventEditingAllowed: Bool = false,
+        collaborationProtocolVersion: Int = 0,
+        participantPermission: SharedCalendarParticipantPermission = .unknown
+    ) {
+        self.id = id
+        self.zoneName = zoneName
+        self.ownerName = ownerName
+        self.ownerDisplayName = ownerDisplayName
+        self.calendarName = calendarName
+        self.participantCount = participantCount
+        self.kind = kind
+        self.rootRecordName = rootRecordName
+        self.shareRecordName = shareRecordName
+        self.eventEditingAllowed = eventEditingAllowed
+        self.collaborationProtocolVersion = collaborationProtocolVersion
+        self.participantPermission = participantPermission
+    }
 
     func resolvedCalendarName(fallback: String) -> String {
         Self.nonempty(calendarName) ?? fallback
     }
 
-    var isReadOnly: Bool { kind == .sharedReceived }
+    var isReadOnly: Bool {
+        kind == .sharedReceived
+            && (collaborationProtocolVersion < 1
+                || !eventEditingAllowed
+                || participantPermission != .readWrite)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case zoneName
+        case ownerName
+        case ownerDisplayName
+        case calendarName
+        case participantCount
+        case kind
+        case rootRecordName
+        case shareRecordName
+        case eventEditingAllowed
+        case collaborationProtocolVersion
+        case participantPermission
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            zoneName: try container.decode(String.self, forKey: .zoneName),
+            ownerName: try container.decode(String.self, forKey: .ownerName),
+            ownerDisplayName: try container.decodeIfPresent(String.self, forKey: .ownerDisplayName),
+            calendarName: try container.decode(String.self, forKey: .calendarName),
+            participantCount: try container.decode(Int.self, forKey: .participantCount),
+            kind: try container.decode(TimeNestCalendarKind.self, forKey: .kind),
+            rootRecordName: try container.decode(String.self, forKey: .rootRecordName),
+            shareRecordName: try container.decode(String.self, forKey: .shareRecordName),
+            eventEditingAllowed: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .eventEditingAllowed
+            ) ?? false,
+            collaborationProtocolVersion: try container.decodeIfPresent(
+                Int.self,
+                forKey: .collaborationProtocolVersion
+            ) ?? 0,
+            participantPermission: try container.decodeIfPresent(
+                SharedCalendarParticipantPermission.self,
+                forKey: .participantPermission
+            ) ?? .unknown
+        )
+    }
 
     private static func nonempty(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -193,9 +273,66 @@ struct OwnedSharedCalendarDescriptor: Codable, Hashable {
     var participantCount: Int
     var rootRecordName: String
     var shareRecordName: String
+    var eventEditingAllowed: Bool = false
+    var collaborationProtocolVersion: Int = 0
+
+    init(
+        id: UUID,
+        zoneName: String,
+        ownerName: String,
+        calendarName: String,
+        participantCount: Int,
+        rootRecordName: String,
+        shareRecordName: String,
+        eventEditingAllowed: Bool = false,
+        collaborationProtocolVersion: Int = 0
+    ) {
+        self.id = id
+        self.zoneName = zoneName
+        self.ownerName = ownerName
+        self.calendarName = calendarName
+        self.participantCount = participantCount
+        self.rootRecordName = rootRecordName
+        self.shareRecordName = shareRecordName
+        self.eventEditingAllowed = eventEditingAllowed
+        self.collaborationProtocolVersion = collaborationProtocolVersion
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case zoneName
+        case ownerName
+        case calendarName
+        case participantCount
+        case rootRecordName
+        case shareRecordName
+        case eventEditingAllowed
+        case collaborationProtocolVersion
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            zoneName: try container.decode(String.self, forKey: .zoneName),
+            ownerName: try container.decode(String.self, forKey: .ownerName),
+            calendarName: try container.decode(String.self, forKey: .calendarName),
+            participantCount: try container.decode(Int.self, forKey: .participantCount),
+            rootRecordName: try container.decode(String.self, forKey: .rootRecordName),
+            shareRecordName: try container.decode(String.self, forKey: .shareRecordName),
+            eventEditingAllowed: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .eventEditingAllowed
+            ) ?? false,
+            collaborationProtocolVersion: try container.decodeIfPresent(
+                Int.self,
+                forKey: .collaborationProtocolVersion
+            ) ?? 0
+        )
+    }
 }
 
-enum SharedCalendarParticipantPermission: Equatable {
+enum SharedCalendarParticipantPermission: String, Codable, Equatable, Hashable {
     case unknown
     case none
     case readOnly
@@ -232,8 +369,7 @@ struct SharedCalendarParticipantSnapshot: Identifiable, Equatable {
     }
 }
 
-/// A deliberately small transfer object. Deletions are synchronized by deleting the
-/// corresponding CloudKit record, so no private CalendarEvent fields are represented here.
+/// A deliberately small transfer object. No private CalendarEvent fields are represented here.
 struct SharedEventSnapshot: Codable, Identifiable, Hashable {
     let id: UUID
     let title: String
@@ -241,6 +377,138 @@ struct SharedEventSnapshot: Codable, Identifiable, Hashable {
     let endDate: Date
     let isAllDay: Bool
     let updatedAt: Date
+    let isDeleted: Bool
+    let deletedAt: Date?
+
+    init(
+        id: UUID,
+        title: String,
+        startDate: Date,
+        endDate: Date,
+        isAllDay: Bool,
+        updatedAt: Date,
+        isDeleted: Bool = false,
+        deletedAt: Date? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.startDate = startDate
+        self.endDate = endDate
+        self.isAllDay = isAllDay
+        self.updatedAt = updatedAt
+        self.isDeleted = isDeleted
+        self.deletedAt = deletedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case title
+        case startDate
+        case endDate
+        case isAllDay
+        case updatedAt
+        case isDeleted
+        case deletedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            id: try container.decode(UUID.self, forKey: .id),
+            title: try container.decode(String.self, forKey: .title),
+            startDate: try container.decode(Date.self, forKey: .startDate),
+            endDate: try container.decode(Date.self, forKey: .endDate),
+            isAllDay: try container.decode(Bool.self, forKey: .isAllDay),
+            updatedAt: try container.decode(Date.self, forKey: .updatedAt),
+            isDeleted: try container.decodeIfPresent(Bool.self, forKey: .isDeleted) ?? false,
+            deletedAt: try container.decodeIfPresent(Date.self, forKey: .deletedAt)
+        )
+    }
+}
+
+enum SharedEventSyncStatus: String, Codable, Equatable, Hashable {
+    case saving
+    case pending
+    case synced
+    case failed
+    case permissionRevoked
+    case deletedRemotely
+}
+
+enum SharedEventMutationStatus: String, Codable, Equatable, Hashable, CaseIterable {
+    case prepared
+    case sending
+    case awaitingReconciliation
+    case completed
+    case superseded
+    case failed
+    case permissionRevoked
+    case deletedRemotely
+
+    var isTerminal: Bool {
+        switch self {
+        case .completed, .superseded, .failed, .deletedRemotely:
+            true
+        case .prepared, .sending, .awaitingReconciliation, .permissionRevoked:
+            false
+        }
+    }
+
+    var visibleSyncStatus: SharedEventSyncStatus {
+        switch self {
+        case .prepared, .sending:
+            .saving
+        case .awaitingReconciliation:
+            .pending
+        case .completed, .superseded:
+            .synced
+        case .failed:
+            .failed
+        case .permissionRevoked:
+            .permissionRevoked
+        case .deletedRemotely:
+            .deletedRemotely
+        }
+    }
+}
+
+/// A write that was rejected before the CloudKit mutation request was issued. Unlike an
+/// ordinary transport error, this is the only failure that may safely return to `prepared`
+/// without first comparing the server's `lastMutationID`.
+enum SharedEventWriteError: Error, Equatable {
+    case confirmedNotSent(CalendarSharingError)
+}
+
+struct OwnerSharedEventMutation: Identifiable, Equatable, Sendable {
+    let id: UUID
+    let calendarID: UUID
+    let eventID: UUID
+    var operation: SharedEventMutationOperation
+    var payload: SharedEventSnapshot
+    let createdAt: Date
+    /// Assigned by the persistence actor inside the same transaction as the event write.
+    var sequence: Int64
+    var status: SharedEventMutationStatus
+    var retryCount: Int
+    var lastErrorCode: String?
+}
+
+struct SharedEventEnvelope: Codable, Identifiable, Hashable {
+    var id: UUID { snapshot.id }
+    let calendarID: UUID
+    let zoneName: String
+    let ownerName: String
+    let recordName: String
+    var snapshot: SharedEventSnapshot
+    var recordChangeTag: String?
+    var modificationDate: Date?
+    var creatorIdentifierHash: String?
+    var lastModifierIdentifierHash: String?
+    var syncStatus: SharedEventSyncStatus
+    var pendingMutationID: UUID?
+    var lastMutationID: UUID? = nil
+
+    var isDeleted: Bool { snapshot.isDeleted }
 }
 
 enum SharedEventMapper {
@@ -298,7 +566,7 @@ enum SharedEventMapper {
         in range: DateInterval
     ) -> [EventOccurrence] {
         let calendar = Calendar(identifier: .gregorian)
-        return snapshots.flatMap { snapshot in
+        return snapshots.filter { !$0.isDeleted }.flatMap { snapshot in
             coveredDates(for: snapshot, in: range, calendar: calendar).map { occurrenceDate in
                 let dateOnly = DateOnly(from: occurrenceDate) ?? DateOnly(year: 2000, month: 1, day: 1)
                 return EventOccurrence(
@@ -604,10 +872,16 @@ enum SharedWorkRecordMapper {
 struct CalendarAccessPolicy: Equatable {
     let selectedCalendar: TimeNestCalendar
 
-    var isReadOnly: Bool { !selectedCalendar.canEditContent }
-    var canCreate: Bool { selectedCalendar.canEditContent }
-    var canEdit: Bool { selectedCalendar.canEditContent }
-    var canDelete: Bool { selectedCalendar.canEditContent }
+    var isReadOnly: Bool { !selectedCalendar.canCreateSharedEvent }
+    var canCreate: Bool { selectedCalendar.canCreateSharedEvent }
+    var canEdit: Bool { selectedCalendar.canEditSharedEvent }
+    var canDelete: Bool { selectedCalendar.canDeleteSharedEvent }
+    var canCreateSharedEvent: Bool { selectedCalendar.canCreateSharedEvent }
+    var canEditSharedEvent: Bool { selectedCalendar.canEditSharedEvent }
+    var canDeleteSharedEvent: Bool { selectedCalendar.canDeleteSharedEvent }
+    var canEditShifts: Bool { selectedCalendar.canEditContent }
+    var canEditWorkRecords: Bool { selectedCalendar.canEditContent }
+    var canManageShare: Bool { selectedCalendar.canManageShare }
     /// Keep the affordance visible for read-only calendars so a tap can explain why creation is blocked.
     var showsAddButton: Bool { true }
 }
@@ -642,10 +916,13 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
     case shareCreationFailed
     case shareUnavailable
     case permissionDenied
+    case sharedEventDeleted
+    case sharedEventPermissionRevoked
     case cloudEnvironmentMismatch
     case receivedCalendarRefreshFailed
     case calendarDataMigrationFailed
     case invitationCancellationFailed
+    case localPersistenceFailed
     case syncFailed
 
     var errorDescription: String? {
@@ -692,6 +969,10 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingShareUnavailable)
         case .permissionDenied:
             LocalizationManager.shared.localized(.calendarSharingPermissionDenied)
+        case .sharedEventDeleted:
+            LocalizationManager.shared.localized(.calendarSharingSharedEventDeleted)
+        case .sharedEventPermissionRevoked:
+            LocalizationManager.shared.localized(.calendarSharingSharedEventPermissionRevoked)
         case .cloudEnvironmentMismatch:
             LocalizationManager.shared.localized(.calendarSharingCloudEnvironmentMismatch)
         case .receivedCalendarRefreshFailed:
@@ -700,6 +981,8 @@ enum CalendarSharingError: Error, Equatable, LocalizedError {
             LocalizationManager.shared.localized(.calendarSharingDataMigrationFailed)
         case .invitationCancellationFailed:
             LocalizationManager.shared.localized(.calendarSharingInvitationCancellationFailed)
+        case .localPersistenceFailed:
+            LocalizationManager.shared.localized(.calendarSharingSyncFailed)
         case .syncFailed:
             LocalizationManager.shared.localized(.calendarSharingSyncFailed)
         }

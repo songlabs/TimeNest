@@ -42,7 +42,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
     }
 
     func testReceivedCalendarBlocksCreateBeforeEditorInAllLanguages() {
-        for language in ["ja", "enUS", "zhHans", "zhHant", "ko"] {
+        for language in ["ja", "enUS", "zhHans", "zh-Hant", "ko"] {
             let app = launchApp(sharingScenario: "received", language: language)
             selectCalendar(
                 identifier: "sharing.calendar.33333333-3333-3333-3333-333333333333",
@@ -81,6 +81,218 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
         XCTAssertFalse(element(in: app, identifier: "dayDetail.content").exists)
         XCTAssertFalse(app.buttons["event.add"].exists)
         XCTAssertFalse(element(in: app, identifier: "entry.editor").exists)
+    }
+
+    func testReceivedEditableCalendarUsesSharedEventOnlyEditorInAllLanguages() {
+        for language in ["ja", "enUS", "zhHans", "zh-Hant", "ko"] {
+            let app = launchApp(sharingScenario: "receivedEditable", language: language)
+            selectCalendar(
+                identifier: "sharing.calendar.33333333-3333-3333-3333-333333333333",
+                in: app
+            )
+
+            app.buttons["calendar.addEntry"].tap()
+            XCTAssertTrue(
+                element(in: app, identifier: "sharedEvent.editor")
+                    .waitForExistence(timeout: 5),
+                language
+            )
+            XCTAssertTrue(app.textFields["sharedEvent.title"].exists, language)
+            XCTAssertTrue(app.buttons["sharedEvent.save"].exists, language)
+            XCTAssertFalse(element(in: app, identifier: "entry.editor").exists, language)
+            XCTAssertFalse(element(in: app, identifier: "entry.memo.field").exists, language)
+            XCTAssertFalse(element(in: app, identifier: "entry.event.reminder").exists, language)
+            XCTAssertFalse(element(in: app, identifier: "entry.calendarSelector").exists, language)
+            XCTAssertFalse(element(in: app, identifier: "workRecord.editor").exists, language)
+
+            app.buttons["sharedEvent.cancel"].tap()
+            XCTAssertTrue(
+                element(in: app, identifier: "sharedEvent.editor")
+                    .waitForNonExistence(timeout: 5),
+                language
+            )
+            app.terminate()
+        }
+    }
+
+    func testReceivedEditableCalendarCanCreateEditAndDeleteSharedEvent() {
+        let app = launchApp(sharingScenario: "receivedEditable", language: "enUS")
+        selectCalendar(
+            identifier: "sharing.calendar.33333333-3333-3333-3333-333333333333",
+            in: app
+        )
+
+        app.buttons["calendar.addEntry"].tap()
+        XCTAssertTrue(
+            element(in: app, identifier: "sharedEvent.editor")
+                .waitForExistence(timeout: 5)
+        )
+        replaceText(in: app.textFields["sharedEvent.title"], with: "Shared UI Created")
+        app.buttons["sharedEvent.save"].tap()
+        XCTAssertTrue(
+            element(in: app, identifier: "sharedEvent.editor")
+                .waitForNonExistence(timeout: 8)
+        )
+
+        let today = calendarDayElement(for: Date(), in: app)
+        XCTAssertTrue(today.waitForExistence(timeout: 8))
+        today.tap()
+        XCTAssertTrue(
+            element(in: app, identifier: "sharedEvent.dayDetail")
+                .waitForExistence(timeout: 8)
+        )
+        XCTAssertTrue(app.staticTexts["Shared UI Created"].waitForExistence(timeout: 5))
+        app.buttons["sharedEvent.row.edit"].tap()
+        replaceText(in: app.textFields["sharedEvent.title"], with: "Shared UI Updated")
+        app.buttons["sharedEvent.save"].tap()
+
+        XCTAssertTrue(app.staticTexts["Shared UI Updated"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.staticTexts["Shared UI Created"].exists)
+        app.buttons["sharedEvent.row.delete"].tap()
+        let confirmDelete = app.buttons
+            .matching(identifier: "sharedEvent.row.confirmDelete")
+            .firstMatch
+        XCTAssertTrue(confirmDelete.waitForExistence(timeout: 5))
+        confirmDelete.tap()
+
+        XCTAssertTrue(app.staticTexts["Shared UI Updated"].waitForNonExistence(timeout: 8))
+        XCTAssertFalse(app.buttons["sharedEvent.row.edit"].exists)
+        XCTAssertFalse(app.buttons["sharedEvent.row.delete"].exists)
+    }
+
+    func testSharedEventSavingAndFailureStatusesAreVisible() {
+        let scenarios = [
+            ("receivedEditableSaving", "saving"),
+            ("receivedEditablePending", "pending"),
+            ("receivedEditableFailed", "failed"),
+            ("receivedEditablePermissionRevoked", "permissionRevoked"),
+            ("receivedEditableDeletedRemotely", "deletedRemotely"),
+        ]
+
+        for (scenario, status) in scenarios {
+            let app = launchApp(sharingScenario: scenario, language: "enUS")
+            selectCalendar(
+                identifier: "sharing.calendar.33333333-3333-3333-3333-333333333333",
+                in: app
+            )
+            app.buttons["calendar.addEntry"].tap()
+            XCTAssertTrue(
+                element(in: app, identifier: "sharedEvent.editor")
+                    .waitForExistence(timeout: 5),
+                scenario
+            )
+            replaceText(
+                in: app.textFields["sharedEvent.title"],
+                with: "Status \(status)"
+            )
+            app.buttons["sharedEvent.save"].tap()
+            XCTAssertTrue(
+                element(in: app, identifier: "sharedEvent.status.\(status)")
+                    .waitForExistence(timeout: 5),
+                scenario
+            )
+            app.terminate()
+        }
+    }
+
+    func testSharedCalendarEventPermissionPickerDefaultsReadOnlyInAllLanguages() {
+        let expectedLabels = [
+            "ja": ("閲覧のみ", "予定の編集を許可"),
+            "enUS": ("View Only", "Allow Event Editing"),
+            "zhHans": ("仅查看", "允许编辑日程"),
+            "zh-Hant": ("僅供檢視", "允許編輯行程"),
+            "ko": ("보기 전용", "일정 편집 허용"),
+        ]
+
+        for language in ["ja", "enUS", "zhHans", "zh-Hant", "ko"] {
+            let app = launchApp(language: language)
+            app.buttons["sharing.calendarSelector"].tap()
+            let create = app.buttons["sharing.empty.create"]
+            XCTAssertTrue(create.waitForExistence(timeout: 5), language)
+            create.tap()
+
+            XCTAssertTrue(
+                element(in: app, identifier: "sharing.createCalendar")
+                    .waitForExistence(timeout: 5),
+                language
+            )
+            replaceText(
+                in: app.textFields["sharing.createCalendar.name"],
+                with: "Small Screen \(language)"
+            )
+            let labels = expectedLabels[language]!
+            let readOnly = app.buttons["sharing.eventPermission.readOnly"]
+            let readWrite = app.buttons["sharing.eventPermission.readWrite"]
+            let submit = app.buttons["sharing.createCalendar.submit"]
+            let form = element(in: app, identifier: "sharing.createCalendar.form")
+            XCTAssertTrue(readOnly.exists, language)
+            XCTAssertTrue(readWrite.exists, language)
+            XCTAssertEqual(readOnly.label, labels.0, language)
+            XCTAssertEqual(readWrite.label, labels.1, language)
+            XCTAssertTrue(submit.exists, language)
+            XCTAssertTrue(form.exists, language)
+            XCTAssertTrue(readOnly.isSelected, language)
+            XCTAssertFalse(readWrite.isSelected, language)
+            XCTAssertTrue(submit.isHittable, language)
+
+            scrollUntilUnobscured(readWrite, by: submit, in: form)
+            XCTAssertTrue(readWrite.isHittable, language)
+            XCTAssertLessThanOrEqual(readWrite.frame.maxY, submit.frame.minY, language)
+            readWrite.tap()
+            XCTAssertTrue(waitForSelection(readWrite, selected: true), language)
+
+            XCTAssertTrue(submit.isHittable, language)
+            submit.tap()
+            let error = app.alerts.firstMatch
+            XCTAssertTrue(error.waitForExistence(timeout: 5), language)
+            error.buttons.firstMatch.tap()
+            app.terminate()
+        }
+    }
+
+    func testSharedCalendarEditPermissionAndSaveStayReachableInAllLanguages() {
+        let expectedLabels = [
+            "ja": ("閲覧のみ", "予定の編集を許可"),
+            "enUS": ("View Only", "Allow Event Editing"),
+            "zhHans": ("仅查看", "允许编辑日程"),
+            "zh-Hant": ("僅供檢視", "允許編輯行程"),
+            "ko": ("보기 전용", "일정 편집 허용"),
+        ]
+        let calendarID = "22222222-2222-2222-2222-222222222222"
+
+        for language in ["ja", "enUS", "zhHans", "zh-Hant", "ko"] {
+            let app = launchApp(sharingScenario: "acceptedEditable", language: language)
+            app.buttons["sharing.calendarSelector"].tap()
+            let edit = app.buttons["sharing.calendar.edit.\(calendarID)"]
+            XCTAssertTrue(edit.waitForExistence(timeout: 5), language)
+            edit.tap()
+
+            let labels = expectedLabels[language]!
+            let readOnly = app.buttons["sharing.eventPermission.readOnly"]
+            let readWrite = app.buttons["sharing.eventPermission.readWrite"]
+            let submit = app.buttons["sharing.editCalendar.submit"]
+            let form = element(in: app, identifier: "sharing.editCalendar.form")
+            XCTAssertTrue(readOnly.waitForExistence(timeout: 5), language)
+            XCTAssertTrue(readWrite.exists, language)
+            XCTAssertEqual(readOnly.label, labels.0, language)
+            XCTAssertEqual(readWrite.label, labels.1, language)
+            XCTAssertTrue(submit.exists, language)
+            XCTAssertTrue(form.exists, language)
+            XCTAssertFalse(readOnly.isSelected, language)
+            XCTAssertTrue(readWrite.isSelected, language)
+            scrollUntilUnobscured(readOnly, by: submit, in: form)
+            XCTAssertTrue(readOnly.isHittable, language)
+            XCTAssertLessThanOrEqual(readOnly.frame.maxY, submit.frame.minY, language)
+            readOnly.tap()
+            XCTAssertTrue(waitForSelection(readOnly, selected: true), language)
+
+            XCTAssertTrue(submit.isHittable, language)
+            submit.tap()
+            let error = app.alerts.firstMatch
+            XCTAssertTrue(error.waitForExistence(timeout: 5), language)
+            error.buttons.firstMatch.tap()
+            app.terminate()
+        }
     }
 
     func testGeneralCreateUsesCompactEventFirstLayoutAndExpandsWorkRecordInPlace() {
@@ -1013,5 +1225,47 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
         app.descendants(matching: .any)
             .matching(identifier: identifier)
             .firstMatch
+    }
+
+    private func waitForSelection(
+        _ element: XCUIElement,
+        selected: Bool,
+        timeout: TimeInterval = 3
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if element.isSelected == selected { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        } while Date() < deadline
+        return element.isSelected == selected
+    }
+
+    private func scrollUntilUnobscured(
+        _ element: XCUIElement,
+        by fixedAction: XCUIElement,
+        in scrollContainer: XCUIElement,
+        maximumSwipes: Int = 8
+    ) {
+        for _ in 0..<maximumSwipes {
+            let visibleTop = scrollContainer.frame.minY + 8
+            if element.exists,
+               element.frame.minY >= visibleTop,
+               element.frame.maxY <= fixedAction.frame.minY {
+                return
+            }
+            let needsScrollDown = element.exists && element.frame.minY < visibleTop
+            // A normal `swipeUp()` can start on the keyboard-raised fixed action on iPhone SE.
+            // Start downward drags below the inline Picker so the Picker does not consume them.
+            let startOffset = needsScrollDown
+                ? CGVector(dx: 0.5, dy: 0.45)
+                : CGVector(dx: 0.5, dy: 0.42)
+            let endOffset = needsScrollDown
+                ? CGVector(dx: 0.5, dy: 0.68)
+                : CGVector(dx: 0.5, dy: 0.14)
+            let start = scrollContainer.coordinate(withNormalizedOffset: startOffset)
+            let end = scrollContainer.coordinate(withNormalizedOffset: endOffset)
+            start.press(forDuration: 0.05, thenDragTo: end)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        }
     }
 }

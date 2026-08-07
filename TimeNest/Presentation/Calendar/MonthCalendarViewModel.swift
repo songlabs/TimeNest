@@ -377,7 +377,7 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     func enterShiftInputMode() {
-        guard calendarSharingStore.accessPolicy.canCreate else { return }
+        guard calendarSharingStore.accessPolicy.canEditShifts else { return }
         refreshShiftTemplates()
         isShiftInputMode = true
         shiftInputTargetDate = selectedDate

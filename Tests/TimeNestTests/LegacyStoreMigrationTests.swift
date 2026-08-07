@@ -270,7 +270,8 @@ final class LegacyStoreMigrationTests: XCTestCase {
         Schema([
             SwiftDataCalendarEventEntity.self,
             SwiftDataReminderEntity.self,
-            SwiftDataCalendarEntity.self
+            SwiftDataCalendarEntity.self,
+            SwiftDataOwnerSharedEventMutationEntity.self
         ])
     }
 

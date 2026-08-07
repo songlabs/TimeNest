@@ -1,9 +1,11 @@
 import Foundation
 
-actor InMemoryEventRepository: EventRepository {
+actor InMemoryEventRepository: EventRepository, OwnerSharedEventMutationRepository {
     static let shared = InMemoryEventRepository()
     
     private var events: [UUID: CalendarEvent] = [:]
+    private var ownerMutations: [UUID: OwnerSharedEventMutation] = [:]
+    private var nextOwnerMutationSequence: Int64 = 1
     
     func create(_ event: CalendarEvent) async throws {
         events[event.id] = event
@@ -29,6 +31,56 @@ actor InMemoryEventRepository: EventRepository {
             updated.removeValue(forKey: event.id)
         }
         events = updated
+    }
+
+    func applyBatchWithOwnerSharedEventMutations(
+        upserting newEvents: [CalendarEvent],
+        deleting eventsToDelete: [CalendarEvent],
+        ifUnchanged expectedEvents: [CalendarEvent],
+        mutations: [OwnerSharedEventMutation]
+    ) async throws {
+        try EventRepositoryBatchValidator.validateApplyBatch(
+            currentEvents: Array(events.values),
+            upserting: newEvents,
+            deleting: eventsToDelete,
+            ifUnchanged: expectedEvents
+        )
+        var updatedEvents = events
+        var updatedMutations = ownerMutations
+        for event in newEvents { updatedEvents[event.id] = event }
+        for event in eventsToDelete { updatedEvents.removeValue(forKey: event.id) }
+        for mutation in mutations {
+            for (id, var previous) in updatedMutations
+            where previous.calendarID == mutation.calendarID
+                && previous.eventID == mutation.eventID
+                && previous.status == .prepared {
+                previous.status = .superseded
+                updatedMutations[id] = previous
+            }
+            var sequenced = mutation
+            sequenced.sequence = nextOwnerMutationSequence
+            nextOwnerMutationSequence += 1
+            updatedMutations[sequenced.id] = sequenced
+        }
+        events = updatedEvents
+        ownerMutations = updatedMutations
+    }
+
+    func ownerSharedEventMutations(
+        calendarID: UUID
+    ) async throws -> [OwnerSharedEventMutation] {
+        ownerMutations.values
+            .filter { $0.calendarID == calendarID }
+            .sorted { $0.sequence < $1.sequence }
+    }
+
+    func saveOwnerSharedEventMutation(
+        _ mutation: OwnerSharedEventMutation
+    ) async throws {
+        guard ownerMutations[mutation.id] != nil else {
+            throw CalendarSharingError.localPersistenceFailed
+        }
+        ownerMutations[mutation.id] = mutation
     }
     
     func update(_ event: CalendarEvent) async throws {

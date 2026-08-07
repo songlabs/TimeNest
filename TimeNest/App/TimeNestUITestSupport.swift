@@ -507,6 +507,7 @@ enum TimeNestUITestSupport {
 private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientProtocol {
     let status: CalendarSharingICloudStatus
     let scenario: String?
+    private var receivedRecords: [UUID: SharedEventEnvelope] = [:]
 
     init(status: CalendarSharingICloudStatus, scenario: String?) {
         self.status = status
@@ -524,14 +525,18 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
             throw CalendarSharingError.syncFailed
         case "syncing":
             try await Task.sleep(nanoseconds: 30_000_000_000)
-        case "received":
+        case let value? where value.hasPrefix("received"):
             return []
         case nil:
             return []
         default:
             break
         }
-        return [ownedState(isAccepted: scenario == "accepted")]
+        let isEditable = scenario == "acceptedEditable"
+        return [ownedState(
+            isAccepted: scenario == "accepted" || isEditable,
+            isEditable: isEditable
+        )]
     }
     func createShare(
         calendarID: UUID,
@@ -570,7 +575,79 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
         throw CalendarSharingError.syncFailed
     }
     func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload] {
-        scenario == "received" ? [receivedPayload()] : []
+        scenario?.hasPrefix("received") == true
+            ? [receivedPayload()]
+            : []
+    }
+    func createReceivedSharedEvent(
+        _ snapshot: SharedEventSnapshot,
+        mutationID: UUID,
+        in calendar: SharedCalendarDescriptor
+    ) async throws -> SharedEventEnvelope {
+        try validateEditable(calendar)
+        try await injectEditableWriteOutcomeIfNeeded()
+        if receivedRecords[snapshot.id]?.isDeleted == true {
+            throw CalendarSharingError.sharedEventDeleted
+        }
+        let envelope = makeEnvelope(
+            snapshot: snapshot,
+            mutationID: mutationID,
+            calendar: calendar
+        )
+        receivedRecords[snapshot.id] = envelope
+        return envelope
+    }
+    func updateReceivedSharedEvent(
+        _ snapshot: SharedEventSnapshot,
+        mutationID: UUID,
+        in calendar: SharedCalendarDescriptor
+    ) async throws -> SharedEventEnvelope {
+        try validateEditable(calendar)
+        try await injectEditableWriteOutcomeIfNeeded()
+        guard receivedRecords[snapshot.id]?.isDeleted == false else {
+            throw CalendarSharingError.sharedEventDeleted
+        }
+        let envelope = makeEnvelope(
+            snapshot: snapshot,
+            mutationID: mutationID,
+            calendar: calendar
+        )
+        receivedRecords[snapshot.id] = envelope
+        return envelope
+    }
+    func deleteReceivedSharedEvent(
+        eventID: UUID,
+        mutationID: UUID,
+        in calendar: SharedCalendarDescriptor
+    ) async throws -> SharedEventEnvelope? {
+        try validateEditable(calendar)
+        try await injectEditableWriteOutcomeIfNeeded()
+        guard let existing = receivedRecords[eventID] else { return nil }
+        if existing.isDeleted { return existing }
+        let now = Date()
+        let deleted = SharedEventSnapshot(
+            id: existing.snapshot.id,
+            title: existing.snapshot.title,
+            startDate: existing.snapshot.startDate,
+            endDate: existing.snapshot.endDate,
+            isAllDay: existing.snapshot.isAllDay,
+            updatedAt: now,
+            isDeleted: true,
+            deletedAt: now
+        )
+        let envelope = makeEnvelope(
+            snapshot: deleted,
+            mutationID: mutationID,
+            calendar: calendar
+        )
+        receivedRecords[eventID] = envelope
+        return envelope
+    }
+    func fetchReceivedSharedEvent(
+        eventID: UUID,
+        in calendar: SharedCalendarDescriptor
+    ) async throws -> SharedEventEnvelope? {
+        receivedRecords[eventID]
     }
     func accept(
         metadata: any CalendarSharingShareMetadata
@@ -584,7 +661,10 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
         throw CalendarSharingError.syncFailed
     }
 
-    private func ownedState(isAccepted: Bool) -> OwnedSharedCalendarCloudState {
+    private func ownedState(
+        isAccepted: Bool,
+        isEditable: Bool = false
+    ) -> OwnedSharedCalendarCloudState {
         let calendarID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
         let zoneID = CKRecordZone.ID(
             zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
@@ -605,7 +685,9 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
                 calendarName: "UI Test Calendar 多言語",
                 participantCount: isAccepted ? 1 : 0,
                 rootRecordName: CalendarSharingCloudSchema.calendarRecordName,
-                shareRecordName: CKRecordNameZoneWideShare
+                shareRecordName: CKRecordNameZoneWideShare,
+                eventEditingAllowed: isEditable,
+                collaborationProtocolVersion: isEditable ? 1 : 0
             ),
             share: CalendarSharingCloudRecordFactory.makeZoneWideShare(recordZoneID: zoneID),
             participants: [participant]
@@ -614,21 +696,75 @@ private final class TimeNestUITestCalendarSharingClient: CalendarSharingClientPr
 
     private func receivedPayload() -> ReceivedSharedCalendarPayload {
         let calendarID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let isEditable = scenario?.hasPrefix("receivedEditable") == true
+        let descriptor = SharedCalendarDescriptor(
+            id: calendarID,
+            zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
+            ownerName: "ui-test-owner",
+            ownerDisplayName: "UI Test Owner",
+            calendarName: "Received UI Test Calendar",
+            participantCount: 1,
+            kind: .sharedReceived,
+            rootRecordName: CalendarSharingCloudSchema.calendarRecordName,
+            shareRecordName: CKRecordNameZoneWideShare,
+            eventEditingAllowed: isEditable,
+            collaborationProtocolVersion: isEditable ? 1 : 0,
+            participantPermission: isEditable ? .readWrite : .readOnly
+        )
+        let envelopes = Array(receivedRecords.values)
         return ReceivedSharedCalendarPayload(
-            calendar: SharedCalendarDescriptor(
-                id: calendarID,
-                zoneName: CalendarSharingCloudSchema.zoneName(for: calendarID),
-                ownerName: "ui-test-owner",
-                ownerDisplayName: "UI Test Owner",
-                calendarName: "Received UI Test Calendar",
-                participantCount: 1,
-                kind: .sharedReceived,
-                rootRecordName: CalendarSharingCloudSchema.calendarRecordName,
-                shareRecordName: CKRecordNameZoneWideShare
-            ),
-            events: [],
+            calendar: descriptor,
+            events: envelopes.filter { !$0.isDeleted }.map(\.snapshot),
             shifts: [],
-            workRecords: []
+            workRecords: [],
+            eventEnvelopes: envelopes
+        )
+    }
+
+    private func validateEditable(_ calendar: SharedCalendarDescriptor) throws {
+        guard scenario?.hasPrefix("receivedEditable") == true,
+              calendar.eventEditingAllowed,
+              calendar.participantPermission == .readWrite,
+              calendar.collaborationProtocolVersion >= 1 else {
+            throw CalendarSharingError.sharedEventPermissionRevoked
+        }
+    }
+
+    private func injectEditableWriteOutcomeIfNeeded() async throws {
+        switch scenario {
+        case "receivedEditableSaving":
+            try await Task.sleep(for: .seconds(30))
+        case "receivedEditablePending":
+            throw CalendarSharingError.networkUnavailable
+        case "receivedEditableFailed":
+            throw CalendarSharingError.syncFailed
+        case "receivedEditablePermissionRevoked":
+            throw CalendarSharingError.permissionDenied
+        case "receivedEditableDeletedRemotely":
+            throw CalendarSharingError.sharedEventDeleted
+        default:
+            break
+        }
+    }
+
+    private func makeEnvelope(
+        snapshot: SharedEventSnapshot,
+        mutationID: UUID,
+        calendar: SharedCalendarDescriptor
+    ) -> SharedEventEnvelope {
+        SharedEventEnvelope(
+            calendarID: calendar.id,
+            zoneName: calendar.zoneName,
+            ownerName: calendar.ownerName,
+            recordName: "collaborative-event-\(snapshot.id.uuidString.lowercased())",
+            snapshot: snapshot,
+            recordChangeTag: UUID().uuidString,
+            modificationDate: Date(),
+            creatorIdentifierHash: "ui-test-creator",
+            lastModifierIdentifierHash: "ui-test-modifier",
+            syncStatus: snapshot.isDeleted ? .deletedRemotely : .synced,
+            pendingMutationID: nil,
+            lastMutationID: mutationID
         )
     }
 }

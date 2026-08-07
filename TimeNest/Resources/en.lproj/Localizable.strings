@@ -477,6 +477,18 @@
 "calendar_sharing.no_shared_calendars" = "No shared calendars yet";
 "calendar_sharing.no_shared_calendars_message" = "Create read-only sharing so family or coworkers can view events and shifts.";
 "calendar_sharing.read_only" = "View Only";
+"calendar_sharing.event_editing.permission" = "Event Editing";
+"calendar_sharing.event_editing.allowed" = "Allow Event Editing";
+"calendar_sharing.editable" = "Can Edit";
+"calendar_sharing.event_sync.synced" = "Synced";
+"calendar_sharing.event_sync.saving" = "Saving";
+"calendar_sharing.event_sync.pending" = "Waiting to Sync";
+"calendar_sharing.event_sync.failed" = "Sync Failed";
+"calendar_sharing.event_sync.permission_revoked" = "Editing Permission Was Revoked";
+"calendar_sharing.event_sync.deleted" = "Another Participant Deleted This Event";
+"calendar_sharing.event_sync.last_write_wins" = "The most recently saved version takes priority.";
+"calendar_sharing.shared_event.new_title" = "Add Event";
+"calendar_sharing.shared_event.edit_title" = "Edit Event";
 "calendar_sharing.read_only_add.title" = "Read-Only Calendar";
 "calendar_sharing.read_only_add.message" = "This shared calendar is read-only. To add an event or work record, switch to a calendar you can edit.";
 "calendar_sharing.calendar_name" = "Shared Calendar Name";
@@ -539,6 +551,8 @@
 "calendar_sharing.error.creation_failed" = "Sharing could not be started. Try again later.";
 "calendar_sharing.error.share_unavailable" = "This shared calendar is no longer available. TimeNest returned to My Calendar.";
 "calendar_sharing.error.permission_denied" = "You do not have permission to access this shared calendar.";
+"calendar_sharing.error.shared_event_deleted" = "Another participant deleted this event.";
+"calendar_sharing.error.shared_event_permission_revoked" = "Event editing permission was revoked. Your draft remains on this device.";
 "calendar_sharing.error.cloud_environment_mismatch" = "This invitation belongs to a different TimeNest iCloud container or build environment.";
 "calendar_sharing.error.received_calendar_refresh_failed" = "The invitation was accepted, but the shared calendar could not be refreshed. TimeNest will retry when it becomes active.";
 "calendar_sharing.error.data_migration_failed" = "Calendar data could not be migrated. The original data was not deleted. Restart the app to try again.";

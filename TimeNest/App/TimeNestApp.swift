@@ -58,7 +58,8 @@ struct TimeNestApp: App {
         let schema = Schema([
             SwiftDataCalendarEventEntity.self,
             SwiftDataReminderEntity.self,
-            SwiftDataCalendarEntity.self
+            SwiftDataCalendarEntity.self,
+            SwiftDataOwnerSharedEventMutationEntity.self
         ])
         let modelPreparation: ModelContainerPreparation
         do {
@@ -152,13 +153,31 @@ struct TimeNestApp: App {
         let sharingClient: any CalendarSharingClientProtocol = TimeNestUITestSupport.isEnabled
             ? TimeNestUITestSupport.makeCalendarSharingClient()
             : CloudKitCalendarSharingClient()
+        let sharingCache = TimeNestUITestSupport.isEnabled
+            ? CalendarSharingCache(
+                fileURL: FileManager.default.temporaryDirectory.appendingPathComponent(
+                    "TimeNestUITestSharingCache-\(ProcessInfo.processInfo.processIdentifier).json"
+                )
+            )
+            : CalendarSharingCache()
+        let sharedEventEditingPersistence = TimeNestUITestSupport.isEnabled
+            ? SharedEventEditingPersistence(
+                fileURL: FileManager.default.temporaryDirectory.appendingPathComponent(
+                    "TimeNestUITestSharedEvents-\(ProcessInfo.processInfo.processIdentifier).json"
+                )
+            )
+            : SharedEventEditingPersistence()
 #else
         let sharingClient: any CalendarSharingClientProtocol = CloudKitCalendarSharingClient()
+        let sharingCache = CalendarSharingCache()
+        let sharedEventEditingPersistence = SharedEventEditingPersistence()
 #endif
         let calendarSharingStore = CalendarSharingStore(
             client: sharingClient,
             eventUseCase: eventUseCase,
             calendarRepository: calendarRepository,
+            cache: sharingCache,
+            sharedEventEditingPersistence: sharedEventEditingPersistence,
             initialMigrationError: calendarMigrationFailed
                 ? .calendarDataMigrationFailed
                 : nil
@@ -168,6 +187,11 @@ struct TimeNestApp: App {
             Task { @MainActor in
                 snapshotCoordinator.scheduleRefresh()
                 await calendarSharingStore.synchronizeOwnedEventsIfNeeded()
+            }
+        }
+        eventUseCase.onRemoteEventsMaterialized = {
+            Task { @MainActor in
+                snapshotCoordinator.scheduleRefresh()
             }
         }
     }

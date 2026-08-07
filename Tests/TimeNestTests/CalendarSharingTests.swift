@@ -429,7 +429,13 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         let snapshot = try XCTUnwrap(SharedEventMapper.snapshot(from: event))
         let labels = Set(Mirror(reflecting: snapshot).children.compactMap(\.label))
 
-        XCTAssertEqual(labels, ["id", "title", "startDate", "endDate", "isAllDay", "updatedAt"])
+        XCTAssertEqual(
+            labels,
+            [
+                "id", "title", "startDate", "endDate", "isAllDay", "updatedAt",
+                "isDeleted", "deletedAt",
+            ]
+        )
     }
 
     func testWorkRecordSnapshotExcludesFinancialFields() throws {
@@ -737,7 +743,7 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(descriptor.ownerDisplayName)
     }
 
-    func testProjectKeepsMarketingVersionOnePointNineOneAndBuildSixteen() throws {
+    func testProjectKeepsMarketingVersionTwoPointZeroAndBuildSeventeen() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -747,8 +753,8 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(project.contains("let marketingVersion = \"1.9.1\""))
-        XCTAssertTrue(project.contains("let buildNumber = \"16\""))
+        XCTAssertTrue(project.contains("let marketingVersion = \"2.0\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"17\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {
@@ -1037,6 +1043,77 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(store.selection, .calendar(invitation.calendarID))
         XCTAssertEqual(client.ownedStates.map(\.calendar.id), [invitation.calendarID])
         XCTAssertEqual(client.ownedStates.first?.participants.count, 1)
+    }
+
+    func testSharedEventPermissionDefaultsReadOnlyAndCanCreateReadWriteInvitation() async throws {
+        let readOnlyClient = MockCalendarSharingClient()
+        let readOnlyStore = makeStore(
+            client: readOnlyClient,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        let readOnlyInvitation = try await readOnlyStore.createSharedCalendar(name: "Read Only")
+
+        XCTAssertFalse(
+            try XCTUnwrap(readOnlyStore.ownedDescriptor(id: readOnlyInvitation.calendarID))
+                .eventEditingAllowed
+        )
+        XCTAssertEqual(
+            readOnlyStore.participants(for: readOnlyInvitation.calendarID).first?.permission,
+            .readOnly
+        )
+
+        let readWriteClient = MockCalendarSharingClient()
+        let readWriteStore = makeStore(
+            client: readWriteClient,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        let readWriteInvitation = try await readWriteStore.createSharedCalendar(
+            name: "Editable",
+            eventEditingAllowed: true
+        )
+
+        XCTAssertTrue(
+            try XCTUnwrap(readWriteStore.ownedDescriptor(id: readWriteInvitation.calendarID))
+                .eventEditingAllowed
+        )
+        XCTAssertEqual(
+            readWriteStore.participants(for: readWriteInvitation.calendarID).first?.permission,
+            .readWrite
+        )
+    }
+
+    func testOwnerCanToggleExistingParticipantPermissionAndCloudFailureDoesNotChangeLocalState() async throws {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let participant = makeParticipant(id: "accepted", isAccepted: true)
+        let client = MockCalendarSharingClient(
+            ownedStates: [makeOwnedState(calendar: owned, participants: [participant])]
+        )
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar"), owned]
+        )
+        await store.synchronizeAll()
+
+        try await store.setEventEditingAllowed(calendarID: owned.id, allowed: true)
+        XCTAssertTrue(try XCTUnwrap(store.ownedDescriptor(id: owned.id)).eventEditingAllowed)
+        XCTAssertEqual(store.participants(for: owned.id).first?.permission, .readWrite)
+
+        try await store.setEventEditingAllowed(calendarID: owned.id, allowed: false)
+        XCTAssertFalse(try XCTUnwrap(store.ownedDescriptor(id: owned.id)).eventEditingAllowed)
+        XCTAssertEqual(store.participants(for: owned.id).first?.permission, .readOnly)
+
+        client.eventEditingPermissionUpdateError = CalendarSharingError.syncFailed
+        do {
+            try await store.setEventEditingAllowed(calendarID: owned.id, allowed: true)
+            XCTFail("Cloud failure must not update the local permission display")
+        } catch {
+            XCTAssertEqual(error as? CalendarSharingError, .syncFailed)
+        }
+
+        XCTAssertFalse(try XCTUnwrap(store.ownedDescriptor(id: owned.id)).eventEditingAllowed)
+        XCTAssertEqual(store.participants(for: owned.id).first?.permission, .readOnly)
     }
 
     func testCancellingInvitationAfterCreationKeepsSharedCalendarAndShare() async throws {
@@ -3467,6 +3544,11 @@ final class CalendarSharingStoreTests: XCTestCase {
             eventUseCase: eventUseCase,
             calendarRepository: resolvedCalendarRepository,
             cache: resolvedCache,
+            sharedEventEditingPersistence: SharedEventEditingPersistence(
+                fileURL: FileManager.default.temporaryDirectory.appendingPathComponent(
+                    "SharedEventEditingTests-\(UUID().uuidString).json"
+                )
+            ),
             selectionPersistence: CalendarSelectionPersistence(defaults: defaults),
             syncMetadataPersistence: CalendarSharingSyncMetadataPersistence(defaults: defaults),
             initialCalendars: calendars,
@@ -3517,6 +3599,7 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
 
     var ownedStates: [OwnedSharedCalendarCloudState]
     var receivedPayloads: [ReceivedSharedCalendarPayload] = []
+    var ownedEventEnvelopesByCalendarID: [UUID: [UUID: SharedEventEnvelope]] = [:]
     var synchronizedCalendarIDs: [UUID] = []
     var completedCalendarIDs: [UUID] = []
     var lastPayloadByCalendarID: [UUID: Payload] = [:]
@@ -3533,6 +3616,7 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     var shareMetadataFetchGate: ControlledAsyncGate?
     var acceptError: Error?
     var createShareError: Error?
+    var eventEditingPermissionUpdateError: Error?
     var currentUserDisplayNameResult: String?
     var currentUserDisplayNameCallCount = 0
     var iCloudStatusResult: CalendarSharingICloudStatus = .available
@@ -3602,6 +3686,12 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
             participants: [makePendingParticipant(id: participantID)]
         )
         ownedStates.append(state)
+        ownedEventEnvelopesByCalendarID[calendarID] = Dictionary(
+            uniqueKeysWithValues: events.map { snapshot in
+                let envelope = makeEnvelope(snapshot: snapshot, calendar: state.calendar)
+                return (snapshot.id, envelope)
+            }
+        )
         return OwnedSharingInvitationResult(
             state: state,
             invitationURL: invitationURL,
@@ -3618,7 +3708,8 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
             calendar: makeCalendar(
                 kind: .sharedOwned,
                 name: existing.calendar.calendarName,
-                id: calendar.id
+                id: calendar.id,
+                eventEditingAllowed: existing.calendar.eventEditingAllowed
             ),
             participants: existing.participants + [makePendingParticipant(id: participantID)]
         )
@@ -3648,12 +3739,44 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
             calendar: makeCalendar(
                 kind: .sharedOwned,
                 name: existing.calendar.calendarName,
-                id: calendar.id
+                id: calendar.id,
+                eventEditingAllowed: existing.calendar.eventEditingAllowed
             ),
             participants: participants
         )
         replaceOwnedState(state)
         revokedParticipantIDs.append(participantID)
+        return state
+    }
+
+    func updateEventEditingPermission(
+        for calendar: OwnedSharedCalendarDescriptor,
+        allowed: Bool
+    ) async throws -> OwnedSharedCalendarCloudState {
+        if let eventEditingPermissionUpdateError {
+            throw eventEditingPermissionUpdateError
+        }
+        guard let existing = ownedStates.first(where: { $0.calendar.id == calendar.id }) else {
+            throw CalendarSharingError.shareUnavailable
+        }
+        let local = makeCalendar(
+            kind: .sharedOwned,
+            name: existing.calendar.calendarName,
+            id: calendar.id,
+            eventEditingAllowed: allowed
+        )
+        let permission: SharedCalendarParticipantPermission = allowed ? .readWrite : .readOnly
+        let participants = existing.participants.map { participant in
+            SharedCalendarParticipantSnapshot(
+                id: participant.id,
+                displayName: participant.displayName,
+                isAccepted: participant.isAccepted,
+                permission: permission,
+                revocationToken: participant.revocationToken
+            )
+        }
+        let state = makeOwnedState(calendar: local, participants: participants)
+        replaceOwnedState(state)
         return state
     }
 
@@ -3701,6 +3824,43 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
 
     func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload] {
         receivedPayloads
+    }
+
+    func fetchOwnedSharedEvents(
+        in calendar: OwnedSharedCalendarDescriptor
+    ) async throws -> [SharedEventEnvelope] {
+        Array((ownedEventEnvelopesByCalendarID[calendar.id] ?? [:]).values)
+    }
+
+    func upsertOwnedSharedEvent(
+        _ snapshot: SharedEventSnapshot,
+        in calendar: OwnedSharedCalendarDescriptor
+    ) async throws -> SharedEventEnvelope {
+        let envelope = makeEnvelope(snapshot: snapshot, calendar: calendar)
+        ownedEventEnvelopesByCalendarID[calendar.id, default: [:]][snapshot.id] = envelope
+        return envelope
+    }
+
+    func deleteOwnedSharedEvent(
+        eventID: UUID,
+        in calendar: OwnedSharedCalendarDescriptor
+    ) async throws -> SharedEventEnvelope? {
+        guard let existing = ownedEventEnvelopesByCalendarID[calendar.id]?[eventID] else {
+            return nil
+        }
+        let deleted = SharedEventSnapshot(
+            id: existing.snapshot.id,
+            title: existing.snapshot.title,
+            startDate: existing.snapshot.startDate,
+            endDate: existing.snapshot.endDate,
+            isAllDay: existing.snapshot.isAllDay,
+            updatedAt: Date(),
+            isDeleted: true,
+            deletedAt: Date()
+        )
+        let envelope = makeEnvelope(snapshot: deleted, calendar: calendar)
+        ownedEventEnvelopesByCalendarID[calendar.id, default: [:]][eventID] = envelope
+        return envelope
     }
 
     func accept(
@@ -3782,6 +3942,25 @@ private final class MockCalendarSharingClient: CalendarSharingClientProtocol {
     private func replaceOwnedState(_ state: OwnedSharedCalendarCloudState) {
         ownedStates.removeAll { $0.calendar.id == state.calendar.id }
         ownedStates.append(state)
+    }
+
+    private func makeEnvelope(
+        snapshot: SharedEventSnapshot,
+        calendar: OwnedSharedCalendarDescriptor
+    ) -> SharedEventEnvelope {
+        SharedEventEnvelope(
+            calendarID: calendar.id,
+            zoneName: calendar.zoneName,
+            ownerName: calendar.ownerName,
+            recordName: "event-\(snapshot.id.uuidString.lowercased())",
+            snapshot: snapshot,
+            recordChangeTag: UUID().uuidString,
+            modificationDate: Date(),
+            creatorIdentifierHash: nil,
+            lastModifierIdentifierHash: nil,
+            syncStatus: snapshot.isDeleted ? .deletedRemotely : .synced,
+            pendingMutationID: nil
+        )
     }
 }
 
@@ -3984,7 +4163,8 @@ private func makeOwnedState(
             calendarName: calendar.name,
             participantCount: participants.filter(\.isAccepted).count,
             rootRecordName: CalendarSharingCloudSchema.calendarRecordName,
-            shareRecordName: CKRecordNameZoneWideShare
+            shareRecordName: CKRecordNameZoneWideShare,
+            eventEditingAllowed: calendar.eventEditingAllowed
         ),
         share: share,
         participants: participants
@@ -3994,7 +4174,9 @@ private func makeOwnedState(
 private func makeCalendar(
     kind: TimeNestCalendarKind,
     name: String,
-    id: UUID = UUID()
+    id: UUID = UUID(),
+    eventEditingAllowed: Bool = false,
+    participantPermission: SharedCalendarParticipantPermission = .unknown
 ) -> TimeNestCalendar {
     let now = Date()
     return TimeNestCalendar(
@@ -4005,6 +4187,8 @@ private func makeCalendar(
         ownerName: kind.isCloudBacked ? CKCurrentUserDefaultName : nil,
         rootRecordName: kind.isCloudBacked ? CalendarSharingCloudSchema.calendarRecordName : nil,
         shareRecordName: kind.isCloudBacked ? CKRecordNameZoneWideShare : nil,
+        eventEditingAllowed: eventEditingAllowed,
+        participantPermission: participantPermission,
         createdAt: now,
         updatedAt: now
     )

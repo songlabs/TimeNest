@@ -20,6 +20,8 @@ struct MonthCalendarView: View {
     @State private var readOnlyDetail: ReadOnlyCalendarDetail?
     @State private var showingReadOnlyCreateAlert = false
     @State private var editingUnifiedEntry: UnifiedEntryEditorInitialState?
+    @State private var sharedEventEditorRoute: SharedEventEditorRoute?
+    @State private var sharedReceivedDayDetailRoute: SharedReceivedDayDetailRoute?
     @State private var entryLoadErrorMessage: String?
 
     init(
@@ -60,7 +62,7 @@ struct MonthCalendarView: View {
                     calendarAvatarInitial: calendarAvatarInitial,
                     calendarSource: calendarSharingStore.selectedCalendar.kind,
                     calendarDisplayName: calendarSharingStore.selectedCalendarDisplayName,
-                    isReadOnlyCalendar: calendarSharingStore.accessPolicy.isReadOnly,
+                    isReadOnlyCalendar: !calendarSharingStore.selectedCalendar.canEditContent,
                     onCalendarTapped: {
                         showingCalendarSelection = true
                     },
@@ -123,6 +125,16 @@ struct MonthCalendarView: View {
         }
         .sheet(item: $readOnlyDetail) { detail in
             ReadOnlySharedCalendarDetailView(detail: detail)
+                .environmentObject(localization)
+        }
+        .sheet(item: $sharedEventEditorRoute) { route in
+            SharedEventEditorView(route: route)
+                .environmentObject(calendarSharingStore)
+                .environmentObject(localization)
+        }
+        .sheet(item: $sharedReceivedDayDetailRoute) { route in
+            SharedReceivedDayDetailView(route: route)
+                .environmentObject(calendarSharingStore)
                 .environmentObject(localization)
         }
         .sheet(isPresented: $showingSettings, onDismiss: {
@@ -393,8 +405,7 @@ struct MonthCalendarView: View {
                                     )
                                     .environmentObject(localization)
                                     .onTapGesture {
-                                        viewModel.selectDay(cell)
-                                        presentReadOnlyDetailIfNeeded(for: cell)
+                                        handleDayCellTap(cell)
                                     }
                                 } else {
                                     // 空 cell
@@ -491,7 +502,13 @@ struct MonthCalendarView: View {
             selectedViewMode: $viewModel.displayMode,
             onTodayTapped: handleTodayTapped,
             onAddEventTapped: {
-                if calendarSharingStore.accessPolicy.canCreate {
+                if calendarSharingStore.selectedCalendar.kind == .sharedReceived,
+                   calendarSharingStore.accessPolicy.canCreateSharedEvent {
+                    sharedEventEditorRoute = .create(
+                        calendarID: calendarSharingStore.selection.calendarID,
+                        date: viewModel.selectedDate
+                    )
+                } else if calendarSharingStore.accessPolicy.canCreate {
                     Task {
                         await viewModel.openSelectedDateEntryEditor()
                     }
@@ -688,7 +705,49 @@ struct MonthCalendarView: View {
         }
     }
 
+    private func handleDayCellTap(_ cell: CalendarDayCell) {
+        guard calendarSharingStore.selectedCalendar.kind == .sharedReceived else {
+            viewModel.selectDay(cell)
+            return
+        }
+        viewModel.selectReadOnlyDay(cell)
+        if calendarSharingStore.accessPolicy.canCreateSharedEvent {
+            if cell.events.isEmpty {
+                sharedEventEditorRoute = .create(
+                    calendarID: calendarSharingStore.selection.calendarID,
+                    date: cell.date.toDate()
+                )
+            } else {
+                sharedReceivedDayDetailRoute = SharedReceivedDayDetailRoute(
+                    calendarID: calendarSharingStore.selection.calendarID,
+                    cell: cell
+                )
+            }
+        } else {
+            presentReadOnlyDetailIfNeeded(for: cell)
+        }
+    }
+
     private func handleEventTap(_ event: EventOccurrence) {
+        if calendarSharingStore.selectedCalendar.kind == .sharedReceived {
+            let calendarID = calendarSharingStore.selection.calendarID
+            if calendarSharingStore.accessPolicy.canEditSharedEvent,
+               let snapshot = calendarSharingStore.sharedEventSnapshot(
+                calendarID: calendarID,
+                eventID: event.eventID
+               ) {
+                sharedEventEditorRoute = .edit(
+                    calendarID: calendarID,
+                    snapshot: snapshot
+                )
+            } else {
+                readOnlyDetail = ReadOnlyCalendarDetail(
+                    date: event.occurrenceDate.toDate(),
+                    events: [event]
+                )
+            }
+            return
+        }
         if calendarSharingStore.accessPolicy.isReadOnly {
             presentReadOnlyEventIfNeeded(event)
             return

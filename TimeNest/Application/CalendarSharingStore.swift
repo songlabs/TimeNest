@@ -50,6 +50,7 @@ final class CalendarSharingStore: ObservableObject {
 
     private let client: any CalendarSharingClientProtocol
     private let eventUseCase: EventUseCase
+    private let sharedEventEditingUseCase: SharedEventEditingUseCase
     private let calendarRepository: any CalendarRepository
     private let cache: CalendarSharingCache
     private let selectionPersistence: CalendarSelectionPersistence
@@ -79,6 +80,7 @@ final class CalendarSharingStore: ObservableObject {
         eventUseCase: EventUseCase,
         calendarRepository: any CalendarRepository,
         cache: CalendarSharingCache = CalendarSharingCache(),
+        sharedEventEditingPersistence: SharedEventEditingPersistence = SharedEventEditingPersistence(),
         selectionPersistence: CalendarSelectionPersistence = CalendarSelectionPersistence(),
         syncMetadataPersistence: CalendarSharingSyncMetadataPersistence = CalendarSharingSyncMetadataPersistence(),
         initialCalendars: [TimeNestCalendar] = [],
@@ -87,6 +89,11 @@ final class CalendarSharingStore: ObservableObject {
     ) {
         self.client = client
         self.eventUseCase = eventUseCase
+        sharedEventEditingUseCase = SharedEventEditingUseCase(
+            client: client,
+            eventUseCase: eventUseCase,
+            persistence: sharedEventEditingPersistence
+        )
         self.calendarRepository = calendarRepository
         self.cache = cache
         self.selectionPersistence = selectionPersistence
@@ -101,6 +108,29 @@ final class CalendarSharingStore: ObservableObject {
         workRecordsByCalendarID = cached.workRecordsByCalendarID
         selection = selectionPersistence.load()
         lastSuccessfulSyncAt = syncMetadataPersistence.loadLastSuccessfulSyncAt()
+        for descriptor in cached.receivedCalendars {
+            let cachedPayload = ReceivedSharedCalendarPayload(
+                calendar: descriptor,
+                events: cached.eventsByCalendarID[descriptor.id] ?? [],
+                shifts: cached.shiftsByCalendarID[descriptor.id] ?? [],
+                workRecords: cached.workRecordsByCalendarID[descriptor.id] ?? []
+            )
+            do {
+                try sharedEventEditingUseCase.reconcileReceived(
+                    calendar: descriptor,
+                    envelopes: cachedPayload.eventEnvelopes,
+                    isAuthoritative: false
+                )
+                eventsByCalendarID[descriptor.id] = sharedEventEditingUseCase.visibleSnapshots(
+                    calendarID: descriptor.id
+                )
+            } catch {
+                lastError = .localPersistenceFailed
+            }
+        }
+        if sharedEventEditingUseCase.startupPersistenceError != nil {
+            lastError = .localPersistenceFailed
+        }
     }
 
     deinit {
@@ -158,6 +188,102 @@ final class CalendarSharingStore: ObservableObject {
 
     func participants(for calendarID: UUID) -> [SharedCalendarParticipantSnapshot] {
         participantsByCalendarID[calendarID] ?? []
+    }
+
+    func sharedEventSnapshot(calendarID: UUID, eventID: UUID) -> SharedEventSnapshot? {
+        sharedEventEditingUseCase.envelope(
+            calendarID: calendarID,
+            eventID: eventID
+        )?.snapshot ?? eventsByCalendarID[calendarID]?.first { $0.id == eventID }
+    }
+
+    func sharedEventSyncStatus(
+        calendarID: UUID,
+        eventID: UUID
+    ) -> SharedEventSyncStatus? {
+        sharedEventEditingUseCase.status(calendarID: calendarID, eventID: eventID)
+    }
+
+    func ensureCanWriteSharedEvent(calendarID: UUID) throws {
+        guard calendar(id: calendarID)?.canCreateSharedEvent == true else {
+            throw CalendarSharingError.sharedEventPermissionRevoked
+        }
+    }
+
+    @discardableResult
+    func createReceivedSharedEvent(
+        _ snapshot: SharedEventSnapshot,
+        calendarID: UUID
+    ) async throws -> SharedEventSyncStatus {
+        try ensureCanWriteSharedEvent(calendarID: calendarID)
+        guard let descriptor = receivedDescriptor(id: calendarID) else {
+            throw CalendarSharingError.shareUnavailable
+        }
+        let status = try await sharedEventEditingUseCase.create(snapshot, in: descriptor)
+        refreshReceivedSharedEventCache(calendarID: calendarID)
+        return status
+    }
+
+    @discardableResult
+    func updateReceivedSharedEvent(
+        _ snapshot: SharedEventSnapshot,
+        calendarID: UUID
+    ) async throws -> SharedEventSyncStatus {
+        try ensureCanWriteSharedEvent(calendarID: calendarID)
+        guard let descriptor = receivedDescriptor(id: calendarID) else {
+            throw CalendarSharingError.shareUnavailable
+        }
+        let status = try await sharedEventEditingUseCase.update(snapshot, in: descriptor)
+        refreshReceivedSharedEventCache(calendarID: calendarID)
+        return status
+    }
+
+    @discardableResult
+    func deleteReceivedSharedEvent(
+        eventID: UUID,
+        calendarID: UUID
+    ) async throws -> SharedEventSyncStatus {
+        try ensureCanWriteSharedEvent(calendarID: calendarID)
+        guard let descriptor = receivedDescriptor(id: calendarID) else {
+            throw CalendarSharingError.shareUnavailable
+        }
+        let status = try await sharedEventEditingUseCase.delete(
+            eventID: eventID,
+            in: descriptor
+        )
+        refreshReceivedSharedEventCache(calendarID: calendarID)
+        return status
+    }
+
+    func setEventEditingAllowed(calendarID: UUID, allowed: Bool) async throws {
+        guard calendar(id: calendarID)?.canManageShare == true,
+              let descriptor = ownedDescriptor(id: calendarID) else {
+            throw CalendarSharingError.permissionDenied
+        }
+        if allowed, descriptor.collaborationProtocolVersion < 1 {
+            let snapshots = try await Self.localSnapshots(
+                eventUseCase: eventUseCase,
+                calendarID: calendarID,
+                adding: []
+            )
+            try await client.synchronizeOwnedContent(
+                calendar: descriptor,
+                events: snapshots.events,
+                shifts: snapshots.shifts,
+                workRecords: snapshots.workRecords
+            )
+        }
+        let state = try await client.updateEventEditingPermission(
+            for: descriptor,
+            allowed: allowed
+        )
+        try await persistOwnedState(state)
+        ownedCalendars = ownedCalendars.map {
+            $0.id == calendarID ? state.calendar : $0
+        }
+        participantsByCalendarID[calendarID] = state.participants
+        await loadLocalCalendars()
+        revision &+= 1
     }
 
     func displayStatus(for calendar: TimeNestCalendar) -> CalendarSharingDisplayStatus {
@@ -316,9 +442,21 @@ final class CalendarSharingStore: ObservableObject {
             }
 
             let refreshedOwnedStates = try await client.fetchOwnedCalendars()
-            let receivedPayloads = mergingReceivedOwnerDisplayNames(
-                into: try await client.fetchReceivedCalendars()
+            var receivedPayloads = try reconcileReceivedSharedEvents(
+                mergingReceivedOwnerDisplayNames(
+                    into: try await client.fetchReceivedCalendars()
+                )
             )
+            if !sharedEventEditingUseCase.pendingMutations().isEmpty {
+                try await sharedEventEditingUseCase.retryPending(
+                    in: receivedPayloads.map(\.calendar)
+                )
+                receivedPayloads = try reconcileReceivedSharedEvents(
+                    mergingReceivedOwnerDisplayNames(
+                        into: try await client.fetchReceivedCalendars()
+                    )
+                )
+            }
             try await reconcileRemovedCloudCalendars(
                 ownedIDs: Set(refreshedOwnedStates.map(\.calendar.id)),
                 receivedIDs: Set(receivedPayloads.map(\.calendar.id))
@@ -374,7 +512,10 @@ final class CalendarSharingStore: ObservableObject {
         }
     }
 
-    func createSharedCalendar(name: String) async throws -> CalendarSharingInvitation {
+    func createSharedCalendar(
+        name: String,
+        eventEditingAllowed: Bool = false
+    ) async throws -> CalendarSharingInvitation {
         try await requireAvailableICloud()
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else { throw CalendarSharingError.shareCreationFailed }
@@ -404,9 +545,18 @@ final class CalendarSharingStore: ObservableObject {
                 workRecords: []
             )
             cloudCreated = true
-            try await persistOwnedState(result.state)
-            ownedCalendars.append(result.state.calendar)
-            participantsByCalendarID[id] = result.state.participants
+            let finalState: OwnedSharedCalendarCloudState
+            if eventEditingAllowed {
+                finalState = try await client.updateEventEditingPermission(
+                    for: result.state.calendar,
+                    allowed: true
+                )
+            } else {
+                finalState = result.state
+            }
+            try await persistOwnedState(finalState)
+            ownedCalendars.append(finalState.calendar)
+            participantsByCalendarID[id] = finalState.participants
             select(.calendar(id))
             await loadLocalCalendars()
             revision &+= 1
@@ -649,12 +799,18 @@ final class CalendarSharingStore: ObservableObject {
             calendarName: calendar.name,
             participantCount: participants(for: calendar.id).filter(\.isAccepted).count,
             rootRecordName: rootRecordName,
-            shareRecordName: shareRecordName
+            shareRecordName: shareRecordName,
+            eventEditingAllowed: calendar.eventEditingAllowed,
+            collaborationProtocolVersion: calendar.collaborationProtocolVersion
         )
     }
 
     func leave(_ calendar: SharedCalendarDescriptor) async throws {
         try await client.leaveSharedCalendar(calendar)
+        // Keep the local calendar visible until its durable collaborative-editing
+        // state has been removed. Otherwise a persistence failure would orphan an
+        // outbox that can no longer be reached from the UI or retried safely.
+        try sharedEventEditingUseCase.removeCalendar(calendar.id)
         try await calendarRepository.delete(id: calendar.id)
         receivedCalendars.removeAll { $0.id == calendar.id }
         eventsByCalendarID.removeValue(forKey: calendar.id)
@@ -820,12 +976,14 @@ final class CalendarSharingStore: ObservableObject {
         switch error {
         case .noICloudAccount, .iCloudRestricted, .iCloudStatusUnavailable, .networkUnavailable,
              .serviceTemporarilyUnavailable, .invitationPending,
-             .invitationAcceptanceFailed, .receivedCalendarRefreshFailed, .syncFailed:
+             .invitationAcceptanceFailed, .receivedCalendarRefreshFailed,
+             .localPersistenceFailed, .syncFailed:
             .retryLater
         case .invitationInvalid, .invitationRevoked, .cloudEnvironmentMismatch,
              .invitationURLInputEmpty, .invitationURLInvalid, .notCloudKitShare,
              .metadataFetchFailed, .invitationContainerMismatch,
              .invitationUnavailable, .permissionDenied,
+             .sharedEventDeleted, .sharedEventPermissionRevoked,
              .invitationCreationFailed, .invitationURLUnavailable,
              .invitationActivityFailed,
              .shareCreationFailed, .shareUnavailable,
@@ -840,7 +998,7 @@ final class CalendarSharingStore: ObservableObject {
         let metadataOwnerDisplayName = CalendarSharingOwnerDisplayNameResolver.normalized(
             acceptedShare.ownerDisplayName
         )
-        let payloads = mergingReceivedOwnerDisplayNames(
+        let payloads = try reconcileReceivedSharedEvents(mergingReceivedOwnerDisplayNames(
             into: try await client.fetchReceivedCalendars()
         ).map { payload in
             guard payload.calendar.zoneName == acceptedShare.zoneName,
@@ -853,9 +1011,10 @@ final class CalendarSharingStore: ObservableObject {
                 calendar: calendar,
                 events: payload.events,
                 shifts: payload.shifts,
-                workRecords: payload.workRecords
+                workRecords: payload.workRecords,
+                eventEnvelopes: payload.eventEnvelopes
             )
-        }
+        })
         guard let acceptedPayload = payloads.first(where: {
             $0.calendar.zoneName == acceptedShare.zoneName
         }) else {
@@ -903,7 +1062,28 @@ final class CalendarSharingStore: ObservableObject {
                 calendar: calendar,
                 events: payload.events,
                 shifts: payload.shifts,
-                workRecords: payload.workRecords
+                workRecords: payload.workRecords,
+                eventEnvelopes: payload.eventEnvelopes
+            )
+        }
+    }
+
+    private func reconcileReceivedSharedEvents(
+        _ payloads: [ReceivedSharedCalendarPayload]
+    ) throws -> [ReceivedSharedCalendarPayload] {
+        try payloads.map { payload in
+            try sharedEventEditingUseCase.reconcileReceived(
+                calendar: payload.calendar,
+                envelopes: payload.eventEnvelopes
+            )
+            return ReceivedSharedCalendarPayload(
+                calendar: payload.calendar,
+                events: sharedEventEditingUseCase.visibleSnapshots(
+                    calendarID: payload.calendar.id
+                ),
+                shifts: payload.shifts,
+                workRecords: payload.workRecords,
+                eventEnvelopes: payload.eventEnvelopes
             )
         }
     }
@@ -926,7 +1106,26 @@ final class CalendarSharingStore: ObservableObject {
         moved.calendarID = targetCalendarID
         moved.updatedAt = Date()
 
-        if let target = ownedDescriptor(id: targetCalendarID) {
+        let sourceDescriptor = ownedDescriptor(id: sourceCalendarID)
+        let targetDescriptor = ownedDescriptor(id: targetCalendarID)
+        let touchesCollaborativeCalendar = (sourceDescriptor?.collaborationProtocolVersion ?? 0) >= 1
+            || (targetDescriptor?.collaborationProtocolVersion ?? 0) >= 1
+        if touchesCollaborativeCalendar {
+            // The event move and both source/target cloud intents are persisted together by
+            // EventUseCase. Cloud delivery may fail later without losing either intent.
+            _ = try await eventUseCase.updateEvent(moved)
+            for descriptor in [targetDescriptor, sourceDescriptor].compactMap({ $0 }) {
+                let request = enqueueOwnedSync(descriptor)
+                await waitForOwnedSync(request)
+                if completedSyncGenerations[descriptor.id, default: 0] < request.generation {
+                    throw lastError ?? CalendarSharingError.syncFailed
+                }
+            }
+            revision &+= 1
+            return
+        }
+
+        if let target = targetDescriptor {
             pendingExtraEvents[targetCalendarID, default: [:]][moved.id] = moved
             let request = enqueueOwnedSync(target)
             await waitForOwnedSync(request)
@@ -938,7 +1137,7 @@ final class CalendarSharingStore: ObservableObject {
 
         _ = try await eventUseCase.updateEvent(moved)
         pendingExtraEvents[targetCalendarID]?[moved.id] = nil
-        if let source = ownedDescriptor(id: sourceCalendarID) {
+        if let source = sourceDescriptor {
             let request = enqueueOwnedSync(source)
             await waitForOwnedSync(request)
             if completedSyncGenerations[sourceCalendarID, default: 0] < request.generation {
@@ -986,6 +1185,7 @@ final class CalendarSharingStore: ObservableObject {
         guard syncWorkers[calendarID] == nil else { return }
         let client = client
         let eventUseCase = eventUseCase
+        let sharedEventEditingUseCase = sharedEventEditingUseCase
         let worker = Task { @MainActor [weak self] in
             defer { self?.syncWorkers[calendarID] = nil }
             while !Task.isCancelled {
@@ -993,6 +1193,10 @@ final class CalendarSharingStore: ObservableObject {
                     return
                 }
                 do {
+                    try await sharedEventEditingUseCase.synchronizeOwned(
+                        calendar: work.descriptor,
+                        adding: work.extraEvents.compactMap(SharedEventMapper.snapshot(from:))
+                    )
                     let snapshots = try await Self.localSnapshots(
                         eventUseCase: eventUseCase,
                         calendarID: calendarID,
@@ -1111,6 +1315,9 @@ final class CalendarSharingStore: ObservableObject {
                     ownerName: descriptor.ownerName,
                     rootRecordName: descriptor.rootRecordName,
                     shareRecordName: descriptor.shareRecordName,
+                    eventEditingAllowed: descriptor.eventEditingAllowed,
+                    collaborationProtocolVersion: descriptor.collaborationProtocolVersion,
+                    participantPermission: descriptor.participantPermission,
                     createdAt: existing?.createdAt ?? now,
                     updatedAt: now
                 )
@@ -1136,6 +1343,7 @@ final class CalendarSharingStore: ObservableObject {
                 )
                 try await calendarRepository.delete(id: calendar.id)
             case .sharedReceived where !receivedIDs.contains(calendar.id):
+                try sharedEventEditingUseCase.removeCalendar(calendar.id)
                 try await calendarRepository.delete(id: calendar.id)
             case .sharedOwned, .sharedReceived:
                 continue
@@ -1149,6 +1357,7 @@ final class CalendarSharingStore: ObservableObject {
         let localCalendars = try await calendarRepository.calendars()
         for calendar in localCalendars
         where calendar.kind == .sharedReceived && !receivedIDs.contains(calendar.id) {
+            try sharedEventEditingUseCase.removeCalendar(calendar.id)
             try await calendarRepository.delete(id: calendar.id)
         }
     }
@@ -1182,6 +1391,9 @@ final class CalendarSharingStore: ObservableObject {
                 ownerName: descriptor.ownerName,
                 rootRecordName: descriptor.rootRecordName,
                 shareRecordName: descriptor.shareRecordName,
+                eventEditingAllowed: descriptor.eventEditingAllowed,
+                collaborationProtocolVersion: descriptor.collaborationProtocolVersion,
+                participantPermission: .none,
                 stopPhase: existing?.stopPhase ?? .active,
                 createdAt: existing?.createdAt ?? now,
                 updatedAt: now
@@ -1249,6 +1461,14 @@ final class CalendarSharingStore: ObservableObject {
         )
     }
 
+    private func refreshReceivedSharedEventCache(calendarID: UUID) {
+        eventsByCalendarID[calendarID] = sharedEventEditingUseCase.visibleSnapshots(
+            calendarID: calendarID
+        )
+        persistCache()
+        revision &+= 1
+    }
+
     func handleLocalDataRestore() async {
         select(.mine)
         calendars = []
@@ -1258,8 +1478,15 @@ final class CalendarSharingStore: ObservableObject {
         eventsByCalendarID = [:]
         shiftsByCalendarID = [:]
         workRecordsByCalendarID = [:]
+        let sharedEventResetError: CalendarSharingError?
+        do {
+            try sharedEventEditingUseCase.reset()
+            sharedEventResetError = nil
+        } catch {
+            sharedEventResetError = .localPersistenceFailed
+        }
         syncStatus = .idle
-        lastError = nil
+        lastError = sharedEventResetError
         lastSuccessfulSyncAt = nil
         syncMetadataPersistence.saveLastSuccessfulSyncAt(nil)
         try? cache.save(.empty)

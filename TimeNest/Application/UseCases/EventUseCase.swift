@@ -73,13 +73,30 @@ private enum EventUseCaseDiagnostics {
             "operation=update_notification_compensation primary_type=\(String(reflecting: type(of: primaryError)), privacy: .public) compensation_status=\(compensationResult.diagnosticStatus, privacy: .public)"
         )
     }
+
+    static func remoteNotificationRefreshFailed(
+        result: EventNotificationScheduleResult
+    ) {
+        logger.error(
+            "operation=remote_event_notification_refresh status=\(result.diagnosticStatus, privacy: .public)"
+        )
+    }
+
+    static func remoteNotificationStatePersistenceFailed(_ error: Error) {
+        logger.error(
+            "operation=remote_event_notification_persist error_type=\(String(reflecting: type(of: error)), privacy: .public)"
+        )
+    }
 }
 
 class EventUseCase {
     private let repository: EventRepository
     private let calendarRepository: (any CalendarRepository)?
     private let notificationScheduler: LocalNotificationScheduling?
+    /// Local user mutations only. The app may enqueue cloud work from this callback.
     var onEventsChanged: (() -> Void)?
+    /// Remote materialization only. This callback is deliberately widget/UI-only.
+    var onRemoteEventsMaterialized: (() -> Void)?
 
     init(
         repository: EventRepository,
@@ -99,7 +116,14 @@ class EventUseCase {
         let notificationResult = await scheduleNotification(for: eventToSave)
         eventToSave.notificationID = notificationResult.notificationID
         do {
-            try await repository.create(eventToSave)
+            let mutations = try await ownerMutations(oldEvent: nil, newEvent: eventToSave)
+            try await persistLocalEventChange(
+                upserting: [eventToSave],
+                deleting: [],
+                expected: [],
+                mutations: mutations,
+                fallback: { try await self.repository.create(eventToSave) }
+            )
         } catch {
             if let notificationID = eventToSave.notificationID {
                 notificationScheduler?.cancelNotification(id: notificationID)
@@ -124,7 +148,14 @@ class EventUseCase {
         if eventToSave.reminderOffsetMinutes == nil {
             notificationResult = .noReminder
             eventToSave.notificationID = nil
-            try await repository.update(eventToSave)
+            let mutations = try await ownerMutations(oldEvent: oldEvent, newEvent: eventToSave)
+            try await persistLocalEventChange(
+                upserting: [eventToSave],
+                deleting: [],
+                expected: [oldEvent],
+                mutations: mutations,
+                fallback: { try await self.repository.update(eventToSave) }
+            )
             if let oldNotificationID {
                 notificationScheduler?.cancelNotification(id: oldNotificationID)
             }
@@ -135,7 +166,14 @@ class EventUseCase {
             notificationResult = await scheduleNotification(for: eventToSave)
             eventToSave.notificationID = notificationResult.notificationID
             do {
-                try await repository.update(eventToSave)
+                let mutations = try await ownerMutations(oldEvent: oldEvent, newEvent: eventToSave)
+                try await persistLocalEventChange(
+                    upserting: [eventToSave],
+                    deleting: [],
+                    expected: [oldEvent],
+                    mutations: mutations,
+                    fallback: { try await self.repository.update(eventToSave) }
+                )
             } catch {
                 if let newNotificationID = notificationResult.notificationID {
                     if newNotificationID != oldNotificationID {
@@ -170,7 +208,14 @@ class EventUseCase {
         if let event {
             try await validateWriteAccess(calendarID: event.calendarID)
         }
-        try await repository.delete(id: id)
+        let mutations = try await ownerMutations(oldEvent: event, newEvent: nil)
+        try await persistLocalEventChange(
+            upserting: [],
+            deleting: [event].compactMap { $0 },
+            expected: [event].compactMap { $0 },
+            mutations: mutations,
+            fallback: { try await self.repository.delete(id: id) }
+        )
         if let notificationID = event?.notificationID {
             notificationScheduler?.cancelNotification(id: notificationID)
         }
@@ -183,7 +228,18 @@ class EventUseCase {
             try await validateWriteAccess(calendarID: event.calendarID)
         }
 
-        try await repository.deleteBatch(expectedEvents)
+        let mutations = try await ownerMutationsForBatch(
+            upserting: [],
+            deleting: expectedEvents,
+            expected: expectedEvents
+        )
+        try await persistLocalEventChange(
+            upserting: [],
+            deleting: expectedEvents,
+            expected: expectedEvents,
+            mutations: mutations,
+            fallback: { try await self.repository.deleteBatch(expectedEvents) }
+        )
         expectedEvents.compactMap(\.notificationID).forEach {
             notificationScheduler?.cancelNotification(id: $0)
         }
@@ -200,6 +256,114 @@ class EventUseCase {
 
     func event(id: UUID) async throws -> CalendarEvent? {
         try await repository.event(id: id)
+    }
+
+    /// Applies only SharedEvent schema fields from CloudKit while preserving owner-local fields
+    /// such as note, reminder, category and import metadata. This deliberately bypasses the
+    /// ordinary mutation callback so a remote merge cannot enqueue an owner overwrite.
+    func mergeSharedEventFromCloud(
+        _ snapshot: SharedEventSnapshot,
+        calendarID: UUID
+    ) async throws {
+        if snapshot.isDeleted {
+            try await removeSharedEventFromCloud(id: snapshot.id, calendarID: calendarID)
+            return
+        }
+
+        let now = snapshot.updatedAt
+        if let existing = try await repository.event(id: snapshot.id) {
+            guard existing.calendarID == calendarID,
+                  SharedEventMapper.isShareable(existing) else {
+                throw CalendarSharingError.syncFailed
+            }
+            let merged = CalendarEvent(
+                id: existing.id,
+                unifiedEntryID: existing.unifiedEntryID,
+                calendarID: existing.calendarID,
+                title: snapshot.title,
+                note: existing.note,
+                startDate: snapshot.startDate,
+                endDate: snapshot.endDate,
+                isAllDay: snapshot.isAllDay,
+                categoryID: existing.categoryID,
+                recurrenceRule: existing.recurrenceRule,
+                reminderTemplateID: existing.reminderTemplateID,
+                reminderOffsetMinutes: existing.reminderOffsetMinutes,
+                notificationID: existing.notificationID,
+                importSource: existing.importSource,
+                createdAt: existing.createdAt,
+                updatedAt: now,
+                shiftTemplateID: nil,
+                workInfo: nil
+            )
+            try validate(merged)
+            try await repository.update(merged)
+            await refreshNotificationAfterRemoteMerge(merged, previous: existing)
+            onRemoteEventsMaterialized?()
+            return
+        }
+
+        let event = CalendarEvent(
+            id: snapshot.id,
+            calendarID: calendarID,
+            title: snapshot.title,
+            note: nil,
+            startDate: snapshot.startDate,
+            endDate: snapshot.endDate,
+            isAllDay: snapshot.isAllDay,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            reminderOffsetMinutes: nil,
+            notificationID: nil,
+            importSource: nil,
+            createdAt: now,
+            updatedAt: now,
+            shiftTemplateID: nil,
+            workInfo: nil
+        )
+        try validate(event)
+        try await repository.create(event)
+        onRemoteEventsMaterialized?()
+    }
+
+    /// Idempotently removes a remotely tombstoned SharedEvent from the owner's SwiftData rows.
+    func removeSharedEventFromCloud(id: UUID, calendarID: UUID) async throws {
+        guard let existing = try await repository.event(id: id) else { return }
+        guard existing.calendarID == calendarID,
+              SharedEventMapper.isShareable(existing) else {
+            throw CalendarSharingError.syncFailed
+        }
+        try await repository.delete(id: id)
+        if let notificationID = existing.notificationID {
+            notificationScheduler?.cancelNotification(id: notificationID)
+        }
+        onRemoteEventsMaterialized?()
+    }
+
+    func ownerSharedEventMutations(
+        calendarID: UUID
+    ) async throws -> [OwnerSharedEventMutation] {
+        guard let mutationRepository = repository as? any OwnerSharedEventMutationRepository else {
+            throw CalendarSharingError.localPersistenceFailed
+        }
+        return try await mutationRepository.ownerSharedEventMutations(calendarID: calendarID)
+    }
+
+    func saveOwnerSharedEventMutation(
+        _ mutation: OwnerSharedEventMutation
+    ) async throws {
+        guard let mutationRepository = repository as? any OwnerSharedEventMutationRepository else {
+            throw CalendarSharingError.localPersistenceFailed
+        }
+        try await mutationRepository.saveOwnerSharedEventMutation(mutation)
+    }
+
+    func sharedEventSnapshots(calendarID: UUID) async throws -> [SharedEventSnapshot] {
+        try await events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: calendarID
+        ).compactMap(SharedEventMapper.snapshot(from:))
     }
 
     func unifiedEntryGroup(
@@ -473,10 +637,24 @@ class EventUseCase {
         ).values.map { $0 }
 
         do {
-            try await repository.applyBatch(
-                upserting: [eventToSave] + workRecordBatch.upserting,
+            let upsertingEvents = [eventToSave] + workRecordBatch.upserting
+            let mutations = try await ownerMutationsForBatch(
+                upserting: upsertingEvents,
                 deleting: deletingEvents,
-                ifUnchanged: expectedEvents
+                expected: expectedEvents
+            )
+            try await persistLocalEventChange(
+                upserting: upsertingEvents,
+                deleting: deletingEvents,
+                expected: expectedEvents,
+                mutations: mutations,
+                fallback: {
+                    try await self.repository.applyBatch(
+                        upserting: upsertingEvents,
+                        deleting: deletingEvents,
+                        ifUnchanged: expectedEvents
+                    )
+                }
             )
         } catch {
             if let newNotificationID = notificationResult.notificationID {
@@ -655,6 +833,173 @@ class EventUseCase {
         // Migration fallback: personal rows remain usable even if the calendar bootstrap must retry.
         guard calendarID == TimeNestCalendar.personalID else {
             throw CalendarSharingError.permissionDenied
+        }
+    }
+
+    private func ownerMutationsForBatch(
+        upserting: [CalendarEvent],
+        deleting: [CalendarEvent],
+        expected: [CalendarEvent]
+    ) async throws -> [OwnerSharedEventMutation] {
+        let expectedByID = Dictionary(
+            expected.map { ($0.id, $0) },
+            uniquingKeysWith: { current, _ in current }
+        )
+        var mutations: [OwnerSharedEventMutation] = []
+        for event in upserting {
+            mutations.append(contentsOf: try await ownerMutations(
+                oldEvent: expectedByID[event.id],
+                newEvent: event
+            ))
+        }
+        for event in deleting {
+            mutations.append(contentsOf: try await ownerMutations(
+                oldEvent: expectedByID[event.id] ?? event,
+                newEvent: nil
+            ))
+        }
+        return mutations
+    }
+
+    private func ownerMutations(
+        oldEvent: CalendarEvent?,
+        newEvent: CalendarEvent?
+    ) async throws -> [OwnerSharedEventMutation] {
+        var calendarsByID: [UUID: TimeNestCalendar?] = [:]
+        func calendar(for id: UUID) async throws -> TimeNestCalendar? {
+            if let cached = calendarsByID[id] { return cached }
+            let value = try await calendarRepository?.calendar(id: id)
+            calendarsByID[id] = value
+            return value
+        }
+
+        func isCollaborativeOwner(_ calendar: TimeNestCalendar?) -> Bool {
+            calendar?.kind == .sharedOwned
+                && (calendar?.collaborationProtocolVersion ?? 0) >= 1
+                && calendar?.stopPhase.isStopping == false
+        }
+
+        let oldSnapshot = oldEvent.flatMap(SharedEventMapper.snapshot(from:))
+        let newSnapshot = newEvent.flatMap(SharedEventMapper.snapshot(from:))
+        let oldCalendar: TimeNestCalendar?
+        if let oldEvent {
+            oldCalendar = try await calendar(for: oldEvent.calendarID)
+        } else {
+            oldCalendar = nil
+        }
+        let newCalendar: TimeNestCalendar?
+        if let newEvent {
+            newCalendar = try await calendar(for: newEvent.calendarID)
+        } else {
+            newCalendar = nil
+        }
+        var mutations: [OwnerSharedEventMutation] = []
+
+        if let oldEvent, let oldSnapshot, isCollaborativeOwner(oldCalendar),
+           newEvent == nil || newEvent?.calendarID != oldEvent.calendarID || newSnapshot == nil {
+            mutations.append(makeOwnerMutation(
+                calendarID: oldEvent.calendarID,
+                snapshot: oldSnapshot,
+                operation: .delete
+            ))
+        }
+
+        if let newEvent, let newSnapshot, isCollaborativeOwner(newCalendar) {
+            let isSameCollaborativeRecord = oldEvent?.calendarID == newEvent.calendarID
+                && oldSnapshot != nil
+                && isCollaborativeOwner(oldCalendar)
+            mutations.append(makeOwnerMutation(
+                calendarID: newEvent.calendarID,
+                snapshot: newSnapshot,
+                operation: isSameCollaborativeRecord ? .update : .create
+            ))
+        }
+        return mutations
+    }
+
+    private func makeOwnerMutation(
+        calendarID: UUID,
+        snapshot: SharedEventSnapshot,
+        operation: SharedEventMutationOperation
+    ) -> OwnerSharedEventMutation {
+        let now = Date()
+        let payload = SharedEventSnapshot(
+            id: snapshot.id,
+            title: snapshot.title,
+            startDate: snapshot.startDate,
+            endDate: snapshot.endDate,
+            isAllDay: snapshot.isAllDay,
+            updatedAt: snapshot.updatedAt,
+            isDeleted: operation == .delete,
+            deletedAt: operation == .delete ? now : nil
+        )
+        return OwnerSharedEventMutation(
+            id: UUID(),
+            calendarID: calendarID,
+            eventID: snapshot.id,
+            operation: operation,
+            payload: payload,
+            createdAt: now,
+            sequence: 0,
+            status: .prepared,
+            retryCount: 0,
+            lastErrorCode: nil
+        )
+    }
+
+    private func persistLocalEventChange(
+        upserting: [CalendarEvent],
+        deleting: [CalendarEvent],
+        expected: [CalendarEvent],
+        mutations: [OwnerSharedEventMutation],
+        fallback: () async throws -> Void
+    ) async throws {
+        guard !mutations.isEmpty else {
+            try await fallback()
+            return
+        }
+        guard let mutationRepository = repository as? any OwnerSharedEventMutationRepository else {
+            throw CalendarSharingError.localPersistenceFailed
+        }
+        do {
+            try await mutationRepository.applyBatchWithOwnerSharedEventMutations(
+                upserting: upserting,
+                deleting: deleting,
+                ifUnchanged: expected,
+                mutations: mutations
+            )
+        } catch let error as CalendarSharingError {
+            throw error
+        } catch {
+            throw CalendarSharingError.localPersistenceFailed
+        }
+    }
+
+    private func refreshNotificationAfterRemoteMerge(
+        _ event: CalendarEvent,
+        previous: CalendarEvent
+    ) async {
+        guard event.reminderOffsetMinutes != nil else { return }
+        let result = await scheduleNotification(for: event)
+        guard case .scheduled(let notificationID) = result else {
+            if let oldNotificationID = previous.notificationID {
+                notificationScheduler?.cancelNotification(id: oldNotificationID)
+            }
+            EventUseCaseDiagnostics.remoteNotificationRefreshFailed(result: result)
+            return
+        }
+        guard notificationID != event.notificationID else { return }
+        var persisted = event
+        persisted.notificationID = notificationID
+        do {
+            try await repository.update(persisted)
+            if let oldNotificationID = previous.notificationID,
+               oldNotificationID != notificationID {
+                notificationScheduler?.cancelNotification(id: oldNotificationID)
+            }
+        } catch {
+            notificationScheduler?.cancelNotification(id: notificationID)
+            EventUseCaseDiagnostics.remoteNotificationStatePersistenceFailed(error)
         }
     }
 

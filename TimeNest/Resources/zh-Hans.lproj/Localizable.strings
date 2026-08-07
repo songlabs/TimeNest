@@ -477,6 +477,18 @@
 "calendar_sharing.no_shared_calendars" = "还没有共享日历";
 "calendar_sharing.no_shared_calendars_message" = "可以创建只读共享，让家人或同事查看日程和班次。";
 "calendar_sharing.read_only" = "仅查看";
+"calendar_sharing.event_editing.permission" = "日程编辑权限";
+"calendar_sharing.event_editing.allowed" = "允许编辑日程";
+"calendar_sharing.editable" = "可编辑";
+"calendar_sharing.event_sync.synced" = "已同步";
+"calendar_sharing.event_sync.saving" = "正在保存";
+"calendar_sharing.event_sync.pending" = "等待同步";
+"calendar_sharing.event_sync.failed" = "同步失败";
+"calendar_sharing.event_sync.permission_revoked" = "编辑权限已被撤销";
+"calendar_sharing.event_sync.deleted" = "此日程已被其他参与者删除";
+"calendar_sharing.event_sync.last_write_wins" = "后保存的内容优先";
+"calendar_sharing.shared_event.new_title" = "新建日程";
+"calendar_sharing.shared_event.edit_title" = "编辑日程";
 "calendar_sharing.read_only_add.title" = "只读日历";
 "calendar_sharing.read_only_add.message" = "这个共享日历为只读。若要添加日程或工作记录，请先切换到可编辑的日历。";
 "calendar_sharing.calendar_name" = "共享日历名称";
@@ -539,6 +551,8 @@
 "calendar_sharing.error.creation_failed" = "无法开始共享，请稍后重试。";
 "calendar_sharing.error.share_unavailable" = "此共享日历已不可用，已返回我的日历。";
 "calendar_sharing.error.permission_denied" = "你没有访问此共享日历的权限。";
+"calendar_sharing.error.shared_event_deleted" = "此日程已被其他参与者删除。";
+"calendar_sharing.error.shared_event_permission_revoked" = "日程编辑权限已被撤销。输入内容仍保存在此设备上。";
 "calendar_sharing.error.cloud_environment_mismatch" = "此邀请属于其他 TimeNest iCloud 容器或构建环境。";
 "calendar_sharing.error.received_calendar_refresh_failed" = "邀请已接受，但无法刷新共享日历。TimeNest 会在再次进入前台时重试。";
 "calendar_sharing.error.data_migration_failed" = "日历数据迁移失败，原始数据未被删除。请重新启动 App 后重试。";

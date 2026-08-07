@@ -477,6 +477,18 @@
 "calendar_sharing.no_shared_calendars" = "共有カレンダーはまだありません";
 "calendar_sharing.no_shared_calendars_message" = "家族や同僚が予定やシフトを確認できる読み取り専用共有を作成できます。";
 "calendar_sharing.read_only" = "閲覧のみ";
+"calendar_sharing.event_editing.permission" = "予定の編集権限";
+"calendar_sharing.event_editing.allowed" = "予定の編集を許可";
+"calendar_sharing.editable" = "編集可能";
+"calendar_sharing.event_sync.synced" = "同期済み";
+"calendar_sharing.event_sync.saving" = "保存中";
+"calendar_sharing.event_sync.pending" = "同期待ち";
+"calendar_sharing.event_sync.failed" = "同期に失敗しました";
+"calendar_sharing.event_sync.permission_revoked" = "編集権限が取り消されました";
+"calendar_sharing.event_sync.deleted" = "この予定は他の参加者によって削除されました";
+"calendar_sharing.event_sync.last_write_wins" = "後から保存された内容が優先されます";
+"calendar_sharing.shared_event.new_title" = "予定を追加";
+"calendar_sharing.shared_event.edit_title" = "予定を編集";
 "calendar_sharing.read_only_add.title" = "読み取り専用カレンダー";
 "calendar_sharing.read_only_add.message" = "この共有カレンダーは読み取り専用です。予定や勤務記録を追加するには、編集可能なカレンダーに切り替えてください。";
 "calendar_sharing.calendar_name" = "共有カレンダー名";
@@ -539,6 +551,8 @@
 "calendar_sharing.error.creation_failed" = "共有を開始できませんでした。時間をおいて再試行してください。";
 "calendar_sharing.error.share_unavailable" = "この共有カレンダーは利用できません。マイカレンダーに戻しました。";
 "calendar_sharing.error.permission_denied" = "この共有カレンダーにアクセスする権限がありません。";
+"calendar_sharing.error.shared_event_deleted" = "この予定は他の参加者によって削除されました。";
+"calendar_sharing.error.shared_event_permission_revoked" = "予定の編集権限が取り消されました。入力内容は端末に保持されています。";
 "calendar_sharing.error.cloud_environment_mismatch" = "この招待は別の TimeNest iCloud コンテナまたはビルド環境のものです。";
 "calendar_sharing.error.received_calendar_refresh_failed" = "招待は受け入れられましたが、共有カレンダーを更新できませんでした。TimeNest がアクティブになったときに再試行します。";
 "calendar_sharing.error.data_migration_failed" = "カレンダーデータを移行できませんでした。元のデータは削除されていません。もう一度起動してください。";

@@ -105,6 +105,8 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let deleteConfirmationTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.delete_confirmation_title")
     /// Edit Shared Calendar
     public static let editCalendar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.edit_calendar")
+    /// Can Edit
+    public static let editable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.editable")
     /// After creating the shared calendar,\nyou can invite people from the iCloud sharing sheet.
     public static let inviteAfterCreation = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.invite_after_creation")
     /// People to Invite
@@ -214,10 +216,38 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       public static let serviceTemporarilyUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.service_temporarily_unavailable")
       /// This shared calendar is no longer available. TimeNest returned to My Calendar.
       public static let shareUnavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.share_unavailable")
+      /// Another participant deleted this event.
+      public static let sharedEventDeleted = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.shared_event_deleted")
+      /// Event editing permission was revoked. Your draft remains on this device.
+      public static let sharedEventPermissionRevoked = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.shared_event_permission_revoked")
       /// Calendar sync failed. Try again later.
       public static let syncFailed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.sync_failed")
       /// Sharing Error
       public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.error.title")
+    }
+
+    public enum EventEditing: Sendable {
+      /// Allow Event Editing
+      public static let allowed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_editing.allowed")
+      /// Event Editing
+      public static let permission = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_editing.permission")
+    }
+
+    public enum EventSync: Sendable {
+      /// Another Participant Deleted This Event
+      public static let deleted = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_sync.deleted")
+      /// Sync Failed
+      public static let failed = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_sync.failed")
+      /// The most recently saved version takes priority.
+      public static let lastWriteWins = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_sync.last_write_wins")
+      /// Waiting to Sync
+      public static let pending = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_sync.pending")
+      /// Editing Permission Was Revoked
+      public static let permissionRevoked = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_sync.permission_revoked")
+      /// Saving
+      public static let saving = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_sync.saving")
+      /// Synced
+      public static let synced = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.event_sync.synced")
     }
 
     public enum IcloudStatus: Sendable {
@@ -285,6 +315,13 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public enum Settings: Sendable {
       /// Shared Calendars
       public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.settings.title")
+    }
+
+    public enum SharedEvent: Sendable {
+      /// Edit Event
+      public static let editTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.shared_event.edit_title")
+      /// Add Event
+      public static let newTitle = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar_sharing.shared_event.new_title")
     }
 
     public enum State: Sendable {

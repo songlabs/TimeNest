@@ -535,12 +535,19 @@ struct CalendarSelectionView: View {
                             .foregroundStyle(.primary)
                             .lineLimit(1)
                             .truncationMode(.tail)
-                        if calendar.isReadOnly {
+                        if calendar.kind == .sharedReceived {
                             Text(receivedOwnerSubtitle(for: calendar))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
+                            Text(localization.localized(
+                                calendar.canEditSharedEvent
+                                    ? .calendarSharingEditable
+                                    : .calendarSharingReadOnly
+                            ))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                         }
                         if calendar.kind != .personal {
                             Text(localization.localized(
@@ -578,6 +585,7 @@ struct CalendarSelectionView: View {
                     systemImage: "pencil",
                     color: ShiftCalendarColors.primaryBlue,
                     accessibilityLabel: localization.localized(CalendarSelectionAccessibilityLabels.edit),
+                    accessibilityIdentifier: "sharing.calendar.edit.\(calendar.id.uuidString.lowercased())",
                     isEnabled: actions.actionsAreEnabled
                         && actionState.deletionInProgressID == nil
                 ) {
@@ -596,10 +604,11 @@ struct CalendarSelectionView: View {
                         ))
                 } else {
                     calendarActionButton(
-                        systemImage: "trash",
-                        color: .red,
-                        accessibilityLabel: localization.localized(CalendarSelectionAccessibilityLabels.delete),
-                        isEnabled: actions.actionsAreEnabled
+                    systemImage: "trash",
+                    color: .red,
+                    accessibilityLabel: localization.localized(CalendarSelectionAccessibilityLabels.delete),
+                    accessibilityIdentifier: "sharing.calendar.delete.\(calendar.id.uuidString.lowercased())",
+                    isEnabled: actions.actionsAreEnabled
                             && actionState.deletionInProgressID == nil
                     ) {
                         _ = actionState.handle(.delete, for: calendar)
@@ -614,6 +623,7 @@ struct CalendarSelectionView: View {
                     accessibilityLabel: localization.localized(
                         CalendarSelectionAccessibilityLabels.receivedDetails
                     ),
+                    accessibilityIdentifier: "sharing.calendar.details.\(calendar.id.uuidString.lowercased())",
                     isEnabled: true
                 ) {
                     _ = actionState.handle(.receivedDetails, for: calendar)
@@ -635,6 +645,7 @@ struct CalendarSelectionView: View {
         systemImage: String,
         color: Color,
         accessibilityLabel: String,
+        accessibilityIdentifier: String,
         isEnabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
@@ -649,6 +660,7 @@ struct CalendarSelectionView: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .accessibilityLabel(accessibilityLabel)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 
     private func deleteOwnedCalendar(calendarID: UUID) async {
@@ -804,6 +816,7 @@ private struct CreateSharedCalendarView: View {
     @State private var invitation: CalendarSharingInvitation?
     @State private var errorMessage: String?
     @State private var dismissAfterErrorAcknowledgement = false
+    @State private var eventEditingAllowed = false
 
     private var canSubmit: Bool {
         CalendarSharingFormValidation.hasRequiredName(nameDraft.value)
@@ -811,8 +824,7 @@ private struct CreateSharedCalendarView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Form {
+            Form {
                     Section(localization.localized(.calendarSharingCalendarName)) {
                         TextField(
                             localization.localized(.calendarSharingCalendarName),
@@ -826,6 +838,26 @@ private struct CreateSharedCalendarView: View {
                     }
 
                     Section {
+                        Picker(
+                            localization.localized(.calendarSharingEventEditingPermission),
+                            selection: $eventEditingAllowed
+                        ) {
+                            Text(localization.localized(.calendarSharingReadOnly))
+                                .accessibilityIdentifier("sharing.eventPermission.readOnly")
+                                .tag(false)
+                            Text(localization.localized(.calendarSharingEventEditingAllowed))
+                                .accessibilityIdentifier("sharing.eventPermission.readWrite")
+                                .tag(true)
+                        }
+                        .pickerStyle(.inline)
+                        .disabled(isWorking)
+                    } header: {
+                        Text(localization.localized(.calendarSharingEventEditingPermission))
+                    } footer: {
+                        Text(localization.localized(.calendarSharingLastWriteWinsNote))
+                    }
+
+                    Section {
                         Label(
                             localization.localized(.calendarSharingInviteAfterCreation),
                             systemImage: "person.badge.plus"
@@ -836,15 +868,20 @@ private struct CreateSharedCalendarView: View {
                     } footer: {
                         Text(localization.localized(.calendarSharingContentPrivacyNote))
                     }
-                }
-
+            }
+            .accessibilityIdentifier("sharing.createCalendar.form")
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 CalendarSharingPrimaryActionButton(
                     title: localization.localized(.calendarSharingCreateAction),
                     isEnabled: canSubmit,
                     isWorking: isWorking,
                     action: { Task { await create() } }
                 )
+                .accessibilityIdentifier("sharing.createCalendar.submit")
+                .background(.bar)
             }
+            .contentMargins(.bottom, 24, for: .scrollContent)
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(localization.localized(.calendarSharingCreateCalendar))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -921,7 +958,10 @@ private struct CreateSharedCalendarView: View {
         isWorking = true
         defer { isWorking = false }
         do {
-            invitation = try await sharingStore.createSharedCalendar(name: nameDraft.value)
+            invitation = try await sharingStore.createSharedCalendar(
+                name: nameDraft.value,
+                eventEditingAllowed: eventEditingAllowed
+            )
         } catch {
             errorMessage = error.localizedDescription
             dismissAfterErrorAcknowledgement = (error as? CalendarSharingError)
@@ -941,6 +981,7 @@ private struct OwnedSharedCalendarDetailView: View {
     @State private var isWorking = false
     @State private var errorMessage: String?
     @State private var participantPendingRevocation: SharedCalendarParticipantSnapshot?
+    @State private var eventEditingAllowed = false
 
     private var descriptor: OwnedSharedCalendarDescriptor? {
         sharingStore.ownedDescriptor(id: calendarID)
@@ -952,11 +993,31 @@ private struct OwnedSharedCalendarDetailView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
+        Form {
                 Section(localization.localized(.calendarSharingCalendarName)) {
                     TextField(localization.localized(.calendarSharingCalendarName), text: $name)
                         .textInputAutocapitalization(.sentences)
+                }
+
+
+                Section {
+                    Picker(
+                        localization.localized(.calendarSharingEventEditingPermission),
+                        selection: $eventEditingAllowed
+                    ) {
+                        Text(localization.localized(.calendarSharingReadOnly))
+                            .accessibilityIdentifier("sharing.eventPermission.readOnly")
+                            .tag(false)
+                        Text(localization.localized(.calendarSharingEventEditingAllowed))
+                            .accessibilityIdentifier("sharing.eventPermission.readWrite")
+                            .tag(true)
+                    }
+                    .pickerStyle(.inline)
+                    .disabled(isWorking)
+                } header: {
+                    Text(localization.localized(.calendarSharingEventEditingPermission))
+                } footer: {
+                    Text(localization.localized(.calendarSharingLastWriteWinsNote))
                 }
 
                 Section(localization.localized(.calendarSharingSharedPeople)) {
@@ -980,11 +1041,7 @@ private struct OwnedSharedCalendarDetailView: View {
                                     Text(participant.resolvedDisplayName(
                                         fallback: localization.localized(.calendarSharingUnknownPerson)
                                     ))
-                                    Text(localization.localized(
-                                        participant.isAccepted
-                                            ? .calendarSharingReadOnly
-                                            : .calendarSharingInvitationPending
-                                    ))
+                                    Text(localization.localized(participantStatusKey(participant)))
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
                                 }
@@ -1017,15 +1074,20 @@ private struct OwnedSharedCalendarDetailView: View {
                     }
                     .disabled(isWorking || sharingStore.isStopping(calendarID: calendarID))
                 }
-            }
-
+        }
+        .accessibilityIdentifier("sharing.editCalendar.form")
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             CalendarSharingPrimaryActionButton(
                 title: localization.localized(.calendarSharingSaveAction),
                 isEnabled: canSubmit,
                 isWorking: isWorking,
                 action: { Task { await rename() } }
             )
+            .accessibilityIdentifier("sharing.editCalendar.submit")
+            .background(.bar)
         }
+        .contentMargins(.bottom, 24, for: .scrollContent)
+        .scrollDismissesKeyboard(.interactively)
         .navigationTitle(localization.localized(.calendarSharingEditCalendar))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -1034,7 +1096,10 @@ private struct OwnedSharedCalendarDetailView: View {
                     .disabled(isWorking)
             }
         }
-        .onAppear { name = descriptor?.calendarName ?? "" }
+        .onAppear {
+            name = descriptor?.calendarName ?? ""
+            eventEditingAllowed = descriptor?.eventEditingAllowed ?? false
+        }
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(
                 invitation: item,
@@ -1091,8 +1156,25 @@ private struct OwnedSharedCalendarDetailView: View {
     private func rename() async {
         isWorking = true
         defer { isWorking = false }
-        do { try await sharingStore.renameOwnedCalendar(id: calendarID, name: name) }
+        do {
+            if descriptor?.eventEditingAllowed != eventEditingAllowed {
+                try await sharingStore.setEventEditingAllowed(
+                    calendarID: calendarID,
+                    allowed: eventEditingAllowed
+                )
+            }
+            try await sharingStore.renameOwnedCalendar(id: calendarID, name: name)
+        }
         catch { errorMessage = error.localizedDescription }
+    }
+
+    private func participantStatusKey(
+        _ participant: SharedCalendarParticipantSnapshot
+    ) -> LocalizedString {
+        guard participant.isAccepted else { return .calendarSharingInvitationPending }
+        return participant.permission == .readWrite
+            ? .calendarSharingEditable
+            : .calendarSharingReadOnly
     }
 
     private func invite() async {
@@ -1147,7 +1229,14 @@ private struct ReceivedSharedCalendarDetailView: View {
         Form {
             Section(localization.localized(.calendarSharingCalendarName)) {
                 Text(descriptor?.calendarName ?? sharingStore.calendar(id: calendarID)?.name ?? "")
-                Label(localization.localized(.calendarSharingReadOnly), systemImage: "eye")
+                Label(
+                    localization.localized(
+                        descriptor?.isReadOnly == false
+                            ? .calendarSharingEditable
+                            : .calendarSharingReadOnly
+                    ),
+                    systemImage: descriptor?.isReadOnly == false ? "pencil" : "eye"
+                )
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

@@ -477,6 +477,18 @@
 "calendar_sharing.no_shared_calendars" = "공유 캘린더가 아직 없습니다";
 "calendar_sharing.no_shared_calendars_message" = "가족이나 동료가 일정과 근무조를 볼 수 있도록 읽기 전용 공유를 만들 수 있습니다.";
 "calendar_sharing.read_only" = "보기 전용";
+"calendar_sharing.event_editing.permission" = "일정 편집 권한";
+"calendar_sharing.event_editing.allowed" = "일정 편집 허용";
+"calendar_sharing.editable" = "편집 가능";
+"calendar_sharing.event_sync.synced" = "동기화됨";
+"calendar_sharing.event_sync.saving" = "저장 중";
+"calendar_sharing.event_sync.pending" = "동기화 대기 중";
+"calendar_sharing.event_sync.failed" = "동기화에 실패했습니다";
+"calendar_sharing.event_sync.permission_revoked" = "편집 권한이 취소되었습니다";
+"calendar_sharing.event_sync.deleted" = "다른 참여자가 이 일정을 삭제했습니다";
+"calendar_sharing.event_sync.last_write_wins" = "나중에 저장된 내용이 우선됩니다.";
+"calendar_sharing.shared_event.new_title" = "일정 추가";
+"calendar_sharing.shared_event.edit_title" = "일정 편집";
 "calendar_sharing.read_only_add.title" = "읽기 전용 캘린더";
 "calendar_sharing.read_only_add.message" = "이 공유 캘린더는 읽기 전용입니다. 일정이나 근무 기록을 추가하려면 편집 가능한 캘린더로 전환하세요.";
 "calendar_sharing.calendar_name" = "공유 캘린더 이름";
@@ -539,6 +551,8 @@
 "calendar_sharing.error.creation_failed" = "공유를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요.";
 "calendar_sharing.error.share_unavailable" = "이 공유 캘린더를 사용할 수 없어 내 캘린더로 돌아왔습니다.";
 "calendar_sharing.error.permission_denied" = "이 공유 캘린더에 접근할 권한이 없습니다.";
+"calendar_sharing.error.shared_event_deleted" = "다른 참여자가 이 일정을 삭제했습니다.";
+"calendar_sharing.error.shared_event_permission_revoked" = "일정 편집 권한이 취소되었습니다. 입력한 내용은 이 기기에 보관됩니다.";
 "calendar_sharing.error.cloud_environment_mismatch" = "이 초대는 다른 TimeNest iCloud 컨테이너 또는 빌드 환경의 초대입니다.";
 "calendar_sharing.error.received_calendar_refresh_failed" = "초대는 수락되었지만 공유 캘린더를 새로 고칠 수 없습니다. TimeNest가 다시 활성화될 때 재시도합니다.";
 "calendar_sharing.error.data_migration_failed" = "캘린더 데이터를 이전하지 못했습니다. 원본 데이터는 삭제되지 않았습니다. 앱을 다시 시작해 재시도하세요.";

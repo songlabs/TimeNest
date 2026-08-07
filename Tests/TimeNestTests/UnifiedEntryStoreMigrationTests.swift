@@ -66,7 +66,8 @@ final class UnifiedEntryStoreMigrationTests: XCTestCase {
         Schema([
             TimeNest.SwiftDataCalendarEventEntity.self,
             TimeNest.SwiftDataReminderEntity.self,
-            TimeNest.SwiftDataCalendarEntity.self
+            TimeNest.SwiftDataCalendarEntity.self,
+            TimeNest.SwiftDataOwnerSharedEventMutationEntity.self
         ])
     }
 
@@ -193,8 +194,12 @@ final class UnifiedEntryStoreMigrationTests: XCTestCase {
         let migrated = try context.fetch(
             FetchDescriptor<TimeNest.SwiftDataCalendarEventEntity>()
         )
+        let ownerMutations = try context.fetch(
+            FetchDescriptor<TimeNest.SwiftDataOwnerSharedEventMutationEntity>()
+        )
 
         XCTAssertEqual(migrated.count, 3)
+        XCTAssertTrue(ownerMutations.isEmpty)
         XCTAssertEqual(Set(migrated.map(\.id)), Fixture.eventIDs)
         XCTAssertTrue(migrated.allSatisfy { $0.unifiedEntryID == nil })
 

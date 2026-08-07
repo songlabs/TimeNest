@@ -49,6 +49,9 @@ actor SwiftDataCalendarRepository: CalendarRepository {
             ownerName: calendar.ownerName,
             rootRecordName: calendar.rootRecordName,
             shareRecordName: calendar.shareRecordName,
+            eventEditingAllowed: calendar.eventEditingAllowed,
+            collaborationProtocolVersion: calendar.collaborationProtocolVersion,
+            participantPermissionRawValue: calendar.participantPermission.rawValue,
             stopPhaseRawValue: calendar.stopPhase.rawValue,
             createdAt: calendar.createdAt,
             updatedAt: calendar.updatedAt
@@ -62,6 +65,9 @@ actor SwiftDataCalendarRepository: CalendarRepository {
         entity.ownerName = calendar.ownerName
         entity.rootRecordName = calendar.rootRecordName
         entity.shareRecordName = calendar.shareRecordName
+        entity.eventEditingAllowed = calendar.eventEditingAllowed
+        entity.collaborationProtocolVersion = calendar.collaborationProtocolVersion
+        entity.participantPermissionRawValue = calendar.participantPermission.rawValue
         entity.stopPhaseRawValue = calendar.stopPhase.rawValue
         entity.updatedAt = calendar.updatedAt
     }
@@ -76,6 +82,11 @@ actor SwiftDataCalendarRepository: CalendarRepository {
             ownerName: entity.ownerName,
             rootRecordName: entity.rootRecordName,
             shareRecordName: entity.shareRecordName,
+            eventEditingAllowed: entity.eventEditingAllowed,
+            collaborationProtocolVersion: entity.collaborationProtocolVersion,
+            participantPermission: SharedCalendarParticipantPermission(
+                rawValue: entity.participantPermissionRawValue
+            ) ?? .unknown,
             stopPhase: TimeNestCalendarStopPhase(rawValue: entity.stopPhaseRawValue) ?? .active,
             createdAt: entity.createdAt,
             updatedAt: entity.updatedAt
