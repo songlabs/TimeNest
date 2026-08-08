@@ -25,6 +25,35 @@
 "settings.traditional_calendar.show_lunar" = "旧暦を表示";
 "settings.traditional_calendar.show_rokuyo" = "六曜を表示";
 "settings.traditional_calendar.show_solar_terms" = "二十四節気を表示";
+"settings.weather.title" = "天気予報";
+"settings.weather.enable" = "天気を有効にする";
+"settings.weather.location" = "位置";
+"settings.weather.current_location" = "現在地";
+"settings.weather.location_permission" = "位置情報の許可";
+"settings.weather.open_settings" = "設定を開く";
+"settings.calendar.month_secondary_display" = "月表示の補助情報";
+"calendar.month_secondary.none" = "表示しない";
+"calendar.month_secondary.weather" = "天気";
+"calendar.month_secondary.lunar" = "旧暦";
+"calendar.month_secondary.rokuyo" = "六曜";
+"calendar.month_secondary.solar_term" = "二十四節気";
+
+/* Weather */
+"weather.unavailable" = "天気情報を利用できません";
+"weather.loading" = "天気を読み込み中";
+"weather.updated" = "更新";
+"weather.high" = "最高";
+"weather.low" = "最低";
+"weather.precipitation" = "降水";
+"weather.wind" = "風";
+"weather.current" = "現在の天気";
+"weather.nearest_hour" = "最寄りの時間帯";
+"weather.hourly_forecast" = "1時間ごとの予報";
+"weather.attribution.legal" = "法的情報";
+"weather.attribution.description" = "Apple Weather 提供";
+"weather.permission.required" = "天気を有効にすると位置情報の許可を求めます";
+"weather.permission.denied" = "位置情報の使用が許可されていません";
+"weather.permission.restricted" = "位置情報の使用が制限されています";
 
 /* Traditional Calendar */
 "traditional_calendar.lunar.month_names" = "正月|二月|三月|四月|五月|六月|七月|八月|九月|十月|十一月|十二月";

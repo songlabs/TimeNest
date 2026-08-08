@@ -71,6 +71,7 @@ struct CalendarBottomToolbarView: View {
                                 )
                         }
                         .buttonStyle(PlainButtonStyle())
+                        .accessibilityIdentifier("calendar.mode.\(mode.rawValue)")
                     }
                 }
 

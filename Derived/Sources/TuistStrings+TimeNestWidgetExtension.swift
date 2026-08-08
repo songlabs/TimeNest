@@ -74,6 +74,19 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static func moreEventsCount(_ p1: Int) -> String {
       return TimeNestWidgetExtensionStrings.tr("Localizable", "calendar.more_events_count",p1)
     }
+
+    public enum MonthSecondary: Sendable {
+      /// Lunar Calendar
+      public static let lunar = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar.month_secondary.lunar")
+      /// None
+      public static let `none` = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar.month_secondary.none")
+      /// Rokuyo
+      public static let rokuyo = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar.month_secondary.rokuyo")
+      /// 24 Solar Terms
+      public static let solarTerm = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar.month_secondary.solar_term")
+      /// Weather
+      public static let weather = TimeNestWidgetExtensionStrings.tr("Localizable", "calendar.month_secondary.weather")
+    }
   }
 
   public enum CalendarSharing: Sendable {
@@ -1189,6 +1202,11 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     /// Week Start
     public static let weekStart = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.week_start")
 
+    public enum Calendar: Sendable {
+      /// Month View Details
+      public static let monthSecondaryDisplay = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar.month_secondary_display")
+    }
+
     public enum CalendarDisplayCustomize: Sendable {
       /// Event Background
       public static let eventBackground = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.calendar_display_customize.event_background")
@@ -1205,6 +1223,21 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
       public static let showRokuyo = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.traditional_calendar.show_rokuyo")
       /// Show 24 Solar Terms
       public static let showSolarTerms = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.traditional_calendar.show_solar_terms")
+    }
+
+    public enum Weather: Sendable {
+      /// Current Location
+      public static let currentLocation = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.weather.current_location")
+      /// Enable Weather
+      public static let enable = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.weather.enable")
+      /// Location
+      public static let location = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.weather.location")
+      /// Location Permission
+      public static let locationPermission = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.weather.location_permission")
+      /// Open Settings
+      public static let openSettings = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.weather.open_settings")
+      /// Weather Forecast
+      public static let title = TimeNestWidgetExtensionStrings.tr("Localizable", "settings.weather.title")
     }
   }
 
@@ -1374,6 +1407,45 @@ public enum TimeNestWidgetExtensionStrings: Sendable {
     public static let month = TimeNestWidgetExtensionStrings.tr("Localizable", "view_mode.month")
     /// Week
     public static let week = TimeNestWidgetExtensionStrings.tr("Localizable", "view_mode.week")
+  }
+
+  public enum Weather: Sendable {
+    /// Current weather
+    public static let current = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.current")
+    /// High
+    public static let high = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.high")
+    /// Hourly forecast
+    public static let hourlyForecast = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.hourly_forecast")
+    /// Loading weather
+    public static let loading = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.loading")
+    /// Low
+    public static let low = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.low")
+    /// Nearest hour
+    public static let nearestHour = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.nearest_hour")
+    /// Precipitation
+    public static let precipitation = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.precipitation")
+    /// Weather is unavailable
+    public static let unavailable = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.unavailable")
+    /// Updated
+    public static let updated = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.updated")
+    /// Wind
+    public static let wind = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.wind")
+
+    public enum Attribution: Sendable {
+      /// Weather data provided by Apple Weather
+      public static let description = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.attribution.description")
+      /// Legal
+      public static let legal = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.attribution.legal")
+    }
+
+    public enum Permission: Sendable {
+      /// Location permission is off
+      public static let denied = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.permission.denied")
+      /// Location permission will be requested when weather is enabled
+      public static let `required` = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.permission.required")
+      /// Location permission is restricted
+      public static let restricted = TimeNestWidgetExtensionStrings.tr("Localizable", "weather.permission.restricted")
+    }
   }
 
   public enum WeekStart: Sendable {

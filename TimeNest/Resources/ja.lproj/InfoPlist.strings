@@ -1,5 +1,6 @@
 "CFBundleDisplayName" = "TimeNest";
 "CFBundleName" = "TimeNest";
 "NSUserTrackingUsageDescription" = "広告の配信と効果測定のために、デバイス識別子を使用します。";
+"NSLocationWhenInUseUsageDescription" = "現在地は、その地域の天気予報を表示するためだけに使用します。";
 "NSMicrophoneUsageDescription" = "TimeNest は音声でメモを入力するためだけにマイクを使用します。";
 "NSSpeechRecognitionUsageDescription" = "TimeNest は音声をメモのテキストに変換するためだけに音声認識を使用します。";

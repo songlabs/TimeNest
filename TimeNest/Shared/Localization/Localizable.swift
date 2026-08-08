@@ -28,6 +28,18 @@ enum LocalizedString: String {
     case settingsTraditionalCalendarShowLunar = "settings.traditional_calendar.show_lunar"
     case settingsTraditionalCalendarShowRokuyo = "settings.traditional_calendar.show_rokuyo"
     case settingsTraditionalCalendarShowSolarTerms = "settings.traditional_calendar.show_solar_terms"
+    case settingsWeatherTitle = "settings.weather.title"
+    case settingsWeatherEnable = "settings.weather.enable"
+    case settingsWeatherLocation = "settings.weather.location"
+    case settingsWeatherCurrentLocation = "settings.weather.current_location"
+    case settingsWeatherLocationPermission = "settings.weather.location_permission"
+    case settingsWeatherOpenSettings = "settings.weather.open_settings"
+    case settingsMonthSecondaryDisplay = "settings.calendar.month_secondary_display"
+    case monthSecondaryNone = "calendar.month_secondary.none"
+    case monthSecondaryWeather = "calendar.month_secondary.weather"
+    case monthSecondaryLunar = "calendar.month_secondary.lunar"
+    case monthSecondaryRokuyo = "calendar.month_secondary.rokuyo"
+    case monthSecondarySolarTerm = "calendar.month_secondary.solar_term"
     case settingsDataManagement = "settings.data_management"
     case shiftTimeSettingsTitle = "shift_time.settings_title"
 
@@ -38,6 +50,24 @@ enum LocalizedString: String {
     case traditionalCalendarLunarLeapPrefix = "traditional_calendar.lunar.leap_prefix"
     case traditionalCalendarRokuyoNames = "traditional_calendar.rokuyo.names"
     case traditionalCalendarSolarTermNames = "traditional_calendar.solar_term.names"
+
+    // MARK: - Weather
+
+    case weatherUnavailable = "weather.unavailable"
+    case weatherLoading = "weather.loading"
+    case weatherUpdated = "weather.updated"
+    case weatherHigh = "weather.high"
+    case weatherLow = "weather.low"
+    case weatherPrecipitation = "weather.precipitation"
+    case weatherWind = "weather.wind"
+    case weatherCurrent = "weather.current"
+    case weatherNearestHour = "weather.nearest_hour"
+    case weatherHourlyForecast = "weather.hourly_forecast"
+    case weatherAttributionLegal = "weather.attribution.legal"
+    case weatherAttributionDescription = "weather.attribution.description"
+    case weatherPermissionRequired = "weather.permission.required"
+    case weatherPermissionDenied = "weather.permission.denied"
+    case weatherPermissionRestricted = "weather.permission.restricted"
 
     // MARK: - Data Management
 

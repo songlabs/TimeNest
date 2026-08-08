@@ -39,6 +39,8 @@
 	<false/>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>We use the device identifier to deliver and measure advertising.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your current location is used only to show the local weather forecast.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TimeNest uses the microphone only to enter memo text by voice.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

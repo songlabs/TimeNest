@@ -68,6 +68,8 @@ enum TimeNestUITestSupport {
                 TraditionalCalendarPreferences.showLunarCalendarKey,
                 TraditionalCalendarPreferences.showRokuyoKey,
                 TraditionalCalendarPreferences.showSolarTermsKey,
+                MonthSecondaryDisplayMode.storageKey,
+                CalendarWeatherStore.enabledKey,
                 ShiftTemplateFavoritesStore.storageKey,
                 CalendarSharingSyncMetadataPersistence.defaultKey
             ] {
@@ -101,6 +103,37 @@ enum TimeNestUITestSupport {
         if arguments.contains("-uiTestShowSolarTerms") {
             defaults.set(true, forKey: TraditionalCalendarPreferences.showSolarTermsKey)
         }
+        if let rawMode = value(after: "-uiTestMonthSecondaryMode"),
+           let mode = MonthSecondaryDisplayMode(rawValue: rawMode) {
+            MonthSecondaryDisplayMode.save(mode, defaults: defaults)
+            if mode == .weather {
+                defaults.set(true, forKey: CalendarWeatherStore.enabledKey)
+            }
+        }
+        if arguments.contains("-uiTestWeatherEnabled") {
+            defaults.set(true, forKey: CalendarWeatherStore.enabledKey)
+        }
+    }
+
+    static func makeWeatherStore() -> CalendarWeatherStore {
+        let referenceDate = initialCalendarDate ?? Date()
+        let location = WeatherLocation(
+            latitude: 35.68,
+            longitude: 139.76,
+            fetchedAt: referenceDate
+        )
+        let snapshot = makeWeatherSnapshot(location: location, referenceDate: referenceDate)
+        let shouldFail = arguments.contains("-uiTestWeatherUnavailable")
+        return CalendarWeatherStore(
+            locationProvider: TimeNestUITestLocationProvider(location: location),
+            weatherProvider: TimeNestUITestWeatherProvider(
+                snapshot: shouldFail ? nil : snapshot
+            ),
+            cache: TimeNestUITestWeatherCache(
+                snapshot: shouldFail ? nil : snapshot
+            ),
+            now: { referenceDate }
+        )
     }
 
     static func makeModelPreparation(schema: Schema) throws -> ModelContainerPreparation {
@@ -500,6 +533,123 @@ enum TimeNestUITestSupport {
             )
         )
         return (clockIn, clockOut)
+    }
+
+    private static func makeWeatherSnapshot(
+        location: WeatherLocation,
+        referenceDate: Date
+    ) -> WeatherSnapshot {
+        let calendar = Calendar(identifier: .gregorian)
+        let startOfDay = calendar.startOfDay(for: referenceDate)
+        let dailySymbols = [
+            "sun.max.fill",
+            "cloud.sun.fill",
+            "cloud.rain.fill",
+            "cloud.snow.fill"
+        ]
+        let daily = (0..<10).compactMap { offset -> DailyWeatherSnapshot? in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: startOfDay) else {
+                return nil
+            }
+            return DailyWeatherSnapshot(
+                date: date,
+                symbolName: dailySymbols[offset % dailySymbols.count],
+                highTemperatureCelsius: 28 + Double(offset % 3),
+                lowTemperatureCelsius: 19 + Double(offset % 2),
+                precipitationChance: Double(offset % 4) * 0.1,
+                windSpeedMetersPerSecond: 3
+            )
+        }
+        let hourly = (0..<24).compactMap { hour -> HourlyWeatherSnapshot? in
+            guard let date = calendar.date(byAdding: .hour, value: hour, to: startOfDay) else {
+                return nil
+            }
+            return HourlyWeatherSnapshot(
+                date: date,
+                symbolName: hour < 18 ? "sun.max.fill" : "moon.stars.fill",
+                temperatureCelsius: 20 + Double(hour % 8),
+                precipitationChance: Double(hour % 3) * 0.1,
+                windSpeedMetersPerSecond: 2.5
+            )
+        }
+        let attribution = WeatherAttributionSnapshot(
+            serviceName: "Apple Weather",
+            combinedMarkLightURL: URL(string: "https://example.invalid/apple-weather-light.svg")!,
+            combinedMarkDarkURL: URL(string: "https://example.invalid/apple-weather-dark.svg")!,
+            squareMarkURL: value(after: "-uiTestWeatherSquareMarkURL")
+                .flatMap(URL.init(string:))
+                ?? URL(string: "https://example.invalid/apple-weather-square.svg")!,
+            legalPageURL: URL(string: "https://weatherkit.apple.com/legal-attribution.html")!
+        )
+        return WeatherSnapshot(
+            location: location,
+            fetchedAt: referenceDate,
+            expirationDate: referenceDate.addingTimeInterval(2 * 60 * 60),
+            current: CurrentWeatherSnapshot(
+                date: referenceDate,
+                symbolName: "cloud.bolt.rain.fill",
+                temperatureCelsius: 27,
+                windSpeedMetersPerSecond: 3
+            ),
+            daily: daily,
+            hourly: hourly,
+            attribution: attribution
+        )
+    }
+}
+
+@MainActor
+private final class TimeNestUITestLocationProvider: LocationProviding {
+    let authorizationState: LocationAuthorizationState = .authorized
+    private let location: WeatherLocation
+
+    init(location: WeatherLocation) {
+        self.location = location
+    }
+
+    func cachedLocation(maxAge: TimeInterval, now: Date) -> WeatherLocation? {
+        location
+    }
+
+    func requestLocation() async throws -> WeatherLocation {
+        location
+    }
+}
+
+private actor TimeNestUITestWeatherProvider: WeatherProviding {
+    private enum MockError: Error {
+        case unavailable
+    }
+
+    let snapshot: WeatherSnapshot?
+
+    init(snapshot: WeatherSnapshot?) {
+        self.snapshot = snapshot
+    }
+
+    func weather(for location: WeatherLocation) async throws -> WeatherSnapshot {
+        guard let snapshot else { throw MockError.unavailable }
+        return snapshot
+    }
+}
+
+private actor TimeNestUITestWeatherCache: WeatherCacheProviding {
+    private var snapshot: WeatherSnapshot?
+
+    init(snapshot: WeatherSnapshot?) {
+        self.snapshot = snapshot
+    }
+
+    func load() async -> WeatherSnapshot? {
+        snapshot
+    }
+
+    func save(_ snapshot: WeatherSnapshot) async throws {
+        self.snapshot = snapshot
+    }
+
+    func clear() async throws {
+        snapshot = nil
     }
 }
 

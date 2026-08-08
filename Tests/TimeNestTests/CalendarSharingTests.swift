@@ -743,7 +743,7 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
         XCTAssertNil(descriptor.ownerDisplayName)
     }
 
-    func testProjectKeepsMarketingVersionTwoPointZeroAndBuildSeventeen() throws {
+    func testProjectKeepsMarketingVersionTwoPointOneAndBuildEighteen() throws {
         let repositoryRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -753,8 +753,8 @@ final class SharedCalendarPrivacyAndRecordTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(project.contains("let marketingVersion = \"2.0\""))
-        XCTAssertTrue(project.contains("let buildNumber = \"17\""))
+        XCTAssertTrue(project.contains("let marketingVersion = \"2.1\""))
+        XCTAssertTrue(project.contains("let buildNumber = \"18\""))
     }
 
     func testEveryCalendarGetsAnIndependentZoneName() {
@@ -1706,9 +1706,7 @@ final class CalendarSharingStoreTests: XCTestCase {
         let defaults = UserDefaults(
             suiteName: "CalendarSharingHolidayTests-\(UUID().uuidString)"
         )!
-        defaults.set(true, forKey: TraditionalCalendarPreferences.showLunarCalendarKey)
-        defaults.set(true, forKey: TraditionalCalendarPreferences.showRokuyoKey)
-        defaults.set(true, forKey: TraditionalCalendarPreferences.showSolarTermsKey)
+        MonthSecondaryDisplayMode.save(.lunar, defaults: defaults)
         let subscriptionManager = HolidaySubscriptionManager(
             cacheRepository: holidayCache,
             userDefaults: defaults
@@ -1736,13 +1734,8 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(monthCell.holidays.map(\.localizedNames.zhHans), ["海の日"])
         XCTAssertEqual(monthCell.events.map(\.eventID), [sharedEventID])
         XCTAssertNotNil(monthCell.traditionalCalendar.lunarText)
-        XCTAssertNotNil(monthCell.traditionalCalendar.rokuyoText)
-        let solarTermCell = try XCTUnwrap(
-            viewModel.grid?.days.first {
-                $0.date == DateOnly(year: 2026, month: 7, day: 23)
-            }
-        )
-        XCTAssertNotNil(solarTermCell.traditionalCalendar.solarTermText)
+        XCTAssertNil(monthCell.traditionalCalendar.rokuyoText)
+        XCTAssertNil(monthCell.traditionalCalendar.solarTermText)
         XCTAssertEqual(
             viewModel.weekCells.first { $0.date == holidayDate }?.holidays.map(\.id),
             ["japan-2026-07-20"]

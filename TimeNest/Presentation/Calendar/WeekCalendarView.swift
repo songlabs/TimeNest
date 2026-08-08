@@ -6,21 +6,40 @@ struct WeekCalendarView: View {
     let cells: [CalendarDayCell]
     let onDateSelected: (Date) -> Void
     let onEventTapped: (EventOccurrence) -> Void
+    let weatherByDate: [DateOnly: DailyWeatherSnapshot]
+    let isWeatherEnabled: Bool
+    let isWeatherLoading: Bool
 
     init(
         selectedDate: Date,
         cells: [CalendarDayCell],
         onDateSelected: @escaping (Date) -> Void,
-        onEventTapped: @escaping (EventOccurrence) -> Void = { _ in }
+        onEventTapped: @escaping (EventOccurrence) -> Void = { _ in },
+        weatherByDate: [DateOnly: DailyWeatherSnapshot] = [:],
+        isWeatherEnabled: Bool = false,
+        isWeatherLoading: Bool = false
     ) {
         self.selectedDate = selectedDate
         self.cells = cells
         self.onDateSelected = onDateSelected
         self.onEventTapped = onEventTapped
+        self.weatherByDate = weatherByDate
+        self.isWeatherEnabled = isWeatherEnabled
+        self.isWeatherLoading = isWeatherLoading
     }
 
     private let timeLabelWidth = CalendarTimelineLayout.timeLabelWidth
-    private let dateHeaderHeight: CGFloat = 72
+    private var showsWeatherRows: Bool {
+        isWeatherEnabled && !weatherByDate.isEmpty
+    }
+
+    private var dateHeaderHeight: CGFloat {
+        showsWeatherRows ? 112 : 72
+    }
+
+    private var weatherStatusHeight: CGFloat {
+        isWeatherEnabled && weatherByDate.isEmpty ? 28 : 0
+    }
     private let allDayRowVerticalPadding: CGFloat = 8
     private let allDayChipHeight: CGFloat = 20
     private let allDayChipSpacing: CGFloat = 4
@@ -41,7 +60,9 @@ struct WeekCalendarView: View {
             let availableWidth = CalendarTimelineLayout.nonNegativeDimension(geometry.size.width - timeLabelWidth)
             let columnWidth = availableWidth / CGFloat(displayCellCount)
             let allDayRowHeight = calculatedAllDayRowHeight
-            let timeAxisHeight = CalendarTimelineLayout.nonNegativeDimension(geometry.size.height - dateHeaderHeight - allDayRowHeight)
+            let timeAxisHeight = CalendarTimelineLayout.nonNegativeDimension(
+                geometry.size.height - dateHeaderHeight - weatherStatusHeight - allDayRowHeight
+            )
 
             VStack(spacing: 0) {
                 WeekDateHeaderView(
@@ -49,9 +70,16 @@ struct WeekCalendarView: View {
                     timeLabelWidth: timeLabelWidth,
                     columnWidth: columnWidth,
                     selectedDate: selectedDate,
-                    onDateSelected: onDateSelected
+                    onDateSelected: onDateSelected,
+                    weatherByDate: weatherByDate,
+                    showsWeatherRows: showsWeatherRows
                 )
                 .frame(height: dateHeaderHeight)
+
+                if weatherStatusHeight > 0 {
+                    InlineWeatherUnavailableView(isLoading: isWeatherLoading)
+                        .frame(height: weatherStatusHeight)
+                }
 
                 if allDayRowHeight > 0 {
                     WeekAllDayEventsRow(
@@ -88,6 +116,8 @@ struct WeekDateHeaderView: View {
     let columnWidth: CGFloat
     let selectedDate: Date
     let onDateSelected: (Date) -> Void
+    let weatherByDate: [DateOnly: DailyWeatherSnapshot]
+    let showsWeatherRows: Bool
 
     var body: some View {
         HStack(spacing: 0) {
@@ -99,7 +129,9 @@ struct WeekDateHeaderView: View {
                 WeekDateHeaderCell(
                     cell: cell,
                     columnWidth: columnWidth,
-                    isSelected: isDateSelected(cell.date)
+                    isSelected: isDateSelected(cell.date),
+                    weather: weatherByDate[cell.date],
+                    showsWeatherRows: showsWeatherRows
                 )
                 .frame(width: columnWidth)
                 .contentShape(Rectangle())
@@ -125,12 +157,16 @@ struct WeekDateHeaderView: View {
 }
 
 struct WeekDateHeaderCell: View {
+    @EnvironmentObject private var localization: LocalizationManager
+
     let cell: CalendarDayCell
     let columnWidth: CGFloat
     let isSelected: Bool
+    let weather: DailyWeatherSnapshot?
+    let showsWeatherRows: Bool
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: showsWeatherRows ? 3 : 6) {
             Text(cell.dayText)
                 .font(.system(size: 22, weight: isSelected ? .semibold : .medium))
                 .foregroundColor(dateTextColor)
@@ -138,10 +174,51 @@ struct WeekDateHeaderCell: View {
             Text(cell.weekdayText)
                 .font(.system(size: 15, weight: .regular))
                 .foregroundColor(weekdayTextColor)
+
+            if showsWeatherRows {
+                if let weather {
+                    Image(systemName: weather.symbolName)
+                        .symbolRenderingMode(.multicolor)
+                        .foregroundStyle(Color(uiColor: .systemBlue))
+                        .font(.system(size: 14, weight: .semibold))
+                        .shadow(
+                            color: Color(uiColor: .systemGray).opacity(0.45),
+                            radius: 0.75
+                        )
+                        .accessibilityIdentifier("weather.week.symbol.\(cell.id)")
+
+                    Text(temperatureRange(weather))
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(ShiftCalendarColors.primaryText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                        .accessibilityIdentifier("weather.week.temperature.\(cell.id)")
+
+                    HStack(spacing: 1) {
+                        Image(systemName: "drop.fill")
+                            .font(.system(size: 7))
+                        Text(
+                            WeatherValueFormatter.percentage(
+                                weather.precipitationChance,
+                                locale: localization.currentLocale
+                            )
+                        )
+                        .font(.system(size: 8, weight: .medium))
+                    }
+                    .foregroundStyle(ShiftCalendarColors.secondaryText)
+                    .accessibilityIdentifier("weather.week.precipitation.\(cell.id)")
+                } else {
+                    Color.clear
+                        .frame(height: 39)
+                        .accessibilityHidden(true)
+                }
+            }
         }
         .frame(width: columnWidth)
         .frame(maxHeight: .infinity)
         .background(isSelected ? ShiftCalendarColors.primaryBlue.opacity(0.10) : Color.clear)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("weather.week.\(cell.id)")
     }
 
     private var dateTextColor: Color {
@@ -157,6 +234,20 @@ struct WeekDateHeaderCell: View {
 
     private var weekendColor: Color? {
         ShiftCalendarColors.weekendTextColor(for: cell.weekdayText)
+    }
+
+    private func temperatureRange(_ weather: DailyWeatherSnapshot) -> String {
+        let high = WeatherValueFormatter.temperature(
+            weather.highTemperatureCelsius,
+            locale: localization.currentLocale,
+            compact: true
+        )
+        let low = WeatherValueFormatter.temperature(
+            weather.lowTemperatureCelsius,
+            locale: localization.currentLocale,
+            compact: true
+        )
+        return "\(high) \(low)"
     }
 }
 

@@ -25,6 +25,35 @@
 "settings.traditional_calendar.show_lunar" = "显示农历";
 "settings.traditional_calendar.show_rokuyo" = "显示六曜";
 "settings.traditional_calendar.show_solar_terms" = "显示二十四节气";
+"settings.weather.title" = "天气预报";
+"settings.weather.enable" = "开启天气";
+"settings.weather.location" = "位置";
+"settings.weather.current_location" = "当前位置";
+"settings.weather.location_permission" = "位置权限";
+"settings.weather.open_settings" = "打开设置";
+"settings.calendar.month_secondary_display" = "月视图辅助信息";
+"calendar.month_secondary.none" = "不显示";
+"calendar.month_secondary.weather" = "天气";
+"calendar.month_secondary.lunar" = "农历";
+"calendar.month_secondary.rokuyo" = "六曜";
+"calendar.month_secondary.solar_term" = "二十四节气";
+
+/* Weather */
+"weather.unavailable" = "天气暂不可用";
+"weather.loading" = "正在加载天气";
+"weather.updated" = "更新时间";
+"weather.high" = "最高";
+"weather.low" = "最低";
+"weather.precipitation" = "降水";
+"weather.wind" = "风";
+"weather.current" = "当前天气";
+"weather.nearest_hour" = "最近小时";
+"weather.hourly_forecast" = "小时天气";
+"weather.attribution.legal" = "法律信息";
+"weather.attribution.description" = "天气数据由 Apple Weather 提供";
+"weather.permission.required" = "开启天气后将请求位置权限";
+"weather.permission.denied" = "位置权限未开启";
+"weather.permission.restricted" = "位置权限受限";
 
 /* Traditional Calendar */
 "traditional_calendar.lunar.month_names" = "正月|二月|三月|四月|五月|六月|七月|八月|九月|十月|冬月|腊月";

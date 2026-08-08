@@ -25,6 +25,35 @@
 "settings.traditional_calendar.show_lunar" = "Show Chinese Lunar Calendar";
 "settings.traditional_calendar.show_rokuyo" = "Show Rokuyo";
 "settings.traditional_calendar.show_solar_terms" = "Show 24 Solar Terms";
+"settings.weather.title" = "Weather Forecast";
+"settings.weather.enable" = "Enable Weather";
+"settings.weather.location" = "Location";
+"settings.weather.current_location" = "Current Location";
+"settings.weather.location_permission" = "Location Permission";
+"settings.weather.open_settings" = "Open Settings";
+"settings.calendar.month_secondary_display" = "Month View Details";
+"calendar.month_secondary.none" = "None";
+"calendar.month_secondary.weather" = "Weather";
+"calendar.month_secondary.lunar" = "Lunar Calendar";
+"calendar.month_secondary.rokuyo" = "Rokuyo";
+"calendar.month_secondary.solar_term" = "24 Solar Terms";
+
+/* Weather */
+"weather.unavailable" = "Weather is unavailable";
+"weather.loading" = "Loading weather";
+"weather.updated" = "Updated";
+"weather.high" = "High";
+"weather.low" = "Low";
+"weather.precipitation" = "Precipitation";
+"weather.wind" = "Wind";
+"weather.current" = "Current weather";
+"weather.nearest_hour" = "Nearest hour";
+"weather.hourly_forecast" = "Hourly forecast";
+"weather.attribution.legal" = "Legal";
+"weather.attribution.description" = "Weather data provided by Apple Weather";
+"weather.permission.required" = "Location permission will be requested when weather is enabled";
+"weather.permission.denied" = "Location permission is off";
+"weather.permission.restricted" = "Location permission is restricted";
 
 /* Traditional Calendar */
 "traditional_calendar.lunar.month_names" = "L1|L2|L3|L4|L5|L6|L7|L8|L9|L10|L11|L12";

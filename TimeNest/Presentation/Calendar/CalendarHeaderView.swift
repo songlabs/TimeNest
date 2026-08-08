@@ -17,6 +17,8 @@ struct CalendarHeaderView: View {
     let calendarSource: TimeNestCalendarKind
     let calendarDisplayName: String
     let isReadOnlyCalendar: Bool
+    let weatherAttribution: WeatherAttributionSnapshot?
+    @Binding private var isWeatherAttributionMarkVisible: Bool
     let onCalendarTapped: () -> Void
     let onStatisticsTapped: () -> Void
     let onShiftInputTapped: () -> Void
@@ -32,6 +34,8 @@ struct CalendarHeaderView: View {
         calendarSource: TimeNestCalendarKind = .personal,
         calendarDisplayName: String = "",
         isReadOnlyCalendar: Bool = false,
+        weatherAttribution: WeatherAttributionSnapshot? = nil,
+        isWeatherAttributionMarkVisible: Binding<Bool> = .constant(false),
         onCalendarTapped: @escaping () -> Void = {},
         onStatisticsTapped: @escaping () -> Void,
         onShiftInputTapped: @escaping () -> Void,
@@ -46,6 +50,8 @@ struct CalendarHeaderView: View {
         self.calendarSource = calendarSource
         self.calendarDisplayName = calendarDisplayName
         self.isReadOnlyCalendar = isReadOnlyCalendar
+        self.weatherAttribution = weatherAttribution
+        _isWeatherAttributionMarkVisible = isWeatherAttributionMarkVisible
         self.onCalendarTapped = onCalendarTapped
         self.onStatisticsTapped = onStatisticsTapped
         self.onShiftInputTapped = onShiftInputTapped
@@ -69,39 +75,89 @@ struct CalendarHeaderView: View {
         HStack(spacing: 0) {
             calendarSelectionButton
 
-            HStack(spacing: 6) {
+            HStack(spacing: weatherAttribution == nil ? 6 : 2) {
                 navigationButton(icon: "chevron.left", action: onPrevious)
 
-                Button(action: onTitleTapped) {
-                    HStack(spacing: 7) {
-                        Text(title)
-                            .font(titleFont)
-                            .lineLimit(1)
-                            .minimumScaleFactor(titleMinimumScaleFactor)
-                            .allowsTightening(true)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(ShiftCalendarColors.primaryBlue)
-                    }
-                    .foregroundColor(ShiftCalendarColors.primaryText)
-                    .padding(.vertical, 3)
-                    .frame(minHeight: 36)
+                if let weatherAttribution {
+                    weatherTitleControls(attribution: weatherAttribution)
+                } else {
+                    titlePickerButton
                 }
-                .buttonStyle(PlainButtonStyle())
-                .contentShape(Rectangle())
-                .accessibilityLabel(Text(localization.localized(.selectYearMonth)))
 
                 navigationButton(icon: "chevron.right", action: onNext)
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, weatherAttribution == nil ? 4 : 2)
             .background(ShiftCalendarColors.primaryBlue.opacity(0.12))
             .clipShape(Capsule())
             .frame(maxWidth: .infinity, alignment: .center)
 
             moreMenu
         }
+    }
+
+    private var titlePickerButton: some View {
+        Button(action: onTitleTapped) {
+            HStack(spacing: 7) {
+                titleText
+
+                titleChevron
+            }
+            .foregroundColor(ShiftCalendarColors.primaryText)
+            .padding(.vertical, 3)
+            .frame(minHeight: 36)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .contentShape(Rectangle())
+        .accessibilityLabel(Text(localization.localized(.selectYearMonth)))
+        .accessibilityIdentifier("calendar.header.title")
+        .layoutPriority(1)
+    }
+
+    private func weatherTitleControls(
+        attribution: WeatherAttributionSnapshot
+    ) -> some View {
+        HStack(spacing: 4) {
+            Button(action: onTitleTapped) {
+                titleText
+                    .foregroundColor(ShiftCalendarColors.primaryText)
+                    .padding(.vertical, 3)
+                    .frame(minHeight: 36)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .contentShape(Rectangle())
+            .accessibilityLabel(Text(localization.localized(.selectYearMonth)))
+            .accessibilityIdentifier("calendar.header.title")
+            .layoutPriority(1)
+
+            WeatherHeaderAttributionView(
+                attribution: attribution,
+                isMarkVisible: $isWeatherAttributionMarkVisible
+            )
+
+            Button(action: onTitleTapped) {
+                titleChevron
+                    .frame(width: 20, height: 36)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PlainButtonStyle())
+            .accessibilityHidden(true)
+        }
+        .layoutPriority(1)
+    }
+
+    private var titleText: some View {
+        Text(title)
+            .font(titleFont)
+            .lineLimit(1)
+            .minimumScaleFactor(titleMinimumScaleFactor)
+            .allowsTightening(true)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var titleChevron: some View {
+        Image(systemName: "chevron.down")
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundColor(ShiftCalendarColors.primaryBlue)
     }
 
     private var calendarSelectionButton: some View {
@@ -151,6 +207,10 @@ struct CalendarHeaderView: View {
     }
 
     private var titleMinimumScaleFactor: CGFloat {
+        if weatherAttribution != nil {
+            return 0.65
+        }
+
         switch displayMode {
         case .month, .week:
             return 0.85
@@ -238,7 +298,7 @@ struct CalendarHeaderView: View {
             Image(systemName: icon)
                 .font(.system(size: 22, weight: .medium))
                 .foregroundColor(ShiftCalendarColors.primaryBlue)
-                .frame(width: 36, height: 36)
+                .frame(width: weatherAttribution == nil ? 36 : 30, height: 36)
                 .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())

@@ -25,6 +25,35 @@
 "settings.traditional_calendar.show_lunar" = "중국 음력 표시";
 "settings.traditional_calendar.show_rokuyo" = "육요 표시";
 "settings.traditional_calendar.show_solar_terms" = "24절기 표시";
+"settings.weather.title" = "날씨 예보";
+"settings.weather.enable" = "날씨 켜기";
+"settings.weather.location" = "위치";
+"settings.weather.current_location" = "현재 위치";
+"settings.weather.location_permission" = "위치 권한";
+"settings.weather.open_settings" = "설정 열기";
+"settings.calendar.month_secondary_display" = "월 보기 보조 정보";
+"calendar.month_secondary.none" = "표시 안 함";
+"calendar.month_secondary.weather" = "날씨";
+"calendar.month_secondary.lunar" = "음력";
+"calendar.month_secondary.rokuyo" = "육요";
+"calendar.month_secondary.solar_term" = "24절기";
+
+/* Weather */
+"weather.unavailable" = "날씨를 사용할 수 없습니다";
+"weather.loading" = "날씨 불러오는 중";
+"weather.updated" = "업데이트";
+"weather.high" = "최고";
+"weather.low" = "최저";
+"weather.precipitation" = "강수";
+"weather.wind" = "바람";
+"weather.current" = "현재 날씨";
+"weather.nearest_hour" = "가장 가까운 시간";
+"weather.hourly_forecast" = "시간별 날씨";
+"weather.attribution.legal" = "법적 고지";
+"weather.attribution.description" = "Apple Weather 제공";
+"weather.permission.required" = "날씨를 켜면 위치 권한을 요청합니다";
+"weather.permission.denied" = "위치 권한이 꺼져 있습니다";
+"weather.permission.restricted" = "위치 권한이 제한되어 있습니다";
 
 /* Traditional Calendar */
 "traditional_calendar.lunar.month_names" = "1월|2월|3월|4월|5월|6월|7월|8월|9월|10월|11월|12월";

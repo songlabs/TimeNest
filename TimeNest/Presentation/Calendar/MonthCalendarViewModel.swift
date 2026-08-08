@@ -15,6 +15,7 @@ class MonthCalendarViewModel: ObservableObject {
     @Published var shiftInputTargetDate: Date?
     @Published var selectedShiftTemplate: ShiftTimeTemplate?
     @Published private(set) var shiftTemplates: [ShiftTimeTemplate] = ShiftTimeTemplate.all()
+    @Published private(set) var monthSecondaryDisplayMode: MonthSecondaryDisplayMode
     
     // 视图模式：month / week / day
     @Published var displayMode: CalendarViewMode = .month
@@ -66,7 +67,9 @@ class MonthCalendarViewModel: ObservableObject {
         let initialLanguage = LocalizationManager.shared.currentLanguage
         let enabledRegions = self.subscriptionManager.enabledRegions  // 允许空数组
         let initialWeekStart = WeekStartPolicy(rawValue: userDefaults.string(forKey: "weekStart") ?? "system") ?? .system
-        let traditionalPreferences = TraditionalCalendarPreferences(defaults: userDefaults)
+        let monthSecondaryDisplayMode = MonthSecondaryDisplayMode.resolved(defaults: userDefaults)
+        self.monthSecondaryDisplayMode = monthSecondaryDisplayMode
+        let traditionalPreferences = monthSecondaryDisplayMode.traditionalPreferences
 
         self.currentSetting = .init(
             displayLanguage: initialLanguage,
@@ -170,7 +173,8 @@ class MonthCalendarViewModel: ObservableObject {
 
     private func updatePersistedCalendarSettings() {
         let newWeekStart = WeekStartPolicy(rawValue: userDefaults.string(forKey: "weekStart") ?? "system") ?? .system
-        let traditionalPreferences = TraditionalCalendarPreferences(defaults: userDefaults)
+        let newMonthSecondaryDisplayMode = MonthSecondaryDisplayMode.resolved(defaults: userDefaults)
+        let traditionalPreferences = newMonthSecondaryDisplayMode.traditionalPreferences
         var needsReload = false
 
         if currentSetting.weekStartPolicy != newWeekStart {
@@ -187,6 +191,10 @@ class MonthCalendarViewModel: ObservableObject {
         }
         if currentSetting.showSolarTerms != traditionalPreferences.showSolarTerms {
             currentSetting.showSolarTerms = traditionalPreferences.showSolarTerms
+            needsReload = true
+        }
+        if monthSecondaryDisplayMode != newMonthSecondaryDisplayMode {
+            monthSecondaryDisplayMode = newMonthSecondaryDisplayMode
             needsReload = true
         }
 

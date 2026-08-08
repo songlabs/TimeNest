@@ -33,6 +33,7 @@ struct TimeNestApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("themeMode") private var themeMode: String = "system"
     @StateObject private var calendarSharingStore: CalendarSharingStore
+    @StateObject private var weatherStore: CalendarWeatherStore
 
     private let modelContainer: ModelContainer
     private let eventRepository: EventRepository
@@ -54,6 +55,16 @@ struct TimeNestApp: App {
     init() {
 #if DEBUG
         TimeNestUITestSupport.configureDefaults()
+#endif
+        MonthSecondaryDisplayMode.migrateIfNeeded()
+#if DEBUG
+        if TimeNestUITestSupport.isEnabled {
+            _weatherStore = StateObject(wrappedValue: TimeNestUITestSupport.makeWeatherStore())
+        } else {
+            _weatherStore = StateObject(wrappedValue: CalendarWeatherStore())
+        }
+#else
+        _weatherStore = StateObject(wrappedValue: CalendarWeatherStore())
 #endif
         let schema = Schema([
             SwiftDataCalendarEventEntity.self,
@@ -262,6 +273,12 @@ struct TimeNestApp: App {
                     await holidaySubscriptionManager.performAutoSync()
                 }
                 .task {
+#if DEBUG
+                    guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
+#endif
+                    await weatherStore.prepareForUse()
+                }
+                .task {
                     await calendarSharingStore.start()
                 }
                 .onChange(of: scenePhase) { _, newPhase in
@@ -273,12 +290,19 @@ struct TimeNestApp: App {
 #endif
                         await holidaySubscriptionManager.performAutoSync()
                     }
+                    Task {
+#if DEBUG
+                        guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
+#endif
+                        await weatherStore.refreshIfNeeded()
+                    }
                 }
             }
         }
         .preferredColorScheme(preferredColorScheme)
         .environmentObject(LocalizationManager.shared)
         .environmentObject(calendarSharingStore)
+        .environmentObject(weatherStore)
         .modelContainer(modelContainer)
         .overlay {
             if calendarSharingStore.isAcceptingInvitation {

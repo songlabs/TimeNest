@@ -5,6 +5,18 @@ private enum CalendarModalDestination {
     case settings
 }
 
+enum MonthWeatherPresentationPolicy {
+    static func allowsWeatherDisplay(
+        isWeatherEnabled: Bool,
+        secondaryDisplayMode: MonthSecondaryDisplayMode,
+        isAttributionMarkVisible: Bool
+    ) -> Bool {
+        isWeatherEnabled
+            && secondaryDisplayMode == .weather
+            && isAttributionMarkVisible
+    }
+}
+
 struct MonthCalendarView: View {
     @StateObject private var viewModel: MonthCalendarViewModel
     @State private var showingYearMonthPicker = false
@@ -13,6 +25,8 @@ struct MonthCalendarView: View {
     @State private var showingReceivedStatisticsUnavailable = false
     @StateObject private var statisticsViewModel: WorkStatisticsViewModel
     @EnvironmentObject private var localization: LocalizationManager
+    @EnvironmentObject private var weatherStore: CalendarWeatherStore
+    @State private var isWeatherAttributionMarkVisible = false
     @ObservedObject private var purchaseManager = RemoveAdsPurchaseManager.shared
     @ObservedObject private var calendarSharingStore: CalendarSharingStore
     private let holidaySubscriptionManager: HolidaySubscriptionManager
@@ -63,6 +77,8 @@ struct MonthCalendarView: View {
                     calendarSource: calendarSharingStore.selectedCalendar.kind,
                     calendarDisplayName: calendarSharingStore.selectedCalendarDisplayName,
                     isReadOnlyCalendar: !calendarSharingStore.selectedCalendar.canEditContent,
+                    weatherAttribution: headerWeatherAttribution,
+                    isWeatherAttributionMarkVisible: $isWeatherAttributionMarkVisible,
                     onCalendarTapped: {
                         showingCalendarSelection = true
                     },
@@ -102,10 +118,14 @@ struct MonthCalendarView: View {
         .onAppear {
             Task {
                 await viewModel.reloadMonth()
+                await weatherStore.prepareForUse()
             }
         }
         .onChange(of: calendarSharingStore.revision) { _, _ in
             Task { await viewModel.reloadMonth() }
+        }
+        .onChange(of: headerWeatherAttribution?.squareMarkURL) { _, _ in
+            isWeatherAttributionMarkVisible = false
         }
         .onReceive(NotificationCenter.default.publisher(for: .widgetCalendarDateRequested)) { notification in
             guard let date = notification.object as? Date else { return }
@@ -401,7 +421,9 @@ struct MonthCalendarView: View {
                                         cell: cell,
                                         cellWidth: cellWidth,
                                         cellHeight: dateCellHeight,
-                                        isSelected: isDayCellSelected(cell)
+                                        isSelected: isDayCellSelected(cell),
+                                        secondaryDisplayMode: viewModel.monthSecondaryDisplayMode,
+                                        weatherSymbolName: monthWeatherSymbol(for: cell)
                                     )
                                     .environmentObject(localization)
                                     .onTapGesture {
@@ -665,7 +687,10 @@ struct MonthCalendarView: View {
                 onDateSelected: { date in
                     viewModel.selectDate(date)
                 },
-                onEventTapped: handleEventTap
+                onEventTapped: handleEventTap,
+                weatherByDate: weekWeatherByDate,
+                isWeatherEnabled: weatherStore.isEnabled,
+                isWeatherLoading: weatherStore.isLoading
             )
             .environmentObject(localization)
         }
@@ -680,7 +705,11 @@ struct MonthCalendarView: View {
             DayCalendarView(
                 selectedDate: viewModel.selectedDate,
                 cell: viewModel.dayCell,
-                onEventTapped: handleEventTap
+                onEventTapped: handleEventTap,
+                isWeatherEnabled: weatherStore.isEnabled,
+                weather: weatherStore.dayWeather(for: viewModel.selectedDate),
+                isWeatherLoading: weatherStore.isLoading,
+                weatherAttribution: weatherStore.attribution
             )
             .environmentObject(localization)
         }
@@ -694,6 +723,39 @@ struct MonthCalendarView: View {
             displayName: calendar.name,
             fallback: localization.localized(.calendarSharingUnknownCalendar)
         )
+    }
+
+    private var headerWeatherAttribution: WeatherAttributionSnapshot? {
+        guard weatherStore.hasValidWeather else { return nil }
+        switch viewModel.displayMode {
+        case .month:
+            guard viewModel.monthSecondaryDisplayMode == .weather else { return nil }
+            return weatherStore.attribution
+        case .day:
+            return nil
+        case .week:
+            return weatherStore.attribution
+        }
+    }
+
+    private var weekWeatherByDate: [DateOnly: DailyWeatherSnapshot] {
+        guard weatherStore.isEnabled else { return [:] }
+        return Dictionary(
+            uniqueKeysWithValues: viewModel.weekCells.compactMap { cell in
+                weatherStore.dailyWeather(for: cell.date).map { (cell.date, $0) }
+            }
+        )
+    }
+
+    private func monthWeatherSymbol(for cell: CalendarDayCell) -> String? {
+        guard MonthWeatherPresentationPolicy.allowsWeatherDisplay(
+            isWeatherEnabled: weatherStore.isEnabled,
+            secondaryDisplayMode: viewModel.monthSecondaryDisplayMode,
+            isAttributionMarkVisible: isWeatherAttributionMarkVisible
+        ) else {
+            return nil
+        }
+        return weatherStore.monthWeatherSymbolName(for: cell.date)
     }
 
     private func presentReadOnlyDetailIfNeeded(for cell: CalendarDayCell) {
@@ -1002,10 +1064,13 @@ struct DayCellView: View {
     let cellWidth: CGFloat
     let cellHeight: CGFloat
     let isSelected: Bool
+    var secondaryDisplayMode: MonthSecondaryDisplayMode = .none
+    var weatherSymbolName: String? = nil
 
     private enum Layout {
         static let headerTopPadding: CGFloat = 3
         static let headerHeight: CGFloat = 30
+        static let weatherSymbolSize: CGFloat = 17
         static let eventTopSpacing: CGFloat = 2
         static let eventRowSpacing: CGFloat = 1
         static let eventRowVerticalPadding: CGFloat = 1
@@ -1025,7 +1090,7 @@ struct DayCellView: View {
 
             // 内容区域 - 统一从顶部对齐
             VStack(alignment: .leading, spacing: 0) {
-                // 日期和农历/六曜/节气共用顶部信息区，避免辅助信息覆盖事件区。
+                // 日期与单一辅助信息共用固定顶部区域，天气不会改变 Cell 高度或事件配额。
                 topInformationView
 
                 eventLabelsView
@@ -1086,18 +1151,23 @@ struct DayCellView: View {
         var id: String { kind.accessibilityIdentifier }
     }
 
-    private var traditionalCalendarLabels: [TraditionalCalendarLabel] {
-        var labels: [TraditionalCalendarLabel] = []
-        if let text = cell.traditionalCalendar.solarTermText {
-            labels.append(.init(kind: .solarTerm, text: text))
+    private var selectedTraditionalCalendarLabel: TraditionalCalendarLabel? {
+        switch secondaryDisplayMode {
+        case .lunar:
+            cell.traditionalCalendar.lunarText.map {
+                TraditionalCalendarLabel(kind: .lunar, text: $0)
+            }
+        case .rokuyo:
+            cell.traditionalCalendar.rokuyoText.map {
+                TraditionalCalendarLabel(kind: .rokuyo, text: $0)
+            }
+        case .solarTerm:
+            cell.traditionalCalendar.solarTermText.map {
+                TraditionalCalendarLabel(kind: .solarTerm, text: $0)
+            }
+        case .none, .weather:
+            nil
         }
-        if let text = cell.traditionalCalendar.lunarText {
-            labels.append(.init(kind: .lunar, text: text))
-        }
-        if let text = cell.traditionalCalendar.rokuyoText {
-            labels.append(.init(kind: .rokuyo, text: text))
-        }
-        return labels
     }
 
     private var topInformationView: some View {
@@ -1113,8 +1183,21 @@ struct DayCellView: View {
                 .padding(.leading, 8)
                 .padding(.top, Layout.headerTopPadding)
 
-            if !cell.traditionalCalendar.isEmpty {
-                traditionalCalendarLabelsView
+            if secondaryDisplayMode == .weather, let weatherSymbolName {
+                Image(systemName: weatherSymbolName)
+                    .symbolRenderingMode(.multicolor)
+                    .foregroundStyle(Color(uiColor: .systemBlue))
+                    .font(.system(size: Layout.weatherSymbolSize, weight: .semibold))
+                    .shadow(
+                        color: Color(uiColor: .systemGray).opacity(0.45),
+                        radius: 0.75
+                    )
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.top, Layout.headerTopPadding)
+                    .padding(.trailing, 5)
+                    .accessibilityIdentifier("calendar.weather.\(cell.id)")
+            } else if let selectedTraditionalCalendarLabel {
+                traditionalCalendarLabelView(selectedTraditionalCalendarLabel)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .padding(.top, Layout.headerTopPadding)
                     .padding(.trailing, 3)
@@ -1125,28 +1208,24 @@ struct DayCellView: View {
         .frame(maxWidth: .infinity, minHeight: Layout.headerHeight, maxHeight: Layout.headerHeight, alignment: .topLeading)
     }
 
-    private var traditionalCalendarLabelsView: some View {
-        VStack(alignment: .trailing, spacing: 0) {
-            ForEach(traditionalCalendarLabels) { label in
-                Text(label.text)
-                    .font(.system(
-                        size: label.kind == .solarTerm ? 8.5 : 8,
-                        weight: label.kind == .solarTerm ? .semibold : .regular
-                    ))
-                    .foregroundColor(
-                        label.kind == .solarTerm
-                            ? ShiftCalendarColors.primaryBlueDark
-                            : ShiftCalendarColors.secondaryText
-                    )
-                    .lineLimit(1)
-                    .allowsTightening(true)
-                    .minimumScaleFactor(0.55)
-                    .frame(maxWidth: .infinity, minHeight: 9, alignment: .trailing)
-                    .accessibilityIdentifier(
-                        "\(label.kind.accessibilityIdentifier).\(cell.id)"
-                    )
-            }
-        }
+    private func traditionalCalendarLabelView(_ label: TraditionalCalendarLabel) -> some View {
+        Text(label.text)
+            .font(.system(
+                size: label.kind == .solarTerm ? 8.5 : 8,
+                weight: label.kind == .solarTerm ? .semibold : .regular
+            ))
+            .foregroundColor(
+                label.kind == .solarTerm
+                    ? ShiftCalendarColors.primaryBlueDark
+                    : ShiftCalendarColors.secondaryText
+            )
+            .lineLimit(1)
+            .allowsTightening(true)
+            .minimumScaleFactor(0.55)
+            .frame(maxWidth: .infinity, minHeight: 9, alignment: .trailing)
+            .accessibilityIdentifier(
+                "\(label.kind.accessibilityIdentifier).\(cell.id)"
+            )
     }
 
 

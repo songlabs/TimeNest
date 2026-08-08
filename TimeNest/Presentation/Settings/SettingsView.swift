@@ -10,11 +10,10 @@ struct SettingsView: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var localization: LocalizationManager
     @EnvironmentObject private var calendarSharingStore: CalendarSharingStore
+    @EnvironmentObject private var weatherStore: CalendarWeatherStore
     @AppStorage("weekStart") private var weekStart: String = "system"
     @AppStorage("themeMode") private var themeMode: String = "system"
-    @AppStorage(TraditionalCalendarPreferences.showLunarCalendarKey) private var showLunarCalendar = false
-    @AppStorage(TraditionalCalendarPreferences.showRokuyoKey) private var showRokuyo = false
-    @AppStorage(TraditionalCalendarPreferences.showSolarTermsKey) private var showSolarTerms = false
+    @AppStorage(MonthSecondaryDisplayMode.storageKey) private var monthSecondaryDisplayModeRaw = MonthSecondaryDisplayMode.none.rawValue
 
     @State private var showVersionInfo: Bool = false
     @State private var showingHelp = false
@@ -206,33 +205,35 @@ struct SettingsView: View {
                 }
 
                 SettingsCard {
-                    SettingsCardTitle(localization.localized(.settingsTraditionalCalendar))
-                    SettingsDivider()
-
-                    SettingsToggleRow(
-                        title: localization.localized(.settingsTraditionalCalendarShowLunar),
-                        isOn: $showLunarCalendar,
-                        accessibilityIdentifier: "settings.traditionalCalendar.showLunar"
-                    )
-
-                    SettingsDivider()
-
-                    SettingsToggleRow(
-                        title: localization.localized(.settingsTraditionalCalendarShowRokuyo),
-                        isOn: $showRokuyo,
-                        accessibilityIdentifier: "settings.traditionalCalendar.showRokuyo"
-                    )
-
-                    SettingsDivider()
-
-                    SettingsToggleRow(
-                        title: localization.localized(.settingsTraditionalCalendarShowSolarTerms),
-                        isOn: $showSolarTerms,
-                        accessibilityIdentifier: "settings.traditionalCalendar.showSolarTerms"
+                    SettingsPickerRow(
+                        title: localization.localized(.settingsMonthSecondaryDisplay),
+                        allowsMultiline: true,
+                        accessibilityIdentifier: "settings.monthSecondaryDisplay",
+                        selection: monthSecondaryDisplayBinding,
+                        options: [
+                            SettingsPickerOption(
+                                title: localization.localized(.monthSecondaryNone),
+                                tag: MonthSecondaryDisplayMode.none.rawValue
+                            ),
+                            SettingsPickerOption(
+                                title: localization.localized(.monthSecondaryWeather),
+                                tag: MonthSecondaryDisplayMode.weather.rawValue
+                            ),
+                            SettingsPickerOption(
+                                title: localization.localized(.monthSecondaryLunar),
+                                tag: MonthSecondaryDisplayMode.lunar.rawValue
+                            ),
+                            SettingsPickerOption(
+                                title: localization.localized(.monthSecondaryRokuyo),
+                                tag: MonthSecondaryDisplayMode.rokuyo.rawValue
+                            ),
+                            SettingsPickerOption(
+                                title: localization.localized(.monthSecondarySolarTerm),
+                                tag: MonthSecondaryDisplayMode.solarTerm.rawValue
+                            )
+                        ]
                     )
                 }
-                .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("settings.traditionalCalendar")
 
                 SettingsCard {
                     SettingsNavigationRow(
@@ -519,6 +520,21 @@ struct SettingsView: View {
             return version
         }
         return "\(version) (\(build))"
+    }
+
+    private var monthSecondaryDisplayBinding: Binding<String> {
+        Binding(
+            get: { monthSecondaryDisplayModeRaw },
+            set: { rawValue in
+                guard let mode = MonthSecondaryDisplayMode(rawValue: rawValue) else { return }
+                MonthSecondaryDisplayMode.save(mode)
+                monthSecondaryDisplayModeRaw = mode.rawValue
+
+                if mode == .weather, !weatherStore.isEnabled {
+                    Task { await weatherStore.enableWeather() }
+                }
+            }
+        )
     }
 
     private func openPrivacyPolicy() {
@@ -914,6 +930,7 @@ private struct SettingsRow<Accessory: View>: View {
 private struct SettingsPickerRow: View {
     let title: String
     var allowsMultiline = false
+    var accessibilityIdentifier = ""
     @Binding var selection: String
     let options: [SettingsPickerOption]
 
@@ -927,6 +944,7 @@ private struct SettingsPickerRow: View {
             .labelsHidden()
             .pickerStyle(.menu)
             .tint(SettingsStyle.secondaryText)
+            .accessibilityIdentifier(accessibilityIdentifier)
         }
     }
 }

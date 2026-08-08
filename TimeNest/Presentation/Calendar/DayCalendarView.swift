@@ -5,15 +5,27 @@ struct DayCalendarView: View {
     let selectedDate: Date
     let cell: CalendarDayCell?
     let onEventTapped: (EventOccurrence) -> Void
+    let isWeatherEnabled: Bool
+    let weather: DayWeatherSnapshot?
+    let isWeatherLoading: Bool
+    let weatherAttribution: WeatherAttributionSnapshot?
 
     init(
         selectedDate: Date,
         cell: CalendarDayCell?,
-        onEventTapped: @escaping (EventOccurrence) -> Void = { _ in }
+        onEventTapped: @escaping (EventOccurrence) -> Void = { _ in },
+        isWeatherEnabled: Bool = false,
+        weather: DayWeatherSnapshot? = nil,
+        isWeatherLoading: Bool = false,
+        weatherAttribution: WeatherAttributionSnapshot? = nil
     ) {
         self.selectedDate = selectedDate
         self.cell = cell
         self.onEventTapped = onEventTapped
+        self.isWeatherEnabled = isWeatherEnabled
+        self.weather = weather
+        self.isWeatherLoading = isWeatherLoading
+        self.weatherAttribution = weatherAttribution
     }
 
     private let timeLabelWidth = CalendarTimelineLayout.timeLabelWidth
@@ -22,9 +34,16 @@ struct DayCalendarView: View {
         GeometryReader { geometry in
             let allDayEvents = CalendarTimelineEventMetrics.allDayEvents(in: cell?.events ?? [])
             let contentWidth = CalendarTimelineLayout.nonNegativeDimension(geometry.size.width - timeLabelWidth)
-            let timeAxisHeight = CalendarTimelineLayout.nonNegativeDimension(geometry.size.height)
 
             VStack(spacing: 0) {
+                if isWeatherEnabled {
+                    DayWeatherSection(
+                        weather: weather,
+                        isLoading: isWeatherLoading,
+                        attribution: weatherAttribution
+                    )
+                }
+
                 if !allDayEvents.isEmpty {
                     DayAllDayEventsSection(
                         events: allDayEvents,
@@ -37,9 +56,9 @@ struct DayCalendarView: View {
                     cell: cell,
                     timeLabelWidth: timeLabelWidth,
                     contentWidth: contentWidth,
-                    timeAxisHeight: timeAxisHeight,
                     onEventTapped: onEventTapped
                 )
+                .frame(maxHeight: .infinity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -96,7 +115,6 @@ struct DayTimeAxisView: View {
     let cell: CalendarDayCell?
     let timeLabelWidth: CGFloat
     let contentWidth: CGFloat
-    let timeAxisHeight: CGFloat
     let onEventTapped: (EventOccurrence) -> Void
 
     private let startHour = CalendarTimelineLayout.startHour
