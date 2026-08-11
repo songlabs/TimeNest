@@ -79,8 +79,7 @@ jobs:
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -only-testing:TimeNestTests \
-            -resultBundlePath "$RUNNER_TEMP/TimeNestTests.xcresult" \
-            CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/unit-tests.log"
+            -resultBundlePath "$RUNNER_TEMP/TimeNestTests.xcresult" | tee "$RUNNER_TEMP/unit-tests.log"
 
       - name: Archive with automatic signing
         env:
