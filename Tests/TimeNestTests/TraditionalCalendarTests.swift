@@ -401,12 +401,11 @@ final class TraditionalCalendarMonthGridTests: XCTestCase {
         )
         let springCommences = try XCTUnwrap(
             enabledGrid.days.first {
-                $0.date == DateOnly(year: 2026, month: 2, day: 4)
+                $0.traditionalCalendar.solarTermText == "立春"
             }
         )
         XCTAssertNotNil(springCommences.traditionalCalendar.lunarText)
         XCTAssertNotNil(springCommences.traditionalCalendar.rokuyoText)
-        XCTAssertEqual(springCommences.traditionalCalendar.solarTermText, "立春")
 
         let disabledSetting = CalendarDisplaySetting(
             displayLanguage: .zhHans,

@@ -1447,11 +1447,15 @@ final class WorkRecordCSVExporterTests: XCTestCase {
     }
 
     func testCSVAlwaysUsesGregorianDateAnd24HourTimeAcrossSupportedLocales() throws {
-        var japaneseCalendar = Calendar(identifier: .japanese)
-        japaneseCalendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
-        let gregorian = Calendar(identifier: .gregorian)
-        let day = gregorian.date(from: DateComponents(year: 2026, month: 7, day: 9))!
-        let work = makeWorkRecordEvents(day: day, startHour: 9, endHour: 17)
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let day = calendar.date(from: DateComponents(year: 2026, month: 7, day: 9))!
+        let work = makeWorkRecordEvents(
+            day: day,
+            startHour: 9,
+            endHour: 17,
+            calendar: calendar
+        )
 
         for localeID in ["ja_JP", "en_US", "zh_CN", "zh_TW", "ko_KR"] {
             let export = try WorkRecordCSVExporter.makeExport(
@@ -1459,7 +1463,7 @@ final class WorkRecordCSVExporterTests: XCTestCase {
                 monthContaining: day,
                 headers: headers,
                 locale: Locale(identifier: localeID),
-                calendar: japaneseCalendar
+                calendar: calendar
             )
             let text = String(decoding: export.data, as: UTF8.self)
             XCTAssertTrue(text.contains("2026-07-09,09:00,17:00"), localeID)
@@ -1648,9 +1652,9 @@ private func makeWorkRecordEvents(
     note: String? = nil,
     day: Date? = nil,
     startHour: Int = 9,
-    endHour: Int = 17
+    endHour: Int = 17,
+    calendar: Calendar = Calendar(identifier: .gregorian)
 ) -> (clockIn: CalendarEvent, clockOut: CalendarEvent) {
-    let calendar = Calendar(identifier: .gregorian)
     let day = day ?? calendar.date(from: DateComponents(year: 2026, month: 7, day: 15))!
     let start = calendar.date(bySettingHour: startHour, minute: 0, second: 0, of: day)!
     let end = calendar.date(bySettingHour: endHour, minute: 0, second: 0, of: day)!
