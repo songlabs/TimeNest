@@ -36,7 +36,7 @@ def token(options)
 end
 
 def request(options, method, path, body = nil)
-  uri = URI("https://api.appstoreconnect.apple.com#{path}")
+  uri = URI(path.start_with?("http") ? path : "https://api.appstoreconnect.apple.com#{path}")
   request_class = method == :get ? Net::HTTP::Get : Net::HTTP::Post
   request = request_class.new(uri)
   request["Authorization"] = "Bearer #{token(options)}"
@@ -57,6 +57,7 @@ end
 app_query = URI.encode_www_form("filter[bundleId]" => options[:bundle_id], "limit" => "2")
 app = one_record!(request(options, :get, "/v1/apps?#{app_query}"), "app #{options[:bundle_id]}")
 group_query = URI.encode_www_form("filter[app]" => app.fetch("id"), "filter[name]" => options[:group_name], "limit" => "2")
+group_query = "#{group_query}&#{URI.encode_www_form('fields[betaGroups]' => 'name,isInternalGroup,hasAccessToAllBuilds')}"
 group = one_record!(request(options, :get, "/v1/betaGroups?#{group_query}"), "beta group #{options[:group_name]}")
 
 build = nil
@@ -78,6 +79,28 @@ build = nil
   sleep 30
 end
 abort "Timed out waiting for TestFlight build #{options[:build_number]}" unless build
+
+group_attributes = group.fetch("attributes")
+if group_attributes.fetch("isInternalGroup") && group_attributes.fetch("hasAccessToAllBuilds")
+  puts "Internal group has access to all builds; explicit assignment is not required."
+  exit
+end
+
+build_assigned = false
+group_builds_path = "/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200"
+while group_builds_path
+  response = request(options, :get, group_builds_path)
+  if response.fetch("data").any? { |record| record.fetch("id") == build.fetch("id") }
+    build_assigned = true
+    break
+  end
+  group_builds_path = response.fetch("links", {})["next"]
+end
+
+if build_assigned
+  puts "Build #{options[:build_number]} already belongs to #{options[:group_name]}; explicit assignment is not required."
+  exit
+end
 
 request(
   options,
