@@ -22,6 +22,9 @@ Workspace.xcworkspace/xcshareddata/xcschemes/
 *.ipa
 *.dSYM.zip
 *.dSYM
+*.p8
+*.p12
+*.mobileprovision
 
 ## Playgrounds
 timeline.xctimeline

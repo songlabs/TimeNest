@@ -1,0 +1,177 @@
+name: TestFlight
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: testflight-production
+  cancel-in-progress: false
+
+jobs:
+  archive-and-upload:
+    runs-on: macos-15
+    timeout-minutes: 60
+    environment: testflight
+    env:
+      APP_BUNDLE_ID: com.song.TimeNest
+      INTERNAL_GROUP_NAME: songlabs Internal Test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select and verify Xcode 26.3
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+          SDK_VERSION=$(xcrun --sdk iphoneos --show-sdk-version)
+          echo "iOS SDK $SDK_VERSION"
+          test "${SDK_VERSION%%.*}" -ge 26
+
+      - name: Validate required secrets
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          test -n "$ASC_KEY_ID" || { echo "Missing ASC_KEY_ID"; exit 1; }
+          test -n "$ASC_ISSUER_ID" || { echo "Missing ASC_ISSUER_ID"; exit 1; }
+          test -n "$ASC_PRIVATE_KEY" || { echo "Missing ASC_PRIVATE_KEY"; exit 1; }
+
+      - name: Install App Store Connect API key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
+        run: |
+          KEY_DIRECTORY="$HOME/.appstoreconnect/private_keys"
+          mkdir -p "$KEY_DIRECTORY"
+          KEY_PATH="$KEY_DIRECTORY/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_PRIVATE_KEY" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+
+      - name: Set unique build number
+        run: echo "BUILD_NUMBER=$(date -u +%s)" >> "$GITHUB_ENV"
+
+      - name: Resolve Swift packages
+        run: xcodebuild -resolvePackageDependencies -project TimeNest.xcodeproj -scheme TimeNest
+
+      - name: Select simulator
+        run: |
+          SIMULATOR_ID=$(xcrun simctl list devices available -j | ruby -rjson -e '
+            runtimes = JSON.parse(STDIN.read).fetch("devices").filter_map do |runtime, devices|
+              version = runtime[/iOS[- ](\d+(?:[-.]\d+)*)/, 1]
+              next unless version
+              [version.split(/[-.]/).map(&:to_i), devices]
+            end
+            runtime = runtimes.select { |version, _| version.first >= 26 }.max_by(&:first)
+            abort "No available iOS 26 or newer simulator runtime" unless runtime
+            phone = runtime.last.find { |device| device["name"].start_with?("iPhone") }
+            abort "No available iPhone in the selected simulator runtime" unless phone
+            print phone.fetch("udid")
+          ')
+          echo "SIMULATOR_ID=$SIMULATOR_ID" >> "$GITHUB_ENV"
+
+      - name: Run unit tests
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project TimeNest.xcodeproj \
+            -scheme TimeNest \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -only-testing:TimeNestTests \
+            -resultBundlePath "$RUNNER_TEMP/TimeNestTests.xcresult" \
+            CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/unit-tests.log"
+
+      - name: Archive with automatic signing
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild archive \
+            -project TimeNest.xcodeproj \
+            -scheme TimeNest \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath "$RUNNER_TEMP/TimeNest.xcarchive" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            CURRENT_PROJECT_VERSION="$BUILD_NUMBER" | tee "$RUNNER_TEMP/archive.log"
+
+      - name: Verify archive signing and entitlements
+        run: Scripts/verify_distribution_archive.sh "$RUNNER_TEMP/TimeNest.xcarchive"
+
+      - name: Create export options
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>JCABFH9F66</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>stripSwiftSymbols</key><true/>
+            <key>uploadSymbols</key><true/>
+          </dict></plist>
+          PLIST
+
+      - name: Export IPA
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/TimeNest.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tee "$RUNNER_TEMP/export.log"
+          test -f "$RUNNER_TEMP/export/TimeNest.ipa"
+
+      - name: Upload to App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -o pipefail
+          xcrun altool --upload-app \
+            --type ios \
+            --file "$RUNNER_TEMP/export/TimeNest.ipa" \
+            --apiKey "$ASC_KEY_ID" \
+            --apiIssuer "$ASC_ISSUER_ID" | tee "$RUNNER_TEMP/upload.log"
+
+      - name: Wait for processing and assign internal group
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          ruby Scripts/assign_testflight_group.rb \
+            --key-path "$ASC_KEY_PATH" \
+            --key-id "$ASC_KEY_ID" \
+            --issuer-id "$ASC_ISSUER_ID" \
+            --bundle-id "$APP_BUNDLE_ID" \
+            --build-number "$BUILD_NUMBER" \
+            --group-name "$INTERNAL_GROUP_NAME"
+
+      - name: Remove API key
+        if: always()
+        run: rm -f "${ASC_KEY_PATH:-/dev/null}"
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-diagnostics-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/TimeNestTests.xcresult
+            ${{ runner.temp }}/*.log
+            ${{ runner.temp }}/export/DistributionSummary.plist
+          retention-days: 7
+          if-no-files-found: ignore
