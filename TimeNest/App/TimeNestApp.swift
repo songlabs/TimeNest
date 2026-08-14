@@ -247,11 +247,6 @@ struct TimeNestApp: App {
                     guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
 #endif
                     await notificationScheduler.requestAuthorizationOnFirstLaunchIfNeeded()
-                }
-                .task {
-#if DEBUG
-                    guard !TimeNestUITestSupport.suppressesStartupSideEffects else { return }
-#endif
                     RemoveAdsPurchaseManager.shared.startObservingTransactionUpdates()
                     let isAdsRemoved = await RemoveAdsPurchaseManager.shared.refreshPurchasedState(
                         context: "app startup"

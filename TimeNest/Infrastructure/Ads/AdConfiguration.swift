@@ -4,6 +4,7 @@ import CoreGraphics
 import Foundation
 import GoogleMobileAds
 import StoreKit
+import UIKit
 import UserMessagingPlatform
 
 enum AdConfiguration {
@@ -91,6 +92,7 @@ final class AdConsentManager: ObservableObject {
     private var hasRequestedConsentInfo = false
     private var hasRequestedTrackingAuthorization = false
     private var hasStartedMobileAds = false
+    private var trackingAuthorizationActivationObserver: AnyCancellable?
 
     private init() {}
 
@@ -146,22 +148,43 @@ final class AdConsentManager: ObservableObject {
 
     private func prepareAdsAfterConsentFlow() {
         refreshConsentState()
-        guard canRequestAds else { return }
 
         switch ATTrackingManager.trackingAuthorizationStatus {
         case .notDetermined:
-            guard !hasRequestedTrackingAuthorization else { return }
-            hasRequestedTrackingAuthorization = true
-            ATTrackingManager.requestTrackingAuthorization { [weak self] _ in
-                Task { @MainActor in
-                    self?.startMobileAdsIfAllowed()
-                }
-            }
+            requestTrackingAuthorizationWhenActive()
         case .authorized, .denied, .restricted:
             startMobileAdsIfAllowed()
         @unknown default:
             startMobileAdsIfAllowed()
         }
+    }
+
+    private func requestTrackingAuthorizationWhenActive() {
+        guard !hasRequestedTrackingAuthorization else { return }
+        guard UIApplication.shared.applicationState == .active else {
+            observeNextAppActivationForTrackingAuthorization()
+            return
+        }
+
+        trackingAuthorizationActivationObserver = nil
+        hasRequestedTrackingAuthorization = true
+        ATTrackingManager.requestTrackingAuthorization { [weak self] _ in
+            Task { @MainActor in
+                self?.startMobileAdsIfAllowed()
+            }
+        }
+    }
+
+    private func observeNextAppActivationForTrackingAuthorization() {
+        guard trackingAuthorizationActivationObserver == nil else { return }
+        trackingAuthorizationActivationObserver = NotificationCenter.default
+            .publisher(for: UIApplication.didBecomeActiveNotification)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { @MainActor in
+                    self?.requestTrackingAuthorizationWhenActive()
+                }
+            }
     }
 
     private func startMobileAdsIfAllowed() {
