@@ -506,6 +506,9 @@
 "calendar_sharing.no_shared_calendars" = "共有カレンダーはまだありません";
 "calendar_sharing.no_shared_calendars_message" = "家族や同僚が予定やシフトを確認できる読み取り専用共有を作成できます。";
 "calendar_sharing.read_only" = "閲覧のみ";
+"calendar_sharing.start_method" = "開始方法";
+"calendar_sharing.start_empty" = "空のカレンダーから開始";
+"calendar_sharing.copy_my_calendar" = "自分のカレンダーをコピー";
 "calendar_sharing.event_editing.permission" = "予定の編集権限";
 "calendar_sharing.event_editing.allowed" = "予定の編集を許可";
 "calendar_sharing.editable" = "編集可能";

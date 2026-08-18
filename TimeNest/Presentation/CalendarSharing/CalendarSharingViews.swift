@@ -817,6 +817,7 @@ private struct CreateSharedCalendarView: View {
     @State private var errorMessage: String?
     @State private var dismissAfterErrorAcknowledgement = false
     @State private var eventEditingAllowed = false
+    @State private var creationMode: CalendarSharingCreationMode = .empty
 
     private var canSubmit: Bool {
         CalendarSharingFormValidation.hasRequiredName(nameDraft.value)
@@ -838,17 +839,37 @@ private struct CreateSharedCalendarView: View {
                     }
 
                     Section {
-                        Picker(
-                            localization.localized(.calendarSharingEventEditingPermission),
-                            selection: $eventEditingAllowed
-                        ) {
+                        Picker(selection: $creationMode) {
+                            Text(localization.localized(.calendarSharingStartEmpty))
+                                .tag(CalendarSharingCreationMode.empty)
+                            Text(localization.localized(.calendarSharingCopyMyCalendar))
+                                .tag(CalendarSharingCreationMode.copyPersonalCalendar)
+                        } label: {
+                            EmptyView()
+                        }
+                        .labelsHidden()
+                        .accessibilityLabel(localization.localized(.calendarSharingStartMethod))
+                        .pickerStyle(.inline)
+                        .disabled(isWorking)
+                    } header: {
+                        Text(localization.localized(.calendarSharingStartMethod))
+                    }
+
+                    Section {
+                        Picker(selection: $eventEditingAllowed) {
                             Text(localization.localized(.calendarSharingReadOnly))
                                 .accessibilityIdentifier("sharing.eventPermission.readOnly")
                                 .tag(false)
                             Text(localization.localized(.calendarSharingEventEditingAllowed))
                                 .accessibilityIdentifier("sharing.eventPermission.readWrite")
                                 .tag(true)
+                        } label: {
+                            EmptyView()
                         }
+                        .labelsHidden()
+                        .accessibilityLabel(
+                            localization.localized(.calendarSharingEventEditingPermission)
+                        )
                         .pickerStyle(.inline)
                         .disabled(isWorking)
                     } header: {
@@ -960,7 +981,8 @@ private struct CreateSharedCalendarView: View {
         do {
             invitation = try await sharingStore.createSharedCalendar(
                 name: nameDraft.value,
-                eventEditingAllowed: eventEditingAllowed
+                eventEditingAllowed: eventEditingAllowed,
+                creationMode: creationMode
             )
         } catch {
             errorMessage = error.localizedDescription

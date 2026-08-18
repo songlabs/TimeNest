@@ -254,6 +254,82 @@ class EventUseCase {
         try await repository.events(in: range).filter { $0.calendarID == calendarID }
     }
 
+    /// Creates independent local rows for the shareable events and shifts in one calendar.
+    /// Work records and owner-local event metadata are intentionally not copied.
+    @discardableResult
+    func copyShareableEventsOnce(
+        from sourceCalendarID: UUID,
+        to targetCalendarID: UUID
+    ) async throws -> [CalendarEvent] {
+        guard sourceCalendarID != targetCalendarID else { return [] }
+        try await validateWriteAccess(calendarID: targetCalendarID)
+
+        let sourceEvents = try await events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: sourceCalendarID
+        )
+        let now = Date()
+        let copies = sourceEvents.compactMap { source -> CalendarEvent? in
+            if let shift = SharedShiftMapper.snapshot(from: source) {
+                return CalendarEvent(
+                    id: UUID(),
+                    calendarID: targetCalendarID,
+                    title: shift.displayName,
+                    note: nil,
+                    startDate: shift.startDate,
+                    endDate: shift.endDate,
+                    isAllDay: false,
+                    categoryID: nil,
+                    recurrenceRule: .none,
+                    reminderTemplateID: nil,
+                    importSource: nil,
+                    createdAt: now,
+                    updatedAt: now,
+                    shiftTemplateID: source.shiftTemplateID
+                )
+            }
+            guard let event = SharedEventMapper.snapshot(from: source) else { return nil }
+            return CalendarEvent(
+                id: UUID(),
+                calendarID: targetCalendarID,
+                title: event.title,
+                note: nil,
+                startDate: event.startDate,
+                endDate: event.endDate,
+                isAllDay: event.isAllDay,
+                categoryID: nil,
+                recurrenceRule: .none,
+                reminderTemplateID: nil,
+                importSource: nil,
+                createdAt: now,
+                updatedAt: now
+            )
+        }
+        guard !copies.isEmpty else { return [] }
+        for event in copies { try validate(event) }
+
+        let mutations = try await ownerMutationsForBatch(
+            upserting: copies,
+            deleting: [],
+            expected: []
+        )
+        try await persistLocalEventChange(
+            upserting: copies,
+            deleting: [],
+            expected: [],
+            mutations: mutations,
+            fallback: {
+                try await self.repository.applyBatch(
+                    upserting: copies,
+                    deleting: [],
+                    ifUnchanged: []
+                )
+            }
+        )
+        onEventsChanged?()
+        return copies
+    }
+
     func event(id: UUID) async throws -> CalendarEvent? {
         try await repository.event(id: id)
     }

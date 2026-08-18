@@ -506,6 +506,9 @@
 "calendar_sharing.no_shared_calendars" = "No shared calendars yet";
 "calendar_sharing.no_shared_calendars_message" = "Create read-only sharing so family or coworkers can view events and shifts.";
 "calendar_sharing.read_only" = "View Only";
+"calendar_sharing.start_method" = "Start Method";
+"calendar_sharing.start_empty" = "Start with an Empty Calendar";
+"calendar_sharing.copy_my_calendar" = "Copy My Calendar";
 "calendar_sharing.event_editing.permission" = "Event Editing";
 "calendar_sharing.event_editing.allowed" = "Allow Event Editing";
 "calendar_sharing.editable" = "Can Edit";

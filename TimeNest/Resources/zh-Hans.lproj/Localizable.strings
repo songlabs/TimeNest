@@ -506,6 +506,9 @@
 "calendar_sharing.no_shared_calendars" = "还没有共享日历";
 "calendar_sharing.no_shared_calendars_message" = "可以创建只读共享，让家人或同事查看日程和班次。";
 "calendar_sharing.read_only" = "仅查看";
+"calendar_sharing.start_method" = "开始方式";
+"calendar_sharing.start_empty" = "从空白日历开始";
+"calendar_sharing.copy_my_calendar" = "复制我的日历";
 "calendar_sharing.event_editing.permission" = "日程编辑权限";
 "calendar_sharing.event_editing.allowed" = "允许编辑日程";
 "calendar_sharing.editable" = "可编辑";

@@ -18,6 +18,13 @@ enum CalendarSharingManualInvitationState: Equatable {
     case failed(CalendarSharingError)
 }
 
+enum CalendarSharingCreationMode: String, CaseIterable, Identifiable {
+    case empty
+    case copyPersonalCalendar
+
+    var id: Self { self }
+}
+
 enum CalendarSharingOwnerDisplayNameResolver {
     static func normalized(_ value: String?) -> String? {
         guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -514,7 +521,8 @@ final class CalendarSharingStore: ObservableObject {
 
     func createSharedCalendar(
         name: String,
-        eventEditingAllowed: Bool = false
+        eventEditingAllowed: Bool = false,
+        creationMode: CalendarSharingCreationMode = .empty
     ) async throws -> CalendarSharingInvitation {
         try await requireAvailableICloud()
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -557,6 +565,16 @@ final class CalendarSharingStore: ObservableObject {
             try await persistOwnedState(finalState)
             ownedCalendars.append(finalState.calendar)
             participantsByCalendarID[id] = finalState.participants
+            if creationMode == .copyPersonalCalendar {
+                let copiedEvents = try await eventUseCase.copyShareableEventsOnce(
+                    from: TimeNestCalendar.personalID,
+                    to: id
+                )
+                if !copiedEvents.isEmpty {
+                    let request = enqueueOwnedSync(finalState.calendar)
+                    await waitForOwnedSync(request)
+                }
+            }
             select(.calendar(id))
             await loadLocalCalendars()
             revision &+= 1

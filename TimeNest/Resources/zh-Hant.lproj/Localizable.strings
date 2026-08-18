@@ -506,6 +506,9 @@
 "calendar_sharing.no_shared_calendars" = "還沒有共享日曆";
 "calendar_sharing.no_shared_calendars_message" = "可以建立唯讀共享，讓家人或同事查看行程和班次。";
 "calendar_sharing.read_only" = "僅供檢視";
+"calendar_sharing.start_method" = "開始方式";
+"calendar_sharing.start_empty" = "從空白日曆開始";
+"calendar_sharing.copy_my_calendar" = "複製我的日曆";
 "calendar_sharing.event_editing.permission" = "行程編輯權限";
 "calendar_sharing.event_editing.allowed" = "允許編輯行程";
 "calendar_sharing.editable" = "可編輯";

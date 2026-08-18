@@ -1045,6 +1045,86 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(client.ownedStates.first?.participants.count, 1)
     }
 
+    func testCreateSharedCalendarCanCopyPersonalEventsAndShiftsWithoutWorkRecords() async throws {
+        let personal = TimeNestCalendar.personal(name: "My Calendar")
+        let calendarRepository = InMemoryCalendarRepository(calendars: [personal])
+        let eventRepository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(
+            repository: eventRepository,
+            calendarRepository: calendarRepository
+        )
+        let personalEvent = makeEvent(title: "Appointment")
+        let personalShift = makeEvent(
+            title: "Day Shift",
+            shiftTemplateID: .day
+        )
+        let personalWorkRecord = makeWorkClockEvent(
+            kind: .clockIn,
+            calendarID: TimeNestCalendar.personalID,
+            sessionID: UUID()
+        )
+        for event in [personalEvent, personalShift, personalWorkRecord] {
+            try await eventRepository.create(event)
+        }
+        let client = MockCalendarSharingClient()
+        let store = makeStore(
+            client: client,
+            calendars: [personal],
+            eventUseCase: eventUseCase,
+            calendarRepository: calendarRepository
+        )
+
+        let invitation = try await store.createSharedCalendar(
+            name: "Family",
+            creationMode: .copyPersonalCalendar
+        )
+
+        let copiedEvents = try await eventUseCase.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: invitation.calendarID
+        )
+        XCTAssertEqual(Set(copiedEvents.map(\.title)), ["Appointment", "Day Shift"])
+        XCTAssertTrue(copiedEvents.allSatisfy { $0.calendarID == invitation.calendarID })
+        XCTAssertTrue(
+            Set(copiedEvents.map(\.id)).isDisjoint(
+                with: [personalEvent.id, personalShift.id, personalWorkRecord.id]
+            )
+        )
+        let uploaded = try XCTUnwrap(client.lastPayloadByCalendarID[invitation.calendarID])
+        XCTAssertEqual(uploaded.events.map(\.title), ["Appointment"])
+        XCTAssertEqual(uploaded.shifts.map(\.displayName), ["Day Shift"])
+        XCTAssertTrue(uploaded.workRecords.isEmpty)
+
+        var updatedPersonalEvent = personalEvent
+        updatedPersonalEvent.title = "Changed Later"
+        updatedPersonalEvent.updatedAt = Date()
+        try await eventUseCase.updateEvent(updatedPersonalEvent)
+        await store.synchronizeOwnedEventsIfNeeded()
+
+        let targetEventsAfterSourceUpdate = try await eventUseCase.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: invitation.calendarID
+        )
+        XCTAssertEqual(Set(targetEventsAfterSourceUpdate.map(\.title)), ["Appointment", "Day Shift"])
+    }
+
+    func testCopyModeStillCreatesSharedCalendarWhenPersonalCalendarIsEmpty() async throws {
+        let client = MockCalendarSharingClient()
+        let store = makeStore(
+            client: client,
+            calendars: [.personal(name: "My Calendar")]
+        )
+
+        let invitation = try await store.createSharedCalendar(
+            name: "Empty Copy",
+            creationMode: .copyPersonalCalendar
+        )
+
+        XCTAssertEqual(store.calendar(id: invitation.calendarID)?.kind, .sharedOwned)
+        XCTAssertEqual(store.calendar(id: invitation.calendarID)?.name, "Empty Copy")
+        XCTAssertEqual(client.ownedStates.map(\.calendar.id), [invitation.calendarID])
+    }
+
     func testSharedEventPermissionDefaultsReadOnlyAndCanCreateReadWriteInvitation() async throws {
         let readOnlyClient = MockCalendarSharingClient()
         let readOnlyStore = makeStore(
