@@ -2,6 +2,11 @@ name: TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      marketing_version:
+        description: "Marketing version (e.g. 2.2 or 2.2.1)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -55,8 +60,22 @@ jobs:
           chmod 600 "$KEY_PATH"
           echo "ASC_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
 
-      - name: Set unique build number
-        run: echo "BUILD_NUMBER=$(date -u +%s)" >> "$GITHUB_ENV"
+      - name: Validate release version and set unique build number
+        env:
+          REQUESTED_MARKETING_VERSION: ${{ inputs.marketing_version }}
+        run: |
+          set -euo pipefail
+          if [[ ! "$REQUESTED_MARKETING_VERSION" =~ ^[0-9]+(\.[0-9]+){1,2}$ ]]; then
+            echo "Invalid marketing_version: $REQUESTED_MARKETING_VERSION" >&2
+            exit 1
+          fi
+
+          MARKETING_VERSION="$REQUESTED_MARKETING_VERSION"
+          BUILD_NUMBER="$(date -u +%s)"
+          echo "MARKETING_VERSION=$MARKETING_VERSION" >> "$GITHUB_ENV"
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "Marketing version: $MARKETING_VERSION"
+          echo "Build number: $BUILD_NUMBER"
 
       - name: Verify iOS CI passed for current commit
         env:
@@ -109,7 +128,85 @@ jobs:
             -authenticationKeyPath "$ASC_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            MARKETING_VERSION="$MARKETING_VERSION" \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" | tee "$RUNNER_TEMP/archive.log"
+
+      - name: Verify archive versions
+        run: |
+          set -euo pipefail
+          archive_path="$RUNNER_TEMP/TimeNest.xcarchive"
+          shopt -s nullglob
+
+          app_candidates=("$archive_path"/Products/Applications/*.app)
+          if (( ${#app_candidates[@]} != 1 )); then
+            echo "Expected exactly one main App in the archive, found ${#app_candidates[@]}." >&2
+            exit 1
+          fi
+          app_path="${app_candidates[0]}"
+          app_info="$app_path/Info.plist"
+          test -f "$app_info" || { echo "Missing Main App Info.plist: $app_info" >&2; exit 1; }
+
+          extension_candidates=("$app_path"/PlugIns/*.appex)
+          widget_candidates=()
+          for extension_path in "${extension_candidates[@]}"; do
+            extension_info="$extension_path/Info.plist"
+            test -f "$extension_info" || continue
+            extension_point=$(/usr/libexec/PlistBuddy -c "Print :NSExtension:NSExtensionPointIdentifier" "$extension_info" 2>/dev/null || true)
+            if [[ "$extension_point" == "com.apple.widgetkit-extension" ]]; then
+              widget_candidates+=("$extension_path")
+            fi
+          done
+
+          if (( ${#widget_candidates[@]} != 1 )); then
+            echo "Expected exactly one Widget Extension in the Main App, found ${#widget_candidates[@]}." >&2
+            exit 1
+          fi
+          widget_path="${widget_candidates[0]}"
+          widget_info="$widget_path/Info.plist"
+
+          read_plist_value() {
+            /usr/libexec/PlistBuddy -c "Print :$2" "$1"
+          }
+
+          app_marketing_version=$(read_plist_value "$app_info" CFBundleShortVersionString)
+          app_build_number=$(read_plist_value "$app_info" CFBundleVersion)
+          widget_marketing_version=$(read_plist_value "$widget_info" CFBundleShortVersionString)
+          widget_build_number=$(read_plist_value "$widget_info" CFBundleVersion)
+
+          printf 'Release version verification\n\n'
+          printf 'Main App (%s):\n' "$(basename "$app_path")"
+          printf '  Marketing Version: %s\n' "$app_marketing_version"
+          printf '  Build Number: %s\n\n' "$app_build_number"
+          printf 'Widget (%s):\n' "$(basename "$widget_path")"
+          printf '  Marketing Version: %s\n' "$widget_marketing_version"
+          printf '  Build Number: %s\n\n' "$widget_build_number"
+          printf 'Expected:\n'
+          printf '  Marketing Version: %s\n' "$MARKETING_VERSION"
+          printf '  Build Number: %s\n\n' "$BUILD_NUMBER"
+
+          verification_failed=0
+          if [[ "$app_marketing_version" != "$MARKETING_VERSION" ]]; then
+            echo "Main App Marketing Version does not match the workflow input." >&2
+            verification_failed=1
+          fi
+          if [[ "$app_build_number" != "$BUILD_NUMBER" ]]; then
+            echo "Main App Build Number does not match the generated build number." >&2
+            verification_failed=1
+          fi
+          if [[ "$widget_marketing_version" != "$MARKETING_VERSION" ]]; then
+            echo "Widget Marketing Version does not match the workflow input." >&2
+            verification_failed=1
+          fi
+          if [[ "$widget_build_number" != "$BUILD_NUMBER" ]]; then
+            echo "Widget Build Number does not match the generated build number." >&2
+            verification_failed=1
+          fi
+          if (( verification_failed != 0 )); then
+            echo "Version verification failed." >&2
+            exit 1
+          fi
+
+          echo "Version verification passed."
 
       - name: Verify archive signing and entitlements
         run: Scripts/verify_distribution_archive.sh "$RUNNER_TEMP/TimeNest.xcarchive"
@@ -151,14 +248,41 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
-          set -o pipefail
+          set -euo pipefail
+          set +e
           xcrun altool --upload-app \
             --type ios \
             --file "$RUNNER_TEMP/export/TimeNest.ipa" \
             --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID" | tee "$RUNNER_TEMP/upload.log"
+            --apiIssuer "$ASC_ISSUER_ID" 2>&1 | tee "$RUNNER_TEMP/upload.log"
+          UPLOAD_PIPESTATUS=("${PIPESTATUS[@]}")
+          set -e
+          ALTOOL_EXIT="${UPLOAD_PIPESTATUS[0]}"
+          TEE_EXIT="${UPLOAD_PIPESTATUS[1]}"
+
+          if [[ "$ALTOOL_EXIT" -ne 0 ]]; then
+            echo "App Store Connect upload command failed (exit code $ALTOOL_EXIT)." >&2
+            exit 1
+          fi
+          if [[ "$TEE_EXIT" -ne 0 ]]; then
+            echo "Failed to capture the App Store Connect upload log (tee exit code $TEE_EXIT)." >&2
+            exit 1
+          fi
+          if [[ ! -f "$RUNNER_TEMP/upload.log" ]]; then
+            echo "App Store Connect upload log was not created." >&2
+            exit 1
+          fi
+          if grep -Eiq \
+            'UPLOAD FAILED|Failed to upload package\.|Validation failed|STATE_ERROR\.VALIDATION_ERROR|Invalid Pre-Release Train' \
+            "$RUNNER_TEMP/upload.log"; then
+            echo "App Store Connect rejected the upload." >&2
+            exit 1
+          fi
+
+          echo "App Store Connect upload completed without known failure markers."
 
       - name: Wait for processing and assign internal group
+        if: success()
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
