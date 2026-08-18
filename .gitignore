@@ -24,7 +24,13 @@ Workspace.xcworkspace/xcshareddata/xcschemes/
 *.dSYM
 *.p8
 *.p12
+*.pem
+*.key
 *.mobileprovision
+
+## Local environment and secrets
+.env
+.env.*
 
 ## Playgrounds
 timeline.xctimeline

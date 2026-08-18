@@ -3,12 +3,16 @@ name: TestFlight
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 concurrency:
   group: testflight-production
   cancel-in-progress: false
 
 jobs:
   archive-and-upload:
+    if: github.ref == 'refs/heads/main'
     runs-on: macos-15
     timeout-minutes: 60
     environment: testflight
@@ -17,6 +21,8 @@ jobs:
       INTERNAL_GROUP_NAME: songlabs Internal Test
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Select and verify Xcode 26.3
         run: |

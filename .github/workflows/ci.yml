@@ -1,10 +1,12 @@
 name: iOS CI
 
 on:
-  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ios-ci-${{ github.ref }}
@@ -16,6 +18,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Select and verify Xcode 26.3
         run: |
