@@ -8,6 +8,8 @@ require "openssl"
 require "optparse"
 require "uri"
 
+$stdout.sync = true
+
 options = {}
 OptionParser.new do |parser|
   parser.on("--key-path PATH") { |value| options[:key_path] = value }
@@ -60,6 +62,12 @@ group_query = URI.encode_www_form("filter[app]" => app.fetch("id"), "filter[name
 group_query = "#{group_query}&#{URI.encode_www_form('fields[betaGroups]' => 'name,isInternalGroup,hasAccessToAllBuilds')}"
 group = one_record!(request(options, :get, "/v1/betaGroups?#{group_query}"), "beta group #{options[:group_name]}")
 
+group_attributes = group.fetch("attributes")
+if group_attributes.fetch("isInternalGroup") && group_attributes.fetch("hasAccessToAllBuilds")
+  puts "Internal group has access to all builds; explicit assignment is not required."
+  exit
+end
+
 build = nil
 120.times do |attempt|
   build_query = URI.encode_www_form("filter[app]" => app.fetch("id"), "filter[version]" => options[:build_number], "limit" => "2")
@@ -79,12 +87,6 @@ build = nil
   sleep 30
 end
 abort "Timed out waiting for TestFlight build #{options[:build_number]}" unless build
-
-group_attributes = group.fetch("attributes")
-if group_attributes.fetch("isInternalGroup") && group_attributes.fetch("hasAccessToAllBuilds")
-  puts "Internal group has access to all builds; explicit assignment is not required."
-  exit
-end
 
 build_assigned = false
 group_builds_path = "/v1/betaGroups/#{group.fetch('id')}/relationships/builds?limit=200"
