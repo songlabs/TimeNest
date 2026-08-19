@@ -89,6 +89,7 @@ private enum HelpFAQCategory: String, CaseIterable, Identifiable, Hashable {
                 HelpFAQItem(questionKey: .helpSharingCreateQuestion, answerKey: .helpSharingCreateAnswer),
                 HelpFAQItem(questionKey: .helpSharingAcceptQuestion, answerKey: .helpSharingAcceptAnswer),
                 HelpFAQItem(questionKey: .helpSharingSwitchQuestion, answerKey: .helpSharingSwitchAnswer),
+                HelpFAQItem(questionKey: .helpSharingCopyQuestion, answerKey: .helpSharingCopyAnswer),
                 HelpFAQItem(
                     questionKey: .helpSharingReadOnlyHolidaysQuestion,
                     answerKey: .helpSharingReadOnlyHolidaysAnswer

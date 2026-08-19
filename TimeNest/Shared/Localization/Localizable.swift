@@ -210,6 +210,8 @@ enum LocalizedString: String {
     case helpSharingAcceptAnswer = "help.sharing.accept.answer"
     case helpSharingSwitchQuestion = "help.sharing.switch.question"
     case helpSharingSwitchAnswer = "help.sharing.switch.answer"
+    case helpSharingCopyQuestion = "help.sharing.copy.question"
+    case helpSharingCopyAnswer = "help.sharing.copy.answer"
     case helpSharingReadOnlyHolidaysQuestion = "help.sharing.read_only_holidays.question"
     case helpSharingReadOnlyHolidaysAnswer = "help.sharing.read_only_holidays.answer"
     case helpSharingContentQuestion = "help.sharing.content.question"

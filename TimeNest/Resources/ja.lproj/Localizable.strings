@@ -449,8 +449,10 @@
 "help.sharing.accept.answer" = "iCloud にサインインした端末で招待リンクを開き、共有を承認します。iCloud または CloudKit を利用できない端末では、招待を受け取れないことがあります。承認や更新の反映には少し時間がかかる場合があります。";
 "help.sharing.switch.question" = "表示するカレンダーを切り替えるには？";
 "help.sharing.switch.answer" = "カレンダー左上のアイコンをタップし、「マイカレンダー」または共有カレンダーを選びます。チェックマークは現在表示中のカレンダーを示します。一度に表示できるのは1つのカレンダーです。";
+"help.sharing.copy.question" = "共有カレンダーの内容をマイカレンダーにコピーできますか？";
+"help.sharing.copy.answer" = "共有カレンダーの詳細画面で「自分のカレンダーにコピー」を選び、「すべて」または「期間を指定」を選べます。期間を指定した場合は開始日と終了日も対象です。実行前に上書き確認が表示され、対象範囲にあるマイカレンダーの予定、シフト、勤務記録は削除され、共有カレンダーの内容に置き換えられます。範囲外のデータは残ります。コピー後は共有元と同期しない独立したローカルコピーになり、共有元は変更されません。この操作は元に戻せません。受信した共有カレンダーの内容がまだ同期中の場合はコピーできないことがあるため、更新して同期完了を待ってから再度お試しください。";
 "help.sharing.read_only_holidays.question" = "共有カレンダーを編集できますか？祝日はどう表示されますか？";
-"help.sharing.read_only_holidays.answer" = "受信側は共有された予定、シフト、勤務記録を閲覧できますが、追加や編集はできません。追加しようとした場合は、編集可能なカレンダーに切り替えてください。祝日は CloudKit では共有されず、受信側の端末で有効にしている地域とローカルキャッシュに基づいて表示されます。";
+"help.sharing.read_only_holidays.answer" = "受信した共有カレンダーは通常は閲覧用です。所有者が予定の編集を許可し、iCloud／CloudKit の参加権限も読み書き可能な場合に限り、受信側は予定を追加・編集・削除できます。受信側ではシフトと勤務記録の追加・編集・削除はできません。祝日は CloudKit では共有されず、受信側の端末で有効にしている地域とローカルキャッシュに基づいて表示されます。";
 "help.sharing.content.question" = "共有される内容と共有されない内容は？";
 "help.sharing.content.answer" = "現在は、その共有カレンダー内の予定、シフト、勤務記録が自動的に共有され、種類ごとに個別にオフにはできません。予定のタイトルと日時、勤務記録の出退勤時刻と休憩時間は共有されます。メモ、リマインダーや通知、音声入力の内容、時給、給与、交通費、シフトテンプレート、設定、広告削除の購入状態は共有されません。";
 "help.sharing.stop.question" = "共有を停止・削除した場合は？";
@@ -504,7 +506,7 @@
 "calendar_sharing.owned_calendars" = "共有カレンダー";
 "calendar_sharing.create_calendar" = "共有カレンダーを作成";
 "calendar_sharing.no_shared_calendars" = "共有カレンダーはまだありません";
-"calendar_sharing.no_shared_calendars_message" = "家族や同僚が予定やシフトを確認できる読み取り専用共有を作成できます。";
+"calendar_sharing.no_shared_calendars_message" = "予定、シフト、勤務記録を家族や同僚と共有し、予定の編集権限を設定できます。";
 "calendar_sharing.read_only" = "閲覧のみ";
 "calendar_sharing.start_method" = "開始方法";
 "calendar_sharing.start_empty" = "空のカレンダーから開始";
@@ -602,7 +604,7 @@
 "calendar_sharing.error.data_migration_failed" = "カレンダーデータを移行できませんでした。元のデータは削除されていません。もう一度起動してください。";
 "calendar_sharing.error.legacy_store_migration_failed" = "既存データを現在の保存場所へ移行できませんでした。元のデータは保持されています。App を終了して再度開くと再試行します。移行が成功するまで編集はできません。";
 "calendar_sharing.error.sync_failed" = "同期できませんでした。時間をおいて再試行してください。";
-"calendar_sharing.content.privacy_note" = "このカレンダーの予定、シフト、勤務記録は自動的に共有されます。メモ、通知、時給、交通費、給与情報は共有されません。共有相手は閲覧のみ可能です。";
+"calendar_sharing.content.privacy_note" = "このカレンダーの予定、シフト、勤務記録は自動的に共有されます。メモ、通知、時給、交通費、給与情報は共有されません。共有相手の予定編集は権限設定に従い、シフトと勤務記録は閲覧のみです。";
 
 "settings.data_management" = "データ管理";
 "data_management.backup.create" = "バックアップを作成";

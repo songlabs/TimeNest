@@ -664,6 +664,11 @@ struct SharedShiftSnapshot: Codable, Identifiable, Hashable {
     let updatedAt: Date
 }
 
+struct SharedShiftLocalCopyResult {
+    let event: CalendarEvent
+    let newTemplate: ShiftTimeTemplate?
+}
+
 enum SharedShiftMapper {
     static func snapshot(
         from event: CalendarEvent,
@@ -691,10 +696,18 @@ enum SharedShiftMapper {
         calendarID: UUID,
         now: Date,
         templates: [ShiftTimeTemplate] = ShiftTimeTemplate.all(),
-        defaults: UserDefaults = .standard,
         calendar: Calendar = .current
-    ) -> CalendarEvent {
-        CalendarEvent(
+    ) -> SharedShiftLocalCopyResult {
+        let matchingTemplate = localTemplate(
+            for: snapshot,
+            templates: templates,
+            calendar: calendar
+        )
+        let template = matchingTemplate ?? makeCustomTemplate(
+            for: snapshot,
+            calendar: calendar
+        )
+        let event = CalendarEvent(
             id: UUID(),
             calendarID: calendarID,
             title: snapshot.displayName,
@@ -708,12 +721,11 @@ enum SharedShiftMapper {
             importSource: nil,
             createdAt: now,
             updatedAt: now,
-            shiftTemplateID: localTemplateID(
-                for: snapshot,
-                templates: templates,
-                defaults: defaults,
-                calendar: calendar
-            )
+            shiftTemplateID: template.id
+        )
+        return SharedShiftLocalCopyResult(
+            event: event,
+            newTemplate: matchingTemplate == nil ? template : nil
         )
     }
 
@@ -774,28 +786,48 @@ enum SharedShiftMapper {
             ?? legacyTemplate(for: event.title, templates: templates)
     }
 
-    private static func localTemplateID(
+    private static func localTemplate(
         for snapshot: SharedShiftSnapshot,
         templates: [ShiftTimeTemplate],
-        defaults: UserDefaults,
         calendar: Calendar
-    ) -> ShiftTimeTemplateID {
+    ) -> ShiftTimeTemplate? {
+        let startTime = ShiftTimeTemplate.normalizedTimeString(
+            from: snapshot.startDate,
+            calendar: calendar
+        )
+        let endTime = ShiftTimeTemplate.normalizedTimeString(
+            from: snapshot.endDate,
+            calendar: calendar
+        )
         if let exactMatch = templates.first(where: {
-            $0.displayName == snapshot.displayName
-                && $0.colorHex.caseInsensitiveCompare(snapshot.colorHex) == .orderedSame
+            matches(
+                $0,
+                displayName: snapshot.displayName,
+                colorHex: snapshot.colorHex,
+                startTime: startTime,
+                endTime: endTime
+            )
         }) {
-            return exactMatch.id
+            return exactMatch
         }
         for id in [ShiftTimeTemplateID.day, .night]
         where ShiftTimeTemplate.isKnownDefaultDisplayName(snapshot.displayName, for: id) {
             if let template = templates.first(where: { $0.id == id }),
-               template.colorHex.caseInsensitiveCompare(snapshot.colorHex) == .orderedSame {
-                return id
+               template.colorHex.caseInsensitiveCompare(snapshot.colorHex) == .orderedSame,
+               template.startTime == startTime,
+               template.endTime == endTime {
+                return template
             }
         }
+        return nil
+    }
 
+    private static func makeCustomTemplate(
+        for snapshot: SharedShiftSnapshot,
+        calendar: Calendar
+    ) -> ShiftTimeTemplate {
         let id = ShiftTimeTemplateID.custom(UUID())
-        ShiftTimeTemplate(
+        return ShiftTimeTemplate(
             id: id,
             nameKey: id.nameKey,
             displayName: snapshot.displayName,
@@ -810,8 +842,20 @@ enum SharedShiftMapper {
                 calendar: calendar
             ),
             enabled: true
-        ).persist(to: defaults)
-        return id
+        )
+    }
+
+    private static func matches(
+        _ template: ShiftTimeTemplate,
+        displayName: String,
+        colorHex: String,
+        startTime: String,
+        endTime: String
+    ) -> Bool {
+        template.displayName == displayName
+            && template.colorHex.caseInsensitiveCompare(colorHex) == .orderedSame
+            && template.startTime == startTime
+            && template.endTime == endTime
     }
 
     private static func legacyTemplate(

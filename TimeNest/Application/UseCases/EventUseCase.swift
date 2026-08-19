@@ -377,20 +377,26 @@ class EventUseCase {
                     now: now
                 )
             }
+        var availableShiftTemplates = ShiftTimeTemplate.all(from: shiftTemplateDefaults)
+        var pendingShiftTemplates: [ShiftTimeTemplate] = []
         let shiftCopies = sharedShifts
             .filter { snapshot in
                 guard let dateRange else { return true }
                 return SharedShiftMapper.isIncluded(snapshot, in: dateRange)
             }
-            .map {
-                SharedShiftMapper.makeLocalCopy(
-                    from: $0,
+            .map { snapshot in
+                let result = SharedShiftMapper.makeLocalCopy(
+                    from: snapshot,
                     calendarID: targetCalendarID,
                     now: now,
-                    templates: ShiftTimeTemplate.all(from: shiftTemplateDefaults),
-                    defaults: shiftTemplateDefaults,
+                    templates: availableShiftTemplates,
                     calendar: calendar
                 )
+                if let newTemplate = result.newTemplate {
+                    pendingShiftTemplates.append(newTemplate)
+                    availableShiftTemplates.append(newTemplate)
+                }
+                return result.event
             }
         let workRecordCopies = sharedWorkRecords
             .filter { snapshot in
@@ -425,6 +431,7 @@ class EventUseCase {
                 )
             }
         )
+        pendingShiftTemplates.forEach { $0.persist(to: shiftTemplateDefaults) }
         eventsToDelete.compactMap(\.notificationID).forEach {
             notificationScheduler?.cancelNotification(id: $0)
         }

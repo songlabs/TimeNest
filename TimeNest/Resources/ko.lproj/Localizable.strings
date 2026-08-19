@@ -449,8 +449,10 @@
 "help.sharing.accept.answer" = "iCloud에 로그인한 기기에서 초대 링크를 열고 공유를 수락하세요. iCloud 또는 CloudKit을 사용할 수 없는 기기에서는 초대를 수락하지 못할 수 있습니다. 수락하거나 새로고침한 데이터가 표시되기까지 잠시 걸릴 수 있습니다.";
 "help.sharing.switch.question" = "표시할 캘린더를 전환하려면?";
 "help.sharing.switch.answer" = "캘린더 왼쪽 위 아이콘을 누르고 내 캘린더 또는 공유 캘린더 하나를 선택하세요. 체크 표시는 현재 표시 중인 캘린더를 뜻합니다. 한 번에 하나의 캘린더만 표시됩니다.";
+"help.sharing.copy.question" = "공유 캘린더의 내용을 내 캘린더에 복사할 수 있나요?";
+"help.sharing.copy.answer" = "네. 공유 캘린더 세부 정보 화면에서 ‘내 캘린더에 복사’를 선택한 다음 ‘전체’ 또는 ‘기간 지정’을 선택할 수 있습니다. 기간을 지정하면 시작일과 종료일이 모두 범위에 포함됩니다. 복사하기 전에 덮어쓰기 확인이 표시되며, 내 캘린더에서 선택한 범위의 일정, 근무조 및 근무 기록은 삭제되고 공유 캘린더의 내용으로 대체됩니다. 범위 밖의 데이터는 유지됩니다. 복사한 내용은 공유 캘린더와 계속 동기화되지 않는 별도의 로컬 사본이며, 원본 공유 캘린더는 변경되지 않습니다. 이 작업은 되돌릴 수 없습니다. 받은 공유 캘린더의 동기화가 아직 끝나지 않았다면 일시적으로 복사할 수 없으므로 새로고침한 뒤 동기화가 완료될 때까지 기다렸다가 다시 시도하세요.";
 "help.sharing.read_only_holidays.question" = "공유 캘린더를 편집할 수 있나요? 공휴일은 어떻게 표시되나요?";
-"help.sharing.read_only_holidays.answer" = "받는 사람은 공유된 일정, 근무조 및 근무 기록을 볼 수 있지만 추가하거나 편집할 수는 없습니다. 항목을 추가하려면 편집 가능한 캘린더로 전환하세요. 공휴일은 CloudKit으로 공유되지 않으며 받는 사람의 기기에서 활성화한 지역과 로컬 캐시에 따라 표시됩니다.";
+"help.sharing.read_only_holidays.answer" = "받은 공유 캘린더는 기본적으로 보기 전용입니다. 소유자가 일정 편집을 허용하고 받는 사람의 iCloud/CloudKit 참여 권한이 읽기 및 쓰기인 경우에만 일정을 추가, 편집 또는 삭제할 수 있습니다. 받는 사람은 근무조와 근무 기록을 추가, 편집 또는 삭제할 수 없습니다. 공휴일은 CloudKit으로 공유되지 않으며 받는 사람의 기기에서 활성화한 지역과 로컬 캐시에 따라 표시됩니다.";
 "help.sharing.content.question" = "공유되는 내용과 공유되지 않는 내용은?";
 "help.sharing.content.answer" = "현재 해당 공유 캘린더의 일정, 근무조 및 근무 기록은 자동으로 공유되며 종류별로 끌 수 없습니다. 일정 제목과 시간, 근무 기록의 출근・퇴근 및 휴게 시간은 공유됩니다. 메모, 미리 알림과 알림, 음성 입력 내용, 시급, 급여, 교통비, 근무조 템플릿, 설정 및 광고 제거 구입 상태는 공유되지 않습니다.";
 "help.sharing.stop.question" = "공유를 중단하거나 삭제하면 어떻게 되나요?";
@@ -504,7 +506,7 @@
 "calendar_sharing.owned_calendars" = "공유 캘린더";
 "calendar_sharing.create_calendar" = "공유 캘린더 만들기";
 "calendar_sharing.no_shared_calendars" = "공유 캘린더가 아직 없습니다";
-"calendar_sharing.no_shared_calendars_message" = "가족이나 동료가 일정과 근무조를 볼 수 있도록 읽기 전용 공유를 만들 수 있습니다.";
+"calendar_sharing.no_shared_calendars_message" = "가족이나 동료와 일정, 근무조 및 근무 기록을 공유하고 일정 편집 권한을 설정할 수 있습니다.";
 "calendar_sharing.read_only" = "보기 전용";
 "calendar_sharing.start_method" = "시작 방법";
 "calendar_sharing.start_empty" = "빈 캘린더로 시작";
@@ -602,7 +604,7 @@
 "calendar_sharing.error.data_migration_failed" = "캘린더 데이터를 이전하지 못했습니다. 원본 데이터는 삭제되지 않았습니다. 앱을 다시 시작해 재시도하세요.";
 "calendar_sharing.error.legacy_store_migration_failed" = "기존 데이터를 현재 저장 위치로 이전하지 못했습니다. 원본 데이터는 안전하게 보존됩니다. 앱을 종료한 뒤 다시 열어 재시도하세요. 이전이 완료될 때까지 편집할 수 없습니다.";
 "calendar_sharing.error.sync_failed" = "동기화하지 못했습니다. 잠시 후 다시 시도해 주세요.";
-"calendar_sharing.content.privacy_note" = "이 캘린더의 일정, 근무조 및 근무 기록은 자동으로 공유됩니다. 메모, 알림, 시급, 교통비 및 급여 정보는 공유되지 않으며 받는 사람은 읽기만 할 수 있습니다.";
+"calendar_sharing.content.privacy_note" = "이 캘린더의 일정, 근무조 및 근무 기록은 자동으로 공유됩니다. 메모, 알림, 시급, 교통비 및 급여 정보는 공유되지 않습니다. 받는 사람의 일정 편집은 권한 설정을 따르며 근무조와 근무 기록은 보기 전용입니다.";
 
 "settings.data_management" = "데이터 관리";
 "data_management.backup.create" = "백업 생성";

@@ -294,6 +294,52 @@ final class ShiftTemplatePersistenceGateTests: XCTestCase {
         XCTAssertEqual(copiedTemplate.endTime, "22:15")
     }
 
+    func testMultipleMatchingSharedShiftsCreateOnlyOneCustomTemplate() async throws {
+        let snapshots = (10...12).map { day -> SharedShiftSnapshot in
+            let start = date(2026, 8, day, 13, 30)
+            return SharedShiftSnapshot(
+                id: UUID(),
+                registeredDate: calendar.startOfDay(for: start),
+                displayName: "Late Shift",
+                startDate: start,
+                endDate: date(2026, 8, day, 22, 15),
+                spansMidnight: false,
+                colorHex: "#AF52DEFF",
+                updatedAt: start
+            )
+        }
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(
+            repository: repository,
+            shiftTemplateDefaults: defaults
+        )
+
+        let copies = try await eventUseCase.overwritePersonalCalendar(
+            targetCalendarID: TimeNestCalendar.personalID,
+            sharedEvents: [],
+            sharedShifts: snapshots,
+            sharedWorkRecords: [],
+            scope: .all,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(copies.count, 3)
+        let copiedTemplateIDs = Set(copies.compactMap(\.shiftTemplateID))
+        XCTAssertEqual(copiedTemplateIDs.count, 1)
+        let copiedTemplateID = try XCTUnwrap(copiedTemplateIDs.first)
+        let customTemplates = ShiftTimeTemplate.all(from: defaults).filter {
+            if case .custom = $0.id { return true }
+            return false
+        }
+        XCTAssertEqual(customTemplates.count, 1)
+        let template = try XCTUnwrap(customTemplates.first)
+        XCTAssertEqual(template.id, copiedTemplateID)
+        XCTAssertEqual(template.displayName, "Late Shift")
+        XCTAssertEqual(template.colorHex, "#AF52DEFF")
+        XCTAssertEqual(template.startTime, "13:30")
+        XCTAssertEqual(template.endTime, "22:15")
+    }
+
     private func storeTemplate(
         id: ShiftTimeTemplateID,
         name: String,

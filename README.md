@@ -11,7 +11,7 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 - Clock-in, clock-out, rest time, transport fee, and hourly-rate records.
 - Work statistics for a selected date range.
 - Public-holiday subscriptions and ICS synchronization for Japan, China, Taiwan, Korea, and the United States.
-- Optional CloudKit calendar sharing with read-only recipients. Events, shifts, and work records in a shared calendar are synchronized automatically; memos, notifications, voice-input content, hourly rates, pay, and transport fees are not shared.
+- Optional CloudKit calendar sharing. Events, shifts, and work records in a shared calendar are synchronized automatically; recipients can edit events only when the owner allows it and their iCloud permission is read-write, while shifts and work records remain view-only. Memos, notifications, voice-input content, hourly rates, pay, and transport fees are not shared.
 - Japanese, Simplified Chinese, Traditional Chinese, English, and Korean UI resources, plus a system-language mode.
 - Light, dark, and system appearance settings.
 - A calendar banner-ad container backed by Google Mobile Ads.
@@ -23,9 +23,10 @@ The first release is ad-supported and includes a one-time Apple In-App Purchase 
 - Open the calendar chooser from the icon at the top left. TimeNest displays either My Calendar or one selected shared calendar; the checkmark identifies the current selection.
 - Adding an event or work record from a displayed writable calendar automatically assigns it to that calendar, without asking for the calendar again. Editing keeps the entry in its original calendar. TimeNest currently displays one calendar at a time and has no aggregate-calendar add flow.
 - Creating, renaming, inviting people to, accepting, refreshing, stopping, leaving, or deleting a shared calendar requires access to the user's Apple iCloud account and CloudKit. A recipient device must also be able to use iCloud to accept an invitation.
-- Recipients have read-only access. They can view shared events, shifts, and work records but cannot create, edit, move, or delete the owner's shared content. If they try to add an entry, TimeNest asks them to switch to a calendar they can edit.
+- Received calendars are view-only by default. When the owner enables event editing and the recipient has read-write iCloud permission, the recipient can create, edit, and delete events within that capability. Generic content editing remains unavailable on received calendars, so shifts and work records cannot be created, edited, or deleted by recipients.
 - Events, shifts, and work records assigned to an owned shared calendar are currently synchronized automatically. The current implementation does not expose per-category sharing switches.
 - Event titles and times, shift display data, and work-record clock-in, clock-out, and break times may enter the shared zone. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift-template settings, app settings, and Remove Ads purchase state do not.
+- From an owned or received shared calendar's details, users can copy its current contents to My Calendar once. They can overwrite everything or an inclusive selected date range. The result is an independent local copy: it does not remain synchronized, does not modify the shared source, and preserves My Calendar data outside a selected range.
 - Holidays are not synchronized through CloudKit. A shared calendar uses the recipient device's enabled holiday regions and local holiday cache.
 - When an owner stops sharing or deletes a shared calendar, recipients lose access. Leaving a received share removes it from that recipient's TimeNest data without changing the owner's calendar. CloudKit changes may require a short refresh before they appear.
 
@@ -143,7 +144,7 @@ Calendar events, shifts, work records, settings, and holiday choices are stored 
 - Voice memo input uses the microphone and Apple's Speech framework only when the user starts voice input in the memo field; recognized text is inserted into the local memo.
 - Banner ads use Google Mobile Ads only after Google UMP reports `canRequestAds == true` and the ATT decision completes. Ad personalization is disabled through Publisher Privacy Treatment; denying ATT keeps the calendar usable and permits non-IDFA ad requests when UMP allows ads.
 - Remove Ads is a one-time Apple In-App Purchase handled by StoreKit. TimeNest does not collect or store payment card details, and purchase restoration uses Apple transaction entitlements.
-- The app has no TimeNest account, developer-operated backend, or general-purpose cloud sync. Optional shared calendars use the user's Apple iCloud account and CloudKit; events, shifts, and work records assigned to an owned shared calendar enter its shared zone automatically, and recipients are read-only.
+- The app has no TimeNest account, developer-operated backend, or general-purpose cloud sync. Optional shared calendars use the user's Apple iCloud account and CloudKit; events, shifts, and work records assigned to an owned shared calendar enter its shared zone automatically. Recipient event editing is available only when the owner allows it and the recipient has read-write permission; shifts and work records remain view-only for recipients.
 
 Uninstalling the app removes its local container under normal iOS behavior. Existing SwiftData entities and decoding compatibility must be treated as user-data migration code and should not be removed as ordinary cleanup.
 
@@ -169,7 +170,7 @@ Before submission, confirm:
 - Verify month/week/day navigation, event editing, memo voice input permissions, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
 - Verify all five app languages, system-language mode, week-start settings, and light/dark appearance.
 - Verify offline behavior and invalid or unavailable ICS sources.
-- Verify CloudKit sharing on two physical devices, including invitation acceptance, recipient read-only behavior, automatic event/shift/work-record synchronization, name updates, stopping/leaving a share, recipient-local holidays, and excluded private fields.
+- Verify CloudKit sharing on two physical devices, including invitation acceptance, event editing disabled/enabled with the matching recipient permission, recipient view-only shifts/work records, automatic event/shift/work-record synchronization, shared-to-personal one-time copy and independence, name updates, stopping/leaving a share, recipient-local holidays, and excluded private fields.
 
 Release-preparation documents:
 

@@ -44,20 +44,31 @@
 
 ## 6. Languages and Appearance
 
-- [ ] Check Japanese, Simplified Chinese, English, Korean, and System language modes.
+- [ ] Check Japanese, Simplified Chinese, Traditional Chinese, English, Korean, and System language modes.
 - [ ] In each mode, inspect calendar headers, month/week/day labels, settings, event editor, holiday subscription, shift input, statistics, alerts, and Widget text.
 - [ ] Confirm no raw keys, mixed unintended languages, truncation, or incorrect date/weekday formatting.
 - [ ] Run core flows in light and dark appearance and confirm readable contrast.
 - [ ] Inspect a small and a large supported display for clipped calendar rows, controls, sheets, Widget content, or banners.
 
-## 7. Widget and Deep Links
+## 7. Shared Calendars
+
+- [ ] On two devices with separate Apple IDs, verify invitation acceptance and automatic synchronization. With owner event editing disabled, confirm received events are read-only; with editing enabled and a read-write recipient, confirm recipient event create/edit/delete. Recipient shifts and work records must remain view-only.
+- [ ] Confirm **Copy to My Calendar** is available from both owned and received shared-calendar details.
+- [ ] Verify **All** and **Specify Period**, including that both the selected start and end dates are included.
+- [ ] Cancel the destructive overwrite warning and confirm My Calendar is unchanged; then confirm a successful overwrite replaces events, shifts, and work records in scope while preserving data outside a selected range.
+- [ ] Copy an empty shared range and confirm only the matching target range is cleared. For a received calendar whose content is not ready, confirm copying is blocked without deleting target data.
+- [ ] Confirm a copied custom shift keeps its color and local start/end times. Copy repeated identical shifts and confirm they do not create unnecessary duplicate custom templates.
+- [ ] Edit the personal copy and confirm the shared calendar is unchanged. Then change the shared calendar and confirm the personal copy does not update automatically.
+- [ ] In Japanese, Simplified Chinese, Traditional Chinese, English, and Korean, inspect the Copy sheet, DatePicker labels and formatting, destructive confirmation, success/error alerts, and Help > Shared Calendars. Confirm no raw keys or clipped text, including on a small display and with larger Dynamic Type.
+
+## 8. Widget and Deep Links
 
 - [ ] Add each Widget family/configuration intended for release and confirm it renders without placeholder-only content.
 - [ ] Confirm schedule, shift, holiday, language, and date changes refresh Widget content within expected WidgetKit timing.
 - [ ] Tap Widget dates/events and confirm the `timenest` deep link opens TimeNest at the expected date.
 - [ ] Relaunch and upgrade the app, then confirm the shared App Group snapshot remains readable by the Widget.
 
-## 8. Ads and Privacy State
+## 9. Ads and Privacy State
 
 - [ ] On the candidate build, confirm the expected banner location, loading/failure behavior, layout, and foreground/background recovery.
 - [ ] Confirm the candidate was built with `TIMENEST_ADS_ENABLED=YES` and the approved production App ID and Banner Unit ID.
@@ -67,7 +78,7 @@
 - [ ] On a fresh install, confirm the localized ATT prompt appears only after UMP completes and before the first banner request. Verify both allowed and denied paths; denied must keep the app usable and request ads without IDFA when UMP permits.
 - [ ] Verify the Remove Ads purchase and restore flow through TestFlight/Sandbox. Purchased users should not create or reserve space for the banner; unpurchased users should keep the existing banner behavior.
 
-## 9. Lifecycle, Offline, and Stability
+## 10. Lifecycle, Offline, and Stability
 
 - [ ] Force-quit and relaunch; confirm local schedules, shifts, settings, subscriptions, and Widget data persist.
 - [ ] Move the app to background and return to foreground repeatedly during calendar navigation, editing, holiday sync, and ad loading.
@@ -75,7 +86,7 @@
 - [ ] Switch languages and calendar modes repeatedly, rapidly navigate dates, and delete an event while navigating; confirm no crash, hang, or corrupted state.
 - [ ] Review TestFlight crash feedback and Xcode Organizer diagnostics for the candidate build before submission.
 
-## 10. Final Internal-Test Sign-off
+## 11. Final Internal-Test Sign-off
 
 - [ ] No release-blocking crash, startup failure, data-loss issue, unreadable screen, broken Widget, or privacy-flow mismatch remains.
 - [ ] Confirm https://songlabs.github.io/timenest/privacy.html and https://songlabs.github.io/timenest/support.html remain publicly reachable and match this exact build.

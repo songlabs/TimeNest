@@ -24,7 +24,7 @@ TimeNest 第一版是带广告发布的版本，不包含 TimeNest 账号登录�
 
 用户在 TimeNest 中创建的日程、备注、班次、工作记录，以及显示语言、周起始日、节假日地区选择、节假日订阅 URL 和节假日缓存数据，默认保存在用户设备的 App 沙盒或 App Group 本地容器中。当前版本没有 TimeNest 账号系统、自有后端或通用云同步，也不会将这些数据上传到 TimeNest 自有服务器。
 
-只有在用户主动创建并使用共享日历时，TimeNest 才会通过 Apple iCloud（CloudKit）传输和存储共享数据。当前实现会自动同步分配到该自有共享日历中的日程、班次和工作记录，不提供按类别分别关闭的开关。接收方仅可查看，不能创建、编辑或删除共享内容。共享记录不包含备注、通知、语音输入内容、时薪、工资、交通费、班次模板、广告状态、购买状态、设备设置、App 设置、Widget 私有数据或节假日订阅内部信息。CloudKit 数据由 Apple 服务处理，用户应同时查看 Apple 的相关隐私说明。
+只有在用户主动创建并使用共享日历时，TimeNest 才会通过 Apple iCloud（CloudKit）传输和存储共享数据。当前实现会自动同步分配到该自有共享日历中的日程、班次和工作记录，不提供按类别分别关闭的开关。接收的共享日历默认仅供查看；只有所有者允许编辑日程，且接收方的 iCloud 权限为可读写时，接收方才能创建、编辑或删除日程。班次和工作记录在接收方仍仅供查看。共享记录不包含备注、通知、语音输入内容、时薪、工资、交通费、班次模板、广告状态、购买状态、设备设置、App 设置、Widget 私有数据或节假日订阅内部信息。CloudKit 数据由 Apple 服务处理，用户应同时查看 Apple 的相关隐私说明。
 
 ### 3. 节假日订阅
 
@@ -68,7 +68,7 @@ The first TimeNest release is ad-supported and does not include a TimeNest accou
 
 Schedules, notes, shifts, work-time records, display language, week start settings, holiday region selections, holiday subscription URLs, and cached holiday data created or configured in TimeNest are stored locally in the app sandbox or App Group container by default. The current version has no TimeNest account system, developer-operated backend, or general-purpose cloud sync, and does not upload this data to TimeNest-owned servers.
 
-Only when a user actively creates and uses a shared calendar does TimeNest transfer and store shared data through Apple iCloud (CloudKit). The current implementation automatically synchronizes events, shifts, and work records assigned to that owned shared calendar; it does not provide per-category sharing switches. Recipients have read-only access and cannot create, edit, or delete shared content. Shared records exclude memos, notifications, voice-input content, hourly rates, pay, transport fees, shift templates, advertising state, purchase state, device settings, app settings, Widget-private data, and holiday-subscription internals. CloudKit data is processed by Apple services; users should also review Apple's applicable privacy information.
+Only when a user actively creates and uses a shared calendar does TimeNest transfer and store shared data through Apple iCloud (CloudKit). The current implementation automatically synchronizes events, shifts, and work records assigned to that owned shared calendar; it does not provide per-category sharing switches. Received shared calendars are view-only by default. A recipient can create, edit, or delete events only when the owner allows event editing and the recipient's iCloud permission is read-write; shifts and work records remain view-only for recipients. Shared records exclude memos, notifications, voice-input content, hourly rates, pay, transport fees, shift templates, advertising state, purchase state, device settings, app settings, Widget-private data, and holiday-subscription internals. CloudKit data is processed by Apple services; users should also review Apple's applicable privacy information.
 
 ### 3. Holiday Subscriptions
 

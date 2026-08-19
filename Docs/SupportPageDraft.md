@@ -12,13 +12,21 @@
 
 ## Shared Calendar Support
 
-TimeNest supports optional read-only shared calendars through Apple iCloud (CloudKit). Sharing requires an iCloud account signed in on the device and a working network connection.
+TimeNest supports optional shared calendars through Apple iCloud (CloudKit). Sharing requires an iCloud account signed in on the device and a working network connection.
 
 Events, shifts, and work records assigned to an owned shared calendar are synchronized automatically. The current implementation does not provide separate switches for those categories.
 
-Recipients can view the synchronized content, but cannot create, edit, or delete shared content. Private memos, notifications, voice-input content, hourly rates, pay, transport fees, templates, advertising or purchase state, and device/app settings are not shared.
+Received shared calendars are view-only by default. A recipient can create, edit, or delete events only when the owner allows event editing and the recipient's iCloud permission is read-write. Shifts and work records remain view-only for recipients. Private memos, notifications, voice-input content, hourly rates, pay, transport fees, templates, advertising or purchase state, and device/app settings are not shared.
 
 The owner can stop sharing from the Shared Calendar management screen. This revokes recipient access without deleting the owner's local data. A recipient can leave a shared calendar from the same area; TimeNest removes that shared calendar from the recipient's local list and cache without deleting the owner's data.
+
+### Copy shared calendar to My Calendar
+
+Open an owned or received shared calendar's details and choose **Copy to My Calendar**. Select **All** or **Specify Period**; both the start and end dates are included in a specified period.
+
+Before copying, TimeNest displays an overwrite confirmation. Events, shifts, and work records in the selected range of My Calendar are deleted and replaced with the shared calendar's current contents. Data outside a selected range is preserved. This action cannot be undone.
+
+The copied items are independent local copies. They do not continue syncing with the shared calendar, and copying does not change the shared source. If a received shared calendar has not finished syncing, copying may be temporarily unavailable; refresh it and wait for syncing to finish before trying again.
 
 ## Shared Calendar Troubleshooting
 

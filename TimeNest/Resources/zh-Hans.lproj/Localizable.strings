@@ -449,8 +449,10 @@
 "help.sharing.accept.answer" = "请在已登录 iCloud 的设备上打开邀请链接并接受共享。无法使用 iCloud 或 CloudKit 的设备可能无法接受邀请。接受或刷新后，数据可能需要一点时间才会显示。";
 "help.sharing.switch.question" = "如何切换显示的日历？";
 "help.sharing.switch.answer" = "点击日历左上角的图标，选择“我的日历”或一个共享日历。对号表示当前正在显示的日历。每次只能显示一个日历。";
+"help.sharing.copy.question" = "可以将共享日历的内容复制到我的日历吗？";
+"help.sharing.copy.answer" = "可以。在共享日历详情页面选择“复制到我的日历”，再选择“全部”或“指定期间”。指定期间时，开始日期和结束日期均包含在范围内。执行前会显示覆盖确认；目标“我的日历”中所选范围内的日程、班次和工作记录会被删除，并替换为共享日历的内容，范围外的数据会保留。复制后得到的是独立的本地副本，不会继续与共享日历同步，也不会修改共享日历。此操作无法撤销。如果接收的共享日历尚未完成同步，可能会暂时无法复制；请先刷新并等待同步完成后重试。";
 "help.sharing.read_only_holidays.question" = "可以编辑共享日历吗？节假日如何显示？";
-"help.sharing.read_only_holidays.answer" = "接收方只能查看共享的日程、班次和工作记录，不能新增或编辑。如果尝试新增，请先切换到可编辑的日历。节假日不会通过 CloudKit 共享，而是根据接收方设备已启用的地区和本地缓存显示。";
+"help.sharing.read_only_holidays.answer" = "接收的共享日历默认用于查看。只有所有者允许编辑日程，且 iCloud／CloudKit 的参与者权限为可读写时，接收方才可以新增、编辑或删除日程。接收方仍不能新增、编辑或删除班次和工作记录。节假日不会通过 CloudKit 共享，而是根据接收方设备已启用的地区和本地缓存显示。";
 "help.sharing.content.question" = "哪些内容会共享，哪些不会？";
 "help.sharing.content.answer" = "当前会自动共享该共享日历中的日程、班次和工作记录，暂时无法按类别单独关闭。日程标题和时间、工作记录中的上班时间、下班时间与休息时间会共享。备忘、提醒与通知、语音输入内容、时薪、工资、交通费、班次模板、设置以及去除广告的购买状态不会共享。";
 "help.sharing.stop.question" = "停止或删除共享后会怎样？";
@@ -504,7 +506,7 @@
 "calendar_sharing.owned_calendars" = "共享日历";
 "calendar_sharing.create_calendar" = "创建共享日历";
 "calendar_sharing.no_shared_calendars" = "还没有共享日历";
-"calendar_sharing.no_shared_calendars_message" = "可以创建只读共享，让家人或同事查看日程和班次。";
+"calendar_sharing.no_shared_calendars_message" = "可以与家人或同事共享日程、班次和工作记录，并设置日程编辑权限。";
 "calendar_sharing.read_only" = "仅查看";
 "calendar_sharing.start_method" = "开始方式";
 "calendar_sharing.start_empty" = "从空白日历开始";
@@ -602,7 +604,7 @@
 "calendar_sharing.error.data_migration_failed" = "日历数据迁移失败，原始数据未被删除。请重新启动 App 后重试。";
 "calendar_sharing.error.legacy_store_migration_failed" = "无法将现有数据迁移到当前存储位置，原始数据仍安全保留。请关闭并重新打开 App 以重试；迁移成功前无法编辑。";
 "calendar_sharing.error.sync_failed" = "同步失败，请稍后重试。";
-"calendar_sharing.content.privacy_note" = "此日历中的日程、班次和工作记录会自动共享。备忘录、通知、时薪、交通费和工资信息不会共享，接收者仅可查看。";
+"calendar_sharing.content.privacy_note" = "此日历中的日程、班次和工作记录会自动共享。备忘录、通知、时薪、交通费和工资信息不会共享。接收方能否编辑日程取决于权限设置；班次和工作记录仅供查看。";
 
 "settings.data_management" = "数据管理";
 "data_management.backup.create" = "创建备份";

@@ -449,8 +449,10 @@
 "help.sharing.accept.answer" = "Open the invitation link on a device signed in to iCloud and accept the share. A device without usable iCloud or CloudKit access may not be able to accept it. Accepted or refreshed data can take a short time to appear.";
 "help.sharing.switch.question" = "How do I switch the displayed calendar?";
 "help.sharing.switch.answer" = "Tap the calendar icon at the top left and choose My Calendar or one shared calendar. The checkmark identifies the calendar currently displayed. Only one calendar is displayed at a time.";
+"help.sharing.copy.question" = "Can I copy a shared calendar to My Calendar?";
+"help.sharing.copy.answer" = "Yes. From the shared calendar details screen, choose Copy to My Calendar, then select All or Specify Period. For a specified period, both the start and end dates are included. Before copying, TimeNest asks you to confirm the overwrite. Events, shifts, and work records in the selected range in My Calendar are deleted and replaced with the shared calendar's contents; data outside the range is kept. The result is an independent local copy that does not continue syncing with the shared calendar, and the shared calendar is not changed. This action cannot be undone. If a received shared calendar has not finished syncing, copying may be temporarily unavailable; refresh it and wait for syncing to finish before trying again.";
 "help.sharing.read_only_holidays.question" = "Can I edit a shared calendar, and how are holidays shown?";
-"help.sharing.read_only_holidays.answer" = "Recipients can view shared events, shifts, and work records but cannot add or edit them. If you try to add an entry, switch to a calendar you can edit. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.";
+"help.sharing.read_only_holidays.answer" = "Received shared calendars are view-only by default. A recipient can create, edit, or delete events only when the owner allows event editing and the recipient's iCloud/CloudKit permission is read-write. Recipients still cannot create, edit, or delete shifts or work records. Holidays are not shared through CloudKit; they come from the regions enabled and cached locally on the recipient's device.";
 "help.sharing.content.question" = "What is and is not shared?";
 "help.sharing.content.answer" = "Events, shifts, and work records in that shared calendar are currently shared automatically and cannot be disabled by category. Event titles and times, plus work-record clock-in, clock-out, and break times, are shared. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift templates, settings, and Remove Ads purchase state are not shared.";
 "help.sharing.stop.question" = "What happens when sharing is stopped or deleted?";
@@ -504,7 +506,7 @@
 "calendar_sharing.owned_calendars" = "Shared Calendars";
 "calendar_sharing.create_calendar" = "Create Shared Calendar";
 "calendar_sharing.no_shared_calendars" = "No shared calendars yet";
-"calendar_sharing.no_shared_calendars_message" = "Create read-only sharing so family or coworkers can view events and shifts.";
+"calendar_sharing.no_shared_calendars_message" = "Share events, shifts, and work records with family or coworkers, and choose whether they can edit events.";
 "calendar_sharing.read_only" = "View Only";
 "calendar_sharing.start_method" = "Start Method";
 "calendar_sharing.start_empty" = "Start with an Empty Calendar";
@@ -602,7 +604,7 @@
 "calendar_sharing.error.data_migration_failed" = "Calendar data could not be migrated. The original data was not deleted. Restart the app to try again.";
 "calendar_sharing.error.legacy_store_migration_failed" = "Your existing data could not be moved to the current storage location. The original data is still safe. Close and reopen the app to retry; editing is disabled until migration succeeds.";
 "calendar_sharing.error.sync_failed" = "Calendar sync failed. Try again later.";
-"calendar_sharing.content.privacy_note" = "Events, shifts, and work records in this calendar are shared automatically. Memos, notifications, hourly rates, transport costs, and pay information are not shared. Recipients have read-only access.";
+"calendar_sharing.content.privacy_note" = "Events, shifts, and work records in this calendar are shared automatically. Memos, notifications, hourly rates, transport costs, and pay information are not shared. Recipient event editing follows the permission setting; shifts and work records remain view-only.";
 
 "settings.data_management" = "Data Management";
 "data_management.backup.create" = "Create Backup";

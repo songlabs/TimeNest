@@ -1776,6 +1776,63 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(stored, [existing])
     }
 
+    func testSharedShiftTemplateIsNotPersistedWhenOverwriteBatchFails() async throws {
+        let suiteName = "CalendarSharingTests-shift-template-failure-\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.removePersistentDomain(forName: suiteName)
+
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(
+            repository: repository,
+            shiftTemplateDefaults: defaults
+        )
+        let existing = makeEvent(title: "Keep After Shift Failure")
+        try await repository.create(existing)
+        await repository.failNextWrite()
+
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let start = makeTestDate(year: 2026, month: 8, day: 10, hour: 13, minute: 30)
+        let snapshot = SharedShiftSnapshot(
+            id: UUID(),
+            registeredDate: calendar.startOfDay(for: start),
+            displayName: "Late Shift",
+            startDate: start,
+            endDate: makeTestDate(year: 2026, month: 8, day: 10, hour: 22, minute: 15),
+            spansMidnight: false,
+            colorHex: "#AF52DEFF",
+            updatedAt: start
+        )
+
+        do {
+            _ = try await useCase.overwritePersonalCalendar(
+                targetCalendarID: TimeNestCalendar.personalID,
+                sharedEvents: [],
+                sharedShifts: [snapshot],
+                sharedWorkRecords: [],
+                scope: .all,
+                calendar: calendar
+            )
+            XCTFail("The injected batch failure must be surfaced.")
+        } catch {
+            XCTAssertTrue(error is InjectedSharingTestError)
+        }
+
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertEqual(stored, [existing])
+        let customTemplates = ShiftTimeTemplate.all(from: defaults).filter {
+            if case .custom = $0.id { return true }
+            return false
+        }
+        XCTAssertTrue(customTemplates.isEmpty)
+        XCTAssertFalse(defaults.dictionaryRepresentation().keys.contains {
+            $0.hasPrefix("shiftTime.custom.")
+        })
+    }
+
     func testSharedEventPermissionDefaultsReadOnlyAndCanCreateReadWriteInvitation() async throws {
         let readOnlyClient = MockCalendarSharingClient()
         let readOnlyStore = makeStore(
