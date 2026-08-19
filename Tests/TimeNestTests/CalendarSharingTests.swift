@@ -1241,6 +1241,153 @@ final class CalendarSharingStoreTests: XCTestCase {
         )
     }
 
+    func testReceivedOverwriteRequiresEverySnapshotKeyAndPreservesPersonalData() async throws {
+        for missingSnapshot in ["events", "shifts", "workRecords"] {
+            let personal = TimeNestCalendar.personal(name: "My Calendar")
+            let received = makeCalendar(kind: .sharedReceived, name: "Team")
+            let calendarRepository = InMemoryCalendarRepository(calendars: [personal, received])
+            let eventRepository = ControlledEventRepository()
+            let eventUseCase = EventUseCase(
+                repository: eventRepository,
+                calendarRepository: calendarRepository
+            )
+            let date = makeTestDate(year: 2026, month: 8, day: 10, hour: 9)
+            let personalEvent = makeEvent(title: "Keep Event", startDate: date)
+            let personalShift = makeEvent(
+                title: "Keep Shift",
+                shiftTemplateID: .day,
+                startDate: date.addingTimeInterval(2 * 3_600),
+                endDate: date.addingTimeInterval(10 * 3_600)
+            )
+            let personalWorkRecords = makeWorkRecordEvents(
+                title: "Keep Work",
+                workDate: date,
+                clockInDate: date,
+                clockOutDate: date.addingTimeInterval(8 * 3_600),
+                sessionID: UUID()
+            )
+            let originalEvents = [personalEvent, personalShift] + personalWorkRecords
+            for event in originalEvents {
+                try await eventRepository.create(event)
+            }
+
+            var eventsByCalendarID: [UUID: [SharedEventSnapshot]] = [received.id: []]
+            var shiftsByCalendarID: [UUID: [SharedShiftSnapshot]] = [received.id: []]
+            var workRecordsByCalendarID: [UUID: [SharedWorkRecordSnapshot]] = [received.id: []]
+            switch missingSnapshot {
+            case "events":
+                eventsByCalendarID.removeValue(forKey: received.id)
+            case "shifts":
+                shiftsByCalendarID.removeValue(forKey: received.id)
+            case "workRecords":
+                workRecordsByCalendarID.removeValue(forKey: received.id)
+            default:
+                XCTFail("Unexpected snapshot fixture: \(missingSnapshot)")
+            }
+            let cache = CalendarSharingCache(
+                fileURL: FileManager.default.temporaryDirectory.appendingPathComponent(
+                    "CalendarCopyReadinessTests-\(missingSnapshot)-\(UUID().uuidString).json"
+                )
+            )
+            try cache.save(CalendarSharingCacheData(
+                receivedCalendars: [makeReceivedPayload(calendar: received).calendar],
+                eventsByCalendarID: eventsByCalendarID,
+                shiftsByCalendarID: shiftsByCalendarID,
+                workRecordsByCalendarID: workRecordsByCalendarID
+            ))
+            let store = makeStore(
+                client: MockCalendarSharingClient(),
+                calendars: [personal, received],
+                eventUseCase: eventUseCase,
+                calendarRepository: calendarRepository,
+                cache: cache
+            )
+
+            do {
+                _ = try await store.overwritePersonalCalendar(
+                    from: received.id,
+                    to: personal.id,
+                    scope: .all
+                )
+                XCTFail("A missing \(missingSnapshot) snapshot key must block overwrite.")
+            } catch {
+                XCTAssertEqual(error as? CalendarSharingError, .syncFailed, missingSnapshot)
+            }
+
+            let applyBatchCallCount = await eventRepository.applyBatchCallCount()
+            XCTAssertEqual(applyBatchCallCount, 0, missingSnapshot)
+            let stored = await eventRepository.events(
+                in: DateInterval(start: .distantPast, end: .distantFuture)
+            )
+            XCTAssertEqual(Set(stored.map(\.id)), Set(originalEvents.map(\.id)), missingSnapshot)
+            for original in originalEvents {
+                let storedOriginal = await eventRepository.event(id: original.id)
+                XCTAssertEqual(storedOriginal, original, missingSnapshot)
+            }
+        }
+    }
+
+    func testReceivedOverwriteAcceptsMaterializedEmptySnapshotsAndClearsPersonalData() async throws {
+        let personal = TimeNestCalendar.personal(name: "My Calendar")
+        let received = makeCalendar(kind: .sharedReceived, name: "Team")
+        let calendarRepository = InMemoryCalendarRepository(calendars: [personal, received])
+        let eventRepository = ControlledEventRepository()
+        let eventUseCase = EventUseCase(
+            repository: eventRepository,
+            calendarRepository: calendarRepository
+        )
+        let date = makeTestDate(year: 2026, month: 8, day: 10, hour: 9)
+        let personalEvent = makeEvent(title: "Delete Event", startDate: date)
+        let personalShift = makeEvent(
+            title: "Delete Shift",
+            shiftTemplateID: .night,
+            startDate: date.addingTimeInterval(2 * 3_600),
+            endDate: date.addingTimeInterval(10 * 3_600)
+        )
+        let personalWorkRecords = makeWorkRecordEvents(
+            title: "Delete Work",
+            workDate: date,
+            clockInDate: date,
+            clockOutDate: date.addingTimeInterval(8 * 3_600),
+            sessionID: UUID()
+        )
+        for event in [personalEvent, personalShift] + personalWorkRecords {
+            try await eventRepository.create(event)
+        }
+        let cache = CalendarSharingCache(
+            fileURL: FileManager.default.temporaryDirectory.appendingPathComponent(
+                "CalendarCopyEmptySnapshotsTests-\(UUID().uuidString).json"
+            )
+        )
+        try cache.save(CalendarSharingCacheData(
+            receivedCalendars: [makeReceivedPayload(calendar: received).calendar],
+            eventsByCalendarID: [received.id: []],
+            shiftsByCalendarID: [received.id: []],
+            workRecordsByCalendarID: [received.id: []]
+        ))
+        let store = makeStore(
+            client: MockCalendarSharingClient(),
+            calendars: [personal, received],
+            eventUseCase: eventUseCase,
+            calendarRepository: calendarRepository,
+            cache: cache
+        )
+
+        let copies = try await store.overwritePersonalCalendar(
+            from: received.id,
+            to: personal.id,
+            scope: .all
+        )
+
+        XCTAssertTrue(copies.isEmpty)
+        let applyBatchCallCount = await eventRepository.applyBatchCallCount()
+        let stored = await eventRepository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertEqual(applyBatchCallCount, 1)
+        XCTAssertTrue(stored.isEmpty)
+    }
+
     func testSpecifiedPeriodFromReceivedCalendarUsesInclusiveTypeSpecificDates() async throws {
         let personal = TimeNestCalendar.personal(name: "My Calendar")
         let received = makeCalendar(kind: .sharedReceived, name: "Team")
@@ -1465,6 +1612,85 @@ final class CalendarSharingStoreTests: XCTestCase {
             in: DateInterval(start: .distantPast, end: .distantFuture)
         )
         XCTAssertEqual(Set(stored.map(\.id)), [july.id, september.id])
+    }
+
+    func testOrdinaryEventOverlapCopiesAndDeletesWholeEventsAcrossRangeBoundaries() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository)
+        let rangeStart = makeTestDate(year: 2026, month: 8, day: 1, hour: 0)
+        let selectionEnd = makeTestDate(year: 2026, month: 8, day: 31)
+        let rangeEnd = makeTestDate(year: 2026, month: 9, day: 1, hour: 0)
+        let targetStartOverlap = makeEvent(
+            title: "Delete Start Overlap",
+            startDate: makeTestDate(year: 2026, month: 7, day: 31, hour: 22),
+            endDate: makeTestDate(year: 2026, month: 8, day: 1, hour: 2)
+        )
+        let targetEndOverlap = makeEvent(
+            title: "Delete End Overlap",
+            startDate: makeTestDate(year: 2026, month: 8, day: 31, hour: 23),
+            endDate: makeTestDate(year: 2026, month: 9, day: 1, hour: 2)
+        )
+        let targetBeforeRange = makeEvent(
+            title: "Keep Before",
+            startDate: makeTestDate(year: 2026, month: 7, day: 31, hour: 22),
+            endDate: rangeStart
+        )
+        let targetAfterRange = makeEvent(
+            title: "Keep After",
+            startDate: rangeEnd,
+            endDate: rangeEnd.addingTimeInterval(2 * 3_600)
+        )
+        for event in [
+            targetStartOverlap,
+            targetEndOverlap,
+            targetBeforeRange,
+            targetAfterRange
+        ] {
+            try await repository.create(event)
+        }
+
+        let sourceStartOverlap = SharedEventSnapshot(
+            id: UUID(),
+            title: "Copy Start Overlap",
+            startDate: makeTestDate(year: 2026, month: 7, day: 31, hour: 22),
+            endDate: makeTestDate(year: 2026, month: 8, day: 1, hour: 2),
+            isAllDay: false,
+            updatedAt: rangeStart
+        )
+        let sourceEndOverlap = SharedEventSnapshot(
+            id: UUID(),
+            title: "Copy End Overlap",
+            startDate: makeTestDate(year: 2026, month: 8, day: 31, hour: 23),
+            endDate: makeTestDate(year: 2026, month: 9, day: 1, hour: 2),
+            isAllDay: false,
+            updatedAt: rangeEnd
+        )
+
+        let copies = try await useCase.overwritePersonalCalendar(
+            targetCalendarID: TimeNestCalendar.personalID,
+            sharedEvents: [sourceStartOverlap, sourceEndOverlap],
+            sharedShifts: [],
+            sharedWorkRecords: [],
+            scope: .inclusiveDateRange(startDate: rangeStart, endDate: selectionEnd)
+        )
+
+        XCTAssertEqual(copies.count, 2)
+        let copiesByTitle = Dictionary(uniqueKeysWithValues: copies.map { ($0.title, $0) })
+        let copiedStartOverlap = try XCTUnwrap(copiesByTitle[sourceStartOverlap.title])
+        let copiedEndOverlap = try XCTUnwrap(copiesByTitle[sourceEndOverlap.title])
+        XCTAssertEqual(copiedStartOverlap.startDate, sourceStartOverlap.startDate)
+        XCTAssertEqual(copiedStartOverlap.endDate, sourceStartOverlap.endDate)
+        XCTAssertEqual(copiedEndOverlap.startDate, sourceEndOverlap.startDate)
+        XCTAssertEqual(copiedEndOverlap.endDate, sourceEndOverlap.endDate)
+
+        let stored = try await useCase.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        let storedIDs = Set(stored.map(\.id))
+        XCTAssertFalse(storedIDs.contains(targetStartOverlap.id))
+        XCTAssertFalse(storedIDs.contains(targetEndOverlap.id))
+        XCTAssertTrue(storedIDs.contains(targetBeforeRange.id))
+        XCTAssertTrue(storedIDs.contains(targetAfterRange.id))
     }
 
     func testInvalidCopyRangeAndNonPersonalTargetDoNotWrite() async throws {

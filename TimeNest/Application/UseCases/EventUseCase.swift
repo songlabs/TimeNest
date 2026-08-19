@@ -98,6 +98,7 @@ class EventUseCase {
     private let repository: EventRepository
     private let calendarRepository: (any CalendarRepository)?
     private let notificationScheduler: LocalNotificationScheduling?
+    private let shiftTemplateDefaults: UserDefaults
     /// Local user mutations only. The app may enqueue cloud work from this callback.
     var onEventsChanged: (() -> Void)?
     /// Remote materialization only. This callback is deliberately widget/UI-only.
@@ -106,11 +107,13 @@ class EventUseCase {
     init(
         repository: EventRepository,
         notificationScheduler: LocalNotificationScheduling? = nil,
-        calendarRepository: (any CalendarRepository)? = nil
+        calendarRepository: (any CalendarRepository)? = nil,
+        shiftTemplateDefaults: UserDefaults = .standard
     ) {
         self.repository = repository
         self.notificationScheduler = notificationScheduler
         self.calendarRepository = calendarRepository
+        self.shiftTemplateDefaults = shiftTemplateDefaults
     }
 
     @discardableResult
@@ -383,7 +386,10 @@ class EventUseCase {
                 SharedShiftMapper.makeLocalCopy(
                     from: $0,
                     calendarID: targetCalendarID,
-                    now: now
+                    now: now,
+                    templates: ShiftTimeTemplate.all(from: shiftTemplateDefaults),
+                    defaults: shiftTemplateDefaults,
+                    calendar: calendar
                 )
             }
         let workRecordCopies = sharedWorkRecords

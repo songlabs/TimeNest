@@ -1477,6 +1477,30 @@ struct ShiftTimeTemplate: Identifiable, Equatable {
         all(from: defaults).filter(\.enabled)
     }
 
+    func persist(to defaults: UserDefaults = .standard) {
+        if usesLocalizedDefaultName {
+            defaults.removeObject(forKey: id.displayNameKey)
+            defaults.removeObject(forKey: id.displayNameCustomizedKey)
+        } else {
+            defaults.set(displayName, forKey: id.displayNameKey)
+            switch id {
+            case .day, .night:
+                defaults.set(true, forKey: id.displayNameCustomizedKey)
+            case .custom:
+                break
+            }
+        }
+        defaults.set(note, forKey: id.noteKey)
+        defaults.set(colorHex, forKey: id.colorHexKey)
+        defaults.set(startTime, forKey: id.startTimeKey)
+        defaults.set(endTime, forKey: id.endTimeKey)
+        defaults.set(enabled, forKey: id.enabledKey)
+
+        if case .custom(let uuid) = id {
+            defaults.set(uuid.uuidString, forKey: id.uuidStorageKey)
+        }
+    }
+
     static func normalizedTimeString(from date: Date, calendar: Calendar = Calendar(identifier: .gregorian)) -> String {
         let hour = calendar.component(.hour, from: date)
         let minute = calendar.component(.minute, from: date)
@@ -1792,27 +1816,7 @@ struct ShiftTimeSettingsView: View {
     private func saveShiftTemplates() {
         let defaults = UserDefaults.standard
         for template in shiftTemplates {
-            if template.usesLocalizedDefaultName {
-                defaults.removeObject(forKey: template.id.displayNameKey)
-                defaults.removeObject(forKey: template.id.displayNameCustomizedKey)
-            } else {
-                defaults.set(template.displayName, forKey: template.id.displayNameKey)
-                if case .day = template.id {
-                    defaults.set(true, forKey: template.id.displayNameCustomizedKey)
-                } else if case .night = template.id {
-                    defaults.set(true, forKey: template.id.displayNameCustomizedKey)
-                }
-            }
-            defaults.set(template.note, forKey: template.id.noteKey)
-            defaults.set(template.colorHex, forKey: template.id.colorHexKey)
-            defaults.set(template.startTime, forKey: template.id.startTimeKey)
-            defaults.set(template.endTime, forKey: template.id.endTimeKey)
-            defaults.set(template.enabled, forKey: template.id.enabledKey)
-            
-            // 保存自定义班次的 UUID，确保可以正确加载
-            if case .custom(let uuid) = template.id {
-                defaults.set(uuid.uuidString, forKey: template.id.uuidStorageKey)
-            }
+            template.persist(to: defaults)
         }
     }
 }

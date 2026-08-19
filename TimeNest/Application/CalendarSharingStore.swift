@@ -116,9 +116,13 @@ final class CalendarSharingStore: ObservableObject {
         selection = selectionPersistence.load()
         lastSuccessfulSyncAt = syncMetadataPersistence.loadLastSuccessfulSyncAt()
         for descriptor in cached.receivedCalendars {
+            // Keep a missing cache key distinct from an authoritative empty event snapshot.
+            guard let cachedEvents = cached.eventsByCalendarID[descriptor.id] else {
+                continue
+            }
             let cachedPayload = ReceivedSharedCalendarPayload(
                 calendar: descriptor,
-                events: cached.eventsByCalendarID[descriptor.id] ?? [],
+                events: cachedEvents,
                 shifts: cached.shiftsByCalendarID[descriptor.id] ?? [],
                 workRecords: cached.workRecordsByCalendarID[descriptor.id] ?? []
             )
@@ -406,10 +410,16 @@ final class CalendarSharingStore: ObservableObject {
             guard receivedDescriptor(id: sharedCalendarID) != nil else {
                 throw CalendarSharingError.shareUnavailable
             }
+            // Empty arrays are authoritative; a missing key means that snapshot type is not ready.
+            guard let events = eventsByCalendarID[sharedCalendarID],
+                  let shifts = shiftsByCalendarID[sharedCalendarID],
+                  let workRecords = workRecordsByCalendarID[sharedCalendarID] else {
+                throw CalendarSharingError.syncFailed
+            }
             snapshots = LocalSnapshots(
-                events: eventsByCalendarID[sharedCalendarID] ?? [],
-                shifts: shiftsByCalendarID[sharedCalendarID] ?? [],
-                workRecords: workRecordsByCalendarID[sharedCalendarID] ?? []
+                events: events,
+                shifts: shifts,
+                workRecords: workRecords
             )
         }
 

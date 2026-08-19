@@ -690,7 +690,9 @@ enum SharedShiftMapper {
         from snapshot: SharedShiftSnapshot,
         calendarID: UUID,
         now: Date,
-        templates: [ShiftTimeTemplate] = ShiftTimeTemplate.all()
+        templates: [ShiftTimeTemplate] = ShiftTimeTemplate.all(),
+        defaults: UserDefaults = .standard,
+        calendar: Calendar = .current
     ) -> CalendarEvent {
         CalendarEvent(
             id: UUID(),
@@ -706,7 +708,12 @@ enum SharedShiftMapper {
             importSource: nil,
             createdAt: now,
             updatedAt: now,
-            shiftTemplateID: localTemplateID(for: snapshot, templates: templates)
+            shiftTemplateID: localTemplateID(
+                for: snapshot,
+                templates: templates,
+                defaults: defaults,
+                calendar: calendar
+            )
         )
     }
 
@@ -769,7 +776,9 @@ enum SharedShiftMapper {
 
     private static func localTemplateID(
         for snapshot: SharedShiftSnapshot,
-        templates: [ShiftTimeTemplate]
+        templates: [ShiftTimeTemplate],
+        defaults: UserDefaults,
+        calendar: Calendar
     ) -> ShiftTimeTemplateID {
         if let exactMatch = templates.first(where: {
             $0.displayName == snapshot.displayName
@@ -777,14 +786,32 @@ enum SharedShiftMapper {
         }) {
             return exactMatch.id
         }
-        if let nameMatch = templates.first(where: { $0.displayName == snapshot.displayName }) {
-            return nameMatch.id
-        }
         for id in [ShiftTimeTemplateID.day, .night]
         where ShiftTimeTemplate.isKnownDefaultDisplayName(snapshot.displayName, for: id) {
-            return id
+            if let template = templates.first(where: { $0.id == id }),
+               template.colorHex.caseInsensitiveCompare(snapshot.colorHex) == .orderedSame {
+                return id
+            }
         }
-        return .custom(UUID())
+
+        let id = ShiftTimeTemplateID.custom(UUID())
+        ShiftTimeTemplate(
+            id: id,
+            nameKey: id.nameKey,
+            displayName: snapshot.displayName,
+            note: "",
+            colorHex: snapshot.colorHex,
+            startTime: ShiftTimeTemplate.normalizedTimeString(
+                from: snapshot.startDate,
+                calendar: calendar
+            ),
+            endTime: ShiftTimeTemplate.normalizedTimeString(
+                from: snapshot.endDate,
+                calendar: calendar
+            ),
+            enabled: true
+        ).persist(to: defaults)
+        return id
     }
 
     private static func legacyTemplate(

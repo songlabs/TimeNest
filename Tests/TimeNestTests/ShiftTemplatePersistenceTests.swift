@@ -182,6 +182,118 @@ final class ShiftTemplatePersistenceGateTests: XCTestCase {
         XCTAssertEqual(storedEvents.map(\.id), [historicalShift.id])
     }
 
+    func testSharedShiftCopyPersistsIndependentCustomTemplateWithSnapshotColorAndTimes() async throws {
+        let start = date(2026, 8, 10, 13, 30)
+        let end = date(2026, 8, 10, 22, 15)
+        let snapshot = SharedShiftSnapshot(
+            id: UUID(),
+            registeredDate: calendar.startOfDay(for: start),
+            displayName: "Late Shift",
+            startDate: start,
+            endDate: end,
+            spansMidnight: false,
+            colorHex: "#AF52DEFF",
+            updatedAt: start
+        )
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(
+            repository: repository,
+            shiftTemplateDefaults: defaults
+        )
+
+        let copies = try await eventUseCase.overwritePersonalCalendar(
+            targetCalendarID: TimeNestCalendar.personalID,
+            sharedEvents: [],
+            sharedShifts: [snapshot],
+            sharedWorkRecords: [],
+            scope: .all,
+            calendar: calendar
+        )
+
+        let copiedShift = try XCTUnwrap(copies.first)
+        let copiedTemplateID = try XCTUnwrap(copiedShift.shiftTemplateID)
+        guard case .custom(let copiedTemplateUUID) = copiedTemplateID else {
+            XCTFail("An unmatched shared shift must create a custom template.")
+            return
+        }
+        XCTAssertNotEqual(copiedTemplateUUID, snapshot.id)
+        XCTAssertEqual(copiedShift.title, "Late Shift")
+
+        let reloaded = try XCTUnwrap(
+            ShiftTimeTemplate.all(from: defaults).first(where: { $0.id == copiedTemplateID })
+        )
+        XCTAssertEqual(reloaded.displayName, "Late Shift")
+        XCTAssertEqual(reloaded.note, "")
+        XCTAssertEqual(reloaded.colorHex, "#AF52DEFF")
+        XCTAssertEqual(reloaded.startTime, "13:30")
+        XCTAssertEqual(reloaded.endTime, "22:15")
+        XCTAssertTrue(reloaded.enabled)
+        XCTAssertEqual(copiedTemplateID.colorHex(from: defaults), "#AF52DEFF")
+
+        let storedCopy = try await repository.event(id: copiedShift.id)
+        XCTAssertEqual(storedCopy?.shiftTemplateID, copiedTemplateID)
+        XCTAssertEqual(storedCopy?.startDate, snapshot.startDate)
+        XCTAssertEqual(storedCopy?.endDate, snapshot.endDate)
+    }
+
+    func testSharedShiftCopyDoesNotReuseSameNameTemplateWithDifferentColor() async throws {
+        let existingTemplateID = ShiftTimeTemplateID.custom(UUID())
+        storeTemplate(
+            id: existingTemplateID,
+            name: "Late Shift",
+            colorHex: "#34C759FF",
+            startTime: "08:00",
+            endTime: "16:00"
+        )
+        let start = date(2026, 8, 11, 13, 30)
+        let end = date(2026, 8, 11, 22, 15)
+        let snapshot = SharedShiftSnapshot(
+            id: UUID(),
+            registeredDate: calendar.startOfDay(for: start),
+            displayName: "Late Shift",
+            startDate: start,
+            endDate: end,
+            spansMidnight: false,
+            colorHex: "#AF52DEFF",
+            updatedAt: start
+        )
+        let repository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(
+            repository: repository,
+            shiftTemplateDefaults: defaults
+        )
+
+        let copies = try await eventUseCase.overwritePersonalCalendar(
+            targetCalendarID: TimeNestCalendar.personalID,
+            sharedEvents: [],
+            sharedShifts: [snapshot],
+            sharedWorkRecords: [],
+            scope: .all,
+            calendar: calendar
+        )
+
+        let copiedTemplateID = try XCTUnwrap(copies.first?.shiftTemplateID)
+        XCTAssertNotEqual(copiedTemplateID, existingTemplateID)
+        guard case .custom(_) = copiedTemplateID else {
+            XCTFail("A color mismatch must use a new custom template.")
+            return
+        }
+        let templates = ShiftTimeTemplate.all(from: defaults)
+        let existingTemplate = try XCTUnwrap(
+            templates.first(where: { $0.id == existingTemplateID })
+        )
+        let copiedTemplate = try XCTUnwrap(
+            templates.first(where: { $0.id == copiedTemplateID })
+        )
+        XCTAssertEqual(existingTemplate.colorHex, "#34C759FF")
+        XCTAssertEqual(existingTemplate.startTime, "08:00")
+        XCTAssertEqual(existingTemplate.endTime, "16:00")
+        XCTAssertEqual(copiedTemplate.displayName, "Late Shift")
+        XCTAssertEqual(copiedTemplate.colorHex, "#AF52DEFF")
+        XCTAssertEqual(copiedTemplate.startTime, "13:30")
+        XCTAssertEqual(copiedTemplate.endTime, "22:15")
+    }
+
     private func storeTemplate(
         id: ShiftTimeTemplateID,
         name: String,
@@ -194,13 +306,16 @@ final class ShiftTemplatePersistenceGateTests: XCTestCase {
             XCTFail("Gate fixtures must use custom template identifiers")
             return
         }
-        defaults.set(uuid.uuidString, forKey: id.uuidStorageKey)
-        defaults.set(name, forKey: id.displayNameKey)
-        defaults.set(note, forKey: id.noteKey)
-        defaults.set(colorHex, forKey: id.colorHexKey)
-        defaults.set(startTime, forKey: id.startTimeKey)
-        defaults.set(endTime, forKey: id.endTimeKey)
-        defaults.set(true, forKey: id.enabledKey)
+        ShiftTimeTemplate(
+            id: .custom(uuid),
+            nameKey: id.nameKey,
+            displayName: name,
+            note: note,
+            colorHex: colorHex,
+            startTime: startTime,
+            endTime: endTime,
+            enabled: true
+        ).persist(to: defaults)
     }
 
     private func deletedKey(for id: ShiftTimeTemplateID) -> String {
