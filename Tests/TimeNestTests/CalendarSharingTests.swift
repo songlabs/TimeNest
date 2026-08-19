@@ -61,6 +61,18 @@ final class CalendarSelectionAndPolicyTests: XCTestCase {
         XCTAssertTrue(state.isCreating)
     }
 
+    func testCancellingCopyConfirmationDoesNotAuthorizeOverwrite() {
+        var state = CalendarSharingCopyConfirmationState()
+
+        state.request()
+        XCTAssertTrue(state.isPresented)
+
+        state.cancel()
+
+        XCTAssertFalse(state.isPresented)
+        XCTAssertFalse(state.beginConfirmedCopy())
+    }
+
     func testSharedListStateShowsEmptyOnlyAfterSuccessfulRefresh() {
         XCTAssertEqual(
             CalendarSelectionSharedListState.resolve(
@@ -1123,6 +1135,419 @@ final class CalendarSharingStoreTests: XCTestCase {
         XCTAssertEqual(store.calendar(id: invitation.calendarID)?.kind, .sharedOwned)
         XCTAssertEqual(store.calendar(id: invitation.calendarID)?.name, "Empty Copy")
         XCTAssertEqual(client.ownedStates.map(\.calendar.id), [invitation.calendarID])
+    }
+
+    func testOverwriteAllFromOwnedSharedCalendarReplacesAllThreeLocalDataTypes() async throws {
+        let personal = TimeNestCalendar.personal(name: "My Calendar")
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let calendarRepository = InMemoryCalendarRepository(calendars: [personal, owned])
+        let eventRepository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(
+            repository: eventRepository,
+            calendarRepository: calendarRepository
+        )
+        let sourceDate = makeTestDate(year: 2026, month: 8, day: 10, hour: 9)
+        let sourceEvent = makeEvent(
+            title: "Shared Appointment",
+            calendarID: owned.id,
+            startDate: sourceDate
+        )
+        let sourceShift = makeEvent(
+            title: "Shared Day Shift",
+            calendarID: owned.id,
+            shiftTemplateID: .day,
+            startDate: sourceDate.addingTimeInterval(2 * 3_600),
+            endDate: sourceDate.addingTimeInterval(10 * 3_600)
+        )
+        let sourceSessionID = UUID()
+        let sourceClockOutDate = sourceDate.addingTimeInterval(8 * 3_600)
+        let sourceWorkEvents = makeWorkRecordEvents(
+            title: "Shared Work",
+            calendarID: owned.id,
+            workDate: sourceDate,
+            clockInDate: sourceDate,
+            clockOutDate: sourceClockOutDate,
+            sessionID: sourceSessionID,
+            transportFee: 800,
+            hourlyRate: 2_000
+        )
+
+        let targetEvent = makeEvent(title: "Old Appointment", startDate: sourceDate)
+        let targetShift = makeEvent(
+            title: "Old Shift",
+            shiftTemplateID: .night,
+            startDate: sourceDate
+        )
+        let targetSessionID = UUID()
+        let targetWorkEvents = makeWorkRecordEvents(
+            title: "Old Work",
+            workDate: sourceDate,
+            clockInDate: sourceDate,
+            clockOutDate: sourceClockOutDate,
+            sessionID: targetSessionID
+        )
+        let sourceEvents = [sourceEvent, sourceShift] + sourceWorkEvents
+        let oldTargetEvents = [targetEvent, targetShift] + targetWorkEvents
+        for event in sourceEvents + oldTargetEvents {
+            try await eventRepository.create(event)
+        }
+        let store = makeStore(
+            client: MockCalendarSharingClient(),
+            calendars: [personal, owned],
+            eventUseCase: eventUseCase,
+            calendarRepository: calendarRepository
+        )
+
+        let copies = try await store.overwritePersonalCalendar(
+            from: owned.id,
+            to: personal.id,
+            scope: .all
+        )
+
+        let targetEvents = try await eventUseCase.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: personal.id
+        )
+        XCTAssertEqual(targetEvents.count, 4)
+        XCTAssertEqual(
+            targetEvents.filter(SharedEventMapper.isShareable).map(\.title),
+            ["Shared Appointment"]
+        )
+        XCTAssertEqual(
+            targetEvents.filter { $0.shiftTemplateID != nil }.map(\.title),
+            ["Shared Day Shift"]
+        )
+        let copiedWorkEvents = targetEvents.filter(SharedWorkRecordMapper.isCandidate)
+        XCTAssertEqual(copiedWorkEvents.count, 2)
+        XCTAssertTrue(copiedWorkEvents.allSatisfy {
+            $0.workInfo?.transportFee == nil && $0.workInfo?.hourlyRate == nil
+        })
+        XCTAssertNotEqual(copiedWorkEvents.first?.workInfo?.workSessionId, sourceSessionID)
+        XCTAssertTrue(Set(oldTargetEvents.map(\.id)).isDisjoint(with: targetEvents.map(\.id)))
+        XCTAssertTrue(Set(sourceEvents.map(\.id)).isDisjoint(with: copies.map(\.id)))
+
+        var changedSourceEvent = sourceEvent
+        changedSourceEvent.title = "Changed Later"
+        changedSourceEvent.updatedAt = Date()
+        try await eventUseCase.updateEvent(changedSourceEvent)
+
+        let targetAfterSourceChange = try await eventUseCase.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: personal.id
+        )
+        XCTAssertEqual(
+            targetAfterSourceChange.filter(SharedEventMapper.isShareable).map(\.title),
+            ["Shared Appointment"]
+        )
+    }
+
+    func testSpecifiedPeriodFromReceivedCalendarUsesInclusiveTypeSpecificDates() async throws {
+        let personal = TimeNestCalendar.personal(name: "My Calendar")
+        let received = makeCalendar(kind: .sharedReceived, name: "Team")
+        let calendarRepository = InMemoryCalendarRepository(calendars: [personal, received])
+        let eventRepository = InMemoryEventRepository()
+        let eventUseCase = EventUseCase(
+            repository: eventRepository,
+            calendarRepository: calendarRepository
+        )
+        let july31 = makeTestDate(year: 2026, month: 7, day: 31)
+        let august1 = makeTestDate(year: 2026, month: 8, day: 1)
+        let august15 = makeTestDate(year: 2026, month: 8, day: 15)
+        let august31 = makeTestDate(year: 2026, month: 8, day: 31, hour: 23)
+        let september1 = makeTestDate(year: 2026, month: 9, day: 1)
+
+        let julyKeep = makeEvent(title: "July Keep", startDate: july31)
+        let augustDelete = makeEvent(title: "August Delete", startDate: august15)
+        let septemberKeep = makeEvent(title: "September Keep", startDate: september1)
+        let julyOvernightShift = makeEvent(
+            title: "July Overnight Keep",
+            shiftTemplateID: .night,
+            startDate: makeTestDate(year: 2026, month: 7, day: 31, hour: 23),
+            endDate: makeTestDate(year: 2026, month: 8, day: 1, hour: 7)
+        )
+        let augustShiftDelete = makeEvent(
+            title: "August Shift Delete",
+            shiftTemplateID: .day,
+            startDate: august15
+        )
+        let insideWorkSessionID = UUID()
+        let insideWorkOutDate = september1.addingTimeInterval(7 * 3_600)
+        let insideWorkEvents = makeWorkRecordEvents(
+            title: "August Work Delete",
+            workDate: august31,
+            clockInDate: august31,
+            clockOutDate: insideWorkOutDate,
+            sessionID: insideWorkSessionID
+        )
+        let outsideWorkSessionID = UUID()
+        let outsideWorkClockInDate = makeTestDate(
+            year: 2026,
+            month: 8,
+            day: 31,
+            hour: 23,
+            minute: 30
+        )
+        let outsideWorkClockOutDate = september1.addingTimeInterval(8 * 3_600)
+        let outsideWorkEvents = makeWorkRecordEvents(
+            title: "September Work Keep",
+            workDate: september1,
+            clockInDate: outsideWorkClockInDate,
+            clockOutDate: outsideWorkClockOutDate,
+            sessionID: outsideWorkSessionID
+        )
+        let originalTargetEvents = [
+            julyKeep,
+            augustDelete,
+            septemberKeep,
+            julyOvernightShift,
+            augustShiftDelete
+        ] + insideWorkEvents + outsideWorkEvents
+        for event in originalTargetEvents {
+            try await eventRepository.create(event)
+        }
+
+        let descriptor = makeReceivedPayload(calendar: received).calendar
+        let sharedEvents = [
+            SharedEventSnapshot(
+                id: UUID(),
+                title: "Boundary Start Event",
+                startDate: makeTestDate(year: 2026, month: 8, day: 1, hour: 0),
+                endDate: makeTestDate(year: 2026, month: 8, day: 1, hour: 1),
+                isAllDay: false,
+                updatedAt: august1
+            ),
+            SharedEventSnapshot(
+                id: UUID(),
+                title: "Boundary End Event",
+                startDate: august31,
+                endDate: september1,
+                isAllDay: false,
+                updatedAt: august31
+            ),
+            SharedEventSnapshot(
+                id: UUID(),
+                title: "Outside Event",
+                startDate: september1,
+                endDate: september1.addingTimeInterval(3_600),
+                isAllDay: false,
+                updatedAt: september1
+            )
+        ]
+        let sharedShifts = [
+            SharedShiftSnapshot(
+                id: UUID(),
+                registeredDate: Calendar.current.startOfDay(for: august31),
+                displayName: "Boundary End Shift",
+                startDate: august31,
+                endDate: september1.addingTimeInterval(7 * 3_600),
+                spansMidnight: true,
+                colorHex: "#5C6BC0",
+                updatedAt: august31
+            ),
+            SharedShiftSnapshot(
+                id: UUID(),
+                registeredDate: Calendar.current.startOfDay(for: september1),
+                displayName: "Outside Shift",
+                startDate: september1,
+                endDate: september1.addingTimeInterval(8 * 3_600),
+                spansMidnight: false,
+                colorHex: "#FFD54F",
+                updatedAt: september1
+            )
+        ]
+        let sharedWorkRecords = [
+            SharedWorkRecordSnapshot(
+                id: UUID(),
+                workDate: Calendar.current.startOfDay(for: august1),
+                workInTime: august1,
+                workOutTime: august1.addingTimeInterval(8 * 3_600),
+                isWorkOutTimeSet: true,
+                restHours: 1,
+                updatedAt: august1
+            ),
+            SharedWorkRecordSnapshot(
+                id: UUID(),
+                workDate: Calendar.current.startOfDay(for: september1),
+                workInTime: september1,
+                workOutTime: september1.addingTimeInterval(8 * 3_600),
+                isWorkOutTimeSet: true,
+                restHours: 1,
+                updatedAt: september1
+            )
+        ]
+        let cache = CalendarSharingCache(
+            fileURL: FileManager.default.temporaryDirectory.appendingPathComponent(
+                "CalendarCopyRangeTests-\(UUID().uuidString).json"
+            )
+        )
+        try cache.save(CalendarSharingCacheData(
+            receivedCalendars: [descriptor],
+            eventsByCalendarID: [received.id: sharedEvents],
+            shiftsByCalendarID: [received.id: sharedShifts],
+            workRecordsByCalendarID: [received.id: sharedWorkRecords]
+        ))
+        let store = makeStore(
+            client: MockCalendarSharingClient(),
+            calendars: [personal, received],
+            eventUseCase: eventUseCase,
+            calendarRepository: calendarRepository,
+            cache: cache
+        )
+
+        try await store.overwritePersonalCalendar(
+            from: received.id,
+            to: personal.id,
+            scope: .inclusiveDateRange(startDate: august1, endDate: august31)
+        )
+
+        let targetEvents = try await eventUseCase.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: personal.id
+        )
+        let targetIDs = Set(targetEvents.map(\.id))
+        XCTAssertTrue(targetIDs.contains(julyKeep.id))
+        XCTAssertTrue(targetIDs.contains(septemberKeep.id))
+        XCTAssertTrue(targetIDs.contains(julyOvernightShift.id))
+        XCTAssertTrue(Set(outsideWorkEvents.map(\.id)).isSubset(of: targetIDs))
+        XCTAssertFalse(targetIDs.contains(augustDelete.id))
+        XCTAssertFalse(targetIDs.contains(augustShiftDelete.id))
+        XCTAssertTrue(Set(insideWorkEvents.map(\.id)).isDisjoint(with: targetIDs))
+
+        let ordinaryTitles = Set(targetEvents.filter(SharedEventMapper.isShareable).map(\.title))
+        XCTAssertEqual(
+            ordinaryTitles,
+            ["July Keep", "September Keep", "Boundary Start Event", "Boundary End Event"]
+        )
+        let shiftTitles = Set(targetEvents.filter { $0.shiftTemplateID != nil }.map(\.title))
+        XCTAssertEqual(shiftTitles, ["July Overnight Keep", "Boundary End Shift"])
+        let workEvents = targetEvents.filter(SharedWorkRecordMapper.isCandidate)
+        XCTAssertEqual(workEvents.count, 4)
+        XCTAssertEqual(Set(workEvents.compactMap { $0.workInfo?.workSessionId }).count, 2)
+        XCTAssertTrue(workEvents.allSatisfy {
+            let workDate = $0.workInfo?.workDate
+            return Calendar.current.isDate(workDate ?? .distantPast, inSameDayAs: august1)
+                || Calendar.current.isDate(workDate ?? .distantPast, inSameDayAs: september1)
+        })
+    }
+
+    func testEmptySharedRangeDeletesOnlyTargetRange() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = EventUseCase(repository: repository)
+        let july = makeEvent(
+            title: "July Keep",
+            startDate: makeTestDate(year: 2026, month: 7, day: 31)
+        )
+        let august = makeEvent(
+            title: "August Delete",
+            startDate: makeTestDate(year: 2026, month: 8, day: 15)
+        )
+        let september = makeEvent(
+            title: "September Keep",
+            startDate: makeTestDate(year: 2026, month: 9, day: 1)
+        )
+        for event in [july, august, september] {
+            try await repository.create(event)
+        }
+
+        let copies = try await useCase.overwritePersonalCalendar(
+            targetCalendarID: TimeNestCalendar.personalID,
+            sharedEvents: [],
+            sharedShifts: [],
+            sharedWorkRecords: [],
+            scope: .inclusiveDateRange(
+                startDate: makeTestDate(year: 2026, month: 8, day: 1),
+                endDate: makeTestDate(year: 2026, month: 8, day: 31)
+            )
+        )
+
+        XCTAssertTrue(copies.isEmpty)
+        let stored = try await useCase.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertEqual(Set(stored.map(\.id)), [july.id, september.id])
+    }
+
+    func testInvalidCopyRangeAndNonPersonalTargetDoNotWrite() async throws {
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(repository: repository)
+        let existing = makeEvent(title: "Keep")
+        try await repository.create(existing)
+        let start = makeTestDate(year: 2026, month: 8, day: 31)
+        let end = makeTestDate(year: 2026, month: 8, day: 1)
+
+        do {
+            _ = try await useCase.overwritePersonalCalendar(
+                targetCalendarID: TimeNestCalendar.personalID,
+                sharedEvents: [],
+                sharedShifts: [],
+                sharedWorkRecords: [],
+                scope: .inclusiveDateRange(startDate: start, endDate: end)
+            )
+            XCTFail("An invalid range must not execute the overwrite.")
+        } catch {
+            guard let useCaseError = error as? EventUseCaseError else {
+                XCTFail("Expected invalidDateRange, got \(error)")
+                return
+            }
+            guard case .invalidDateRange = useCaseError else {
+                XCTFail("Expected invalidDateRange, got \(error)")
+                return
+            }
+        }
+        do {
+            _ = try await useCase.overwritePersonalCalendar(
+                targetCalendarID: UUID(),
+                sharedEvents: [],
+                sharedShifts: [],
+                sharedWorkRecords: [],
+                scope: .all
+            )
+            XCTFail("A shared calendar must not be accepted as the target.")
+        } catch {
+            XCTAssertEqual(error as? CalendarSharingError, .permissionDenied)
+        }
+
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        let storedExisting = await repository.event(id: existing.id)
+        XCTAssertEqual(applyBatchCallCount, 0)
+        XCTAssertEqual(storedExisting, existing)
+    }
+
+    func testOverwriteBatchFailureKeepsOriginalTargetData() async throws {
+        let repository = ControlledEventRepository()
+        let useCase = EventUseCase(repository: repository)
+        let existing = makeEvent(title: "Keep After Failure")
+        try await repository.create(existing)
+        await repository.failNextWrite()
+        let sourceDate = makeTestDate(year: 2026, month: 8, day: 10)
+        let source = SharedEventSnapshot(
+            id: UUID(),
+            title: "Replacement",
+            startDate: sourceDate,
+            endDate: sourceDate.addingTimeInterval(3_600),
+            isAllDay: false,
+            updatedAt: sourceDate
+        )
+
+        do {
+            _ = try await useCase.overwritePersonalCalendar(
+                targetCalendarID: TimeNestCalendar.personalID,
+                sharedEvents: [source],
+                sharedShifts: [],
+                sharedWorkRecords: [],
+                scope: .all
+            )
+            XCTFail("The injected batch failure must be surfaced.")
+        } catch {
+            XCTAssertTrue(error is InjectedSharingTestError)
+        }
+
+        let applyBatchCallCount = await repository.applyBatchCallCount()
+        XCTAssertEqual(applyBatchCallCount, 1)
+        let stored = await repository.events(
+            in: DateInterval(start: .distantPast, end: .distantFuture)
+        )
+        XCTAssertEqual(stored, [existing])
     }
 
     func testSharedEventPermissionDefaultsReadOnlyAndCanCreateReadWriteInvitation() async throws {
@@ -3535,6 +3960,47 @@ final class CalendarSharingStoreTests: XCTestCase {
         )
     }
 
+    private func makeWorkRecordEvents(
+        title: String,
+        calendarID: UUID = TimeNestCalendar.personalID,
+        workDate: Date,
+        clockInDate: Date,
+        clockOutDate: Date,
+        sessionID: UUID,
+        transportFee: Int? = nil,
+        hourlyRate: Int? = nil
+    ) -> [CalendarEvent] {
+        let clockIn = makeEvent(
+            title: title,
+            calendarID: calendarID,
+            workInfo: WorkInfo(
+                workInTime: clockInDate,
+                restHours: 1,
+                workDate: workDate,
+                transportFee: transportFee,
+                hourlyRate: hourlyRate,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: true
+            ),
+            startDate: clockInDate
+        )
+        let clockOut = makeEvent(
+            title: title,
+            calendarID: calendarID,
+            workInfo: WorkInfo(
+                workOutTime: clockOutDate,
+                restHours: 1,
+                workDate: workDate,
+                transportFee: transportFee,
+                hourlyRate: hourlyRate,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: true
+            ),
+            startDate: clockOutDate
+        )
+        return [clockIn, clockOut]
+    }
+
     private func makeWorkClockEvent(
         kind: WorkClockKind,
         calendarID: UUID,
@@ -4336,16 +4802,18 @@ private func makeEvent(
     reminderOffsetMinutes: Int? = nil,
     notificationID: String? = nil,
     shiftTemplateID: ShiftTimeTemplateID? = nil,
-    workInfo: WorkInfo? = nil
+    workInfo: WorkInfo? = nil,
+    startDate: Date? = nil,
+    endDate: Date? = nil
 ) -> CalendarEvent {
-    let start = Date(timeIntervalSince1970: 1_700_000_000)
+    let start = startDate ?? Date(timeIntervalSince1970: 1_700_000_000)
     return CalendarEvent(
         id: id,
         calendarID: calendarID,
         title: title,
         note: note,
         startDate: start,
-        endDate: start.addingTimeInterval(3_600),
+        endDate: endDate ?? start.addingTimeInterval(3_600),
         isAllDay: false,
         categoryID: nil,
         recurrenceRule: .none,
@@ -4358,4 +4826,22 @@ private func makeEvent(
         shiftTemplateID: shiftTemplateID,
         workInfo: workInfo
     )
+}
+
+private func makeTestDate(
+    year: Int,
+    month: Int,
+    day: Int,
+    hour: Int = 12,
+    minute: Int = 0
+) -> Date {
+    var components = DateComponents()
+    components.calendar = .current
+    components.timeZone = .current
+    components.year = year
+    components.month = month
+    components.day = day
+    components.hour = hour
+    components.minute = minute
+    return components.date!
 }

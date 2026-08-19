@@ -173,6 +173,10 @@ final class CalendarSharingStore: ObservableObject {
         calendars.filter(\.canEditContent)
     }
 
+    var writablePersonalCalendars: [TimeNestCalendar] {
+        calendars.filter { $0.kind == .personal && $0.canEditContent }
+    }
+
     func isStopping(calendarID: UUID) -> Bool {
         calendar(id: calendarID)?.stopPhase.isStopping == true
     }
@@ -371,6 +375,53 @@ final class CalendarSharingStore: ObservableObject {
             }
             return $0.startDate < $1.startDate
         }
+    }
+
+    @discardableResult
+    func overwritePersonalCalendar(
+        from sharedCalendarID: UUID,
+        to targetCalendarID: UUID,
+        scope: SharedCalendarCopyScope
+    ) async throws -> [CalendarEvent] {
+        guard let sourceCalendar = calendar(id: sharedCalendarID),
+              let targetCalendar = calendar(id: targetCalendarID),
+              sourceCalendar.kind != .personal,
+              sourceCalendar.id != targetCalendar.id,
+              !sourceCalendar.stopPhase.isStopping,
+              targetCalendar.kind == .personal,
+              targetCalendar.canEditContent else {
+            throw CalendarSharingError.permissionDenied
+        }
+
+        let snapshots: LocalSnapshots
+        switch sourceCalendar.kind {
+        case .personal:
+            throw CalendarSharingError.permissionDenied
+        case .sharedOwned:
+            snapshots = try await Self.localSnapshots(
+                eventUseCase: eventUseCase,
+                calendarID: sharedCalendarID
+            )
+        case .sharedReceived:
+            guard receivedDescriptor(id: sharedCalendarID) != nil else {
+                throw CalendarSharingError.shareUnavailable
+            }
+            snapshots = LocalSnapshots(
+                events: eventsByCalendarID[sharedCalendarID] ?? [],
+                shifts: shiftsByCalendarID[sharedCalendarID] ?? [],
+                workRecords: workRecordsByCalendarID[sharedCalendarID] ?? []
+            )
+        }
+
+        let copies = try await eventUseCase.overwritePersonalCalendar(
+            targetCalendarID: targetCalendarID,
+            sharedEvents: snapshots.events,
+            sharedShifts: snapshots.shifts,
+            sharedWorkRecords: snapshots.workRecords,
+            scope: scope
+        )
+        revision &+= 1
+        return copies
     }
 
     func start() async {

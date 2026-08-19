@@ -15,6 +15,11 @@ enum EventUseCaseError: Error, LocalizedError {
     }
 }
 
+enum SharedCalendarCopyScope: Equatable {
+    case all
+    case inclusiveDateRange(startDate: Date, endDate: Date)
+}
+
 enum WorkRecordPairSaveError: Error, Equatable, LocalizedError {
     case duplicateExplicitEventID
     case explicitEventNotFound
@@ -326,6 +331,97 @@ class EventUseCase {
                 )
             }
         )
+        onEventsChanged?()
+        return copies
+    }
+
+    /// Replaces the selected portion of the personal calendar with independent local copies
+    /// of the currently materialized shared snapshots. Delete and insert are one repository batch.
+    @discardableResult
+    func overwritePersonalCalendar(
+        targetCalendarID: UUID,
+        sharedEvents: [SharedEventSnapshot],
+        sharedShifts: [SharedShiftSnapshot],
+        sharedWorkRecords: [SharedWorkRecordSnapshot],
+        scope: SharedCalendarCopyScope,
+        calendar: Calendar = .current
+    ) async throws -> [CalendarEvent] {
+        guard targetCalendarID == TimeNestCalendar.personalID else {
+            throw CalendarSharingError.permissionDenied
+        }
+        try await validateWriteAccess(calendarID: targetCalendarID)
+
+        let dateRange = try resolvedDateRange(for: scope, calendar: calendar)
+        let targetEvents = try await events(
+            in: DateInterval(start: .distantPast, end: .distantFuture),
+            calendarID: targetCalendarID
+        )
+        let eventsToDelete = targetEvents.filter {
+            guard let dateRange else { return true }
+            return isIncludedInOverwriteRange($0, range: dateRange)
+        }
+
+        let now = Date()
+        let eventCopies = sharedEvents
+            .filter { snapshot in
+                guard let dateRange else { return true }
+                return SharedEventMapper.isIncluded(snapshot, in: dateRange)
+            }
+            .compactMap {
+                SharedEventMapper.makeLocalCopy(
+                    from: $0,
+                    calendarID: targetCalendarID,
+                    now: now
+                )
+            }
+        let shiftCopies = sharedShifts
+            .filter { snapshot in
+                guard let dateRange else { return true }
+                return SharedShiftMapper.isIncluded(snapshot, in: dateRange)
+            }
+            .map {
+                SharedShiftMapper.makeLocalCopy(
+                    from: $0,
+                    calendarID: targetCalendarID,
+                    now: now
+                )
+            }
+        let workRecordCopies = sharedWorkRecords
+            .filter { snapshot in
+                guard let dateRange else { return true }
+                return SharedWorkRecordMapper.isIncluded(snapshot, in: dateRange)
+            }
+            .flatMap {
+                SharedWorkRecordMapper.makeLocalCopies(
+                    from: $0,
+                    calendarID: targetCalendarID,
+                    now: now
+                )
+            }
+        let copies = eventCopies + shiftCopies + workRecordCopies
+        for event in copies { try validate(event) }
+
+        let mutations = try await ownerMutationsForBatch(
+            upserting: copies,
+            deleting: eventsToDelete,
+            expected: eventsToDelete
+        )
+        try await persistLocalEventChange(
+            upserting: copies,
+            deleting: eventsToDelete,
+            expected: eventsToDelete,
+            mutations: mutations,
+            fallback: {
+                try await self.repository.applyBatch(
+                    upserting: copies,
+                    deleting: eventsToDelete,
+                    ifUnchanged: eventsToDelete
+                )
+            }
+        )
+        eventsToDelete.compactMap(\.notificationID).forEach {
+            notificationScheduler?.cancelNotification(id: $0)
+        }
         onEventsChanged?()
         return copies
     }
@@ -1170,6 +1266,48 @@ class EventUseCase {
         guard event.endDate > event.startDate else {
             throw EventUseCaseError.invalidDateRange
         }
+    }
+
+    private func resolvedDateRange(
+        for scope: SharedCalendarCopyScope,
+        calendar: Calendar
+    ) throws -> DateInterval? {
+        switch scope {
+        case .all:
+            return nil
+        case .inclusiveDateRange(let startDate, let endDate):
+            let normalizedStart = calendar.startOfDay(for: startDate)
+            let normalizedEnd = calendar.startOfDay(for: endDate)
+            guard normalizedStart <= normalizedEnd,
+                  let exclusiveEnd = calendar.date(
+                    byAdding: .day,
+                    value: 1,
+                    to: normalizedEnd
+                  ),
+                  exclusiveEnd > normalizedStart else {
+                throw EventUseCaseError.invalidDateRange
+            }
+            return DateInterval(start: normalizedStart, end: exclusiveEnd)
+        }
+    }
+
+    private func isIncludedInOverwriteRange(
+        _ event: CalendarEvent,
+        range: DateInterval
+    ) -> Bool {
+        if SharedWorkRecordMapper.isCandidate(event) {
+            return event.workDate >= range.start && event.workDate < range.end
+        }
+        if let shift = SharedShiftMapper.snapshot(from: event) {
+            return SharedShiftMapper.isIncluded(shift, in: range)
+        }
+        if let snapshot = SharedEventMapper.snapshot(from: event) {
+            return SharedEventMapper.isIncluded(snapshot, in: range)
+        }
+        if event.endDate > event.startDate {
+            return event.startDate < range.end && event.endDate > range.start
+        }
+        return event.startDate >= range.start && event.startDate < range.end
     }
 
     private func scheduleNotification(for event: CalendarEvent) async -> EventNotificationScheduleResult {

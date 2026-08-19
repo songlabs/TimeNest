@@ -56,6 +56,31 @@ enum CalendarSharingFormValidation {
     }
 }
 
+enum CalendarSharingCopyPeriodSelection: String, CaseIterable, Identifiable {
+    case all
+    case specified
+
+    var id: Self { self }
+}
+
+struct CalendarSharingCopyConfirmationState: Equatable {
+    private(set) var isPresented = false
+
+    mutating func request() {
+        isPresented = true
+    }
+
+    mutating func cancel() {
+        isPresented = false
+    }
+
+    mutating func beginConfirmedCopy() -> Bool {
+        guard isPresented else { return false }
+        isPresented = false
+        return true
+    }
+}
+
 struct CalendarSharingCreateNameDraft: Equatable {
     private(set) var value = ""
     private(set) var initialFallbackName: String?
@@ -1004,6 +1029,7 @@ private struct OwnedSharedCalendarDetailView: View {
     @State private var errorMessage: String?
     @State private var participantPendingRevocation: SharedCalendarParticipantSnapshot?
     @State private var eventEditingAllowed = false
+    @State private var isCopyingToPersonalCalendar = false
 
     private var descriptor: OwnedSharedCalendarDescriptor? {
         sharingStore.ownedDescriptor(id: calendarID)
@@ -1040,6 +1066,23 @@ private struct OwnedSharedCalendarDetailView: View {
                     Text(localization.localized(.calendarSharingEventEditingPermission))
                 } footer: {
                     Text(localization.localized(.calendarSharingLastWriteWinsNote))
+                }
+
+                Section {
+                    Button {
+                        isCopyingToPersonalCalendar = true
+                    } label: {
+                        Label(
+                            localization.localized(.calendarSharingCopyToPersonalAction),
+                            systemImage: "square.on.square"
+                        )
+                    }
+                    .disabled(
+                        isWorking
+                            || descriptor == nil
+                            || sharingStore.isStopping(calendarID: calendarID)
+                    )
+                    .accessibilityIdentifier("sharing.copyToPersonal.open")
                 }
 
                 Section(localization.localized(.calendarSharingSharedPeople)) {
@@ -1121,6 +1164,11 @@ private struct OwnedSharedCalendarDetailView: View {
         .onAppear {
             name = descriptor?.calendarName ?? ""
             eventEditingAllowed = descriptor?.eventEditingAllowed ?? false
+        }
+        .sheet(isPresented: $isCopyingToPersonalCalendar) {
+            SharedCalendarCopyView(sourceCalendarID: calendarID)
+                .environmentObject(sharingStore)
+                .environmentObject(localization)
         }
         .sheet(item: $invitation) { item in
             SharingInvitationActivityView(
@@ -1242,6 +1290,7 @@ private struct ReceivedSharedCalendarDetailView: View {
     @State private var isWorking = false
     @State private var confirmingLeave = false
     @State private var errorMessage: String?
+    @State private var isCopyingToPersonalCalendar = false
 
     private var descriptor: SharedCalendarDescriptor? {
         sharingStore.receivedCalendars.first { $0.id == calendarID }
@@ -1264,6 +1313,19 @@ private struct ReceivedSharedCalendarDetailView: View {
             }
 
             Section {
+                Button {
+                    isCopyingToPersonalCalendar = true
+                } label: {
+                    Label(
+                        localization.localized(.calendarSharingCopyToPersonalAction),
+                        systemImage: "square.on.square"
+                    )
+                }
+                .disabled(isWorking || descriptor == nil)
+                .accessibilityIdentifier("sharing.copyToPersonal.open")
+            }
+
+            Section {
                 Button(role: .destructive) {
                     confirmingLeave = true
                 } label: {
@@ -1279,6 +1341,11 @@ private struct ReceivedSharedCalendarDetailView: View {
         }
         .navigationTitle(localization.localized(.calendarSharingReceivedDetails))
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $isCopyingToPersonalCalendar) {
+            SharedCalendarCopyView(sourceCalendarID: calendarID)
+                .environmentObject(sharingStore)
+                .environmentObject(localization)
+        }
         .confirmationDialog(
             localization.localized(.calendarSharingLeaveConfirmation),
             isPresented: $confirmingLeave,
@@ -1309,6 +1376,241 @@ private struct ReceivedSharedCalendarDetailView: View {
         do {
             try await sharingStore.leave(descriptor)
             dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private enum CalendarSharingCopyDateDefaults {
+    static func currentMonth(
+        containing date: Date = Date(),
+        calendar: Calendar = .current
+    ) -> (startDate: Date, endDate: Date) {
+        let fallback = calendar.startOfDay(for: date)
+        guard let month = calendar.dateInterval(of: .month, for: date),
+              let endDate = calendar.date(byAdding: .day, value: -1, to: month.end) else {
+            return (fallback, fallback)
+        }
+        return (
+            calendar.startOfDay(for: month.start),
+            calendar.startOfDay(for: endDate)
+        )
+    }
+}
+
+@MainActor
+private struct SharedCalendarCopyView: View {
+    @EnvironmentObject private var sharingStore: CalendarSharingStore
+    @EnvironmentObject private var localization: LocalizationManager
+    @Environment(\.dismiss) private var dismiss
+
+    let sourceCalendarID: UUID
+    @State private var targetCalendarID = TimeNestCalendar.personalID
+    @State private var periodSelection = CalendarSharingCopyPeriodSelection.all
+    @State private var startDate: Date
+    @State private var endDate: Date
+    @State private var confirmationState = CalendarSharingCopyConfirmationState()
+    @State private var isWorking = false
+    @State private var errorMessage: String?
+    @State private var isShowingCompletion = false
+
+    init(sourceCalendarID: UUID) {
+        self.sourceCalendarID = sourceCalendarID
+        let defaults = CalendarSharingCopyDateDefaults.currentMonth()
+        _startDate = State(initialValue: defaults.startDate)
+        _endDate = State(initialValue: defaults.endDate)
+    }
+
+    private var targetCalendars: [TimeNestCalendar] {
+        sharingStore.writablePersonalCalendars
+    }
+
+    private var selectedTargetName: String {
+        targetCalendars.first(where: { $0.id == targetCalendarID })?.name
+            ?? localization.localized(.calendarSharingMyCalendar)
+    }
+
+    private var isDateRangeValid: Bool {
+        let calendar = Calendar.current
+        return calendar.startOfDay(for: startDate) <= calendar.startOfDay(for: endDate)
+    }
+
+    private var canSubmit: Bool {
+        !isWorking
+            && targetCalendars.contains(where: { $0.id == targetCalendarID })
+            && (periodSelection == .all || isDateRangeValid)
+    }
+
+    private var copyScope: SharedCalendarCopyScope {
+        switch periodSelection {
+        case .all:
+            return .all
+        case .specified:
+            return .inclusiveDateRange(startDate: startDate, endDate: endDate)
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(localization.localized(.calendarSharingCopyDestination)) {
+                    Picker(
+                        localization.localized(.calendarSharingCopyDestination),
+                        selection: $targetCalendarID
+                    ) {
+                        ForEach(targetCalendars) { calendar in
+                            Text(calendar.name).tag(calendar.id)
+                        }
+                    }
+                    .disabled(isWorking)
+                    .accessibilityIdentifier("sharing.copyToPersonal.destination")
+                }
+
+                Section(localization.localized(.calendarSharingCopyPeriod)) {
+                    Picker(selection: $periodSelection) {
+                        Text(localization.localized(.calendarSharingCopyPeriodAll))
+                            .tag(CalendarSharingCopyPeriodSelection.all)
+                        Text(localization.localized(.calendarSharingCopyPeriodSpecified))
+                            .tag(CalendarSharingCopyPeriodSelection.specified)
+                    } label: {
+                        EmptyView()
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.inline)
+                    .disabled(isWorking)
+                    .accessibilityLabel(localization.localized(.calendarSharingCopyPeriod))
+                    .accessibilityIdentifier("sharing.copyToPersonal.period")
+
+                    if periodSelection == .specified {
+                        DatePicker(
+                            localization.localized(.startDateMonth),
+                            selection: $startDate,
+                            in: ...endDate,
+                            displayedComponents: .date
+                        )
+                        .disabled(isWorking)
+                        .accessibilityIdentifier("sharing.copyToPersonal.startDate")
+
+                        DatePicker(
+                            localization.localized(.endDateMonth),
+                            selection: $endDate,
+                            in: startDate...,
+                            displayedComponents: .date
+                        )
+                        .disabled(isWorking)
+                        .accessibilityIdentifier("sharing.copyToPersonal.endDate")
+                    }
+                }
+            }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                CalendarSharingPrimaryActionButton(
+                    title: localization.localized(.calendarSharingCopyAction),
+                    isEnabled: canSubmit,
+                    isWorking: isWorking,
+                    action: { confirmationState.request() }
+                )
+                .accessibilityIdentifier("sharing.copyToPersonal.submit")
+                .background(.bar)
+            }
+            .contentMargins(.bottom, 24, for: .scrollContent)
+            .navigationTitle(localization.localized(.calendarSharingCopyToPersonalAction))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localization.localized(.cancel)) { dismiss() }
+                        .disabled(isWorking)
+                }
+            }
+        }
+        .calendarSharingPresentation()
+        .interactiveDismissDisabled(isWorking)
+        .onAppear {
+            if !targetCalendars.contains(where: { $0.id == targetCalendarID }),
+               let firstTarget = targetCalendars.first {
+                targetCalendarID = firstTarget.id
+            }
+        }
+        .confirmationDialog(
+            confirmationTitle,
+            isPresented: Binding(
+                get: { confirmationState.isPresented },
+                set: { if !$0 { confirmationState.cancel() } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(
+                localization.localized(.calendarSharingCopyOverwriteAction),
+                role: .destructive
+            ) {
+                guard confirmationState.beginConfirmedCopy() else { return }
+                Task { await overwriteAndCopy() }
+            }
+            .accessibilityIdentifier("sharing.copyToPersonal.confirm")
+            Button(localization.localized(.cancel), role: .cancel) {
+                confirmationState.cancel()
+            }
+        } message: {
+            Text(confirmationMessage)
+        }
+        .alert(
+            localization.localized(.calendarSharingErrorTitle),
+            isPresented: Binding(
+                get: { errorMessage != nil },
+                set: { if !$0 { errorMessage = nil } }
+            )
+        ) {
+            Button(localization.localized(.ok)) { errorMessage = nil }
+        } message: {
+            Text(errorMessage ?? "")
+        }
+        .alert(
+            localization.localized(.calendarSharingCopyCompleted),
+            isPresented: $isShowingCompletion
+        ) {
+            Button(localization.localized(.ok)) { dismiss() }
+        }
+    }
+
+    private var confirmationTitle: String {
+        localization.localized(
+            periodSelection == .specified
+                ? .calendarSharingCopyConfirmationPeriodTitle
+                : .calendarSharingCopyConfirmationAllTitle
+        )
+    }
+
+    private var confirmationMessage: String {
+        switch periodSelection {
+        case .all:
+            return String(
+                format: localization.localized(.calendarSharingCopyConfirmationAllMessage),
+                locale: localization.currentLocale,
+                selectedTargetName
+            )
+        case .specified:
+            let formatter = localization.localizedDateFormatter(template: "yyyyMMMMd")
+            return String(
+                format: localization.localized(.calendarSharingCopyConfirmationPeriodMessage),
+                locale: localization.currentLocale,
+                formatter.string(from: startDate),
+                formatter.string(from: endDate)
+            )
+        }
+    }
+
+    private func overwriteAndCopy() async {
+        guard canSubmit else { return }
+        isWorking = true
+        errorMessage = nil
+        defer { isWorking = false }
+        do {
+            try await sharingStore.overwritePersonalCalendar(
+                from: sourceCalendarID,
+                to: targetCalendarID,
+                scope: copyScope
+            )
+            isShowingCompletion = true
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -532,6 +532,37 @@ enum SharedEventMapper {
         )
     }
 
+    static func makeLocalCopy(
+        from snapshot: SharedEventSnapshot,
+        calendarID: UUID,
+        now: Date
+    ) -> CalendarEvent? {
+        guard !snapshot.isDeleted else { return nil }
+        return CalendarEvent(
+            id: UUID(),
+            calendarID: calendarID,
+            title: snapshot.title,
+            note: nil,
+            startDate: snapshot.startDate,
+            endDate: snapshot.endDate,
+            isAllDay: snapshot.isAllDay,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: now,
+            updatedAt: now
+        )
+    }
+
+    static func isIncluded(_ snapshot: SharedEventSnapshot, in range: DateInterval) -> Bool {
+        guard !snapshot.isDeleted else { return false }
+        if snapshot.endDate > snapshot.startDate {
+            return snapshot.startDate < range.end && snapshot.endDate > range.start
+        }
+        return snapshot.startDate >= range.start && snapshot.startDate < range.end
+    }
+
     static func isShareable(_ event: CalendarEvent) -> Bool {
         exclusionReason(for: event) == nil
     }
@@ -655,6 +686,34 @@ enum SharedShiftMapper {
         )
     }
 
+    static func makeLocalCopy(
+        from snapshot: SharedShiftSnapshot,
+        calendarID: UUID,
+        now: Date,
+        templates: [ShiftTimeTemplate] = ShiftTimeTemplate.all()
+    ) -> CalendarEvent {
+        CalendarEvent(
+            id: UUID(),
+            calendarID: calendarID,
+            title: snapshot.displayName,
+            note: nil,
+            startDate: snapshot.startDate,
+            endDate: snapshot.endDate,
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: now,
+            updatedAt: now,
+            shiftTemplateID: localTemplateID(for: snapshot, templates: templates)
+        )
+    }
+
+    static func isIncluded(_ snapshot: SharedShiftSnapshot, in range: DateInterval) -> Bool {
+        snapshot.registeredDate >= range.start && snapshot.registeredDate < range.end
+    }
+
     static func occurrences(
         from snapshots: [SharedShiftSnapshot],
         in range: DateInterval
@@ -708,6 +767,26 @@ enum SharedShiftMapper {
             ?? legacyTemplate(for: event.title, templates: templates)
     }
 
+    private static func localTemplateID(
+        for snapshot: SharedShiftSnapshot,
+        templates: [ShiftTimeTemplate]
+    ) -> ShiftTimeTemplateID {
+        if let exactMatch = templates.first(where: {
+            $0.displayName == snapshot.displayName
+                && $0.colorHex.caseInsensitiveCompare(snapshot.colorHex) == .orderedSame
+        }) {
+            return exactMatch.id
+        }
+        if let nameMatch = templates.first(where: { $0.displayName == snapshot.displayName }) {
+            return nameMatch.id
+        }
+        for id in [ShiftTimeTemplateID.day, .night]
+        where ShiftTimeTemplate.isKnownDefaultDisplayName(snapshot.displayName, for: id) {
+            return id
+        }
+        return .custom(UUID())
+    }
+
     private static func legacyTemplate(
         for title: String,
         templates: [ShiftTimeTemplate]
@@ -756,6 +835,58 @@ enum SharedWorkRecordMapper {
             if lhs.workDate != rhs.workDate { return lhs.workDate < rhs.workDate }
             return lhs.id.uuidString < rhs.id.uuidString
         }
+    }
+
+    static func makeLocalCopies(
+        from snapshot: SharedWorkRecordSnapshot,
+        calendarID: UUID,
+        now: Date
+    ) -> [CalendarEvent] {
+        let sessionID = UUID()
+        let title = LocalizationManager.shared.localized(.workRecordDefaultTitle)
+        var events: [CalendarEvent] = []
+
+        if let workInTime = snapshot.workInTime {
+            events.append(makeLocalWorkClockEvent(
+                calendarID: calendarID,
+                title: title,
+                clockDate: workInTime,
+                workInfo: WorkInfo(
+                    workInTime: workInTime,
+                    workOutTime: nil,
+                    restHours: snapshot.restHours,
+                    workDate: snapshot.workDate,
+                    transportFee: nil,
+                    hourlyRate: nil,
+                    workSessionId: sessionID,
+                    isWorkOutTimeSet: snapshot.isWorkOutTimeSet
+                ),
+                now: now
+            ))
+        }
+
+        let workOutTime = snapshot.workOutTime ?? snapshot.workDate
+        events.append(makeLocalWorkClockEvent(
+            calendarID: calendarID,
+            title: title,
+            clockDate: workOutTime,
+            workInfo: WorkInfo(
+                workInTime: nil,
+                workOutTime: workOutTime,
+                restHours: snapshot.restHours,
+                workDate: snapshot.workDate,
+                transportFee: nil,
+                hourlyRate: nil,
+                workSessionId: sessionID,
+                isWorkOutTimeSet: snapshot.isWorkOutTimeSet
+            ),
+            now: now
+        ))
+        return events
+    }
+
+    static func isIncluded(_ snapshot: SharedWorkRecordSnapshot, in range: DateInterval) -> Bool {
+        snapshot.workDate >= range.start && snapshot.workDate < range.end
     }
 
     static func occurrences(
@@ -863,6 +994,32 @@ enum SharedWorkRecordMapper {
             categoryID: nil,
             reminderOffsetMinutes: nil,
             notificationID: nil,
+            shiftTemplateID: nil,
+            workInfo: workInfo
+        )
+    }
+
+    private static func makeLocalWorkClockEvent(
+        calendarID: UUID,
+        title: String,
+        clockDate: Date,
+        workInfo: WorkInfo,
+        now: Date
+    ) -> CalendarEvent {
+        CalendarEvent(
+            id: UUID(),
+            calendarID: calendarID,
+            title: title,
+            note: nil,
+            startDate: clockDate,
+            endDate: CalendarEvent.defaultEndDate(for: clockDate, isAllDay: false),
+            isAllDay: false,
+            categoryID: nil,
+            recurrenceRule: .none,
+            reminderTemplateID: nil,
+            importSource: nil,
+            createdAt: now,
+            updatedAt: now,
             shiftTemplateID: nil,
             workInfo: workInfo
         )
