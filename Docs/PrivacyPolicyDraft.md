@@ -18,7 +18,7 @@ TimeNest 是一个本地优先的日历与日程管理 App。我们重视用户�
 
 ### 1. 我们是否收集个人信息
 
-TimeNest 第一版是带广告发布的版本，不包含 TimeNest 账号登录、自有后端或通用云同步。App 集成 Google Mobile Ads，在 UMP 允许请求广告后为未购买用户显示日历横幅广告，并通过 Apple In-App Purchase / StoreKit 提供一次性去广告购买。最终发布版本的数据处理说明必须根据正式广告配置、同意流程、内购配置及 Google 的数据使用说明确认。
+TimeNest 是带广告的 App，不包含 TimeNest 账号登录、自有后端或通用云同步。App 集成 Google Mobile Ads，在 UMP 允许请求广告后为未购买用户显示日历横幅广告，并通过 Apple In-App Purchase / StoreKit 提供一次性去广告购买。最终发布版本的数据处理说明必须根据正式广告配置、同意流程、内购配置及 Google 的数据使用说明确认。
 
 ### 2. 日历与日程数据
 
@@ -62,7 +62,7 @@ TimeNest is a local-first calendar and schedule management app. We care about us
 
 ### 1. Personal Information
 
-The first TimeNest release is ad-supported and does not include a TimeNest account, developer-operated backend, or general-purpose cloud sync. It integrates Google Mobile Ads to display a calendar banner for unpurchased users after UMP permits ad requests, and it offers a one-time Remove Ads purchase through Apple In-App Purchase / StoreKit. The final disclosure must be confirmed against the production ad configuration, consent flow, in-app purchase configuration, and Google's data-use documentation.
+TimeNest is ad-supported and does not include a TimeNest account, developer-operated backend, or general-purpose cloud sync. It integrates Google Mobile Ads to display a calendar banner for unpurchased users after UMP permits ad requests, and it offers a one-time Remove Ads purchase through Apple In-App Purchase / StoreKit. The final disclosure must be confirmed against the production ad configuration, consent flow, in-app purchase configuration, and Google's data-use documentation.
 
 ### 2. Calendar and Schedule Data
 

@@ -2,15 +2,15 @@
 
 > Release-preparation checklist only. It does not guarantee App Review approval. Confirm manual items in Apple Developer, App Store Connect, Xcode Organizer, and the exact submitted build.
 
-## Repository Audit Snapshot (updated 2026-07-12)
+## Repository Audit Snapshot (updated 2026-08-19)
 
 - [x] App target, test target, and Widget Extension are present; project shared schemes are `TimeNest` and `TimeNestWidgetExtension`, and the workspace also contains `TimeNest-Workspace`.
 - [x] App Bundle ID is `com.song.TimeNest`; Widget Bundle ID is `com.song.TimeNest.TimeNestWidgetExtension`.
 - [x] App and Widget entitlements use the same App Group: `group.com.songlabs.timenest`.
 - [x] Widget deep links use the registered `timenest` URL scheme.
-- [x] App and Widget versions currently match at `1.1 (3)`.
+- [x] `Project.swift` and the checked-in Xcode project give the App and Widget matching defaults of `2.1 (18)`. The manual TestFlight workflow overrides the marketing version and build number for each run, so confirm the exact archive values before submission.
 - [x] `AppIcon` contains the declared iPhone, iPad, and 1024x1024 marketing icon files with matching pixel dimensions.
-- [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 392 unique `Localizable.strings` keys with no key-set differences; localized InfoPlist key sets also match at 5 keys and include tracking, microphone, and speech-recognition purpose strings.
+- [x] `ja`, `zh-Hans`, `zh-Hant`, `en`, and `ko` each contain 576 unique `Localizable.strings` keys with no duplicate keys or key-set differences; localized `InfoPlist.strings` key sets also match at 6 keys and include tracking, location, microphone, and speech-recognition purpose strings.
 - [x] `TimeNest/PrivacyInfo.xcprivacy` is included in the app resources and currently declares `UserDefaults` reason `CA92.1`, no app-declared collected data, and `NSPrivacyTracking = false`.
 - [x] Current implementation has no TimeNest account, developer-operated general cloud sync, or TimeNest-owned backend upload. Optional shared calendars use Apple iCloud/CloudKit. Recipients can edit events only when the owner allows it and their iCloud permission is read-write; shifts and work records remain view-only for recipients. Private memo, notification, pay, transport-fee, purchase, ad, settings, and device data are excluded.
 - [x] Memo voice input uses microphone and speech-recognition permissions only from the event memo UI.
@@ -76,7 +76,7 @@
 - [ ] Update the published privacy policy so the CloudKit and advertising disclosures are final rather than conditional and clearly cover sharing lifecycle, third-party data retention/deletion, and how users can withdraw consent or reopen required privacy options.
 - [x] Replace the URL placeholders in `Docs/AppStoreMetadataDraft.md` with the public Privacy Policy and Support URLs.
 - [ ] Paste and recheck the final localized metadata against the exact submitted build and App Store Connect field limits.
-- [ ] Confirm metadata claims match the submitted build. Describe CloudKit calendar sharing as optional, event editing as permission-based, and recipient shifts/work records as view-only; do not imply unrestricted collaboration, full-account sync, private-field sharing, analytics, or other unimplemented features. Describe shared-to-personal copy as a one-time independent local copy. Only describe Remove Ads if the submitted build and App Store Connect product are ready.
+- [ ] Confirm metadata claims match the submitted build. Describe CloudKit calendar sharing as optional, event editing as permission-based, and recipient shifts/work records as view-only; do not imply unrestricted collaboration, full-account sync, private-field sharing, analytics, or other unimplemented features. Describe shared-to-personal copying as a repeatable manual action where each run is an independent local overwrite and does not establish ongoing synchronization. Only describe Remove Ads if the submitted build and App Store Connect product are ready.
 - [x] Prepare the six-shot capture outline in `Docs/ScreenshotPlan.md`.
 - [ ] Prepare required iPhone screenshot sizes for each App Store locale selected in App Store Connect.
 - [ ] Capture: month view, week view, day view, event create/edit, holiday subscriptions, shift input/work statistics, and language/settings.

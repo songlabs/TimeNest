@@ -25,9 +25,9 @@ Important flows include fresh-install startup, local data persistence after forc
 
 Known limitations and pending release items:
 
-- There is no TimeNest account system or developer-operated general cloud sync. Optional CloudKit shared calendars automatically synchronize events, shifts, and work records assigned to an owned shared calendar. Recipient event editing is available only when the owner enables it and the recipient has read-write permission; recipient shifts and work records remain view-only, and there are no per-category sharing switches. Copy to My Calendar is a one-time independent local copy, not continuous synchronization.
+- There is no TimeNest account system or developer-operated general cloud sync. Optional CloudKit shared calendars automatically synchronize events, shifts, and work records assigned to an owned shared calendar. Recipient event editing is available only when the owner enables it and the recipient has read-write permission; recipient shifts and work records remain view-only, and there are no per-category sharing switches. Copy to My Calendar performs a manual independent local overwrite that can be run again later and does not establish ongoing synchronization.
 - Public-holiday refresh and ad loading require network access; existing local calendar data should remain usable without network access.
-- The current first release offers a one-time Remove Ads In-App Purchase through Apple StoreKit. Please verify purchase and restore behavior in the uploaded TestFlight/Sandbox environment.
+- TimeNest offers a one-time Remove Ads In-App Purchase through Apple StoreKit. Please verify purchase and restore behavior in the uploaded TestFlight/Sandbox environment.
 - Final production advertising identifiers, App Privacy/Tracking answers, export-compliance answers, App Store screenshots, and physical-device ATT/TestFlight sign-off remain release checks until explicitly completed.
 - Apple Developer Program activation must be confirmed before App Store submission.
 

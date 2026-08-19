@@ -1,6 +1,6 @@
 # TimeNest TestFlight Checklist
 
-> Run this checklist against the exact internal TestFlight candidate. Record device model, iOS version, app version/build, language, appearance, and network condition. The first release shows ads to unpurchased users, includes a Widget Extension, and offers a one-time Remove Ads purchase.
+> Run this checklist against the exact internal TestFlight candidate. Record device model, iOS version, app version/build, language, appearance, and network condition. The candidate shows ads to unpurchased users, includes a Widget Extension, and offers a one-time Remove Ads purchase.
 
 ## 1. Internal Test Setup
 

@@ -16,7 +16,7 @@ TimeNest is a local-first iOS calendar app built with Swift and SwiftUI. It comb
 - Light, dark, and system appearance settings.
 - A calendar banner-ad container backed by Google Mobile Ads.
 
-The first release is ad-supported and includes a one-time Apple In-App Purchase to remove ads. Unpurchased users see banner ads after the required consent flow permits ad requests; purchased users do not create or reserve space for the banner. Debug builds use Google's official test identifiers. Release builds require advertising to be enabled with approved production App and Banner IDs; missing, placeholder, malformed, or Google test IDs fail the Release build.
+TimeNest is ad-supported and includes a one-time Apple In-App Purchase to remove ads. Unpurchased users see banner ads after the required consent flow permits ad requests; purchased users do not create or reserve space for the banner. Debug builds use Google's official test identifiers. Release builds require advertising to be enabled with approved production App and Banner IDs; missing, placeholder, malformed, or Google test IDs fail the Release build.
 
 ## Shared Calendars
 
@@ -26,7 +26,7 @@ The first release is ad-supported and includes a one-time Apple In-App Purchase 
 - Received calendars are view-only by default. When the owner enables event editing and the recipient has read-write iCloud permission, the recipient can create, edit, and delete events within that capability. Generic content editing remains unavailable on received calendars, so shifts and work records cannot be created, edited, or deleted by recipients.
 - Events, shifts, and work records assigned to an owned shared calendar are currently synchronized automatically. The current implementation does not expose per-category sharing switches.
 - Event titles and times, shift display data, and work-record clock-in, clock-out, and break times may enter the shared zone. Memos, reminders and notifications, voice-input content, hourly rates, pay, transport costs, shift-template settings, app settings, and Remove Ads purchase state do not.
-- From an owned or received shared calendar's details, users can copy its current contents to My Calendar once. They can overwrite everything or an inclusive selected date range. The result is an independent local copy: it does not remain synchronized, does not modify the shared source, and preserves My Calendar data outside a selected range.
+- From an owned or received shared calendar's details, users can manually copy its current contents to My Calendar. They can run the copy again later and overwrite everything or an inclusive selected date range. Each run creates an independent local copy: it does not establish ongoing synchronization, does not modify the shared source, and preserves My Calendar data outside a selected range.
 - Holidays are not synchronized through CloudKit. A shared calendar uses the recipient device's enabled holiday regions and local holiday cache.
 - When an owner stops sharing or deletes a shared calendar, recipients lose access. Leaving a received share removes it from that recipient's TimeNest data without changing the owner's calendar. CloudKit changes may require a short refresh before they appear.
 
@@ -35,7 +35,7 @@ The first release is ad-supported and includes a one-time Apple In-App Purchase 
 - Swift 5.9
 - SwiftUI
 - SwiftData local persistence
-- iOS 17.0 or later
+- iOS 18.0 or later
 - Tuist project description with a checked-in Xcode project/workspace
 - Google Mobile Ads and Google User Messaging Platform through Swift Package Manager
 - Apple CloudKit calendar sharing
@@ -44,7 +44,7 @@ The first release is ad-supported and includes a one-time Apple In-App Purchase 
 
 Requirements:
 
-- Xcode with an iOS 17 or later SDK
+- Xcode with an iOS 18.0 or later SDK for the iOS 18.0 deployment target. The current GitHub Actions workflows select Xcode 26.3 and require an iOS 26 or newer SDK.
 - A simulator installed locally
 - Network access when Swift Package Manager first resolves Google Mobile Ads
 
@@ -63,7 +63,7 @@ Replace the destination with an installed simulator when necessary. Signing, Bun
 
 The checked-in Xcode project and `Project.swift` define the same three build settings:
 
-- `TIMENEST_ADS_ENABLED`: `YES` for both Debug and Release. The first release must support ads for users who have not purchased Remove Ads.
+- `TIMENEST_ADS_ENABLED`: `YES` for both Debug and Release. Release builds must support ads for users who have not purchased Remove Ads.
 - `TIMENEST_ADMOB_APP_ID`: Google's official test App ID in Debug and simulator builds; Release device/archive builds use the production App ID configured in `Project.swift` and the checked-in Xcode project.
 - `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's official test Banner Unit ID in Debug and simulator builds; Release device/archive builds use the production Banner Unit ID configured in `Project.swift` and the checked-in Xcode project.
 
@@ -160,7 +160,7 @@ Uninstalling the app removes its local container under normal iOS behavior. Exis
 
 Before submission, confirm:
 
-- Confirm both Release device/archive identifiers use the approved production AdMob App ID and Banner Unit ID; the first release must not disable ads for unpurchased users.
+- Confirm both Release device/archive identifiers use the approved production AdMob App ID and Banner Unit ID; the submitted release must not disable ads for unpurchased users.
 - Confirm the one-time Remove Ads In-App Purchase and restore flow match the submitted build and App Store Connect product status before mentioning them in metadata.
 - Configure and verify the required consent messages and privacy-options behavior in the AdMob console.
 - Verify the five localized ATT purpose strings and authorized/denied paths on physical devices.
@@ -170,7 +170,7 @@ Before submission, confirm:
 - Verify month/week/day navigation, event editing, memo voice input permissions, all-day events, shifts, work records, statistics, holiday sync, and ad layout.
 - Verify all five app languages, system-language mode, week-start settings, and light/dark appearance.
 - Verify offline behavior and invalid or unavailable ICS sources.
-- Verify CloudKit sharing on two physical devices, including invitation acceptance, event editing disabled/enabled with the matching recipient permission, recipient view-only shifts/work records, automatic event/shift/work-record synchronization, shared-to-personal one-time copy and independence, name updates, stopping/leaving a share, recipient-local holidays, and excluded private fields.
+- Verify CloudKit sharing on two physical devices, including invitation acceptance, event editing disabled/enabled with the matching recipient permission, recipient view-only shifts/work records, automatic event/shift/work-record synchronization, repeatable manual shared-to-personal copying with independent results and no ongoing synchronization, name updates, stopping/leaving a share, recipient-local holidays, and excluded private fields.
 
 Release-preparation documents:
 

@@ -18,9 +18,9 @@ The Widget, if included in the submitted build, reads a local calendar snapshot 
 
 The optional Shared Calendar feature uses the user's Apple iCloud account and CloudKit. Events, shifts, and work records assigned to an owned shared calendar synchronize automatically, and the current implementation has no per-category sharing switches. Received calendars are view-only by default; a recipient can create, edit, or delete events only when the owner enables event editing and the recipient has read-write permission. Shifts and work records remain view-only for recipients. Memos, notifications, voice content, hourly rates, pay, transport fees, app settings, advertising state, and purchase state are not included in shared records.
 
-From an owned or received shared calendar's details, Copy to My Calendar performs a one-time local overwrite for all content or an inclusive selected date range. The result is independent and does not modify or remain synchronized with the shared source.
+From an owned or received shared calendar's details, Copy to My Calendar performs a manual independent local overwrite for all content or an inclusive selected date range. It can be run again later; each run does not modify the shared source or establish ongoing synchronization.
 
-Google Mobile Ads is integrated, and the first release displays banner ads after the required consent flow permits ad requests. The current first release includes a one-time Remove Ads In-App Purchase handled by Apple StoreKit; restored purchases are based on Apple transaction entitlements.
+Google Mobile Ads is integrated, and TimeNest displays banner ads for unpurchased users after the required consent flow permits ad requests. TimeNest includes a one-time Remove Ads In-App Purchase handled by Apple StoreKit; restored purchases are based on Apple transaction entitlements.
 
 ## Required Pre-Submission TODO
 
@@ -28,7 +28,7 @@ Google Mobile Ads is integrated, and the first release displays banner ads after
 - [ ] **Advertising and IAP:** Production AdMob App and Banner Unit IDs are configured; confirm banner behavior for unpurchased and purchased states on the exact submitted build and do not submit a build using placeholders or Google's test identifiers. Confirm the Remove Ads product exists in App Store Connect with product ID `com.song.TimeNest.remove_ads`.
 - [ ] **ATT:** Confirm the localized ATT prompt appears after UMP and before advertising on a fresh install, and ensure the review notes, Privacy Manifest, privacy policy, and App Privacy/Tracking answers agree.
 - [ ] **Widget:** Confirm the Widget Extension is included and functional in the submitted build; otherwise remove the Widget paragraph.
-- [ ] **CloudKit sharing:** Confirm the Production schema and iCloud container are deployed, then verify invitation acceptance, events remaining read-only when editing is disabled, recipient event create/edit/delete when editing is enabled with read-write permission, view-only recipient shifts/work records, and shared-to-personal one-time copy on two physical devices with separate Apple IDs.
+- [ ] **CloudKit sharing:** Confirm the Production schema and iCloud container are deployed, then verify invitation acceptance, events remaining read-only when editing is disabled, recipient event create/edit/delete when editing is enabled with read-write permission, view-only recipient shifts/work records, and repeatable manual shared-to-personal copying with independent results on two physical devices with separate Apple IDs.
 - [ ] **Upgrade migration:** Install the App Store `v1.0.0` build on a physical device, create an event, shift, work record, and reminder, then upgrade to the exact candidate and confirm preservation plus Widget refresh. Simulator fixture tests are not equivalent to this check.
 - [ ] **Public pages:** Publish and verify the CloudKit updates in the public privacy and support pages; their HTML sources are not in this repository.
 - [ ] **Review path:** Recheck the named controls and menus on the exact submitted build so the reviewer instructions remain accurate.
@@ -36,7 +36,7 @@ Google Mobile Ads is integrated, and the first release displays banner ads after
 ## Facts That Must Remain Consistent
 
 - No account or demo credentials are required.
-- No developer-operated general cloud sync is provided; optional shared calendars use Apple iCloud/CloudKit. Recipient event editing is permission-based, while shifts and work records remain view-only for recipients. Copy to My Calendar is a one-time independent local copy, not general cloud sync.
+- No developer-operated general cloud sync is provided; optional shared calendars use Apple iCloud/CloudKit. Recipient event editing is permission-based, while shifts and work records remain view-only for recipients. Copy to My Calendar is a repeatable manual action where each run creates an independent local overwrite without ongoing synchronization; it is not general cloud sync.
 - User-created calendar, shift, and work-record data is local-first.
 - Public-holiday subscriptions contact a selected external public ICS provider.
 - The release has a one-time Remove Ads In-App Purchase through Apple StoreKit.
