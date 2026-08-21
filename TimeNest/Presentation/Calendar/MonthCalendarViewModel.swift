@@ -48,6 +48,7 @@ class MonthCalendarViewModel: ObservableObject {
     private var subscriptionObserver: AnyCancellable?
     private var preferencesObserver: AnyCancellable?
     private var sharingObserver: AnyCancellable?
+    private var sharingObservedCalendarID: UUID?
 
     private var notificationObservers: [AnyCancellable] = []
     init(
@@ -98,14 +99,21 @@ class MonthCalendarViewModel: ObservableObject {
     }
 
     private func setupSharingObserver() {
+        sharingObservedCalendarID = calendarSharingStore.selection.calendarID
         sharingObserver = calendarSharingStore.$revision
             .dropFirst()
             .sink { [weak self] _ in
                 Task { @MainActor in
                     guard let self else { return }
-                    self.showingEntryEditor = false
-                    self.showingDayDetail = false
-                    self.exitShiftInputMode()
+                    let selectedCalendarID = self.calendarSharingStore.selection.calendarID
+                    if self.sharingObservedCalendarID != selectedCalendarID {
+                        self.showingEntryEditor = false
+                        self.showingDayDetail = false
+                        self.exitShiftInputMode()
+                    } else if !self.calendarSharingStore.accessPolicy.canCreate {
+                        self.showingEntryEditor = false
+                    }
+                    self.sharingObservedCalendarID = selectedCalendarID
                     await self.reloadMonth()
                 }
             }
