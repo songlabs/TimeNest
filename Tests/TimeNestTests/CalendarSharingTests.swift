@@ -899,6 +899,78 @@ final class CalendarSharingAcceptanceCoordinatorTests: XCTestCase {
 
 @MainActor
 final class CalendarSharingStoreTests: XCTestCase {
+    func testSharingRevisionKeepsPresentedDayDetail() async {
+        let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let store = makeStore(
+            client: MockCalendarSharingClient(),
+            calendars: [.personal(name: "My Calendar")],
+            eventUseCase: eventUseCase
+        )
+        let viewModel = makeViewModel(eventUseCase: eventUseCase, store: store)
+        viewModel.showingDayDetail = true
+
+        await store.synchronizeAll()
+        for _ in 0..<10 { await Task.yield() }
+
+        XCTAssertTrue(viewModel.showingDayDetail)
+    }
+
+    func testSharingRevisionKeepsPresentedEntryEditor() async {
+        let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let store = makeStore(
+            client: MockCalendarSharingClient(),
+            calendars: [.personal(name: "My Calendar")],
+            eventUseCase: eventUseCase
+        )
+        let viewModel = makeViewModel(eventUseCase: eventUseCase, store: store)
+        viewModel.showingEntryEditor = true
+
+        await store.synchronizeAll()
+        for _ in 0..<10 { await Task.yield() }
+
+        XCTAssertTrue(viewModel.showingEntryEditor)
+    }
+
+    func testSharingRevisionStillReloadsMonthGrid() async throws {
+        let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let store = makeStore(
+            client: MockCalendarSharingClient(),
+            calendars: [.personal(name: "My Calendar")],
+            eventUseCase: eventUseCase
+        )
+        let viewModel = makeViewModel(eventUseCase: eventUseCase, store: store)
+        let eventDate = makeTestDate(year: 2026, month: 8, day: 21)
+        viewModel.selectedDate = eventDate
+        await viewModel.reloadMonth()
+        XCTAssertTrue(viewModel.grid?.days.flatMap(\.events).isEmpty == true)
+
+        try await eventUseCase.createEvent(makeEvent(title: "Synced", startDate: eventDate))
+        await store.synchronizeAll()
+        for _ in 0..<10 { await Task.yield() }
+
+        XCTAssertEqual(viewModel.grid?.days.flatMap(\.events).map(\.title), ["Synced"])
+    }
+
+    func testCalendarSelectionChangeClosesPresentations() async {
+        let owned = makeCalendar(kind: .sharedOwned, name: "Family")
+        let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
+        let store = makeStore(
+            client: MockCalendarSharingClient(ownedStates: [makeOwnedState(calendar: owned)]),
+            calendars: [.personal(name: "My Calendar"), owned],
+            eventUseCase: eventUseCase
+        )
+        let viewModel = makeViewModel(eventUseCase: eventUseCase, store: store)
+        viewModel.showingDayDetail = true
+        viewModel.showingEntryEditor = true
+
+        store.select(.calendar(owned.id))
+        for _ in 0..<10 { await Task.yield() }
+
+        XCTAssertEqual(store.selection, .calendar(owned.id))
+        XCTAssertFalse(viewModel.showingDayDetail)
+        XCTAssertFalse(viewModel.showingEntryEditor)
+    }
+
     func testICloudAccountStatusesAreDistinctAndBlockUnavailableRefreshes() async {
         let client = MockCalendarSharingClient()
         client.iCloudStatusResult = .noAccount
