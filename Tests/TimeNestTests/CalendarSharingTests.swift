@@ -910,8 +910,9 @@ final class CalendarSharingStoreTests: XCTestCase {
         viewModel.showingDayDetail = true
 
         await store.synchronizeAll()
-        for _ in 0..<10 { await Task.yield() }
+        let didReload = await waitUntil { viewModel.grid != nil }
 
+        XCTAssertTrue(didReload, "Timed out waiting for the sharing revision reload")
         XCTAssertTrue(viewModel.showingDayDetail)
     }
 
@@ -926,8 +927,9 @@ final class CalendarSharingStoreTests: XCTestCase {
         viewModel.showingEntryEditor = true
 
         await store.synchronizeAll()
-        for _ in 0..<10 { await Task.yield() }
+        let didReload = await waitUntil { viewModel.grid != nil }
 
+        XCTAssertTrue(didReload, "Timed out waiting for the sharing revision reload")
         XCTAssertTrue(viewModel.showingEntryEditor)
     }
 
@@ -946,8 +948,11 @@ final class CalendarSharingStoreTests: XCTestCase {
 
         try await eventUseCase.createEvent(makeEvent(title: "Synced", startDate: eventDate))
         await store.synchronizeAll()
-        for _ in 0..<10 { await Task.yield() }
+        let didReloadSyncedEvent = await waitUntil {
+            viewModel.grid?.days.flatMap(\.events).map(\.title) == ["Synced"]
+        }
 
+        XCTAssertTrue(didReloadSyncedEvent, "Timed out waiting for the synced event to appear")
         XCTAssertEqual(viewModel.grid?.days.flatMap(\.events).map(\.title), ["Synced"])
     }
 
@@ -964,8 +969,11 @@ final class CalendarSharingStoreTests: XCTestCase {
         viewModel.showingEntryEditor = true
 
         store.select(.calendar(owned.id))
-        for _ in 0..<10 { await Task.yield() }
+        let didClosePresentations = await waitUntil {
+            !viewModel.showingDayDetail && !viewModel.showingEntryEditor
+        }
 
+        XCTAssertTrue(didClosePresentations, "Timed out waiting for the calendar selection observer")
         XCTAssertEqual(store.selection, .calendar(owned.id))
         XCTAssertFalse(viewModel.showingDayDetail)
         XCTAssertFalse(viewModel.showingEntryEditor)
@@ -4480,6 +4488,18 @@ final class CalendarSharingStoreTests: XCTestCase {
             eventUseCase: eventUseCase,
             calendarSharingStore: store
         )
+    }
+
+    private func waitUntil(
+        timeout: TimeInterval = 2,
+        condition: () -> Bool
+    ) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition() {
+            guard Date() < deadline else { return false }
+            await Task.yield()
+        }
+        return true
     }
 }
 
