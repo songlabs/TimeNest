@@ -1331,9 +1331,14 @@ private actor ControlledICSDownloader: ICSDownloading {
 }
 
 private final class SpyHolidayCacheRepository: HolidayEventCacheRepositoryProtocol {
+    private let lock = NSLock()
     private var eventsByRegion: [HolidayRegion: [HolidayEvent]]
     private var lastSyncByRegion: [HolidayRegion: Date]
-    private(set) var saveCount = 0
+    private var storedSaveCount = 0
+
+    var saveCount: Int {
+        lock.withLock { storedSaveCount }
+    }
 
     init(
         eventsByRegion: [HolidayRegion: [HolidayEvent]] = [:],
@@ -1344,13 +1349,17 @@ private final class SpyHolidayCacheRepository: HolidayEventCacheRepositoryProtoc
     }
 
     func saveEvents(_ events: [HolidayEvent], for region: HolidayRegion) async throws {
-        saveCount += 1
-        eventsByRegion[region] = events
-        lastSyncByRegion[region] = Date()
+        lock.withLock {
+            storedSaveCount += 1
+            eventsByRegion[region] = events
+            lastSyncByRegion[region] = Date()
+        }
     }
 
     func getEvents(for regions: [HolidayRegion]) -> [HolidayEvent] {
-        regions.flatMap { eventsByRegion[$0] ?? [] }.sorted { $0.date < $1.date }
+        lock.withLock {
+            regions.flatMap { eventsByRegion[$0] ?? [] }.sorted { $0.date < $1.date }
+        }
     }
 
     func getEvents(on date: DateOnly, for regions: [HolidayRegion]) -> [HolidayEvent] {
@@ -1365,12 +1374,14 @@ private final class SpyHolidayCacheRepository: HolidayEventCacheRepositoryProtoc
     }
 
     func clearEvents() async throws {
-        eventsByRegion.removeAll()
-        lastSyncByRegion.removeAll()
+        lock.withLock {
+            eventsByRegion.removeAll()
+            lastSyncByRegion.removeAll()
+        }
     }
 
     func getLastSyncTime(for region: HolidayRegion) -> Date? {
-        lastSyncByRegion[region]
+        lock.withLock { lastSyncByRegion[region] }
     }
 }
 
