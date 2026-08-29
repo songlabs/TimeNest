@@ -389,8 +389,8 @@ struct CalendarPhotoParser {
     static func inferYearMonth(
         from observations: [CalendarOCRObservation]
     ) -> CalendarImportYearMonth? {
-        let reliableText = observations
-            .filter { $0.confidence >= 0.4 }
+        let reliableObservations = observations.filter { $0.confidence >= 0.4 }
+        let reliableText = reliableObservations
             .map(\.text)
             .joined(separator: " ")
         let normalized = reliableText.folding(
@@ -423,6 +423,29 @@ struct CalendarPhotoParser {
            let year = years.first, let month = englishMonths.first,
            let value = CalendarImportYearMonth(year: year, month: month) {
             matches.insert("\(value.year)-\(value.month)")
+        }
+
+        // Some paper calendars print the month as a much larger standalone number.
+        // Only accept it when its size clearly separates it from the date grid.
+        let dateNumberHeights = reliableObservations.compactMap { observation -> Double? in
+            dateAnchor(observation) == nil ? nil : observation.boundingBox.height
+        }.sorted()
+        if years.count == 1, dateNumberHeights.count >= 7,
+           let year = years.first {
+            let medianDateHeight = dateNumberHeights[dateNumberHeights.count / 2]
+            let largeStandaloneMonths = Set(reliableObservations.compactMap { observation -> Int? in
+                guard let anchor = dateAnchor(observation),
+                      anchor.day <= 12,
+                      observation.boundingBox.height >= medianDateHeight * 1.8 else {
+                    return nil
+                }
+                return anchor.day
+            })
+            if largeStandaloneMonths.count == 1,
+               let month = largeStandaloneMonths.first,
+               let value = CalendarImportYearMonth(year: year, month: month) {
+                matches.insert("\(value.year)-\(value.month)")
+            }
         }
 
         guard matches.count == 1,
