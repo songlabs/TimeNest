@@ -119,16 +119,23 @@ final class CalendarPhotoImportTests: XCTestCase {
     func testMissingYearMonthRequiresExplicitSelectionBeforeCandidates() throws {
         var observations = september2026DateObservations(includeHeader: false)
         observations.append(observation("Meeting", day: 1, line: 0))
+        var missingYearMonthDiagnostics: CalendarPhotoImportDiagnostics?
 
         let result = try CalendarPhotoParser().parse(
             observations: observations,
             defaultCalendarID: calendarID,
-            calendar: utcGregorianCalendar()
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { missingYearMonthDiagnostics = $0 }
         )
 
         XCTAssertTrue(result.requiresYearMonthSelection)
         XCTAssertNil(result.yearMonth)
         XCTAssertTrue(result.candidates.isEmpty)
+        XCTAssertNil(missingYearMonthDiagnostics?.manualYearMonth)
+        XCTAssertNil(missingYearMonthDiagnostics?.resolvedYearMonth)
+        XCTAssertEqual(missingYearMonthDiagnostics?.parseStage, .yearMonth)
+        XCTAssertEqual(missingYearMonthDiagnostics?.failureReason, .missingYearMonth)
+        XCTAssertTrue(missingYearMonthDiagnostics?.shouldDisplay == true)
 
         var diagnostics: CalendarPhotoImportDiagnostics?
         let reparsed = try CalendarPhotoParser().parse(
@@ -149,6 +156,43 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(diagnostics?.gridRowCount, 5)
         XCTAssertEqual(diagnostics?.dayRegionCount, 30)
         XCTAssertEqual(diagnostics?.candidateCount, 1)
+        XCTAssertNil(diagnostics?.failureReason)
+        XCTAssertFalse(diagnostics?.shouldDisplay == true)
+    }
+
+    func testDiagnosticsPlainTextContainsOnlyStructuralValues() throws {
+        var observations = september2026DateObservations(includeHeader: false)
+        observations.append(observation("Private Person Appointment", day: 12, line: 0))
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        _ = try CalendarPhotoParser().parse(
+            observations: observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        let text = try XCTUnwrap(diagnostics).plainText
+        XCTAssertTrue(text.hasPrefix("CalendarImportDiagnostics\n"))
+        XCTAssertTrue(text.contains("manualYearMonth=2026-09"))
+        XCTAssertTrue(text.contains("resolvedYearMonth=2026-09"))
+        XCTAssertTrue(text.contains("gridAccepted=true"))
+        XCTAssertTrue(text.contains("stage=completed"))
+        XCTAssertTrue(text.contains("failure=none"))
+        XCTAssertFalse(text.contains("Private Person Appointment"))
+        XCTAssertEqual(
+            text.split(separator: "\n").dropFirst().compactMap {
+                $0.split(separator: "=", maxSplits: 1).first.map(String.init)
+            },
+            [
+                "manualYearMonth", "resolvedYearMonth", "ocrObservations",
+                "meaningful", "pureNumeric", "dateAnchors", "distinctDays",
+                "sundayScore", "mondayScore", "weekStart", "grid", "matched",
+                "rejected", "threshold", "gridAccepted", "dayRegions",
+                "candidates", "stage", "failure"
+            ]
+        )
     }
 
     func testManualYearMonthOverridesConflictingAutomaticInference() throws {
@@ -209,6 +253,7 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(diagnostics?.distinctDayCount, 6)
         XCTAssertEqual(diagnostics?.parseStage, .dateAnchors)
         XCTAssertEqual(diagnostics?.failureReason, .noDateStructure)
+        XCTAssertTrue(diagnostics?.shouldDisplay == true)
         XCTAssertNotEqual(diagnostics?.failureReason, .missingYearMonth)
     }
 
@@ -233,6 +278,7 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(diagnostics?.parseStage, .grid)
         XCTAssertEqual(diagnostics?.failureReason, .noDateStructure)
         XCTAssertEqual(diagnostics?.gridAccepted, false)
+        XCTAssertTrue(diagnostics?.shouldDisplay == true)
         XCTAssertNotEqual(diagnostics?.failureReason, .missingYearMonth)
     }
 
@@ -256,6 +302,7 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(diagnostics?.candidateCount, 0)
         XCTAssertEqual(diagnostics?.parseStage, .candidates)
         XCTAssertEqual(diagnostics?.failureReason, .noCandidates)
+        XCTAssertTrue(diagnostics?.shouldDisplay == true)
     }
 
     func testExistingAutomaticYearMonthFormatsStillParse() throws {

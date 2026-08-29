@@ -572,6 +572,9 @@ enum LocalizedString: String {
     case calendarPhotoImportSavePartialFormat = "calendar_photo_import.save_partial_format"
     case calendarPhotoImportSavePendingFormat = "calendar_photo_import.save_pending_format"
     case calendarPhotoImportSaveMixedFormat = "calendar_photo_import.save_mixed_format"
+    case calendarPhotoImportDiagnostics = "calendar_photo_import.diagnostics"
+    case calendarPhotoImportCopyDiagnostics = "calendar_photo_import.copy_diagnostics"
+    case calendarPhotoImportDiagnosticsCopied = "calendar_photo_import.diagnostics_copied"
 
     // MARK: - Event Editor
 

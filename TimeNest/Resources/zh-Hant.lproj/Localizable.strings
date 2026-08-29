@@ -706,3 +706,6 @@
 "calendar_photo_import.save_partial_format" = "已加入 %d 項，另有 %d 項加入失敗。";
 "calendar_photo_import.save_pending_format" = "已加入 %d 項，另有 %d 項共享行程仍在同步。";
 "calendar_photo_import.save_mixed_format" = "已加入 %d 項，%d 項仍在同步，另有 %d 項加入失敗。";
+"calendar_photo_import.diagnostics" = "診斷資訊";
+"calendar_photo_import.copy_diagnostics" = "複製診斷資訊";
+"calendar_photo_import.diagnostics_copied" = "已複製";

@@ -706,3 +706,6 @@
 "calendar_photo_import.save_partial_format" = "%d events were added. %d events could not be added.";
 "calendar_photo_import.save_pending_format" = "%d events were added. %d shared events are still syncing.";
 "calendar_photo_import.save_mixed_format" = "%d events were added, %d are syncing, and %d could not be added.";
+"calendar_photo_import.diagnostics" = "Diagnostics";
+"calendar_photo_import.copy_diagnostics" = "Copy Diagnostics";
+"calendar_photo_import.diagnostics_copied" = "Copied";

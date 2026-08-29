@@ -706,3 +706,6 @@
 "calendar_photo_import.save_partial_format" = "%d件を追加しました。%d件は追加できませんでした。";
 "calendar_photo_import.save_pending_format" = "%d件を追加しました。共有カレンダーの%d件は同期中です。";
 "calendar_photo_import.save_mixed_format" = "%d件を追加し、%d件は同期中、%d件は追加できませんでした。";
+"calendar_photo_import.diagnostics" = "診断情報";
+"calendar_photo_import.copy_diagnostics" = "診断情報をコピー";
+"calendar_photo_import.diagnostics_copied" = "コピーしました";

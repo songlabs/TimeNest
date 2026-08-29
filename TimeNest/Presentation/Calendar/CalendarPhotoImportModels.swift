@@ -199,7 +199,7 @@ enum CalendarPhotoImportWeekStart: String, Equatable, Sendable {
     case monday
 }
 
-enum CalendarPhotoImportParseError: Error, Equatable, Sendable {
+enum CalendarPhotoImportParseError: String, Error, Equatable, Sendable {
     case missingYearMonth
     case noText
     case noDateStructure
@@ -227,6 +227,64 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     let candidateCount: Int
     let parseStage: CalendarPhotoImportParseStage
     let failureReason: CalendarPhotoImportParseError?
+
+    var shouldDisplay: Bool {
+        failureReason != nil || candidateCount == 0
+    }
+
+    var displayFields: [(label: String, value: String)] {
+        [
+            ("Manual YM", Self.yearMonthText(manualYearMonth)),
+            ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
+            ("OCR", "\(observationCount)"),
+            ("Meaningful", "\(meaningfulObservationCount)"),
+            ("Pure Numeric", "\(pureNumericObservationCount)"),
+            ("Date Anchors", "\(dateAnchorCount)"),
+            ("Distinct Days", "\(distinctDayCount)"),
+            ("Sunday Score", "\(sundayStartScore)"),
+            ("Monday Score", "\(mondayStartScore)"),
+            ("Week Start", selectedWeekStart?.rawValue ?? "none"),
+            ("Grid", "\(gridColumnCount) × \(gridRowCount)"),
+            ("Matched", "\(gridMatchedAnchorCount)"),
+            ("Rejected", "\(gridRejectedAnchorCount)"),
+            ("Threshold", "\(gridAcceptanceThreshold)"),
+            ("Accepted", "\(gridAccepted)"),
+            ("Day Regions", "\(dayRegionCount)"),
+            ("Candidates", "\(candidateCount)"),
+            ("Stage", parseStage.rawValue),
+            ("Failure", failureReason?.rawValue ?? "none")
+        ]
+    }
+
+    var plainText: String {
+        [
+            "CalendarImportDiagnostics",
+            "manualYearMonth=\(Self.yearMonthText(manualYearMonth))",
+            "resolvedYearMonth=\(Self.yearMonthText(resolvedYearMonth))",
+            "ocrObservations=\(observationCount)",
+            "meaningful=\(meaningfulObservationCount)",
+            "pureNumeric=\(pureNumericObservationCount)",
+            "dateAnchors=\(dateAnchorCount)",
+            "distinctDays=\(distinctDayCount)",
+            "sundayScore=\(sundayStartScore)",
+            "mondayScore=\(mondayStartScore)",
+            "weekStart=\(selectedWeekStart?.rawValue ?? "none")",
+            "grid=\(gridColumnCount)x\(gridRowCount)",
+            "matched=\(gridMatchedAnchorCount)",
+            "rejected=\(gridRejectedAnchorCount)",
+            "threshold=\(gridAcceptanceThreshold)",
+            "gridAccepted=\(gridAccepted)",
+            "dayRegions=\(dayRegionCount)",
+            "candidates=\(candidateCount)",
+            "stage=\(parseStage.rawValue)",
+            "failure=\(failureReason?.rawValue ?? "none")"
+        ].joined(separator: "\n")
+    }
+
+    private static func yearMonthText(_ yearMonth: CalendarImportYearMonth?) -> String {
+        guard let yearMonth else { return "none" }
+        return String(format: "%04d-%02d", yearMonth.year, yearMonth.month)
+    }
 }
 
 struct CalendarImportTimeParser {

@@ -352,6 +352,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     @Published private(set) var step: CalendarPhotoImportStep = .source
     @Published var candidates: [CalendarImportCandidate] = []
     @Published private(set) var recognizedYearMonth: CalendarImportYearMonth?
+    @Published private(set) var latestDiagnostics: CalendarPhotoImportDiagnostics?
     @Published var monthSelection: Date
     @Published private(set) var isSaving = false
     @Published var failureMessage: String?
@@ -390,9 +391,15 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             && !isSaving
     }
 
+    var visibleDiagnostics: CalendarPhotoImportDiagnostics? {
+        guard let latestDiagnostics, latestDiagnostics.shouldDisplay else { return nil }
+        return latestDiagnostics
+    }
+
     func process(image: UIImage, languageCode: String) async {
         step = .recognizing
         failureMessage = nil
+        latestDiagnostics = nil
         do {
             let normalizedImage = try CalendarPhotoImportImageNormalizer
                 .normalizedCGImage(from: image)
@@ -404,7 +411,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             try applyParse(overridingYearMonth: nil)
             step = .review
         } catch {
-            step = .source
+            step = latestDiagnostics == nil ? .source : .review
             failureMessage = localizedMessage(for: error)
         }
     }
@@ -555,13 +562,24 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             observations: observations,
             overridingYearMonth: overridingYearMonth,
             defaultCalendarID: defaultCalendarID,
-            diagnosticsHandler: Self.debugLog
+            diagnosticsHandler: { [weak self] diagnostics in
+                self?.recordDiagnostics(diagnostics)
+            }
         )
         recognizedYearMonth = result.yearMonth
         candidates = result.candidates
         if let date = result.yearMonth?.date() {
             monthSelection = date
         }
+    }
+
+    private func recordDiagnostics(_ diagnostics: CalendarPhotoImportDiagnostics) {
+        latestDiagnostics = diagnostics
+        recognizedYearMonth = diagnostics.resolvedYearMonth
+        if let date = diagnostics.resolvedYearMonth?.date() {
+            monthSelection = date
+        }
+        Self.debugLog(diagnostics)
     }
 
     private static func debugLog(_ diagnostics: CalendarPhotoImportDiagnostics) {
@@ -686,6 +704,7 @@ struct CalendarPhotoImportView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showingCamera = false
     @State private var showingCameraPermissionAlert = false
+    @State private var diagnosticsCopied = false
     let onCompleted: () -> Void
 
     init(
@@ -754,7 +773,10 @@ struct CalendarPhotoImportView: View {
         .alert(
             localization.localized(.calendarPhotoImportErrorTitle),
             isPresented: Binding(
-                get: { viewModel.failureMessage != nil },
+                get: {
+                    viewModel.failureMessage != nil
+                        && viewModel.visibleDiagnostics == nil
+                },
                 set: { if !$0 { viewModel.failureMessage = nil } }
             )
         ) {
@@ -775,6 +797,9 @@ struct CalendarPhotoImportView: View {
             }
         } message: {
             Text(localization.localized(.calendarPhotoImportCameraPermissionMessage))
+        }
+        .onChange(of: viewModel.latestDiagnostics) { _, _ in
+            diagnosticsCopied = false
         }
     }
 
@@ -894,6 +919,16 @@ struct CalendarPhotoImportView: View {
                     viewModel.applySelectedYearMonth()
                 }
                 .accessibilityIdentifier("calendarPhotoImport.applyYearMonth")
+
+                if let failureMessage = viewModel.failureMessage,
+                   viewModel.visibleDiagnostics != nil {
+                    Label(failureMessage, systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                }
+            }
+
+            if let diagnostics = viewModel.visibleDiagnostics {
+                diagnosticsSection(diagnostics)
             }
 
             ForEach($viewModel.candidates) { $candidate in
@@ -928,6 +963,49 @@ struct CalendarPhotoImportView: View {
             .padding(.vertical, 8)
             .background(.ultraThinMaterial)
             .accessibilityIdentifier("calendarPhotoImport.save")
+        }
+    }
+
+    @ViewBuilder
+    private func diagnosticsSection(_ diagnostics: CalendarPhotoImportDiagnostics) -> some View {
+        Section {
+            DisclosureGroup(localization.localized(.calendarPhotoImportDiagnostics)) {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(Array(diagnostics.displayFields.enumerated()), id: \.offset) { _, field in
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(verbatim: field.label)
+                                .foregroundStyle(.secondary)
+                            Spacer(minLength: 16)
+                            Text(verbatim: field.value)
+                                .multilineTextAlignment(.trailing)
+                        }
+                        .font(.caption.monospaced())
+                    }
+
+                    Button {
+                        UIPasteboard.general.string = diagnostics.plainText
+                        diagnosticsCopied = true
+                    } label: {
+                        Label(
+                            localization.localized(.calendarPhotoImportCopyDiagnostics),
+                            systemImage: "doc.on.doc"
+                        )
+                    }
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("calendarPhotoImport.copyDiagnostics")
+
+                    if diagnosticsCopied {
+                        Label(
+                            localization.localized(.calendarPhotoImportDiagnosticsCopied),
+                            systemImage: "checkmark.circle.fill"
+                        )
+                        .font(.footnote)
+                        .foregroundStyle(.green)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+            .accessibilityIdentifier("calendarPhotoImport.diagnostics")
         }
     }
 
