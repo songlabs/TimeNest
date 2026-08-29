@@ -184,10 +184,49 @@ struct CalendarPhotoImportParseResult: Equatable {
     var requiresYearMonthSelection: Bool { yearMonth == nil }
 }
 
-enum CalendarPhotoImportParseError: Error, Equatable {
+enum CalendarPhotoImportParseStage: String, Equatable, Sendable {
+    case text
+    case yearMonth
+    case dateAnchors
+    case grid
+    case dayRegions
+    case candidates
+    case completed
+}
+
+enum CalendarPhotoImportWeekStart: String, Equatable, Sendable {
+    case sunday
+    case monday
+}
+
+enum CalendarPhotoImportParseError: Error, Equatable, Sendable {
+    case missingYearMonth
     case noText
     case noDateStructure
     case noCandidates
+}
+
+struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
+    let manualYearMonth: CalendarImportYearMonth?
+    let resolvedYearMonth: CalendarImportYearMonth?
+    let observationCount: Int
+    let meaningfulObservationCount: Int
+    let pureNumericObservationCount: Int
+    let dateAnchorCount: Int
+    let distinctDayCount: Int
+    let sundayStartScore: Int
+    let mondayStartScore: Int
+    let selectedWeekStart: CalendarPhotoImportWeekStart?
+    let gridColumnCount: Int
+    let gridRowCount: Int
+    let gridMatchedAnchorCount: Int
+    let gridRejectedAnchorCount: Int
+    let gridAcceptanceThreshold: Int
+    let gridAccepted: Bool
+    let dayRegionCount: Int
+    let candidateCount: Int
+    let parseStage: CalendarPhotoImportParseStage
+    let failureReason: CalendarPhotoImportParseError?
 }
 
 struct CalendarImportTimeParser {
@@ -289,6 +328,14 @@ struct CalendarPhotoParser {
         let anchorsByDay: [Int: DateAnchor]
     }
 
+    private struct GridEvaluation {
+        let fit: GridFit?
+        let bestAttempt: GridFit?
+        let sundayStartScore: Int
+        let mondayStartScore: Int
+        let selectedWeekStart: CalendarPhotoImportWeekStart?
+    }
+
     private struct LineGroup {
         var observations: [CalendarOCRObservation]
 
@@ -318,24 +365,86 @@ struct CalendarPhotoParser {
         "december": 12, "dec": 12
     ]
 
+    private static let minimumGridMatchedAnchorCount = 7
+
     func parse(
         observations: [CalendarOCRObservation],
         overridingYearMonth: CalendarImportYearMonth? = nil,
         defaultCalendarID: UUID,
-        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
+        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian),
+        diagnosticsHandler: ((CalendarPhotoImportDiagnostics) -> Void)? = nil
     ) throws -> CalendarPhotoImportParseResult {
         let meaningful = observations.filter {
             !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
-        guard !meaningful.isEmpty else { throw CalendarPhotoImportParseError.noText }
+        let pureNumericObservationCount = meaningful.filter(Self.isPureNumeric).count
+
+        func report(
+            yearMonth: CalendarImportYearMonth?,
+            anchors: [DateAnchor] = [],
+            gridEvaluation: GridEvaluation? = nil,
+            dayRegionCount: Int = 0,
+            candidateCount: Int = 0,
+            stage: CalendarPhotoImportParseStage,
+            failureReason: CalendarPhotoImportParseError? = nil
+        ) {
+            let selectedGrid = gridEvaluation?.fit ?? gridEvaluation?.bestAttempt
+            let matchedAnchorCount = selectedGrid?.score ?? 0
+            diagnosticsHandler?(CalendarPhotoImportDiagnostics(
+                manualYearMonth: overridingYearMonth,
+                resolvedYearMonth: yearMonth,
+                observationCount: observations.count,
+                meaningfulObservationCount: meaningful.count,
+                pureNumericObservationCount: pureNumericObservationCount,
+                dateAnchorCount: anchors.count,
+                distinctDayCount: Set(anchors.map(\.day)).count,
+                sundayStartScore: gridEvaluation?.sundayStartScore ?? 0,
+                mondayStartScore: gridEvaluation?.mondayStartScore ?? 0,
+                selectedWeekStart: gridEvaluation?.selectedWeekStart,
+                gridColumnCount: selectedGrid?.xCenters.count ?? 0,
+                gridRowCount: selectedGrid?.yCenters.count ?? 0,
+                gridMatchedAnchorCount: matchedAnchorCount,
+                gridRejectedAnchorCount: max(0, anchors.count - matchedAnchorCount),
+                gridAcceptanceThreshold: Self.minimumGridMatchedAnchorCount,
+                gridAccepted: gridEvaluation?.fit != nil,
+                dayRegionCount: dayRegionCount,
+                candidateCount: candidateCount,
+                parseStage: stage,
+                failureReason: failureReason
+            ))
+        }
+
+        guard !meaningful.isEmpty else {
+            report(
+                yearMonth: overridingYearMonth,
+                stage: .text,
+                failureReason: .noText
+            )
+            throw CalendarPhotoImportParseError.noText
+        }
+
+        // A user-selected value is authoritative. Resolve it before any date-grid
+        // failure so later stages cannot be mistaken for another OCR month failure.
+        let yearMonth = overridingYearMonth ?? Self.inferYearMonth(from: meaningful)
 
         let numericAnchors = meaningful.compactMap(Self.dateAnchor)
         guard Set(numericAnchors.map(\.day)).count >= 7 else {
+            report(
+                yearMonth: yearMonth,
+                anchors: numericAnchors,
+                stage: .dateAnchors,
+                failureReason: .noDateStructure
+            )
             throw CalendarPhotoImportParseError.noDateStructure
         }
 
-        let yearMonth = overridingYearMonth ?? Self.inferYearMonth(from: meaningful)
         guard let yearMonth else {
+            report(
+                yearMonth: nil,
+                anchors: numericAnchors,
+                stage: .yearMonth,
+                failureReason: .missingYearMonth
+            )
             return CalendarPhotoImportParseResult(
                 yearMonth: nil,
                 candidates: [],
@@ -346,13 +455,30 @@ struct CalendarPhotoParser {
         var calendar = inputCalendar
         calendar.locale = Locale(identifier: "en_US_POSIX")
         guard let monthStart = yearMonth.date(calendar: calendar),
-              let dayRange = calendar.range(of: .day, in: .month, for: monthStart),
-              let fit = fitGrid(
+              let dayRange = calendar.range(of: .day, in: .month, for: monthStart) else {
+            report(
+                yearMonth: yearMonth,
                 anchors: numericAnchors,
-                monthStart: monthStart,
-                dayCount: dayRange.count,
-                calendar: calendar
-              ) else {
+                stage: .grid,
+                failureReason: .noDateStructure
+            )
+            throw CalendarPhotoImportParseError.noDateStructure
+        }
+
+        let gridEvaluation = evaluateGrid(
+            anchors: numericAnchors,
+            monthStart: monthStart,
+            dayCount: dayRange.count,
+            calendar: calendar
+        )
+        guard let fit = gridEvaluation.fit else {
+            report(
+                yearMonth: yearMonth,
+                anchors: numericAnchors,
+                gridEvaluation: gridEvaluation,
+                stage: .grid,
+                failureReason: .noDateStructure
+            )
             throw CalendarPhotoImportParseError.noDateStructure
         }
 
@@ -360,6 +486,17 @@ struct CalendarPhotoParser {
             fit: fit,
             dayCount: dayRange.count
         )
+        guard regions.count == dayRange.count else {
+            report(
+                yearMonth: yearMonth,
+                anchors: numericAnchors,
+                gridEvaluation: gridEvaluation,
+                dayRegionCount: regions.count,
+                stage: .dayRegions,
+                failureReason: .noDateStructure
+            )
+            throw CalendarPhotoImportParseError.noDateStructure
+        }
         let anchorObservations = Set(
             fit.anchorsByDay.values.map { Self.observationIdentity($0.observation) }
         )
@@ -371,7 +508,25 @@ struct CalendarPhotoParser {
             calendarID: defaultCalendarID,
             calendar: calendar
         )
-        guard !candidates.isEmpty else { throw CalendarPhotoImportParseError.noCandidates }
+        guard !candidates.isEmpty else {
+            report(
+                yearMonth: yearMonth,
+                anchors: numericAnchors,
+                gridEvaluation: gridEvaluation,
+                dayRegionCount: regions.count,
+                stage: .candidates,
+                failureReason: .noCandidates
+            )
+            throw CalendarPhotoImportParseError.noCandidates
+        }
+        report(
+            yearMonth: yearMonth,
+            anchors: numericAnchors,
+            gridEvaluation: gridEvaluation,
+            dayRegionCount: regions.count,
+            candidateCount: candidates.count,
+            stage: .completed
+        )
         return CalendarPhotoImportParseResult(
             yearMonth: yearMonth,
             candidates: candidates,
@@ -507,28 +662,79 @@ struct CalendarPhotoParser {
         return DateAnchor(day: day, observation: observation)
     }
 
+    private static func isPureNumeric(
+        _ observation: CalendarOCRObservation
+    ) -> Bool {
+        let normalized = observation.text
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: .widthInsensitive, locale: Locale(identifier: "en_US_POSIX"))
+        return normalized.range(of: #"^\d+$"#, options: .regularExpression) != nil
+    }
+
     private func fitGrid(
         anchors: [DateAnchor],
         monthStart: Date,
         dayCount: Int,
         calendar: Calendar
     ) -> GridFit? {
-        let firstColumns = [
-            Self.column(
-                for: monthStart,
-                weekStartsOnMonday: false,
-                calendar: calendar
-            ),
-            Self.column(
-                for: monthStart,
-                weekStartsOnMonday: true,
-                calendar: calendar
-            )
-        ]
-        return fitGrid(
+        evaluateGrid(
+            anchors: anchors,
+            monthStart: monthStart,
+            dayCount: dayCount,
+            calendar: calendar
+        ).fit
+    }
+
+    private func evaluateGrid(
+        anchors: [DateAnchor],
+        monthStart: Date,
+        dayCount: Int,
+        calendar: Calendar
+    ) -> GridEvaluation {
+        let sundayFirstColumn = Self.column(
+            for: monthStart,
+            weekStartsOnMonday: false,
+            calendar: calendar
+        )
+        let mondayFirstColumn = Self.column(
+            for: monthStart,
+            weekStartsOnMonday: true,
+            calendar: calendar
+        )
+        let fit = fitGrid(
             anchors: anchors,
             dayCount: dayCount,
-            firstColumns: firstColumns
+            firstColumns: [sundayFirstColumn, mondayFirstColumn]
+        )
+        let sundayAttempt = fitGrid(
+            anchors: anchors,
+            dayCount: dayCount,
+            firstColumns: [sundayFirstColumn],
+            requiresReliableStructure: false
+        )
+        let mondayAttempt = fitGrid(
+            anchors: anchors,
+            dayCount: dayCount,
+            firstColumns: [mondayFirstColumn],
+            requiresReliableStructure: false
+        )
+        let bestAttempt = [
+            (CalendarPhotoImportWeekStart.sunday, sundayAttempt),
+            (CalendarPhotoImportWeekStart.monday, mondayAttempt)
+        ].compactMap { weekStart, fit -> (CalendarPhotoImportWeekStart, GridFit)? in
+            guard let fit else { return nil }
+            return (weekStart, fit)
+        }.max {
+            Self.isWeakerFit($0.1, $1.1)
+        }
+        return GridEvaluation(
+            fit: fit,
+            bestAttempt: bestAttempt?.1,
+            sundayStartScore: sundayAttempt?.score ?? 0,
+            mondayStartScore: mondayAttempt?.score ?? 0,
+            selectedWeekStart: fit.map {
+                $0.firstColumn == sundayFirstColumn ? .sunday : .monday
+            } ?? bestAttempt?.0
         )
     }
 
@@ -551,7 +757,8 @@ struct CalendarPhotoParser {
     private func fitGrid(
         anchors: [DateAnchor],
         dayCount: Int,
-        firstColumns: [Int]
+        firstColumns: [Int],
+        requiresReliableStructure: Bool = true
     ) -> GridFit? {
         guard let xCenters = Self.clusterCenters(
             anchors.map { $0.observation.boundingBox.midX },
@@ -594,10 +801,12 @@ struct CalendarPhotoParser {
 
                 let distinctRows = Set(matched.keys.map { (firstColumn + $0 - 1) / 7 })
                 let distinctColumns = Set(matched.keys.map { (firstColumn + $0 - 1) % 7 })
-                guard matched.count >= 7,
-                      distinctRows.count >= 2,
-                      distinctColumns.count >= 4 else {
-                    continue
+                if requiresReliableStructure {
+                    guard matched.count >= Self.minimumGridMatchedAnchorCount,
+                          distinctRows.count >= 2,
+                          distinctColumns.count >= 4 else {
+                        continue
+                    }
                 }
                 fits.append(GridFit(
                     score: matched.count,

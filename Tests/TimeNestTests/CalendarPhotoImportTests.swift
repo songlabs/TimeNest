@@ -130,13 +130,159 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertNil(result.yearMonth)
         XCTAssertTrue(result.candidates.isEmpty)
 
+        var diagnostics: CalendarPhotoImportDiagnostics?
         let reparsed = try CalendarPhotoParser().parse(
             observations: observations,
             overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
             defaultCalendarID: calendarID,
-            calendar: utcGregorianCalendar()
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
         )
+        XCTAssertEqual(reparsed.yearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(reparsed.dayRegions.count, 30)
         XCTAssertEqual(reparsed.candidates.map(\.title), ["Meeting"])
+        XCTAssertEqual(diagnostics?.manualYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(diagnostics?.resolvedYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(diagnostics?.parseStage, .completed)
+        XCTAssertEqual(diagnostics?.gridAccepted, true)
+        XCTAssertEqual(diagnostics?.gridColumnCount, 7)
+        XCTAssertEqual(diagnostics?.gridRowCount, 5)
+        XCTAssertEqual(diagnostics?.dayRegionCount, 30)
+        XCTAssertEqual(diagnostics?.candidateCount, 1)
+    }
+
+    func testManualYearMonthOverridesConflictingAutomaticInference() throws {
+        var observations = september2026DateObservations(includeHeader: false)
+        observations.append(contentsOf: [
+            CalendarOCRObservation(
+                text: "2025/8",
+                confidence: 0.99,
+                boundingBox: CalendarOCRBoundingBox(x: 0.25, y: 0.93, width: 0.5, height: 0.04)
+            ),
+            observation("Meeting", day: 12, line: 0)
+        ])
+
+        XCTAssertEqual(
+            CalendarPhotoParser.inferYearMonth(from: observations),
+            CalendarImportYearMonth(year: 2025, month: 8)
+        )
+
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        let result = try CalendarPhotoParser().parse(
+            observations: observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        XCTAssertEqual(result.yearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(result.dayRegions.count, 30)
+        XCTAssertEqual(result.candidates.map(\.title), ["Meeting"])
+        XCTAssertEqual(
+            dateComponents(try XCTUnwrap(result.candidates.first).date),
+            DateComponents(year: 2026, month: 9, day: 12)
+        )
+        XCTAssertEqual(diagnostics?.manualYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(diagnostics?.resolvedYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+    }
+
+    func testManualYearMonthWithInsufficientAnchorsReportsDateStructureStage() {
+        let observations = (1...6).map { day in
+            observation("\(day)", column: day - 1, row: 0, line: -1)
+        }
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        XCTAssertThrowsError(try CalendarPhotoParser().parse(
+            observations: observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )) { error in
+            XCTAssertEqual(error as? CalendarPhotoImportParseError, .noDateStructure)
+        }
+
+        XCTAssertEqual(diagnostics?.manualYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(diagnostics?.resolvedYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(diagnostics?.dateAnchorCount, 6)
+        XCTAssertEqual(diagnostics?.distinctDayCount, 6)
+        XCTAssertEqual(diagnostics?.parseStage, .dateAnchors)
+        XCTAssertEqual(diagnostics?.failureReason, .noDateStructure)
+        XCTAssertNotEqual(diagnostics?.failureReason, .missingYearMonth)
+    }
+
+    func testManualYearMonthWithUnusableGridReportsGridStage() {
+        let observations = (1...7).map { day in
+            observation("\(day)", column: day - 1, row: 0, line: -1)
+        }
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        XCTAssertThrowsError(try CalendarPhotoParser().parse(
+            observations: observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )) { error in
+            XCTAssertEqual(error as? CalendarPhotoImportParseError, .noDateStructure)
+        }
+
+        XCTAssertEqual(diagnostics?.resolvedYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(diagnostics?.dateAnchorCount, 7)
+        XCTAssertEqual(diagnostics?.parseStage, .grid)
+        XCTAssertEqual(diagnostics?.failureReason, .noDateStructure)
+        XCTAssertEqual(diagnostics?.gridAccepted, false)
+        XCTAssertNotEqual(diagnostics?.failureReason, .missingYearMonth)
+    }
+
+    func testManualYearMonthWithGridButNoContentReportsCandidateStage() {
+        let observations = september2026DateObservations(includeHeader: false)
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        XCTAssertThrowsError(try CalendarPhotoParser().parse(
+            observations: observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )) { error in
+            XCTAssertEqual(error as? CalendarPhotoImportParseError, .noCandidates)
+        }
+
+        XCTAssertEqual(diagnostics?.resolvedYearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(diagnostics?.gridAccepted, true)
+        XCTAssertEqual(diagnostics?.dayRegionCount, 30)
+        XCTAssertEqual(diagnostics?.candidateCount, 0)
+        XCTAssertEqual(diagnostics?.parseStage, .candidates)
+        XCTAssertEqual(diagnostics?.failureReason, .noCandidates)
+    }
+
+    func testExistingAutomaticYearMonthFormatsStillParse() throws {
+        for header in ["2026年9月", "2026/9", "2026-9", "2026 + SEPTEMBER"] {
+            var observations = september2026DateObservations(includeHeader: false)
+            observations.append(contentsOf: [
+                CalendarOCRObservation(
+                    text: header,
+                    confidence: 0.99,
+                    boundingBox: CalendarOCRBoundingBox(x: 0.25, y: 0.93, width: 0.5, height: 0.04)
+                ),
+                observation("Meeting", day: 12, line: 0)
+            ])
+
+            let result = try CalendarPhotoParser().parse(
+                observations: observations,
+                defaultCalendarID: calendarID,
+                calendar: utcGregorianCalendar()
+            )
+
+            XCTAssertEqual(
+                result.yearMonth,
+                CalendarImportYearMonth(year: 2026, month: 9),
+                "Failed header: \(header)"
+            )
+            XCTAssertEqual(result.candidates.map(\.title), ["Meeting"])
+        }
     }
 
     func testLargeStandaloneMonthNumberPairsWithIndependentYear() throws {

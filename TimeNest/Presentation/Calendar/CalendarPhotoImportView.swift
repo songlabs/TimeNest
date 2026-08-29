@@ -545,16 +545,53 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         guard let defaultCalendarID = defaultCalendarID else {
             throw CalendarPhotoImportImageError.noWritableCalendar
         }
+        failureMessage = nil
+        candidates = []
+        recognizedYearMonth = overridingYearMonth
+        if let date = overridingYearMonth?.date() {
+            monthSelection = date
+        }
         let result = try parser.parse(
             observations: observations,
             overridingYearMonth: overridingYearMonth,
-            defaultCalendarID: defaultCalendarID
+            defaultCalendarID: defaultCalendarID,
+            diagnosticsHandler: Self.debugLog
         )
         recognizedYearMonth = result.yearMonth
         candidates = result.candidates
         if let date = result.yearMonth?.date() {
             monthSelection = date
         }
+    }
+
+    private static func debugLog(_ diagnostics: CalendarPhotoImportDiagnostics) {
+        #if DEBUG
+        func value(_ yearMonth: CalendarImportYearMonth?) -> String {
+            guard let yearMonth else { return "none" }
+            return String(format: "%04d-%02d", yearMonth.year, yearMonth.month)
+        }
+        print(
+            "[CalendarImport] manualYearMonth=\(value(diagnostics.manualYearMonth)) "
+                + "resolvedYearMonth=\(value(diagnostics.resolvedYearMonth)) "
+                + "ocrObservations=\(diagnostics.observationCount) "
+                + "meaningful=\(diagnostics.meaningfulObservationCount) "
+                + "pureNumeric=\(diagnostics.pureNumericObservationCount) "
+                + "dateAnchors=\(diagnostics.dateAnchorCount) "
+                + "distinctDays=\(diagnostics.distinctDayCount) "
+                + "sundayScore=\(diagnostics.sundayStartScore) "
+                + "mondayScore=\(diagnostics.mondayStartScore) "
+                + "weekStart=\(diagnostics.selectedWeekStart?.rawValue ?? "none") "
+                + "grid=\(diagnostics.gridColumnCount)x\(diagnostics.gridRowCount) "
+                + "matched=\(diagnostics.gridMatchedAnchorCount) "
+                + "rejected=\(diagnostics.gridRejectedAnchorCount) "
+                + "threshold=\(diagnostics.gridAcceptanceThreshold) "
+                + "gridAccepted=\(diagnostics.gridAccepted) "
+                + "dayRegions=\(diagnostics.dayRegionCount) "
+                + "candidates=\(diagnostics.candidateCount) "
+                + "stage=\(diagnostics.parseStage.rawValue) "
+                + "failure=\(diagnostics.failureReason.map(String.init(describing:)) ?? "none")"
+        )
+        #endif
     }
 
     private var defaultCalendarID: UUID? {
@@ -624,6 +661,8 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
 
     private func localizedMessage(for error: Error) -> String {
         switch error {
+        case CalendarPhotoImportParseError.missingYearMonth:
+            return LocalizationManager.shared.localized(.calendarPhotoImportYearMonthRequired)
         case CalendarPhotoImportParseError.noText:
             return LocalizationManager.shared.localized(.calendarPhotoImportNoText)
         case CalendarPhotoImportParseError.noDateStructure:
