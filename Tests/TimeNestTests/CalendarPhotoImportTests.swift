@@ -139,6 +139,62 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(reparsed.candidates.map(\.title), ["Meeting"])
     }
 
+    func testLargeStandaloneMonthNumberPairsWithIndependentYear() throws {
+        var observations = september2026DateObservations(includeHeader: false)
+        observations.append(contentsOf: [
+            CalendarOCRObservation(
+                text: "9",
+                confidence: 0.99,
+                boundingBox: CalendarOCRBoundingBox(x: 0.05, y: 0.91, width: 0.08, height: 0.10)
+            ),
+            CalendarOCRObservation(
+                text: "2026",
+                confidence: 0.99,
+                boundingBox: CalendarOCRBoundingBox(x: 0.16, y: 0.94, width: 0.10, height: 0.035)
+            ),
+            CalendarOCRObservation(
+                text: "SEPTEM8ER",
+                confidence: 0.82,
+                boundingBox: CalendarOCRBoundingBox(x: 0.16, y: 0.90, width: 0.18, height: 0.03)
+            ),
+            observation("8:50-16:30 Work", day: 6, line: 0)
+        ])
+
+        let result = try CalendarPhotoParser().parse(
+            observations: observations,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+
+        XCTAssertEqual(result.yearMonth, CalendarImportYearMonth(year: 2026, month: 9))
+        XCTAssertEqual(result.candidates.map(\.title), ["Work"])
+        XCTAssertEqual(
+            dateComponents(try XCTUnwrap(result.candidates.first).date),
+            DateComponents(year: 2026, month: 9, day: 6)
+        )
+    }
+
+    func testOrdinaryDateNumbersDoNotGuessMonth() throws {
+        var observations = september2026DateObservations(includeHeader: false)
+        observations.append(contentsOf: [
+            CalendarOCRObservation(
+                text: "2026",
+                confidence: 0.99,
+                boundingBox: CalendarOCRBoundingBox(x: 0.16, y: 0.94, width: 0.10, height: 0.035)
+            ),
+            observation("Meeting", day: 9, line: 0)
+        ])
+
+        let result = try CalendarPhotoParser().parse(
+            observations: observations,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+
+        XCTAssertNil(result.yearMonth)
+        XCTAssertTrue(result.candidates.isEmpty)
+    }
+
     func testDirectionSelectorCorrectsEveryQuarterTurn() throws {
         var upright = september2026DateObservations()
         upright.append(observation("Meeting", day: 9, line: 0))
