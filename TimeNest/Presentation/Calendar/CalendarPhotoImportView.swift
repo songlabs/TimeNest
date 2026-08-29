@@ -139,6 +139,7 @@ private enum CalendarPhotoImportImageNormalizer {
 private struct CalendarVisionOCRResult: Sendable {
     let rotation: CalendarPhotoRotation
     let observations: [CalendarOCRObservation]
+    let orientationDiagnostics: CalendarPhotoOrientationDiagnostics
 }
 
 private struct CalendarVisionOCRService {
@@ -217,11 +218,21 @@ private struct CalendarVisionOCRService {
             guard let accurateSelection else {
                 throw CalendarPhotoImportImageError.invalidImage
             }
+            let hasAllAccurateCandidates = accurateCandidates.count
+                == CalendarPhotoRotation.allCases.count
+            let orientationDiagnostics = CalendarPhotoOrientationDiagnostics(
+                selectedRotation: accurateSelection.rotation,
+                evidencePhase: hasAllAccurateCandidates ? .accurate : .fast,
+                candidates: hasAllAccurateCandidates
+                    ? accurateSelection.candidateDiagnostics
+                    : fastSelection.candidateDiagnostics
+            )
             Self.debugLog(candidates: accurateCandidates, phase: "accurate")
             Self.debugLog(selection: accurateSelection)
             return CalendarVisionOCRResult(
                 rotation: accurateSelection.rotation,
-                observations: accurateSelection.observations
+                observations: accurateSelection.observations,
+                orientationDiagnostics: orientationDiagnostics
             )
         }.value
     }
@@ -362,6 +373,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     private let parser = CalendarPhotoParser()
     private let ocrService = CalendarVisionOCRService()
     private var observations: [CalendarOCRObservation] = []
+    private var orientationDiagnostics: CalendarPhotoOrientationDiagnostics?
 
     init(
         eventUseCase: EventUseCase,
@@ -408,6 +420,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                 preferredLanguageCode: languageCode
             )
             observations = recognized.observations
+            orientationDiagnostics = recognized.orientationDiagnostics
             try applyParse(overridingYearMonth: nil)
             step = .review
         } catch {
@@ -440,8 +453,10 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
 
     func startOver() {
         observations = []
+        orientationDiagnostics = nil
         candidates = []
         recognizedYearMonth = nil
+        latestDiagnostics = nil
         failureMessage = nil
         step = .source
     }
@@ -562,6 +577,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             observations: observations,
             overridingYearMonth: overridingYearMonth,
             defaultCalendarID: defaultCalendarID,
+            orientationDiagnostics: orientationDiagnostics,
             diagnosticsHandler: { [weak self] diagnostics in
                 self?.recordDiagnostics(diagnostics)
             }

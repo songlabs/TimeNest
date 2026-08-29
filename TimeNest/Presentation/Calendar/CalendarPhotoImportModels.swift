@@ -47,6 +47,7 @@ enum CalendarPhotoRotation: Int, CaseIterable, Sendable {
 
 struct CalendarPhotoOrientationEvidence: Equatable, Sendable {
     let yearMonth: CalendarImportYearMonth?
+    let dateAnchorObservationCount: Int
     let dateAnchorCount: Int
     let matchedDateAnchorCount: Int
     let columnCount: Int
@@ -78,6 +79,30 @@ struct CalendarPhotoOrientationSelection: Equatable, Sendable {
     let rotation: CalendarPhotoRotation
     let observations: [CalendarOCRObservation]
     let evidence: CalendarPhotoOrientationEvidence
+    let candidateDiagnostics: [CalendarPhotoOrientationCandidateDiagnostics]
+}
+
+struct CalendarPhotoOrientationCandidateDiagnostics: Equatable, Sendable {
+    let rotation: CalendarPhotoRotation
+    let observationCount: Int
+    let dateAnchorCount: Int
+    let distinctDayCount: Int
+    let hasInferredYearMonth: Bool
+    let gridColumnCount: Int
+    let gridRowCount: Int
+    let matchedDateAnchorCount: Int
+    let evidenceScore: Int
+}
+
+enum CalendarPhotoOrientationEvidencePhase: String, Equatable, Sendable {
+    case fast
+    case accurate
+}
+
+struct CalendarPhotoOrientationDiagnostics: Equatable, Sendable {
+    let selectedRotation: CalendarPhotoRotation
+    let evidencePhase: CalendarPhotoOrientationEvidencePhase
+    let candidates: [CalendarPhotoOrientationCandidateDiagnostics]
 }
 
 struct CalendarPhotoOrientationSelector {
@@ -86,16 +111,19 @@ struct CalendarPhotoOrientationSelector {
         calendar: Calendar = Calendar(identifier: .gregorian)
     ) -> CalendarPhotoOrientationSelection? {
         let parser = CalendarPhotoParser()
-        return candidates.map { candidate in
-            CalendarPhotoOrientationSelection(
+        let selections = candidates.map { candidate in
+            let evidence = parser.orientationEvidence(
+                observations: candidate.observations,
+                calendar: calendar
+            )
+            return CalendarPhotoOrientationSelection(
                 rotation: candidate.rotation,
                 observations: candidate.observations,
-                evidence: parser.orientationEvidence(
-                    observations: candidate.observations,
-                    calendar: calendar
-                )
+                evidence: evidence,
+                candidateDiagnostics: []
             )
-        }.max { lhs, rhs in
+        }
+        guard let selected = selections.max(by: { lhs, rhs in
             if lhs.evidence.score != rhs.evidence.score {
                 return lhs.evidence.score < rhs.evidence.score
             }
@@ -109,7 +137,26 @@ struct CalendarPhotoOrientationSelector {
             }
             // Keep an already-upright photo stable when all available evidence ties.
             return lhs.rotation.rawValue > rhs.rotation.rawValue
-        }
+        }) else { return nil }
+        let candidateDiagnostics = zip(candidates, selections).map { candidate, selection in
+            CalendarPhotoOrientationCandidateDiagnostics(
+                rotation: candidate.rotation,
+                observationCount: candidate.observations.count,
+                dateAnchorCount: selection.evidence.dateAnchorObservationCount,
+                distinctDayCount: selection.evidence.dateAnchorCount,
+                hasInferredYearMonth: selection.evidence.yearMonth != nil,
+                gridColumnCount: selection.evidence.columnCount,
+                gridRowCount: selection.evidence.rowCount,
+                matchedDateAnchorCount: selection.evidence.matchedDateAnchorCount,
+                evidenceScore: selection.evidence.score
+            )
+        }.sorted { $0.rotation.rawValue < $1.rotation.rawValue }
+        return CalendarPhotoOrientationSelection(
+            rotation: selected.rotation,
+            observations: selected.observations,
+            evidence: selected.evidence,
+            candidateDiagnostics: candidateDiagnostics
+        )
     }
 }
 
@@ -206,7 +253,59 @@ enum CalendarPhotoImportParseError: String, Error, Equatable, Sendable {
     case noCandidates
 }
 
+struct CalendarPhotoAnchorDiagnostics: Equatable, Sendable {
+    let day: Int
+    let midX: Double
+    let midY: Double
+    let width: Double
+    let height: Double
+    let confidence: Float
+    let widthRatio: Double?
+    let heightRatio: Double?
+}
+
+struct CalendarPhotoDuplicateDayDiagnostics: Equatable, Sendable {
+    let day: Int
+    let occurrenceCount: Int
+}
+
+struct CalendarPhotoAnchorExtentDiagnostics: Equatable, Sendable {
+    let minX: Double
+    let maxX: Double
+    let minY: Double
+    let maxY: Double
+}
+
+struct CalendarPhotoAnchorSpatialDiagnostics: Equatable, Sendable {
+    let topQuarterAnchorCount: Int
+    let bottomThreeQuarterAnchorCount: Int
+    let leftHalfAnchorCount: Int
+    let rightHalfAnchorCount: Int
+    let extent: CalendarPhotoAnchorExtentDiagnostics?
+}
+
+struct CalendarPhotoAnchorMappingDiagnostics: Equatable, Sendable {
+    let day: Int
+    let midX: Double
+    let midY: Double
+    let expectedColumn: Int?
+    let expectedRow: Int?
+    let actualColumn: Int
+    let actualRow: Int
+    let matched: Bool
+}
+
+struct CalendarPhotoGridAttemptDiagnostics: Equatable, Sendable {
+    let weekStart: CalendarPhotoImportWeekStart
+    let firstColumn: Int
+    let matchedDateAnchorCount: Int
+    let xCenters: [Double]
+    let yCenters: [Double]
+    let anchorMappings: [CalendarPhotoAnchorMappingDiagnostics]
+}
+
 struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
+    let orientation: CalendarPhotoOrientationDiagnostics?
     let manualYearMonth: CalendarImportYearMonth?
     let resolvedYearMonth: CalendarImportYearMonth?
     let observationCount: Int
@@ -223,6 +322,13 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     let gridRejectedAnchorCount: Int
     let gridAcceptanceThreshold: Int
     let gridAccepted: Bool
+    let anchorMedianWidth: Double?
+    let anchorMedianHeight: Double?
+    let duplicateDays: [CalendarPhotoDuplicateDayDiagnostics]
+    let anchorSpatialDistribution: CalendarPhotoAnchorSpatialDiagnostics
+    let anchors: [CalendarPhotoAnchorDiagnostics]
+    let selectedGridAttempt: CalendarPhotoGridAttemptDiagnostics?
+    let gridAttempts: [CalendarPhotoGridAttemptDiagnostics]
     let dayRegionCount: Int
     let candidateCount: Int
     let parseStage: CalendarPhotoImportParseStage
@@ -236,11 +342,13 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         [
             ("Manual YM", Self.yearMonthText(manualYearMonth)),
             ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
+            ("Selected Rotation", orientation.map { "\($0.selectedRotation.rawValue)" } ?? "none"),
             ("OCR", "\(observationCount)"),
             ("Meaningful", "\(meaningfulObservationCount)"),
             ("Pure Numeric", "\(pureNumericObservationCount)"),
             ("Date Anchors", "\(dateAnchorCount)"),
             ("Distinct Days", "\(distinctDayCount)"),
+            ("Duplicate Days", "\(duplicateDays.count)"),
             ("Sunday Score", "\(sundayStartScore)"),
             ("Monday Score", "\(mondayStartScore)"),
             ("Week Start", selectedWeekStart?.rawValue ?? "none"),
@@ -257,15 +365,25 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     }
 
     var plainText: String {
-        [
+        let summary = [
             "CalendarImportDiagnostics",
             "manualYearMonth=\(Self.yearMonthText(manualYearMonth))",
             "resolvedYearMonth=\(Self.yearMonthText(resolvedYearMonth))",
+            "selectedRotation=\(orientation.map { String($0.selectedRotation.rawValue) } ?? "none")",
+            "orientationEvidencePhase=\(orientation?.evidencePhase.rawValue ?? "none")",
             "ocrObservations=\(observationCount)",
             "meaningful=\(meaningfulObservationCount)",
             "pureNumeric=\(pureNumericObservationCount)",
             "dateAnchors=\(dateAnchorCount)",
             "distinctDays=\(distinctDayCount)",
+            "duplicateDays=\(Self.duplicateDaysText(duplicateDays))",
+            "anchorMedianWidth=\(Self.decimalText(anchorMedianWidth))",
+            "anchorMedianHeight=\(Self.decimalText(anchorMedianHeight))",
+            "topQuarterAnchors=\(anchorSpatialDistribution.topQuarterAnchorCount)",
+            "bottomThreeQuarterAnchors=\(anchorSpatialDistribution.bottomThreeQuarterAnchorCount)",
+            "leftHalfAnchors=\(anchorSpatialDistribution.leftHalfAnchorCount)",
+            "rightHalfAnchors=\(anchorSpatialDistribution.rightHalfAnchorCount)",
+            "anchorExtent=\(Self.extentText(anchorSpatialDistribution.extent))",
             "sundayScore=\(sundayStartScore)",
             "mondayScore=\(mondayStartScore)",
             "weekStart=\(selectedWeekStart?.rawValue ?? "none")",
@@ -279,11 +397,138 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             "stage=\(parseStage.rawValue)",
             "failure=\(failureReason?.rawValue ?? "none")"
         ].joined(separator: "\n")
+
+        let orientationLines = orientation?.candidates.map { candidate in
+            [
+                "rotation=\(candidate.rotation.rawValue)",
+                "ocr=\(candidate.observationCount)",
+                "dateAnchors=\(candidate.dateAnchorCount)",
+                "distinctDays=\(candidate.distinctDayCount)",
+                "yearMonth=\(candidate.hasInferredYearMonth)",
+                "grid=\(candidate.gridColumnCount)x\(candidate.gridRowCount)",
+                "matched=\(candidate.matchedDateAnchorCount)",
+                "score=\(candidate.evidenceScore)"
+            ].joined(separator: " ")
+        } ?? []
+
+        let gridAttemptLines = gridAttempts.map { attempt in
+            [
+                "weekStart=\(attempt.weekStart.rawValue)",
+                "firstColumn=\(attempt.firstColumn)",
+                "rowCount=\(attempt.yCenters.count)",
+                "matched=\(attempt.matchedDateAnchorCount)"
+            ].joined(separator: " ")
+        }
+        let xCenterLines = Self.centerLines(
+            selected: selectedGridAttempt,
+            attempts: gridAttempts,
+            keyPath: \.xCenters
+        )
+        let yCenterLines = Self.centerLines(
+            selected: selectedGridAttempt,
+            attempts: gridAttempts,
+            keyPath: \.yCenters
+        )
+        let anchorLines = anchors.map { anchor in
+            [
+                "day=\(anchor.day)",
+                "x=\(Self.decimalText(anchor.midX))",
+                "y=\(Self.decimalText(anchor.midY))",
+                "w=\(Self.decimalText(anchor.width))",
+                "h=\(Self.decimalText(anchor.height))",
+                "conf=\(Self.decimalText(Double(anchor.confidence)))",
+                "widthRatio=\(Self.decimalText(anchor.widthRatio))",
+                "heightRatio=\(Self.decimalText(anchor.heightRatio))"
+            ].joined(separator: " ")
+        }
+        let mappingLines = gridAttempts.flatMap { attempt -> [String] in
+            let header = [
+                "weekStart=\(attempt.weekStart.rawValue)",
+                "firstColumn=\(attempt.firstColumn)",
+                "rowCount=\(attempt.yCenters.count)",
+                "matched=\(attempt.matchedDateAnchorCount)"
+            ].joined(separator: " ")
+            return [header] + attempt.anchorMappings.map { mapping in
+                [
+                    "day=\(mapping.day)",
+                    "x=\(Self.decimalText(mapping.midX))",
+                    "y=\(Self.decimalText(mapping.midY))",
+                    "expected=(\(Self.integerText(mapping.expectedColumn)),\(Self.integerText(mapping.expectedRow)))",
+                    "actual=(\(mapping.actualColumn),\(mapping.actualRow))",
+                    "matched=\(mapping.matched)"
+                ].joined(separator: " ")
+            }
+        }
+
+        return [
+            summary,
+            Self.section(title: "Orientations", lines: orientationLines),
+            Self.section(title: "GridAttempts", lines: gridAttemptLines),
+            Self.section(title: "XCenters", lines: xCenterLines),
+            Self.section(title: "YCenters", lines: yCenterLines),
+            Self.section(title: "Anchors", lines: anchorLines),
+            Self.section(title: "AnchorMapping", lines: mappingLines)
+        ].joined(separator: "\n\n")
     }
 
     private static func yearMonthText(_ yearMonth: CalendarImportYearMonth?) -> String {
         guard let yearMonth else { return "none" }
         return String(format: "%04d-%02d", yearMonth.year, yearMonth.month)
+    }
+
+    private static func duplicateDaysText(
+        _ duplicateDays: [CalendarPhotoDuplicateDayDiagnostics]
+    ) -> String {
+        guard !duplicateDays.isEmpty else { return "none" }
+        return duplicateDays.map { "\($0.day):\($0.occurrenceCount)" }
+            .joined(separator: ",")
+    }
+
+    private static func extentText(_ extent: CalendarPhotoAnchorExtentDiagnostics?) -> String {
+        guard let extent else { return "none" }
+        return [
+            "minX=\(decimalText(extent.minX))",
+            "maxX=\(decimalText(extent.maxX))",
+            "minY=\(decimalText(extent.minY))",
+            "maxY=\(decimalText(extent.maxY))"
+        ].joined(separator: ",")
+    }
+
+    private static func centerLines(
+        selected: CalendarPhotoGridAttemptDiagnostics?,
+        attempts: [CalendarPhotoGridAttemptDiagnostics],
+        keyPath: KeyPath<CalendarPhotoGridAttemptDiagnostics, [Double]>
+    ) -> [String] {
+        var lines: [String] = []
+        if let selected {
+            lines.append("selected=\(centerText(selected[keyPath: keyPath]))")
+        }
+        lines.append(contentsOf: attempts.map {
+            "\($0.weekStart.rawValue)=\(centerText($0[keyPath: keyPath]))"
+        })
+        return lines
+    }
+
+    private static func centerText(_ centers: [Double]) -> String {
+        centers.map(decimalText).joined(separator: ",")
+    }
+
+    private static func decimalText(_ value: Double?) -> String {
+        guard let value else { return "none" }
+        return String(
+            format: "%.4f",
+            locale: Locale(identifier: "en_US_POSIX"),
+            value
+        )
+    }
+
+    private static func integerText(_ value: Int?) -> String {
+        value.map(String.init) ?? "none"
+    }
+
+    private static func section(title: String, lines: [String]) -> String {
+        (["[\(title)]"] + (lines.isEmpty ? ["none"] : lines))
+            .joined(separator: "\n")
     }
 }
 
@@ -389,9 +634,12 @@ struct CalendarPhotoParser {
     private struct GridEvaluation {
         let fit: GridFit?
         let bestAttempt: GridFit?
+        let sundayAttempt: GridFit?
+        let mondayAttempt: GridFit?
         let sundayStartScore: Int
         let mondayStartScore: Int
         let selectedWeekStart: CalendarPhotoImportWeekStart?
+        let dayCount: Int
     }
 
     private struct LineGroup {
@@ -430,6 +678,7 @@ struct CalendarPhotoParser {
         overridingYearMonth: CalendarImportYearMonth? = nil,
         defaultCalendarID: UUID,
         calendar inputCalendar: Calendar = Calendar(identifier: .gregorian),
+        orientationDiagnostics: CalendarPhotoOrientationDiagnostics? = nil,
         diagnosticsHandler: ((CalendarPhotoImportDiagnostics) -> Void)? = nil
     ) throws -> CalendarPhotoImportParseResult {
         let meaningful = observations.filter {
@@ -448,7 +697,17 @@ struct CalendarPhotoParser {
         ) {
             let selectedGrid = gridEvaluation?.fit ?? gridEvaluation?.bestAttempt
             let matchedAnchorCount = selectedGrid?.score ?? 0
+            let anchorDiagnostics = Self.anchorDiagnostics(anchors)
+            let gridAttempts = Self.gridAttemptDiagnostics(
+                evaluation: gridEvaluation,
+                anchors: anchors
+            )
+            let selectedGridAttempt = Self.selectedGridAttemptDiagnostics(
+                evaluation: gridEvaluation,
+                anchors: anchors
+            )
             diagnosticsHandler?(CalendarPhotoImportDiagnostics(
+                orientation: orientationDiagnostics,
                 manualYearMonth: overridingYearMonth,
                 resolvedYearMonth: yearMonth,
                 observationCount: observations.count,
@@ -465,6 +724,13 @@ struct CalendarPhotoParser {
                 gridRejectedAnchorCount: max(0, anchors.count - matchedAnchorCount),
                 gridAcceptanceThreshold: Self.minimumGridMatchedAnchorCount,
                 gridAccepted: gridEvaluation?.fit != nil,
+                anchorMedianWidth: anchorDiagnostics.medianWidth,
+                anchorMedianHeight: anchorDiagnostics.medianHeight,
+                duplicateDays: anchorDiagnostics.duplicateDays,
+                anchorSpatialDistribution: anchorDiagnostics.spatialDistribution,
+                anchors: anchorDiagnostics.anchors,
+                selectedGridAttempt: selectedGridAttempt,
+                gridAttempts: gridAttempts,
                 dayRegionCount: dayRegionCount,
                 candidateCount: candidateCount,
                 parseStage: stage,
@@ -698,6 +964,7 @@ struct CalendarPhotoParser {
 
         return CalendarPhotoOrientationEvidence(
             yearMonth: yearMonth,
+            dateAnchorObservationCount: numericAnchors.count,
             dateAnchorCount: dateAnchorCount,
             matchedDateAnchorCount: fit?.score ?? 0,
             columnCount: fit?.xCenters.count ?? 0,
@@ -788,12 +1055,183 @@ struct CalendarPhotoParser {
         return GridEvaluation(
             fit: fit,
             bestAttempt: bestAttempt?.1,
+            sundayAttempt: sundayAttempt,
+            mondayAttempt: mondayAttempt,
             sundayStartScore: sundayAttempt?.score ?? 0,
             mondayStartScore: mondayAttempt?.score ?? 0,
             selectedWeekStart: fit.map {
                 $0.firstColumn == sundayFirstColumn ? .sunday : .monday
-            } ?? bestAttempt?.0
+            } ?? bestAttempt?.0,
+            dayCount: dayCount
         )
+    }
+
+    private static func anchorDiagnostics(
+        _ anchors: [DateAnchor]
+    ) -> (
+        medianWidth: Double?,
+        medianHeight: Double?,
+        duplicateDays: [CalendarPhotoDuplicateDayDiagnostics],
+        spatialDistribution: CalendarPhotoAnchorSpatialDiagnostics,
+        anchors: [CalendarPhotoAnchorDiagnostics]
+    ) {
+        let medianWidth = diagnosticMedian(
+            anchors.map { $0.observation.boundingBox.width }
+        )
+        let medianHeight = diagnosticMedian(
+            anchors.map { $0.observation.boundingBox.height }
+        )
+        let duplicateDays = Dictionary(grouping: anchors, by: \.day)
+            .compactMap { day, values -> CalendarPhotoDuplicateDayDiagnostics? in
+                guard values.count > 1 else { return nil }
+                return CalendarPhotoDuplicateDayDiagnostics(
+                    day: day,
+                    occurrenceCount: values.count
+                )
+            }
+            .sorted { $0.day < $1.day }
+        let anchorValues = anchors.map { anchor -> CalendarPhotoAnchorDiagnostics in
+            let box = anchor.observation.boundingBox
+            return CalendarPhotoAnchorDiagnostics(
+                day: anchor.day,
+                midX: box.midX,
+                midY: box.midY,
+                width: box.width,
+                height: box.height,
+                confidence: anchor.observation.confidence,
+                widthRatio: medianWidth.flatMap { $0 > 0 ? box.width / $0 : nil },
+                heightRatio: medianHeight.flatMap { $0 > 0 ? box.height / $0 : nil }
+            )
+        }.sorted(by: anchorDiagnosticOrder)
+        let extent: CalendarPhotoAnchorExtentDiagnostics? = anchors.isEmpty ? nil
+            : CalendarPhotoAnchorExtentDiagnostics(
+                minX: anchors.map { $0.observation.boundingBox.minX }.min() ?? 0,
+                maxX: anchors.map { $0.observation.boundingBox.maxX }.max() ?? 0,
+                minY: anchors.map { $0.observation.boundingBox.minY }.min() ?? 0,
+                maxY: anchors.map { $0.observation.boundingBox.maxY }.max() ?? 0
+            )
+        let spatialDistribution = CalendarPhotoAnchorSpatialDiagnostics(
+            topQuarterAnchorCount: anchors.filter {
+                $0.observation.boundingBox.midY >= 0.75
+            }.count,
+            bottomThreeQuarterAnchorCount: anchors.filter {
+                $0.observation.boundingBox.midY < 0.75
+            }.count,
+            leftHalfAnchorCount: anchors.filter {
+                $0.observation.boundingBox.midX < 0.5
+            }.count,
+            rightHalfAnchorCount: anchors.filter {
+                $0.observation.boundingBox.midX >= 0.5
+            }.count,
+            extent: extent
+        )
+        return (
+            medianWidth,
+            medianHeight,
+            duplicateDays,
+            spatialDistribution,
+            anchorValues
+        )
+    }
+
+    private static func gridAttemptDiagnostics(
+        evaluation: GridEvaluation?,
+        anchors: [DateAnchor]
+    ) -> [CalendarPhotoGridAttemptDiagnostics] {
+        guard let evaluation else { return [] }
+        return [
+            (CalendarPhotoImportWeekStart.sunday, evaluation.sundayAttempt),
+            (CalendarPhotoImportWeekStart.monday, evaluation.mondayAttempt)
+        ].compactMap { weekStart, fit in
+            guard let fit else { return nil }
+            return gridAttemptDiagnostics(
+                fit: fit,
+                weekStart: weekStart,
+                anchors: anchors,
+                dayCount: evaluation.dayCount
+            )
+        }
+    }
+
+    private static func selectedGridAttemptDiagnostics(
+        evaluation: GridEvaluation?,
+        anchors: [DateAnchor]
+    ) -> CalendarPhotoGridAttemptDiagnostics? {
+        guard let evaluation,
+              let fit = evaluation.fit ?? evaluation.bestAttempt,
+              let weekStart = evaluation.selectedWeekStart else {
+            return nil
+        }
+        return gridAttemptDiagnostics(
+            fit: fit,
+            weekStart: weekStart,
+            anchors: anchors,
+            dayCount: evaluation.dayCount
+        )
+    }
+
+    private static func gridAttemptDiagnostics(
+        fit: GridFit,
+        weekStart: CalendarPhotoImportWeekStart,
+        anchors: [DateAnchor],
+        dayCount: Int
+    ) -> CalendarPhotoGridAttemptDiagnostics {
+        let mappings = anchors.map { anchor -> CalendarPhotoAnchorMappingDiagnostics in
+            let box = anchor.observation.boundingBox
+            let expectedIndex = anchor.day <= dayCount
+                ? fit.firstColumn + anchor.day - 1
+                : nil
+            let expectedColumn = expectedIndex.map { $0 % 7 }
+            let expectedRow = expectedIndex.map { $0 / 7 }
+            let actualColumn = closestIndex(to: box.midX, centers: fit.xCenters)
+            let actualRow = closestIndex(to: box.midY, centers: fit.yCenters)
+            return CalendarPhotoAnchorMappingDiagnostics(
+                day: anchor.day,
+                midX: box.midX,
+                midY: box.midY,
+                expectedColumn: expectedColumn,
+                expectedRow: expectedRow,
+                actualColumn: actualColumn,
+                actualRow: actualRow,
+                matched: expectedColumn == actualColumn && expectedRow == actualRow
+            )
+        }.sorted(by: mappingDiagnosticOrder)
+        return CalendarPhotoGridAttemptDiagnostics(
+            weekStart: weekStart,
+            firstColumn: fit.firstColumn,
+            matchedDateAnchorCount: fit.score,
+            xCenters: fit.xCenters,
+            yCenters: fit.yCenters,
+            anchorMappings: mappings
+        )
+    }
+
+    private static func anchorDiagnosticOrder(
+        _ lhs: CalendarPhotoAnchorDiagnostics,
+        _ rhs: CalendarPhotoAnchorDiagnostics
+    ) -> Bool {
+        if lhs.day != rhs.day { return lhs.day < rhs.day }
+        if lhs.midY != rhs.midY { return lhs.midY > rhs.midY }
+        return lhs.midX < rhs.midX
+    }
+
+    private static func mappingDiagnosticOrder(
+        _ lhs: CalendarPhotoAnchorMappingDiagnostics,
+        _ rhs: CalendarPhotoAnchorMappingDiagnostics
+    ) -> Bool {
+        if lhs.day != rhs.day { return lhs.day < rhs.day }
+        if lhs.midY != rhs.midY { return lhs.midY > rhs.midY }
+        return lhs.midX < rhs.midX
+    }
+
+    private static func diagnosticMedian(_ values: [Double]) -> Double? {
+        guard !values.isEmpty else { return nil }
+        let sorted = values.sorted()
+        let middle = sorted.count / 2
+        if sorted.count.isMultiple(of: 2) {
+            return (sorted[middle - 1] + sorted[middle]) / 2
+        }
+        return sorted[middle]
     }
 
     private func fitGridWithoutYearMonth(

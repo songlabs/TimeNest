@@ -162,7 +162,10 @@ final class CalendarPhotoImportTests: XCTestCase {
 
     func testDiagnosticsPlainTextContainsOnlyStructuralValues() throws {
         var observations = september2026DateObservations(includeHeader: false)
-        observations.append(observation("Private Person Appointment", day: 12, line: 0))
+        observations.append(contentsOf: [
+            observation("Private Person Appointment", day: 12, line: 0),
+            observation("○秘 9:00 Candidate Secret", day: 13, line: 0)
+        ])
         var diagnostics: CalendarPhotoImportDiagnostics?
 
         _ = try CalendarPhotoParser().parse(
@@ -180,19 +183,155 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertTrue(text.contains("gridAccepted=true"))
         XCTAssertTrue(text.contains("stage=completed"))
         XCTAssertTrue(text.contains("failure=none"))
+        XCTAssertTrue(text.contains("[Orientations]\nnone"))
+        XCTAssertTrue(text.contains("[Anchors]"))
+        XCTAssertTrue(text.contains("[AnchorMapping]"))
         XCTAssertFalse(text.contains("Private Person Appointment"))
+        XCTAssertFalse(text.contains("Candidate Secret"))
+        XCTAssertFalse(text.contains("○秘"))
+        let summary = try XCTUnwrap(text.components(separatedBy: "\n\n").first)
         XCTAssertEqual(
-            text.split(separator: "\n").dropFirst().compactMap {
+            summary.split(separator: "\n").dropFirst().compactMap {
                 $0.split(separator: "=", maxSplits: 1).first.map(String.init)
             },
             [
-                "manualYearMonth", "resolvedYearMonth", "ocrObservations",
-                "meaningful", "pureNumeric", "dateAnchors", "distinctDays",
+                "manualYearMonth", "resolvedYearMonth", "selectedRotation",
+                "orientationEvidencePhase", "ocrObservations", "meaningful",
+                "pureNumeric", "dateAnchors", "distinctDays", "duplicateDays",
+                "anchorMedianWidth", "anchorMedianHeight", "topQuarterAnchors",
+                "bottomThreeQuarterAnchors", "leftHalfAnchors", "rightHalfAnchors",
+                "anchorExtent",
                 "sundayScore", "mondayScore", "weekStart", "grid", "matched",
                 "rejected", "threshold", "gridAccepted", "dayRegions",
                 "candidates", "stage", "failure"
             ]
         )
+    }
+
+    func testOrientationDiagnosticsRecordsSelectedRotationAndFourCandidates() throws {
+        var upright = september2026DateObservations()
+        upright.append(observation("Meeting", day: 9, line: 0))
+        let candidates = CalendarPhotoRotation.allCases.map { rotation in
+            CalendarPhotoOrientationCandidate(
+                rotation: rotation,
+                observations: rotatedObservations(upright, by: rotation)
+            )
+        }
+        let selection = try XCTUnwrap(CalendarPhotoOrientationSelector().selectBest(
+            from: candidates,
+            calendar: utcGregorianCalendar()
+        ))
+        let orientationDiagnostics = CalendarPhotoOrientationDiagnostics(
+            selectedRotation: selection.rotation,
+            evidencePhase: .accurate,
+            candidates: selection.candidateDiagnostics
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        _ = try CalendarPhotoParser().parse(
+            observations: selection.observations,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            orientationDiagnostics: orientationDiagnostics,
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        let captured = try XCTUnwrap(diagnostics)
+        XCTAssertEqual(selection.rotation, .degrees0)
+        XCTAssertEqual(captured.orientation?.selectedRotation, .degrees0)
+        XCTAssertEqual(captured.orientation?.evidencePhase, .accurate)
+        XCTAssertEqual(
+            captured.orientation?.candidates.map(\.rotation),
+            CalendarPhotoRotation.allCases
+        )
+        XCTAssertTrue(captured.orientation?.candidates.allSatisfy {
+            $0.observationCount == upright.count
+                && $0.dateAnchorCount == 35
+                && $0.distinctDayCount == 31
+        } == true)
+        let uprightCandidate = try XCTUnwrap(
+            captured.orientation?.candidates.first { $0.rotation == .degrees0 }
+        )
+        XCTAssertTrue(uprightCandidate.hasInferredYearMonth)
+        XCTAssertEqual(uprightCandidate.gridColumnCount, 7)
+        XCTAssertEqual(uprightCandidate.gridRowCount, 5)
+        XCTAssertEqual(uprightCandidate.matchedDateAnchorCount, 30)
+        XCTAssertEqual(uprightCandidate.evidenceScore, selection.evidence.score)
+        XCTAssertTrue(captured.plainText.contains("selectedRotation=0"))
+        XCTAssertTrue(captured.plainText.contains("rotation=270"))
+    }
+
+    func testDuplicateAnchorDiagnosticsPreserveAllAnchorObservations() throws {
+        var observations = september2026CurrentMonthDateObservations()
+        observations.append(contentsOf: [
+            scaledAnchor(observation("1", day: 1, line: -1), scale: 0.2),
+            scaledAnchor(observation("2", day: 2, line: -1), scale: 0.2),
+            observation("Meeting", day: 12, line: 0)
+        ])
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        let result = try CalendarPhotoParser().parse(
+            observations: observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        XCTAssertEqual(result.candidates.map(\.title), ["Meeting"])
+        let captured = try XCTUnwrap(diagnostics)
+        XCTAssertEqual(captured.dateAnchorCount, 32)
+        XCTAssertEqual(captured.distinctDayCount, 30)
+        XCTAssertEqual(
+            captured.duplicateDays,
+            [
+                CalendarPhotoDuplicateDayDiagnostics(day: 1, occurrenceCount: 2),
+                CalendarPhotoDuplicateDayDiagnostics(day: 2, occurrenceCount: 2)
+            ]
+        )
+        XCTAssertEqual(captured.anchors.filter { $0.day == 1 }.count, 2)
+        XCTAssertEqual(captured.anchors.filter { $0.day == 2 }.count, 2)
+        XCTAssertTrue(captured.anchors.contains {
+            $0.day == 1 && ($0.widthRatio ?? 1) < 0.5 && ($0.heightRatio ?? 1) < 0.5
+        })
+        XCTAssertTrue(captured.plainText.contains("duplicateDays=1:2,2:2"))
+    }
+
+    func testGridMappingDiagnosticsRecordExpectedAndActualCells() throws {
+        var observations = september2026CurrentMonthDateObservations()
+        observations.append(observation("Meeting", day: 12, line: 0))
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        _ = try CalendarPhotoParser().parse(
+            observations: observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        let captured = try XCTUnwrap(diagnostics)
+        let selectedAttempt = try XCTUnwrap(captured.selectedGridAttempt)
+        XCTAssertEqual(selectedAttempt.weekStart, .sunday)
+        XCTAssertEqual(selectedAttempt.firstColumn, 2)
+        XCTAssertEqual(selectedAttempt.xCenters.count, 7)
+        XCTAssertEqual(selectedAttempt.yCenters.count, 5)
+        XCTAssertEqual(selectedAttempt.anchorMappings.count, 30)
+        XCTAssertTrue(selectedAttempt.anchorMappings.allSatisfy(\.matched))
+        let dayOne = try XCTUnwrap(
+            selectedAttempt.anchorMappings.first { $0.day == 1 }
+        )
+        XCTAssertEqual(dayOne.expectedColumn, 2)
+        XCTAssertEqual(dayOne.expectedRow, 0)
+        XCTAssertEqual(dayOne.actualColumn, 2)
+        XCTAssertEqual(dayOne.actualRow, 0)
+        XCTAssertTrue(dayOne.matched)
+        XCTAssertEqual(captured.gridAttempts.map(\.weekStart), [.sunday, .monday])
+        XCTAssertTrue(captured.plainText.contains("[XCenters]"))
+        XCTAssertTrue(captured.plainText.contains("[YCenters]"))
+        XCTAssertTrue(captured.plainText.contains(
+            "day=1 x=0.3300 y=0.8125 expected=(2,0) actual=(2,0) matched=true"
+        ))
     }
 
     func testManualYearMonthOverridesConflictingAutomaticInference() throws {
@@ -536,6 +675,31 @@ final class CalendarPhotoImportTests: XCTestCase {
             ))
         }
         return observations
+    }
+
+    private func september2026CurrentMonthDateObservations() -> [CalendarOCRObservation] {
+        (1...30).map { day in
+            observation("\(day)", day: day, line: -1)
+        }
+    }
+
+    private func scaledAnchor(
+        _ observation: CalendarOCRObservation,
+        scale: Double
+    ) -> CalendarOCRObservation {
+        let box = observation.boundingBox
+        let width = box.width * scale
+        let height = box.height * scale
+        return CalendarOCRObservation(
+            text: observation.text,
+            confidence: observation.confidence - 0.1,
+            boundingBox: CalendarOCRBoundingBox(
+                x: box.midX - width / 2,
+                y: box.midY - height / 2,
+                width: width,
+                height: height
+            )
+        )
     }
 
     private func observation(
