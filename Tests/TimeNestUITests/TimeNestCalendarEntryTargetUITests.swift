@@ -9,7 +9,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
     func testPersonalCalendarCreateAndEditKeepCalendarFixed() {
         let app = launchApp(seedData: true)
 
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         assertFixedEditor(in: app)
         replaceText(in: app.textFields["entry.title"], with: "Calendar Target Personal")
         app.buttons["entry.editor.save"].tap()
@@ -32,7 +32,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
 
         let selector = app.buttons["sharing.calendarSelector"]
         let selectedCalendarLabel = selector.label
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         assertFixedEditor(in: app)
         replaceText(in: app.textFields["entry.title"], with: "Calendar Target Shared")
         app.buttons["entry.editor.save"].tap()
@@ -49,6 +49,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
                 in: app
             )
 
+            switchToDayView(in: app)
             let add = app.buttons["calendar.addEntry"]
             XCTAssertTrue(add.waitForExistence(timeout: 5), language)
             add.tap()
@@ -91,7 +92,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
                 in: app
             )
 
-            app.buttons["calendar.addEntry"].tap()
+            openDirectEntryEditor(in: app)
             XCTAssertTrue(
                 element(in: app, identifier: "sharedEvent.editor")
                     .waitForExistence(timeout: 5),
@@ -122,7 +123,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
             in: app
         )
 
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         XCTAssertTrue(
             element(in: app, identifier: "sharedEvent.editor")
                 .waitForExistence(timeout: 5)
@@ -134,6 +135,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
                 .waitForNonExistence(timeout: 8)
         )
 
+        switchToMonthView(in: app)
         let today = calendarDayElement(for: Date(), in: app)
         XCTAssertTrue(today.waitForExistence(timeout: 8))
         today.tap()
@@ -175,7 +177,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
                 identifier: "sharing.calendar.33333333-3333-3333-3333-333333333333",
                 in: app
             )
-            app.buttons["calendar.addEntry"].tap()
+            openDirectEntryEditor(in: app)
             XCTAssertTrue(
                 element(in: app, identifier: "sharedEvent.editor")
                     .waitForExistence(timeout: 5),
@@ -297,7 +299,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
 
     func testGeneralCreateUsesCompactEventFirstLayoutAndExpandsWorkRecordInPlace() {
         let app = launchApp()
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         assertFixedEditor(in: app)
 
         XCTAssertFalse(element(in: app, identifier: "entry.kind").exists)
@@ -404,7 +406,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
             contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL",
             language: "ja"
         )
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         assertFixedEditor(in: app)
 
         XCTAssertTrue(app.buttons["entry.editor.cancel"].isHittable)
@@ -441,7 +443,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
 
     func testUnifiedEditorVisualGeneralStates() {
         let app = launchApp(language: "ja")
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         assertFixedEditor(in: app)
         captureScreenshot(named: "01-general-work-off", app: app)
 
@@ -490,7 +492,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
 
     func testUnifiedEditorDarkModeVisualReference() {
         let app = launchApp(language: "ja", theme: "dark")
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         assertFixedEditor(in: app)
         captureScreenshot(named: "06-dark-mode", app: app)
         dismissEditor(in: app)
@@ -498,7 +500,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
 
     func testExistingStandaloneEventKeepsAddButtonVisible() {
         let app = launchApp(language: "ja")
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         replaceText(
             in: app.textFields["entry.title"],
             with: "Standalone UI Event"
@@ -683,7 +685,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
 
     func testCombinedEntryReopensFromBothSidesAndRepeatedSaveDoesNotDuplicate() {
         let app = launchApp()
-        app.buttons["calendar.addEntry"].tap()
+        openDirectEntryEditor(in: app)
         assertFixedEditor(in: app)
         replaceText(
             in: app.textFields["entry.title"],
@@ -994,7 +996,7 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
         }
         app.launch()
         XCTAssertTrue(app.buttons["calendar.moreMenu"].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["calendar.addEntry"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["calendar.photoImport"].waitForExistence(timeout: 10))
         if element(in: app, identifier: "entry.editor").exists {
             dismissEditor(in: app)
         }
@@ -1079,10 +1081,32 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
         let row = app.buttons[identifier]
         XCTAssertTrue(row.waitForExistence(timeout: 10), identifier)
         row.tap()
+        XCTAssertTrue(app.buttons["calendar.photoImport"].waitForExistence(timeout: 5))
+    }
+
+    private func openDirectEntryEditor(in app: XCUIApplication) {
+        switchToDayView(in: app)
+        let add = app.buttons["calendar.addEntry"]
+        XCTAssertTrue(add.waitForExistence(timeout: 5))
+        add.tap()
+    }
+
+    private func switchToDayView(in app: XCUIApplication) {
+        let dayMode = app.buttons["calendar.mode.day"]
+        XCTAssertTrue(dayMode.waitForExistence(timeout: 5))
+        dayMode.tap()
         XCTAssertTrue(app.buttons["calendar.addEntry"].waitForExistence(timeout: 5))
     }
 
+    private func switchToMonthView(in app: XCUIApplication) {
+        let monthMode = app.buttons["calendar.mode.month"]
+        XCTAssertTrue(monthMode.waitForExistence(timeout: 5))
+        monthMode.tap()
+        XCTAssertTrue(app.buttons["calendar.photoImport"].waitForExistence(timeout: 5))
+    }
+
     private func openCreatedEventDay(in app: XCUIApplication) {
+        switchToMonthView(in: app)
         let day = calendarDayElement(for: Date(), in: app)
         XCTAssertTrue(day.waitForExistence(timeout: 8))
         day.tap()

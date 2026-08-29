@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		030693C09B9F4289D5D6BA8B /* HolidayNameLocalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */; };
+		CA1100000000000000000001 /* CalendarPhotoImportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1100000000000000000002 /* CalendarPhotoImportModels.swift */; };
+		CA1100000000000000000003 /* CalendarPhotoImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1100000000000000000004 /* CalendarPhotoImportView.swift */; };
+		CA1100000000000000000005 /* CalendarPhotoImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1100000000000000000006 /* CalendarPhotoImportTests.swift */; };
 		04AEEB3EBAC8AB7CD25A576E /* CalendarWeatherStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E072F78109E4A21BDF33E52B /* CalendarWeatherStore.swift */; };
 		054172C57AFFEE2FE3920BDC /* HolidayRecommendedSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7EB68E188CDED73B8AE135E /* HolidayRecommendedSource.swift */; };
 		0577A149497FC5B4732CFA3A /* RecurrenceRule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 97E3A9728F3DA57418BB27CD /* RecurrenceRule.swift */; };
@@ -271,6 +274,9 @@
 
 /* Begin PBXFileReference section */
 		0063E05B7A32EFB216D87281 /* ICSParsingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICSParsingService.swift; sourceTree = "<group>"; };
+		CA1100000000000000000002 /* CalendarPhotoImportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPhotoImportModels.swift; sourceTree = "<group>"; };
+		CA1100000000000000000004 /* CalendarPhotoImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPhotoImportView.swift; sourceTree = "<group>"; };
+		CA1100000000000000000006 /* CalendarPhotoImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarPhotoImportTests.swift; sourceTree = "<group>"; };
 		016F0667ED1D15B10C1A3256 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		0175D7F1C5B1C250CC4505BC /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		0191EA6B06EB4CEF98AD452D /* HomeScreenWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreenWidgets.swift; sourceTree = "<group>"; };
@@ -600,6 +606,8 @@
 			isa = PBXGroup;
 			children = (
 				1DE6F685787AEAD48B0CD9C0 /* CalendarBottomToolbarView.swift */,
+				CA1100000000000000000002 /* CalendarPhotoImportModels.swift */,
+				CA1100000000000000000004 /* CalendarPhotoImportView.swift */,
 				FCCB9B14D63BBB681C058FEA /* CalendarHeaderView.swift */,
 				B2B79C74CDC902B76AD477B0 /* CalendarStyles.swift */,
 				F413AFD59DC28FA0E75BAFD7 /* CalendarViewMode.swift */,
@@ -1006,6 +1014,7 @@
 			isa = PBXGroup;
 			children = (
 				5F39F508B0572713C6862D53 /* CalendarEntryTargetTests.swift */,
+				CA1100000000000000000006 /* CalendarPhotoImportTests.swift */,
 				CBCF46D788726D4DCCE90149 /* CalendarSharingTests.swift */,
 				5A14A24CA5E36C8D48A5DA77 /* DataManagementTests.swift */,
 				101850E428C0348BB00EF4D7 /* HolidayNameLocalizerTests.swift */,
@@ -1276,6 +1285,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				2ED0D2E61B2489F29371E7E8 /* CalendarEntryTargetTests.swift in Sources */,
+				CA1100000000000000000005 /* CalendarPhotoImportTests.swift in Sources */,
 				FCB689DFEB2900FB86661384 /* CalendarSharingTests.swift in Sources */,
 				ED878CD6B4D1911A47F11312 /* DataManagementTests.swift in Sources */,
 				030693C09B9F4289D5D6BA8B /* HolidayNameLocalizerTests.swift in Sources */,
@@ -1406,6 +1416,8 @@
 				B7E387A03518C78B9B665340 /* AdMobBannerView.swift in Sources */,
 				EABE3524AFD0F00FFBBF2228 /* CalendarAdBannerContainer.swift in Sources */,
 				D06F1FBB9D827B9F1F8AFBFC /* CalendarBottomToolbarView.swift in Sources */,
+				CA1100000000000000000001 /* CalendarPhotoImportModels.swift in Sources */,
+				CA1100000000000000000003 /* CalendarPhotoImportView.swift in Sources */,
 				C0C749CE791967E6EA0E91A6 /* CalendarHeaderView.swift in Sources */,
 				E49E6EB29A391ECB00088F4D /* CalendarStyles.swift in Sources */,
 				957C4B2C0CC597B0ADD86D15 /* CalendarViewMode.swift in Sources */,

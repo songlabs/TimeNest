@@ -1,13 +1,14 @@
 import SwiftUI
 
 /// 日历底部工具栏 - 旧版 TabBar 风格
-/// 左侧：今日 | 中间：月/周/日 | 右侧：蓝色圆形加号
+/// 左侧：今日 | 中间：月/周/日 | 右侧：蓝色圆形操作按钮
 /// 广告位在 TabBar 上方
 struct CalendarBottomToolbarView: View {
     @EnvironmentObject private var localization: LocalizationManager
     @Binding var selectedViewMode: CalendarViewMode
     let onTodayTapped: () -> Void
     let onAddEventTapped: () -> Void
+    let onScanCalendarTapped: () -> Void
     let onModeChanged: ((CalendarViewMode) -> Void)?
     let showsAddButton: Bool
 
@@ -15,12 +16,14 @@ struct CalendarBottomToolbarView: View {
         selectedViewMode: Binding<CalendarViewMode>,
         onTodayTapped: @escaping () -> Void,
         onAddEventTapped: @escaping () -> Void,
+        onScanCalendarTapped: @escaping () -> Void = {},
         onModeChanged: ((CalendarViewMode) -> Void)? = nil,
         showsAddButton: Bool = true
     ) {
         _selectedViewMode = selectedViewMode
         self.onTodayTapped = onTodayTapped
         self.onAddEventTapped = onAddEventTapped
+        self.onScanCalendarTapped = onScanCalendarTapped
         self.onModeChanged = onModeChanged
         self.showsAddButton = showsAddButton
     }
@@ -78,18 +81,35 @@ struct CalendarBottomToolbarView: View {
                 // 右侧弹性空间
                 Spacer()
 
-                // 右侧：添加按钮
+                // 右侧：月视图为照片导入，周/日视图保留原有予定添加
                 Group {
                     if showsAddButton {
-                        Button(action: onAddEventTapped) {
-                            Image(systemName: "plus")
+                        Button(action: {
+                            if selectedViewMode == .month {
+                                onScanCalendarTapped()
+                            } else {
+                                onAddEventTapped()
+                            }
+                        }) {
+                            Image(systemName: selectedViewMode == .month ? "camera.viewfinder" : "plus")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(width: ShiftCalendarLayout.addButtonSize, height: ShiftCalendarLayout.addButtonSize)
                                 .background(ShiftCalendarColors.primaryBlue)
                                 .clipShape(Circle())
                         }
-                        .accessibilityIdentifier("calendar.addEntry")
+                        .accessibilityLabel(
+                            localization.localized(
+                                selectedViewMode == .month
+                                    ? .calendarPhotoImportTitle
+                                    : .entryAddEvent
+                            )
+                        )
+                        .accessibilityIdentifier(
+                            selectedViewMode == .month
+                                ? "calendar.photoImport"
+                                : "calendar.addEntry"
+                        )
                     } else {
                         Color.clear
                             .frame(width: ShiftCalendarLayout.addButtonSize, height: ShiftCalendarLayout.addButtonSize)

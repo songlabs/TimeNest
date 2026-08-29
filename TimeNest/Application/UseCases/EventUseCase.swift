@@ -142,6 +142,39 @@ class EventUseCase {
         return notificationResult
     }
 
+    /// Creates a reviewed import as one local repository transaction.
+    /// Photo imports never carry reminders, so no notification side effects need compensation.
+    func createEventsAtomically(_ events: [CalendarEvent]) async throws {
+        guard !events.isEmpty else { return }
+        for event in events {
+            try validate(event)
+            try await validateWriteAccess(calendarID: event.calendarID)
+            guard event.reminderOffsetMinutes == nil, event.notificationID == nil else {
+                throw EventUseCaseError.invalidDateRange
+            }
+        }
+
+        let mutations = try await ownerMutationsForBatch(
+            upserting: events,
+            deleting: [],
+            expected: []
+        )
+        try await persistLocalEventChange(
+            upserting: events,
+            deleting: [],
+            expected: [],
+            mutations: mutations,
+            fallback: {
+                try await self.repository.applyBatch(
+                    upserting: events,
+                    deleting: [],
+                    ifUnchanged: []
+                )
+            }
+        )
+        onEventsChanged?()
+    }
+
     @discardableResult
     func updateEvent(_ event: CalendarEvent) async throws -> EventNotificationScheduleResult {
         try validate(event)

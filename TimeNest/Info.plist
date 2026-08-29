@@ -41,6 +41,8 @@
 	<string>We use the device identifier to deliver and measure advertising.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Your current location is used only to show the local weather forecast.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>TimeNest uses the camera only to recognize a calendar photo and prepare event candidates on this device.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>TimeNest uses the microphone only to enter memo text by voice.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>

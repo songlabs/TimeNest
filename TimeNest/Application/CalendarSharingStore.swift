@@ -177,6 +177,12 @@ final class CalendarSharingStore: ObservableObject {
         calendars.filter(\.canEditContent)
     }
 
+    /// Event-only destinations include received calendars whose owner and CKShare
+    /// permissions allow the existing collaborative-event creation path.
+    var eventWritableCalendars: [TimeNestCalendar] {
+        calendars.filter(\.canCreateSharedEvent)
+    }
+
     var writablePersonalCalendars: [TimeNestCalendar] {
         calendars.filter { $0.kind == .personal && $0.canEditContent }
     }

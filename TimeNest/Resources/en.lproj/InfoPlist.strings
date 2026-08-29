@@ -2,5 +2,6 @@
 "CFBundleName" = "TimeNest";
 "NSUserTrackingUsageDescription" = "We use the device identifier to deliver and measure advertising.";
 "NSLocationWhenInUseUsageDescription" = "Your current location is used only to show the local weather forecast.";
+"NSCameraUsageDescription" = "TimeNest uses the camera only to recognize a calendar photo and prepare event candidates on this device.";
 "NSMicrophoneUsageDescription" = "TimeNest uses the microphone only to enter memo text by voice.";
 "NSSpeechRecognitionUsageDescription" = "TimeNest uses speech recognition only to convert your voice into memo text.";

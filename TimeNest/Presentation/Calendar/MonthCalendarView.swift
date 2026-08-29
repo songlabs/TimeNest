@@ -37,6 +37,8 @@ struct MonthCalendarView: View {
     @State private var sharedEventEditorRoute: SharedEventEditorRoute?
     @State private var sharedReceivedDayDetailRoute: SharedReceivedDayDetailRoute?
     @State private var entryLoadErrorMessage: String?
+    @State private var showingPhotoImport = false
+    private let eventUseCase: EventUseCase
 
     init(
         calendarDisplayUseCase: CalendarDisplayUseCase,
@@ -44,6 +46,7 @@ struct MonthCalendarView: View {
         holidaySubscriptionManager: HolidaySubscriptionManager,
         calendarSharingStore: CalendarSharingStore
     ) {
+        self.eventUseCase = eventUseCase
         self.holidaySubscriptionManager = holidaySubscriptionManager
         _calendarSharingStore = ObservedObject(wrappedValue: calendarSharingStore)
         _viewModel = StateObject(
@@ -247,6 +250,17 @@ struct MonthCalendarView: View {
                     try await viewModel.saveUnifiedEntry(request)
                 }
             )
+        }
+        .sheet(isPresented: $showingPhotoImport) {
+            CalendarPhotoImportView(
+                eventUseCase: eventUseCase,
+                sharingStore: calendarSharingStore,
+                initialDate: viewModel.selectedDate,
+                onCompleted: {
+                    Task { await viewModel.reloadMonth() }
+                }
+            )
+            .environmentObject(localization)
         }
         .alert(
             localization.localized(.calendarSharingReadOnlyAddTitle),
@@ -538,6 +552,7 @@ struct MonthCalendarView: View {
                     showingReadOnlyCreateAlert = true
                 }
             },
+            onScanCalendarTapped: { showingPhotoImport = true },
             onModeChanged: handleModeChanged,
             showsAddButton: calendarSharingStore.accessPolicy.showsAddButton
         )
