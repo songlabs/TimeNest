@@ -17,10 +17,19 @@ private enum CalendarPhotoImportStep {
 
 private enum CalendarPhotoImportImageNormalizer {
     static func normalizedCGImage(from image: UIImage) throws -> CGImage {
-        let sourceWidth = image.cgImage.map { CGFloat($0.width) }
+        let rawWidth = image.cgImage.map { CGFloat($0.width) }
             ?? image.size.width * max(image.scale, 1)
-        let sourceHeight = image.cgImage.map { CGFloat($0.height) }
+        let rawHeight = image.cgImage.map { CGFloat($0.height) }
             ?? image.size.height * max(image.scale, 1)
+        let swapsDimensions: Bool
+        switch image.imageOrientation {
+        case .left, .leftMirrored, .right, .rightMirrored:
+            swapsDimensions = true
+        default:
+            swapsDimensions = false
+        }
+        let sourceWidth = swapsDimensions ? rawHeight : rawWidth
+        let sourceHeight = swapsDimensions ? rawWidth : rawHeight
         guard sourceWidth > 0, sourceHeight > 0 else {
             throw CalendarPhotoImportImageError.invalidImage
         }
@@ -42,49 +51,220 @@ private enum CalendarPhotoImportImageNormalizer {
         }
         return cgImage
     }
+
+    static func resizedCGImage(
+        _ image: CGImage,
+        maximumDimension: Int
+    ) throws -> CGImage {
+        let sourceWidth = image.width
+        let sourceHeight = image.height
+        guard sourceWidth > 0, sourceHeight > 0, maximumDimension > 0 else {
+            throw CalendarPhotoImportImageError.invalidImage
+        }
+        let scale = min(
+            1,
+            CGFloat(maximumDimension) / CGFloat(max(sourceWidth, sourceHeight))
+        )
+        let targetWidth = max(1, Int((CGFloat(sourceWidth) * scale).rounded()))
+        let targetHeight = max(1, Int((CGFloat(sourceHeight) * scale).rounded()))
+        guard targetWidth != sourceWidth || targetHeight != sourceHeight else {
+            return image
+        }
+        guard let context = bitmapContext(width: targetWidth, height: targetHeight) else {
+            throw CalendarPhotoImportImageError.invalidImage
+        }
+        context.interpolationQuality = .high
+        context.draw(
+            image,
+            in: CGRect(
+                x: 0,
+                y: 0,
+                width: CGFloat(targetWidth),
+                height: CGFloat(targetHeight)
+            )
+        )
+        guard let resized = context.makeImage() else {
+            throw CalendarPhotoImportImageError.invalidImage
+        }
+        return resized
+    }
+
+    static func rotatedCGImage(
+        _ image: CGImage,
+        rotation: CalendarPhotoRotation
+    ) throws -> CGImage {
+        guard rotation != .degrees0 else { return image }
+        let swapsDimensions = rotation == .degrees90 || rotation == .degrees270
+        let outputWidth = swapsDimensions ? image.height : image.width
+        let outputHeight = swapsDimensions ? image.width : image.height
+        guard let context = bitmapContext(width: outputWidth, height: outputHeight) else {
+            throw CalendarPhotoImportImageError.invalidImage
+        }
+
+        let radians = -CGFloat(rotation.rawValue) * .pi / 180
+        context.interpolationQuality = .high
+        context.translateBy(
+            x: CGFloat(outputWidth) / 2,
+            y: CGFloat(outputHeight) / 2
+        )
+        context.rotate(by: radians)
+        context.draw(
+            image,
+            in: CGRect(
+                x: -CGFloat(image.width) / 2,
+                y: -CGFloat(image.height) / 2,
+                width: CGFloat(image.width),
+                height: CGFloat(image.height)
+            )
+        )
+        guard let rotated = context.makeImage() else {
+            throw CalendarPhotoImportImageError.invalidImage
+        }
+        return rotated
+    }
+
+    private static func bitmapContext(width: Int, height: Int) -> CGContext? {
+        CGContext(
+            data: nil,
+            width: width,
+            height: height,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )
+    }
+}
+
+private struct CalendarVisionOCRResult: Sendable {
+    let rotation: CalendarPhotoRotation
+    let observations: [CalendarOCRObservation]
 }
 
 private struct CalendarVisionOCRService {
-    func recognize(
+    private static let directionDetectionMaximumDimension = 1_600
+
+    func recognizeBestOrientation(
         image: CGImage,
         preferredLanguageCode: String
-    ) async throws -> [CalendarOCRObservation] {
+    ) async throws -> CalendarVisionOCRResult {
         try await Task.detached(priority: .userInitiated) {
-            let request = VNRecognizeTextRequest()
-            request.recognitionLevel = .accurate
-            request.usesLanguageCorrection = true
-            request.automaticallyDetectsLanguage = true
-
-            let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? []
-            let recognitionLanguages = Self.preferredRecognitionLanguages(
-                supported: supportedLanguages,
-                preferredLanguageCode: preferredLanguageCode
+            let selector = CalendarPhotoOrientationSelector()
+            let preview = try CalendarPhotoImportImageNormalizer.resizedCGImage(
+                image,
+                maximumDimension: Self.directionDetectionMaximumDimension
             )
-            if !recognitionLanguages.isEmpty {
-                request.recognitionLanguages = recognitionLanguages
-            }
-
-            let handler = VNImageRequestHandler(
-                cgImage: image,
-                orientation: .up,
-                options: [:]
-            )
-            try handler.perform([request])
-            return (request.results ?? []).compactMap { observation in
-                guard let candidate = observation.topCandidates(1).first else { return nil }
-                let box = observation.boundingBox
-                return CalendarOCRObservation(
-                    text: candidate.string,
-                    confidence: candidate.confidence,
-                    boundingBox: CalendarOCRBoundingBox(
-                        x: Double(box.origin.x),
-                        y: Double(box.origin.y),
-                        width: Double(box.size.width),
-                        height: Double(box.size.height)
-                    )
+            var fastCandidates: [CalendarPhotoOrientationCandidate] = []
+            for rotation in CalendarPhotoRotation.allCases {
+                let rotated = try CalendarPhotoImportImageNormalizer.rotatedCGImage(
+                    preview,
+                    rotation: rotation
                 )
+                let observations = try Self.recognizeSynchronously(
+                    image: rotated,
+                    preferredLanguageCode: preferredLanguageCode,
+                    recognitionLevel: .fast
+                )
+                fastCandidates.append(CalendarPhotoOrientationCandidate(
+                    rotation: rotation,
+                    observations: observations
+                ))
             }
+            guard let fastSelection = selector.selectBest(from: fastCandidates) else {
+                throw CalendarPhotoImportImageError.invalidImage
+            }
+            Self.debugLog(candidates: fastCandidates, phase: "fast")
+
+            let selectedObservations: [CalendarOCRObservation] = try {
+                let selectedImage = try CalendarPhotoImportImageNormalizer.rotatedCGImage(
+                    image,
+                    rotation: fastSelection.rotation
+                )
+                return try Self.recognizeSynchronously(
+                    image: selectedImage,
+                    preferredLanguageCode: preferredLanguageCode,
+                    recognitionLevel: .accurate
+                )
+            }()
+            var accurateCandidates = [CalendarPhotoOrientationCandidate(
+                rotation: fastSelection.rotation,
+                observations: selectedObservations
+            )]
+            var accurateSelection = selector.selectBest(from: accurateCandidates)
+
+            // If the low-cost pass chose on weak OCR evidence, evaluate the other
+            // full-resolution directions before committing observations to parsing.
+            if fastSelection.evidence.hasReliableCalendarStructure != true
+                || accurateSelection?.evidence.hasReliableCalendarStructure != true {
+                for rotation in CalendarPhotoRotation.allCases
+                    where rotation != fastSelection.rotation {
+                    let rotated = try CalendarPhotoImportImageNormalizer.rotatedCGImage(
+                        image,
+                        rotation: rotation
+                    )
+                    let observations = try Self.recognizeSynchronously(
+                        image: rotated,
+                        preferredLanguageCode: preferredLanguageCode,
+                        recognitionLevel: .accurate
+                    )
+                    accurateCandidates.append(CalendarPhotoOrientationCandidate(
+                        rotation: rotation,
+                        observations: observations
+                    ))
+                }
+                accurateSelection = selector.selectBest(from: accurateCandidates)
+            }
+            guard let accurateSelection else {
+                throw CalendarPhotoImportImageError.invalidImage
+            }
+            Self.debugLog(candidates: accurateCandidates, phase: "accurate")
+            Self.debugLog(selection: accurateSelection)
+            return CalendarVisionOCRResult(
+                rotation: accurateSelection.rotation,
+                observations: accurateSelection.observations
+            )
         }.value
+    }
+
+    private static func recognizeSynchronously(
+        image: CGImage,
+        preferredLanguageCode: String,
+        recognitionLevel: VNRequestTextRecognitionLevel
+    ) throws -> [CalendarOCRObservation] {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = recognitionLevel
+        request.usesLanguageCorrection = true
+        request.automaticallyDetectsLanguage = true
+
+        let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? []
+        let recognitionLanguages = preferredRecognitionLanguages(
+            supported: supportedLanguages,
+            preferredLanguageCode: preferredLanguageCode
+        )
+        if !recognitionLanguages.isEmpty {
+            request.recognitionLanguages = recognitionLanguages
+        }
+
+        let handler = VNImageRequestHandler(
+            cgImage: image,
+            orientation: .up,
+            options: [:]
+        )
+        try handler.perform([request])
+        return (request.results ?? []).compactMap { observation in
+            guard let candidate = observation.topCandidates(1).first else { return nil }
+            let box = observation.boundingBox
+            return CalendarOCRObservation(
+                text: candidate.string,
+                confidence: candidate.confidence,
+                boundingBox: CalendarOCRBoundingBox(
+                    x: Double(box.origin.x),
+                    y: Double(box.origin.y),
+                    width: Double(box.size.width),
+                    height: Double(box.size.height)
+                )
+            )
+        }
     }
 
     private static func preferredRecognitionLanguages(
@@ -128,6 +308,42 @@ private struct CalendarVisionOCRService {
             return value == desired.lowercased()
                 || value.hasPrefix(desired.lowercased() + "-")
         }
+    }
+
+    private static func debugLog(
+        candidates: [CalendarPhotoOrientationCandidate],
+        phase: String
+    ) {
+        #if DEBUG
+        let selector = CalendarPhotoOrientationSelector()
+        for candidate in candidates {
+            guard let selection = selector.selectBest(from: [candidate]) else { continue }
+            let evidence = selection.evidence
+            print(
+                "[CalendarImport] phase=\(phase) orientation=\(candidate.rotation.rawValue) "
+                    + "score=\(evidence.score) yearMonth=\(evidence.yearMonth != nil) "
+                    + "dateAnchors=\(evidence.dateAnchorCount) "
+                    + "matched=\(evidence.matchedDateAnchorCount) "
+                    + "grid=\(evidence.columnCount)x\(evidence.rowCount)"
+            )
+        }
+        #endif
+    }
+
+    private static func debugLog(selection: CalendarPhotoOrientationSelection) {
+        #if DEBUG
+        print("[CalendarImport] selected=\(selection.rotation.rawValue)")
+        if let yearMonth = selection.evidence.yearMonth {
+            let month = yearMonth.month < 10 ? "0\(yearMonth.month)" : "\(yearMonth.month)"
+            print("[CalendarImport] yearMonth=\(yearMonth.year)-\(month)")
+        } else {
+            print("[CalendarImport] yearMonth=unknown")
+        }
+        print(
+            "[CalendarImport] dateAnchors=\(selection.evidence.dateAnchorCount) "
+                + "matched=\(selection.evidence.matchedDateAnchorCount)"
+        )
+        #endif
     }
 }
 
@@ -180,11 +396,11 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         do {
             let normalizedImage = try CalendarPhotoImportImageNormalizer
                 .normalizedCGImage(from: image)
-            let recognized = try await ocrService.recognize(
+            let recognized = try await ocrService.recognizeBestOrientation(
                 image: normalizedImage,
                 preferredLanguageCode: languageCode
             )
-            observations = recognized
+            observations = recognized.observations
             try applyParse(overridingYearMonth: nil)
             step = .review
         } catch {

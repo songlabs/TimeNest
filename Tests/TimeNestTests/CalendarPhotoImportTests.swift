@@ -7,10 +7,13 @@ final class CalendarPhotoImportTests: XCTestCase {
     func testSeptember2026AssignsMonthStartAndEndWithoutAdjacentMonthCells() throws {
         var observations = september2026DateObservations()
         observations.append(contentsOf: [
-            observation("Previous month note", column: 1, row: 0, line: 0),
+            observation("Previous 30 note", column: 0, row: 0, line: 0),
+            observation("Previous 31 note", column: 1, row: 0, line: 0),
             observation("8:50-16:30 Opening", day: 1, line: 0),
             observation("Closing", day: 30, line: 0),
-            observation("Next month note", column: 4, row: 4, line: 0)
+            observation("Next 1 note", column: 4, row: 4, line: 0),
+            observation("Next 2 note", column: 5, row: 4, line: 0),
+            observation("Next 3 note", column: 6, row: 4, line: 0)
         ])
 
         let result = try CalendarPhotoParser().parse(
@@ -23,7 +26,8 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(result.candidates.map(\.title), ["Opening", "Closing"])
         XCTAssertEqual(dateComponents(result.candidates[0].date), DateComponents(year: 2026, month: 9, day: 1))
         XCTAssertEqual(dateComponents(result.candidates[1].date), DateComponents(year: 2026, month: 9, day: 30))
-        XCTAssertFalse(result.candidates.contains { $0.title.contains("month note") })
+        XCTAssertFalse(result.candidates.contains { $0.title.contains("Previous") })
+        XCTAssertFalse(result.candidates.contains { $0.title.contains("Next") })
     }
 
     func testTimeParserSupportsRangesSingleTimeJapaneseAndInvalidText() {
@@ -135,6 +139,101 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(reparsed.candidates.map(\.title), ["Meeting"])
     }
 
+    func testDirectionSelectorCorrectsEveryQuarterTurn() throws {
+        var upright = september2026DateObservations()
+        upright.append(observation("Meeting", day: 9, line: 0))
+        let selector = CalendarPhotoOrientationSelector()
+
+        for sourceRotation in CalendarPhotoRotation.allCases {
+            let candidates = CalendarPhotoRotation.allCases.map { appliedRotation in
+                CalendarPhotoOrientationCandidate(
+                    rotation: appliedRotation,
+                    observations: rotatedObservations(
+                        upright,
+                        by: combinedRotation(sourceRotation, appliedRotation)
+                    )
+                )
+            }
+            let selection = try XCTUnwrap(selector.selectBest(
+                from: candidates,
+                calendar: utcGregorianCalendar()
+            ))
+
+            XCTAssertEqual(
+                selection.rotation,
+                inverseRotation(sourceRotation),
+                "Failed to correct source rotation \(sourceRotation.rawValue)"
+            )
+            XCTAssertEqual(
+                selection.evidence.yearMonth,
+                CalendarImportYearMonth(year: 2026, month: 9)
+            )
+            XCTAssertEqual(selection.evidence.columnCount, 7)
+            XCTAssertEqual(selection.evidence.rowCount, 5)
+            XCTAssertEqual(selection.evidence.matchedDateAnchorCount, 30)
+        }
+    }
+
+    func testRotatedLayoutOnlyFormsSevenColumnGridAfterCorrection() throws {
+        let upright = september2026DateObservations()
+        let sideways = rotatedObservations(upright, by: .degrees90)
+        let parser = CalendarPhotoParser()
+        let sidewaysEvidence = parser.orientationEvidence(
+            observations: sideways,
+            calendar: utcGregorianCalendar()
+        )
+        let correctedEvidence = parser.orientationEvidence(
+            observations: rotatedObservations(sideways, by: .degrees270),
+            calendar: utcGregorianCalendar()
+        )
+
+        XCTAssertFalse(sidewaysEvidence.hasReliableCalendarStructure)
+        XCTAssertEqual(
+            correctedEvidence.yearMonth,
+            CalendarImportYearMonth(year: 2026, month: 9)
+        )
+        XCTAssertTrue(correctedEvidence.hasReliableCalendarStructure)
+        XCTAssertEqual(correctedEvidence.columnCount, 7)
+        XCTAssertEqual(correctedEvidence.rowCount, 5)
+        XCTAssertEqual(correctedEvidence.matchedDateAnchorCount, 30)
+    }
+
+    func testManualYearMonthParsesSelectedCorrectedObservations() throws {
+        var upright = september2026DateObservations(includeHeader: false)
+        upright.append(observation("Meeting", day: 12, line: 0))
+        let sourceRotation = CalendarPhotoRotation.degrees90
+        let candidates = CalendarPhotoRotation.allCases.map { appliedRotation in
+            CalendarPhotoOrientationCandidate(
+                rotation: appliedRotation,
+                observations: rotatedObservations(
+                    upright,
+                    by: combinedRotation(sourceRotation, appliedRotation)
+                )
+            )
+        }
+        let selection = try XCTUnwrap(CalendarPhotoOrientationSelector().selectBest(
+            from: candidates,
+            calendar: utcGregorianCalendar()
+        ))
+
+        XCTAssertEqual(selection.rotation, .degrees270)
+        XCTAssertNil(selection.evidence.yearMonth)
+        XCTAssertTrue(selection.evidence.hasReliableCalendarStructure)
+
+        let result = try CalendarPhotoParser().parse(
+            observations: selection.observations,
+            overridingYearMonth: CalendarImportYearMonth(year: 2026, month: 9),
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+        let candidate = try XCTUnwrap(result.candidates.first)
+        XCTAssertEqual(candidate.title, "Meeting")
+        XCTAssertEqual(
+            dateComponents(candidate.date),
+            DateComponents(year: 2026, month: 9, day: 12)
+        )
+    }
+
     func testMissingDatesAndEmptyOCRFailSafely() {
         XCTAssertThrowsError(try CalendarPhotoParser().parse(
             observations: [],
@@ -168,6 +267,7 @@ final class CalendarPhotoImportTests: XCTestCase {
         }
 
         // September 1, 2026 is Tuesday in a Sunday-first grid.
+        observations.append(observation("30", column: 0, row: 0, line: -1))
         observations.append(observation("31", column: 1, row: 0, line: -1))
         for day in 1...30 {
             let index = 2 + day - 1
@@ -221,6 +321,63 @@ final class CalendarPhotoImportTests: XCTestCase {
                 height: 0.025
             )
         )
+    }
+
+    private func rotatedObservations(
+        _ observations: [CalendarOCRObservation],
+        by rotation: CalendarPhotoRotation
+    ) -> [CalendarOCRObservation] {
+        observations.map { observation in
+            CalendarOCRObservation(
+                text: observation.text,
+                confidence: observation.confidence,
+                boundingBox: rotatedBoundingBox(observation.boundingBox, by: rotation)
+            )
+        }
+    }
+
+    private func rotatedBoundingBox(
+        _ box: CalendarOCRBoundingBox,
+        by rotation: CalendarPhotoRotation
+    ) -> CalendarOCRBoundingBox {
+        switch rotation {
+        case .degrees0:
+            return box
+        case .degrees90:
+            return CalendarOCRBoundingBox(
+                x: box.minY,
+                y: 1 - box.maxX,
+                width: box.height,
+                height: box.width
+            )
+        case .degrees180:
+            return CalendarOCRBoundingBox(
+                x: 1 - box.maxX,
+                y: 1 - box.maxY,
+                width: box.width,
+                height: box.height
+            )
+        case .degrees270:
+            return CalendarOCRBoundingBox(
+                x: 1 - box.maxY,
+                y: box.minX,
+                width: box.height,
+                height: box.width
+            )
+        }
+    }
+
+    private func combinedRotation(
+        _ lhs: CalendarPhotoRotation,
+        _ rhs: CalendarPhotoRotation
+    ) -> CalendarPhotoRotation {
+        CalendarPhotoRotation(rawValue: (lhs.rawValue + rhs.rawValue) % 360)!
+    }
+
+    private func inverseRotation(
+        _ rotation: CalendarPhotoRotation
+    ) -> CalendarPhotoRotation {
+        CalendarPhotoRotation(rawValue: (360 - rotation.rawValue) % 360)!
     }
 
     private func utcGregorianCalendar() -> Calendar {

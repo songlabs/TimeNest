@@ -37,6 +37,82 @@ struct CalendarOCRObservation: Equatable, Sendable {
     let boundingBox: CalendarOCRBoundingBox
 }
 
+// Clockwise pixel rotation applied before OCR. The resulting CGImage is always `.up`.
+enum CalendarPhotoRotation: Int, CaseIterable, Sendable {
+    case degrees0 = 0
+    case degrees90 = 90
+    case degrees180 = 180
+    case degrees270 = 270
+}
+
+struct CalendarPhotoOrientationEvidence: Equatable, Sendable {
+    let yearMonth: CalendarImportYearMonth?
+    let dateAnchorCount: Int
+    let matchedDateAnchorCount: Int
+    let columnCount: Int
+    let rowCount: Int
+    let reliableTextCount: Int
+
+    var hasReliableCalendarStructure: Bool {
+        columnCount == 7
+            && (4...6).contains(rowCount)
+            && matchedDateAnchorCount >= 7
+    }
+
+    var score: Int {
+        // Calendar structure deliberately outweighs header or raw OCR quantity.
+        (yearMonth == nil ? 0 : 200)
+            + (hasReliableCalendarStructure ? 500 : 0)
+            + matchedDateAnchorCount * 20
+            + min(dateAnchorCount, 31) * 3
+            + min(reliableTextCount, 30)
+    }
+}
+
+struct CalendarPhotoOrientationCandidate: Equatable, Sendable {
+    let rotation: CalendarPhotoRotation
+    let observations: [CalendarOCRObservation]
+}
+
+struct CalendarPhotoOrientationSelection: Equatable, Sendable {
+    let rotation: CalendarPhotoRotation
+    let observations: [CalendarOCRObservation]
+    let evidence: CalendarPhotoOrientationEvidence
+}
+
+struct CalendarPhotoOrientationSelector {
+    func selectBest(
+        from candidates: [CalendarPhotoOrientationCandidate],
+        calendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> CalendarPhotoOrientationSelection? {
+        let parser = CalendarPhotoParser()
+        return candidates.map { candidate in
+            CalendarPhotoOrientationSelection(
+                rotation: candidate.rotation,
+                observations: candidate.observations,
+                evidence: parser.orientationEvidence(
+                    observations: candidate.observations,
+                    calendar: calendar
+                )
+            )
+        }.max { lhs, rhs in
+            if lhs.evidence.score != rhs.evidence.score {
+                return lhs.evidence.score < rhs.evidence.score
+            }
+            if lhs.evidence.matchedDateAnchorCount
+                != rhs.evidence.matchedDateAnchorCount {
+                return lhs.evidence.matchedDateAnchorCount
+                    < rhs.evidence.matchedDateAnchorCount
+            }
+            if lhs.evidence.dateAnchorCount != rhs.evidence.dateAnchorCount {
+                return lhs.evidence.dateAnchorCount < rhs.evidence.dateAnchorCount
+            }
+            // Keep an already-upright photo stable when all available evidence ties.
+            return lhs.rotation.rawValue > rhs.rotation.rawValue
+        }
+    }
+}
+
 struct CalendarImportDayRegion: Equatable, Sendable {
     let day: Int
     let boundingBox: CalendarOCRBoundingBox
@@ -207,7 +283,7 @@ struct CalendarPhotoParser {
 
     private struct GridFit {
         let score: Int
-        let weekStartsOnMonday: Bool
+        let firstColumn: Int
         let xCenters: [Double]
         let yCenters: [Double]
         let anchorsByDay: [Int: DateAnchor]
@@ -282,9 +358,7 @@ struct CalendarPhotoParser {
 
         let regions = makeDayRegions(
             fit: fit,
-            monthStart: monthStart,
-            dayCount: dayRange.count,
-            calendar: calendar
+            dayCount: dayRange.count
         )
         let anchorObservations = Set(
             fit.anchorsByDay.values.map { Self.observationIdentity($0.observation) }
@@ -358,6 +432,44 @@ struct CalendarPhotoParser {
         return CalendarImportYearMonth(year: components[0], month: components[1])
     }
 
+    func orientationEvidence(
+        observations: [CalendarOCRObservation],
+        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> CalendarPhotoOrientationEvidence {
+        let meaningful = observations.filter {
+            !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        let reliableTextCount = meaningful.filter { $0.confidence >= 0.4 }.count
+        let numericAnchors = meaningful.compactMap(Self.dateAnchor)
+        let dateAnchorCount = Set(numericAnchors.map(\.day)).count
+        let yearMonth = Self.inferYearMonth(from: meaningful)
+
+        var calendar = inputCalendar
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        let fit: GridFit?
+        if let yearMonth,
+           let monthStart = yearMonth.date(calendar: calendar),
+           let dayRange = calendar.range(of: .day, in: .month, for: monthStart) {
+            fit = fitGrid(
+                anchors: numericAnchors,
+                monthStart: monthStart,
+                dayCount: dayRange.count,
+                calendar: calendar
+            )
+        } else {
+            fit = fitGridWithoutYearMonth(anchors: numericAnchors)
+        }
+
+        return CalendarPhotoOrientationEvidence(
+            yearMonth: yearMonth,
+            dateAnchorCount: dateAnchorCount,
+            matchedDateAnchorCount: fit?.score ?? 0,
+            columnCount: fit?.xCenters.count ?? 0,
+            rowCount: fit?.yCenters.count ?? 0,
+            reliableTextCount: reliableTextCount
+        )
+    }
+
     private static func dateAnchor(
         _ observation: CalendarOCRObservation
     ) -> DateAnchor? {
@@ -378,6 +490,46 @@ struct CalendarPhotoParser {
         dayCount: Int,
         calendar: Calendar
     ) -> GridFit? {
+        let firstColumns = [
+            Self.column(
+                for: monthStart,
+                weekStartsOnMonday: false,
+                calendar: calendar
+            ),
+            Self.column(
+                for: monthStart,
+                weekStartsOnMonday: true,
+                calendar: calendar
+            )
+        ]
+        return fitGrid(
+            anchors: anchors,
+            dayCount: dayCount,
+            firstColumns: firstColumns
+        )
+    }
+
+    private func fitGridWithoutYearMonth(
+        anchors: [DateAnchor]
+    ) -> GridFit? {
+        var fits: [GridFit] = []
+        for dayCount in 28...31 {
+            if let fit = fitGrid(
+                anchors: anchors,
+                dayCount: dayCount,
+                firstColumns: Array(0...6)
+            ) {
+                fits.append(fit)
+            }
+        }
+        return fits.max(by: Self.isWeakerFit)
+    }
+
+    private func fitGrid(
+        anchors: [DateAnchor],
+        dayCount: Int,
+        firstColumns: [Int]
+    ) -> GridFit? {
         guard let xCenters = Self.clusterCenters(
             anchors.map { $0.observation.boundingBox.midX },
             count: 7,
@@ -385,12 +537,7 @@ struct CalendarPhotoParser {
         ) else { return nil }
 
         var fits: [GridFit] = []
-        for weekStartsOnMonday in [false, true] {
-            let firstColumn = Self.column(
-                for: monthStart,
-                weekStartsOnMonday: weekStartsOnMonday,
-                calendar: calendar
-            )
+        for firstColumn in Set(firstColumns).sorted() {
             let expectedRowCount = Int(ceil(Double(firstColumn + dayCount) / 7.0))
             for rowCount in expectedRowCount...6 {
                 guard let yCenters = Self.clusterCenters(
@@ -431,7 +578,7 @@ struct CalendarPhotoParser {
                 }
                 fits.append(GridFit(
                     score: matched.count,
-                    weekStartsOnMonday: weekStartsOnMonday,
+                    firstColumn: firstColumn,
                     xCenters: xCenters,
                     yCenters: yCenters,
                     anchorsByDay: matched
@@ -439,23 +586,14 @@ struct CalendarPhotoParser {
             }
         }
 
-        return fits.max {
-            if $0.score != $1.score { return $0.score < $1.score }
-            return $0.yCenters.count > $1.yCenters.count
-        }
+        return fits.max(by: Self.isWeakerFit)
     }
 
     private func makeDayRegions(
         fit: GridFit,
-        monthStart: Date,
-        dayCount: Int,
-        calendar: Calendar
+        dayCount: Int
     ) -> [CalendarImportDayRegion] {
-        let firstColumn = Self.column(
-            for: monthStart,
-            weekStartsOnMonday: fit.weekStartsOnMonday,
-            calendar: calendar
-        )
+        let firstColumn = fit.firstColumn
         let xSpacing = Self.medianSpacing(fit.xCenters) ?? (1.0 / 7.0)
         let ySpacing = Self.medianSpacing(fit.yCenters) ?? 0.14
 
@@ -650,6 +788,11 @@ struct CalendarPhotoParser {
             .map { abs($1 - $0) }
             .sorted()
         return differences[differences.count / 2]
+    }
+
+    private static func isWeakerFit(_ lhs: GridFit, _ rhs: GridFit) -> Bool {
+        if lhs.score != rhs.score { return lhs.score < rhs.score }
+        return lhs.yCenters.count > rhs.yCenters.count
     }
 
     private static func column(
