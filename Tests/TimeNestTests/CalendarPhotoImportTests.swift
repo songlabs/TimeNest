@@ -1268,3 +1268,27 @@ final class CalendarPhotoImportTests: XCTestCase {
     }
 
 }
+
+final class CalendarGeminiResponseDecoderTests: XCTestCase {
+    func testDecodesMultipleSchedulesAndTimeRanges() throws {
+        let events = try CalendarGeminiResponseDecoder.decode(
+            #"{"events":[{"title":"夕食","original_text":"17:30-20:30 夕食","start_minutes":1050,"end_minutes":1230,"confidence":0.92},{"title":"買い物","original_text":"買い物","start_minutes":null,"end_minutes":null,"confidence":0.8}]}"#
+        )
+
+        XCTAssertEqual(events.count, 2)
+        XCTAssertEqual(events[0].startMinutes, 1_050)
+        XCTAssertEqual(events[0].endMinutes, 1_230)
+        XCTAssertNil(events[1].startMinutes)
+    }
+
+    func testRejectsInvalidOrPartialTimes() throws {
+        let events = try CalendarGeminiResponseDecoder.decode(
+            #"{"events":[{"title":"bad","original_text":"bad","start_minutes":1050,"end_minutes":null,"confidence":0.9},{"title":"also bad","original_text":"bad","start_minutes":1500,"end_minutes":1600,"confidence":0.9}]}"#
+        )
+        XCTAssertTrue(events.isEmpty)
+    }
+
+    func testAcceptsEmptyCell() throws {
+        XCTAssertTrue(try CalendarGeminiResponseDecoder.decode(#"{"events":[]}"#).isEmpty)
+    }
+}

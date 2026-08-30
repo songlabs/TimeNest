@@ -564,6 +564,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     private let sharingStore: CalendarSharingStore
     private let parser = CalendarPhotoParser()
     private let ocrService = CalendarVisionOCRService()
+    private let geminiService = CalendarGeminiCellRecognitionService()
     private var observations: [CalendarOCRObservation] = []
     private var accurateOrientationCandidates: [CalendarPhotoOrientationCandidate] = []
     private var orientationDiagnostics: CalendarPhotoOrientationDiagnostics?
@@ -655,11 +656,27 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     weekStart: weekStart,
                     grid: grid
                 )
-                observations = try await ocrService.recognizeMonthCells(
-                    image: normalizedImage,
-                    regions: regions,
-                    preferredLanguageCode: languageCode
-                )
+                do {
+                    candidates = try await geminiService.recognizeMonthCells(
+                        image: normalizedImage,
+                        regions: regions,
+                        yearMonth: yearMonth,
+                        calendarID: defaultCalendarID,
+                        languageCode: languageCode
+                    )
+                    recognizedYearMonth = yearMonth
+                    step = .review
+                    return
+                } catch {
+                    #if DEBUG
+                    print("[CalendarImport] Gemini unavailable; falling back to Vision: \(error)")
+                    #endif
+                    observations = try await ocrService.recognizeMonthCells(
+                        image: normalizedImage,
+                        regions: regions,
+                        preferredLanguageCode: languageCode
+                    )
+                }
                 let result = try monthParser.parseMonth(
                     observations: observations,
                     yearMonth: yearMonth,

@@ -1,5 +1,61 @@
 import Foundation
 
+struct CalendarGeminiRecognizedEvent: Equatable, Sendable {
+    let title: String
+    let originalText: String
+    let startMinutes: Int?
+    let endMinutes: Int?
+    let confidence: Float
+}
+
+enum CalendarGeminiResponseDecoder {
+    private struct Envelope: Decodable { let events: [Event] }
+    private struct Event: Decodable {
+        let title: String
+        let originalText: String
+        let startMinutes: Int?
+        let endMinutes: Int?
+        let confidence: Float
+
+        enum CodingKeys: String, CodingKey {
+            case title, confidence
+            case originalText = "original_text"
+            case startMinutes = "start_minutes"
+            case endMinutes = "end_minutes"
+        }
+    }
+
+    static func decode(_ response: String) throws -> [CalendarGeminiRecognizedEvent] {
+        var json = response.trimmingCharacters(in: .whitespacesAndNewlines)
+        if json.hasPrefix("```") {
+            json = json.replacingOccurrences(of: "```json", with: "")
+                .replacingOccurrences(of: "```", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        let envelope = try JSONDecoder().decode(Envelope.self, from: Data(json.utf8))
+        return envelope.events.compactMap { event in
+            let title = event.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty,
+                  (0...1).contains(event.confidence),
+                  valid(event.startMinutes), valid(event.endMinutes),
+                  (event.startMinutes == nil) == (event.endMinutes == nil),
+                  event.endMinutes.map({ end in event.startMinutes.map { end > $0 } ?? false }) ?? true
+            else { return nil }
+            return CalendarGeminiRecognizedEvent(
+                title: title,
+                originalText: event.originalText,
+                startMinutes: event.startMinutes,
+                endMinutes: event.endMinutes,
+                confidence: event.confidence
+            )
+        }
+    }
+
+    private static func valid(_ minutes: Int?) -> Bool {
+        minutes.map { (0..<1_440).contains($0) } ?? true
+    }
+}
+
 struct CalendarImportYearMonth: Equatable, Sendable {
     let year: Int
     let month: Int
