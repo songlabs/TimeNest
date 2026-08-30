@@ -709,3 +709,10 @@
 "calendar_photo_import.diagnostics" = "診断情報";
 "calendar_photo_import.copy_diagnostics" = "診断情報をコピー";
 "calendar_photo_import.diagnostics_copied" = "コピーしました";
+"calendar_photo_import.scan_mode" = "スキャン方式";
+"calendar_photo_import.month_scan" = "月スキャン";
+"calendar_photo_import.day_scan" = "日スキャン";
+"calendar_photo_import.select_date" = "日付を選択";
+"calendar_photo_import.week_start" = "週の開始";
+"calendar_photo_import.sunday_first" = "日曜日";
+"calendar_photo_import.monday_first" = "月曜日";

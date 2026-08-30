@@ -886,4 +886,110 @@ final class CalendarPhotoImportTests: XCTestCase {
     private func dateComponents(_ date: Date) -> DateComponents {
         utcGregorianCalendar().dateComponents([.year, .month, .day], from: date)
     }
+
+    func testGridFirstMonthCreatesRegionsWithoutDateOCR() throws {
+        let yearMonth = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 9))
+        let grid = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0.05, y: 0.1, width: 0.9, height: 0.75),
+            columns: 7,
+            rows: 5
+        )
+        let regions = CalendarPhotoGridFirstParser().dayRegions(
+            yearMonth: yearMonth,
+            weekStart: .sunday,
+            grid: grid,
+            calendar: utcGregorianCalendar()
+        )
+        XCTAssertEqual(regions.count, 30)
+        XCTAssertEqual(regions.first?.day, 1)
+        XCTAssertEqual(regions.last?.day, 30)
+    }
+
+    func testGridFirstMonthMapsCellContentToKnownDate() throws {
+        let yearMonth = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 9))
+        let parser = CalendarPhotoGridFirstParser()
+        let grid = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 0.7, height: 0.5),
+            columns: 7,
+            rows: 5
+        )
+        let region = try XCTUnwrap(parser.dayRegions(
+            yearMonth: yearMonth, weekStart: .sunday, grid: grid,
+            calendar: utcGregorianCalendar()
+        ).first(where: { $0.day == 12 }))
+        let result = try parser.parseMonth(
+            observations: [CalendarOCRObservation(
+                text: "17:30-20:30 Dentist", confidence: 0.95,
+                boundingBox: CalendarOCRBoundingBox(
+                    x: region.boundingBox.x + 0.01, y: region.boundingBox.y + 0.02,
+                    width: region.boundingBox.width * 0.8, height: 0.02
+                )
+            )],
+            yearMonth: yearMonth, weekStart: .sunday, grid: grid,
+            defaultCalendarID: calendarID, calendar: utcGregorianCalendar()
+        )
+        XCTAssertEqual(dateComponents(result.candidates[0].date), DateComponents(year: 2026, month: 9, day: 12))
+        XCTAssertEqual(result.candidates[0].startTimeMinutes, 17 * 60 + 30)
+        XCTAssertEqual(result.candidates[0].endTimeMinutes, 20 * 60 + 30)
+        XCTAssertEqual(result.candidates[0].title, "Dentist")
+    }
+
+    func testMainGridSelectorRejectsSmallerMiniCalendar() throws {
+        let selected = try XCTUnwrap(CalendarPhotoGridSelector().selectMainGrid(
+            from: [
+                CalendarPhotoGridCandidate(
+                    boundingBox: CalendarOCRBoundingBox(x: 0.72, y: 0.75, width: 0.2, height: 0.15),
+                    structuralConfidence: 0.98
+                ),
+                CalendarPhotoGridCandidate(
+                    boundingBox: CalendarOCRBoundingBox(x: 0.05, y: 0.1, width: 0.9, height: 0.7),
+                    structuralConfidence: 0.9
+                )
+            ], expectedRows: 5
+        ))
+        XCTAssertEqual(selected.boundingBox.width, 0.9)
+    }
+
+    func testSixRowAndMondayFirstMonthMapping() throws {
+        let yearMonth = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 3))
+        let parser = CalendarPhotoGridFirstParser()
+        XCTAssertEqual(parser.expectedRows(
+            yearMonth: yearMonth, weekStart: .monday,
+            calendar: utcGregorianCalendar()
+        ), 6)
+        let regions = parser.dayRegions(
+            yearMonth: yearMonth, weekStart: .monday,
+            grid: CalendarPhotoGridGeometry(
+                boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 0.7, height: 0.6),
+                columns: 7, rows: 6
+            ), calendar: utcGregorianCalendar()
+        )
+        XCTAssertEqual(regions.count, 31)
+        XCTAssertEqual(regions[0].boundingBox.x, 0.6, accuracy: 0.0001)
+    }
+
+    func testDayScanKeepsSelectedDateAndSingleTimeNeedsReview() throws {
+        let selectedDate = try XCTUnwrap(utcGregorianCalendar().date(
+            from: DateComponents(year: 2026, month: 9, day: 19)
+        ))
+        let result = try CalendarPhotoDayParser().parse(
+            observations: [
+                CalendarOCRObservation(
+                    text: "9/20", confidence: 0.9,
+                    boundingBox: CalendarOCRBoundingBox(x: 0.1, y: 0.8, width: 0.1, height: 0.03)
+                ),
+                CalendarOCRObservation(
+                    text: "10:00 Meeting", confidence: 0.95,
+                    boundingBox: CalendarOCRBoundingBox(x: 0.1, y: 0.6, width: 0.4, height: 0.04)
+                )
+            ], selectedDate: selectedDate, defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+        XCTAssertEqual(result.candidates.count, 1)
+        XCTAssertEqual(dateComponents(result.candidates[0].date), DateComponents(year: 2026, month: 9, day: 19))
+        XCTAssertEqual(result.candidates[0].startTimeMinutes, 10 * 60)
+        XCTAssertNil(result.candidates[0].endTimeMinutes)
+        XCTAssertTrue(result.candidates[0].needsReview)
+    }
+
 }

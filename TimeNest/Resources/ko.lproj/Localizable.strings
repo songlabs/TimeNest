@@ -709,3 +709,10 @@
 "calendar_photo_import.diagnostics" = "진단 정보";
 "calendar_photo_import.copy_diagnostics" = "진단 정보 복사";
 "calendar_photo_import.diagnostics_copied" = "복사됨";
+"calendar_photo_import.scan_mode" = "스캔 방식";
+"calendar_photo_import.month_scan" = "월 스캔";
+"calendar_photo_import.day_scan" = "일 스캔";
+"calendar_photo_import.select_date" = "날짜 선택";
+"calendar_photo_import.week_start" = "주 시작";
+"calendar_photo_import.sunday_first" = "일요일";
+"calendar_photo_import.monday_first" = "월요일";

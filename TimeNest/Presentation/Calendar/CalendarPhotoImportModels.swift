@@ -37,6 +37,55 @@ struct CalendarOCRObservation: Equatable, Sendable {
     let boundingBox: CalendarOCRBoundingBox
 }
 
+enum CalendarPhotoScanMode: String, CaseIterable, Equatable, Sendable {
+    case month
+    case day
+}
+
+struct CalendarPhotoGridGeometry: Equatable, Sendable {
+    let boundingBox: CalendarOCRBoundingBox
+    let columns: Int
+    let rows: Int
+
+    var area: Double { boundingBox.width * boundingBox.height }
+}
+
+struct CalendarPhotoGridCandidate: Equatable, Sendable {
+    let boundingBox: CalendarOCRBoundingBox
+    let structuralConfidence: Double
+}
+
+struct CalendarPhotoGridSelector {
+    func selectMainGrid(
+        from candidates: [CalendarPhotoGridCandidate],
+        expectedRows: Int
+    ) -> CalendarPhotoGridGeometry? {
+        guard (4...6).contains(expectedRows) else { return nil }
+        guard let selected = candidates
+            .filter({ candidate in
+                candidate.boundingBox.width > 0
+                    && candidate.boundingBox.height > 0
+                    && candidate.structuralConfidence >= 0.5
+            })
+            .max(by: { lhs, rhs in
+                score(lhs, expectedRows: expectedRows) < score(rhs, expectedRows: expectedRows)
+            }) else { return nil }
+        return CalendarPhotoGridGeometry(
+            boundingBox: selected.boundingBox,
+            columns: 7,
+            rows: expectedRows
+        )
+    }
+
+    private func score(_ candidate: CalendarPhotoGridCandidate, expectedRows: Int) -> Double {
+        let expectedAspect = 7.0 / Double(expectedRows)
+        let actualAspect = candidate.boundingBox.width / candidate.boundingBox.height
+        let aspectSimilarity = 1 / (1 + abs(log(actualAspect / expectedAspect)))
+        return candidate.boundingBox.width * candidate.boundingBox.height
+            * candidate.structuralConfidence * aspectSimilarity
+    }
+}
+
 // Clockwise pixel rotation applied before OCR. The resulting CGImage is always `.up`.
 enum CalendarPhotoRotation: Int, CaseIterable, Sendable {
     case degrees0 = 0
@@ -309,6 +358,9 @@ struct CalendarPhotoGridAttemptDiagnostics: Equatable, Sendable {
 }
 
 struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
+    var scanMode: CalendarPhotoScanMode? = nil
+    var selectedDate: Date? = nil
+    var gridDetection: String = "legacy"
     let orientation: CalendarPhotoOrientationDiagnostics?
     let manualYearMonth: CalendarImportYearMonth?
     let resolvedYearMonth: CalendarImportYearMonth?
@@ -344,6 +396,9 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
 
     var displayFields: [(label: String, value: String)] {
         [
+            ("Scan Mode", scanMode?.rawValue ?? "legacy"),
+            ("Selected Date", Self.dateText(selectedDate)),
+            ("Grid Detection", gridDetection),
             ("Manual YM", Self.yearMonthText(manualYearMonth)),
             ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
             ("Selected Rotation", orientation.map { "\($0.selectedRotation.rawValue)" } ?? "none"),
@@ -371,6 +426,9 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var plainText: String {
         let summary = [
             "CalendarImportDiagnostics",
+            "scanMode=\(scanMode?.rawValue ?? "legacy")",
+            "selectedDate=\(Self.dateText(selectedDate))",
+            "gridDetection=\(gridDetection)",
             "manualYearMonth=\(Self.yearMonthText(manualYearMonth))",
             "resolvedYearMonth=\(Self.yearMonthText(resolvedYearMonth))",
             "selectedRotation=\(orientation.map { String($0.selectedRotation.rawValue) } ?? "none")",
@@ -478,6 +536,16 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     private static func yearMonthText(_ yearMonth: CalendarImportYearMonth?) -> String {
         guard let yearMonth else { return "none" }
         return String(format: "%04d-%02d", yearMonth.year, yearMonth.month)
+    }
+
+    private static func dateText(_ date: Date?) -> String {
+        guard let date else { return "none" }
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 
     private static func duplicateDaysText(
@@ -618,6 +686,247 @@ struct CalendarImportTimeParser {
 
     private static func isValid(hour: Int, minute: Int) -> Bool {
         (0...23).contains(hour) && (0...59).contains(minute)
+    }
+}
+
+struct CalendarPhotoGridFirstParser {
+    func expectedRows(
+        yearMonth: CalendarImportYearMonth,
+        weekStart: CalendarPhotoImportWeekStart,
+        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> Int? {
+        guard let values = monthValues(
+            yearMonth: yearMonth,
+            weekStart: weekStart,
+            calendar: inputCalendar
+        ) else { return nil }
+        return Int(ceil(Double(values.firstColumn + values.dayCount) / 7.0))
+    }
+
+    func dayRegions(
+        yearMonth: CalendarImportYearMonth,
+        weekStart: CalendarPhotoImportWeekStart,
+        grid: CalendarPhotoGridGeometry,
+        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> [CalendarImportDayRegion] {
+        guard grid.columns == 7,
+              let values = monthValues(
+                yearMonth: yearMonth,
+                weekStart: weekStart,
+                calendar: inputCalendar
+              ),
+              grid.rows == Int(ceil(Double(values.firstColumn + values.dayCount) / 7.0)) else {
+            return []
+        }
+        let cellWidth = grid.boundingBox.width / 7
+        let cellHeight = grid.boundingBox.height / Double(grid.rows)
+        return (1...values.dayCount).map { day in
+            let index = values.firstColumn + day - 1
+            let column = index % 7
+            let row = index / 7
+            return CalendarImportDayRegion(
+                day: day,
+                boundingBox: CalendarOCRBoundingBox(
+                    x: grid.boundingBox.minX + Double(column) * cellWidth,
+                    y: grid.boundingBox.maxY - Double(row + 1) * cellHeight,
+                    width: cellWidth,
+                    height: cellHeight
+                )
+            )
+        }
+    }
+
+    func parseMonth(
+        observations: [CalendarOCRObservation],
+        yearMonth: CalendarImportYearMonth,
+        weekStart: CalendarPhotoImportWeekStart,
+        grid: CalendarPhotoGridGeometry,
+        defaultCalendarID: UUID,
+        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
+    ) throws -> CalendarPhotoImportParseResult {
+        var calendar = inputCalendar
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        guard let monthStart = yearMonth.date(calendar: calendar) else {
+            throw CalendarPhotoImportParseError.noDateStructure
+        }
+        let regions = dayRegions(
+            yearMonth: yearMonth,
+            weekStart: weekStart,
+            grid: grid,
+            calendar: calendar
+        )
+        guard !regions.isEmpty else { throw CalendarPhotoImportParseError.noDateStructure }
+        let candidates = CalendarImportCandidateBuilder().makeMonthCandidates(
+            observations: observations,
+            regions: regions,
+            monthStart: monthStart,
+            calendarID: defaultCalendarID,
+            calendar: calendar
+        )
+        guard !candidates.isEmpty else { throw CalendarPhotoImportParseError.noCandidates }
+        return CalendarPhotoImportParseResult(
+            yearMonth: yearMonth,
+            candidates: candidates,
+            dayRegions: regions
+        )
+    }
+
+    private func monthValues(
+        yearMonth: CalendarImportYearMonth,
+        weekStart: CalendarPhotoImportWeekStart,
+        calendar inputCalendar: Calendar
+    ) -> (firstColumn: Int, dayCount: Int)? {
+        var calendar = inputCalendar
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        guard let monthStart = yearMonth.date(calendar: calendar),
+              let days = calendar.range(of: .day, in: .month, for: monthStart) else {
+            return nil
+        }
+        let weekday = calendar.component(.weekday, from: monthStart)
+        let firstColumn = weekStart == .monday ? (weekday + 5) % 7 : weekday - 1
+        return (firstColumn, days.count)
+    }
+}
+
+struct CalendarPhotoDayParser {
+    func parse(
+        observations: [CalendarOCRObservation],
+        selectedDate: Date,
+        defaultCalendarID: UUID,
+        calendar: Calendar = Calendar(identifier: .gregorian)
+    ) throws -> CalendarPhotoImportParseResult {
+        let meaningful = observations.filter {
+            !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        guard !meaningful.isEmpty else { throw CalendarPhotoImportParseError.noText }
+        let candidates = CalendarImportCandidateBuilder().makeDayCandidates(
+            observations: meaningful,
+            selectedDate: selectedDate,
+            calendarID: defaultCalendarID,
+            calendar: calendar
+        )
+        guard !candidates.isEmpty else { throw CalendarPhotoImportParseError.noCandidates }
+        let components = calendar.dateComponents([.year, .month], from: selectedDate)
+        return CalendarPhotoImportParseResult(
+            yearMonth: components.year.flatMap { year in
+                components.month.flatMap { CalendarImportYearMonth(year: year, month: $0) }
+            },
+            candidates: candidates,
+            dayRegions: []
+        )
+    }
+}
+
+private struct CalendarImportCandidateBuilder {
+    private struct Line { var observations: [CalendarOCRObservation] }
+
+    func makeMonthCandidates(
+        observations: [CalendarOCRObservation],
+        regions: [CalendarImportDayRegion],
+        monthStart: Date,
+        calendarID: UUID,
+        calendar: Calendar
+    ) -> [CalendarImportCandidate] {
+        regions.flatMap { region -> [CalendarImportCandidate] in
+            guard let date = calendar.date(byAdding: .day, value: region.day - 1, to: monthStart) else {
+                return []
+            }
+            let values = observations.filter { observation in
+                region.contains(observation) && !isPrintedDay(observation.text, day: region.day)
+            }
+            return make(observations: values, date: date, calendarID: calendarID)
+        }
+    }
+
+    func makeDayCandidates(
+        observations: [CalendarOCRObservation],
+        selectedDate: Date,
+        calendarID: UUID,
+        calendar: Calendar
+    ) -> [CalendarImportCandidate] {
+        let fixedDate = calendar.startOfDay(for: selectedDate)
+        return make(
+            observations: observations.filter { !isStandaloneDate($0.text) },
+            date: fixedDate,
+            calendarID: calendarID
+        )
+    }
+
+    private func make(
+        observations: [CalendarOCRObservation],
+        date: Date,
+        calendarID: UUID
+    ) -> [CalendarImportCandidate] {
+        group(observations).compactMap { line in
+            let sorted = line.observations.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
+            let original = sorted.map(\.text).joined(separator: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !original.isEmpty, let time = CalendarImportTimeParser.parse(original) else {
+                return nil
+            }
+            let token = personToken(in: original)
+            var title = CalendarImportTimeParser.removingTime(from: original)
+            if let token, let range = title.range(of: token) { title.removeSubrange(range) }
+            title = title.trimmingCharacters(
+                in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: "-–—〜～~:：・"))
+            )
+            let confidence = sorted.map(\.confidence).reduce(0, +) / Float(max(sorted.count, 1))
+            return CalendarImportCandidate(
+                id: UUID(), date: date, startTimeMinutes: time.startMinutes,
+                endTimeMinutes: time.endMinutes, title: title, originalText: original,
+                personToken: token, confidence: confidence, isSelected: true,
+                needsReview: confidence < 0.75 || time.endMinutes == nil || title.isEmpty || token != nil,
+                targetCalendarID: calendarID, includesPersonTokenInTitle: token != nil
+            )
+        }
+    }
+
+    private func group(_ observations: [CalendarOCRObservation]) -> [Line] {
+        var lines: [Line] = []
+        for observation in observations.sorted(by: {
+            abs($0.boundingBox.midY - $1.boundingBox.midY) > 0.005
+                ? $0.boundingBox.midY > $1.boundingBox.midY
+                : $0.boundingBox.minX < $1.boundingBox.minX
+        }) {
+            if let index = lines.indices.min(by: {
+                abs(centerY(lines[$0]) - observation.boundingBox.midY)
+                    < abs(centerY(lines[$1]) - observation.boundingBox.midY)
+            }), abs(centerY(lines[index]) - observation.boundingBox.midY)
+                <= max(averageHeight(lines[index]), observation.boundingBox.height) * 0.7 {
+                lines[index].observations.append(observation)
+            } else {
+                lines.append(Line(observations: [observation]))
+            }
+        }
+        return lines
+    }
+
+    private func centerY(_ line: Line) -> Double {
+        line.observations.map(\.boundingBox.midY).reduce(0, +) / Double(line.observations.count)
+    }
+
+    private func averageHeight(_ line: Line) -> Double {
+        line.observations.map(\.boundingBox.height).reduce(0, +) / Double(line.observations.count)
+    }
+
+    private func isPrintedDay(_ text: String, day: Int) -> Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines) == String(day)
+    }
+
+    private func isStandaloneDate(_ text: String) -> Bool {
+        let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return value.range(of: #"^(?:\d{1,2}|\d{1,2}[./-]\d{1,2})$"#, options: .regularExpression) != nil
+    }
+
+    private func personToken(in text: String) -> String? {
+        let pattern = #"^[\s]*([○〇◯◎●]\s*[\p{L}\p{N}]{1,3})"#
+        guard let expression = try? NSRegularExpression(pattern: pattern),
+              let match = expression.firstMatch(
+                in: text,
+                range: NSRange(text.startIndex..<text.endIndex, in: text)
+              ), match.numberOfRanges > 1,
+              let range = Range(match.range(at: 1), in: text) else { return nil }
+        return String(text[range]).replacingOccurrences(of: " ", with: "")
     }
 }
 
