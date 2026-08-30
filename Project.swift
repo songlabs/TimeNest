@@ -7,6 +7,10 @@ let project = Project(
     name: "TimeNest",
     packages: [
         .remote(
+            url: "https://github.com/firebase/firebase-ios-sdk.git",
+            requirement: .upToNextMajor(from: "12.0.0")
+        ),
+        .remote(
             url: "https://github.com/googleads/swift-package-manager-google-mobile-ads.git",
             requirement: .upToNextMajor(from: "13.0.0")
         )
@@ -33,6 +37,8 @@ let project = Project(
                 )
             ],
             dependencies: [
+                .package(product: "FirebaseAI"),
+                .package(product: "FirebaseCore"),
                 .package(product: "GoogleMobileAds"),
                 .target(name: "TimeNestWidgetExtension")
             ],

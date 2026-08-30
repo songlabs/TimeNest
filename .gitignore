@@ -7,6 +7,7 @@ xcuserdata/
 
 ## Generated files - do not commit
 .DS_Store
+GoogleService-Info.plist
 
 # Xcode project user-specific files (ignore user data, track project config)
 TimeNest.xcodeproj/xcuserdata/
