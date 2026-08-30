@@ -287,13 +287,15 @@ private struct CalendarVisionOCRService {
         request.minimumSize = 0.08
         request.quadratureTolerance = 25
         try VNImageRequestHandler(cgImage: image, orientation: .up).perform([request])
-        let candidates = (request.results ?? []).map { rectangle in
-            CalendarPhotoGridCandidate(
+        let rectangles: [VNRectangleObservation] = request.results ?? []
+        let candidates: [CalendarPhotoGridCandidate] = rectangles.map { rectangle in
+            let boundingBox: CGRect = rectangle.boundingBox
+            return CalendarPhotoGridCandidate(
                 boundingBox: CalendarOCRBoundingBox(
-                    x: Double(rectangle.boundingBox.minX),
-                    y: Double(rectangle.boundingBox.minY),
-                    width: Double(rectangle.boundingBox.width),
-                    height: Double(rectangle.boundingBox.height)
+                    x: Double(boundingBox.minX),
+                    y: Double(boundingBox.minY),
+                    width: Double(boundingBox.width),
+                    height: Double(boundingBox.height)
                 ),
                 structuralConfidence: Double(rectangle.confidence)
             )
