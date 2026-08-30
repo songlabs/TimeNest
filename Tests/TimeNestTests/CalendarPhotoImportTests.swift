@@ -195,6 +195,7 @@ final class CalendarPhotoImportTests: XCTestCase {
                 $0.split(separator: "=", maxSplits: 1).first.map(String.init)
             },
             [
+                "scanMode", "selectedDate", "gridDetection",
                 "manualYearMonth", "resolvedYearMonth", "selectedRotation",
                 "orientationEvidencePhase", "ocrObservations", "meaningful",
                 "pureNumeric", "dateAnchors", "distinctDays", "duplicateDays",
