@@ -935,6 +935,194 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(result.candidates[0].title, "Dentist")
     }
 
+    func testGridFirstMonthCombinesSymbolTitleWithFollowingTimeLine() throws {
+        let fixture = try gridFirstFixture(day: 24)
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        let result = try fixture.parser.parseMonth(
+            observations: [
+                CalendarOCRObservation(
+                    text: "SEPTEMBER 2026",
+                    confidence: 0.98,
+                    boundingBox: CalendarOCRBoundingBox(
+                        x: 0.1,
+                        y: 0.8,
+                        width: 0.3,
+                        height: 0.04
+                    )
+                ),
+                gridFirstObservation("24", in: fixture.region, line: 0),
+                gridFirstObservation("⑤", in: fixture.region, line: 1, confidence: 0.5),
+                gridFirstObservation("20:20–21:40", in: fixture.region, line: 2)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        let candidate = try XCTUnwrap(result.candidates.first)
+        XCTAssertEqual(result.candidates.count, 1)
+        XCTAssertEqual(dateComponents(candidate.date), DateComponents(year: 2026, month: 9, day: 24))
+        XCTAssertEqual(candidate.startTimeMinutes, 20 * 60 + 20)
+        XCTAssertEqual(candidate.endTimeMinutes, 21 * 60 + 40)
+        XCTAssertEqual(candidate.title, "⑤")
+        XCTAssertTrue(candidate.needsReview)
+
+        let captured = try XCTUnwrap(diagnostics)
+        XCTAssertEqual(captured.scanMode, .month)
+        XCTAssertEqual(captured.cellDiagnostics.count, 30)
+        XCTAssertEqual(captured.unassignedRawTexts, ["SEPTEMBER 2026"])
+        XCTAssertEqual(captured.unassignedNormalizedTexts, ["SEPTEMBER 2026"])
+        let day = try XCTUnwrap(captured.cellDiagnostics.first { $0.day == 24 })
+        XCTAssertEqual(day.observationCount, 3)
+        XCTAssertEqual(day.printedDayObservationCount, 1)
+        XCTAssertEqual(day.rawTexts, ["⑤", "20:20–21:40"])
+        XCTAssertEqual(day.normalizedTexts, ["⑤", "20:20–21:40"])
+        XCTAssertTrue(day.candidateCreated)
+        XCTAssertNil(day.rejectedReason)
+        XCTAssertEqual(day.candidates.first?.parsedStartMinutes, 20 * 60 + 20)
+        XCTAssertEqual(day.candidates.first?.parsedEndMinutes, 21 * 60 + 40)
+        XCTAssertEqual(day.candidates.first?.remainingTitle, "⑤")
+        XCTAssertTrue(captured.plainText.contains(
+            #"rawTexts=["⑤","20:20–21:40"]"#
+        ))
+        XCTAssertTrue(captured.plainText.contains(
+            #"parsedStart=20:20 parsedEnd=21:40 remainingTitle="⑤" candidateCreated=true"#
+        ))
+    }
+
+    func testGridFirstMonthKeepsTimeOnlyCellAsWarningCandidate() throws {
+        let fixture = try gridFirstFixture(day: 12)
+        let result = try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("17:30–20:30", in: fixture.region, line: 0)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+
+        let candidate = try XCTUnwrap(result.candidates.first)
+        XCTAssertEqual(candidate.startTimeMinutes, 17 * 60 + 30)
+        XCTAssertEqual(candidate.endTimeMinutes, 20 * 60 + 30)
+        XCTAssertEqual(candidate.title, "")
+        XCTAssertTrue(candidate.needsReview)
+        XCTAssertFalse(candidate.isValidForSaving)
+    }
+
+    func testGridFirstMonthKeepsUnparseableNumericTextAsWarningFallback() throws {
+        let fixture = try gridFirstFixture(day: 12)
+        let result = try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("⑤", in: fixture.region, line: 0),
+                gridFirstObservation("17720", in: fixture.region, line: 1)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+
+        let candidate = try XCTUnwrap(result.candidates.first)
+        XCTAssertNil(candidate.startTimeMinutes)
+        XCTAssertNil(candidate.endTimeMinutes)
+        XCTAssertEqual(candidate.title, "⑤ 17720")
+        XCTAssertTrue(candidate.needsReview)
+    }
+
+    func testGridFirstMonthCombinesJapaneseTitleWithFollowingTimeLine() throws {
+        let fixture = try gridFirstFixture(day: 6)
+        let result = try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("適性検査対策", in: fixture.region, line: 0),
+                gridFirstObservation("8:50–16:30", in: fixture.region, line: 1)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+
+        let candidate = try XCTUnwrap(result.candidates.first)
+        XCTAssertEqual(candidate.title, "適性検査対策")
+        XCTAssertEqual(candidate.startTimeMinutes, 8 * 60 + 50)
+        XCTAssertEqual(candidate.endTimeMinutes, 16 * 60 + 30)
+        XCTAssertFalse(candidate.needsReview)
+    }
+
+    func testGridFirstMonthKeepsTwoTimedLinesAsIndependentCandidates() throws {
+        let fixture = try gridFirstFixture(day: 26)
+        let result = try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("① 17:30–20:30", in: fixture.region, line: 0),
+                gridFirstObservation("⑤ 20:20–21:40", in: fixture.region, line: 1)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+
+        XCTAssertEqual(result.candidates.count, 2)
+        XCTAssertEqual(result.candidates.map(\.title), ["①", "⑤"])
+        XCTAssertEqual(result.candidates.map(\.startTimeMinutes), [17 * 60 + 30, 20 * 60 + 20])
+        XCTAssertEqual(result.candidates.map(\.endTimeMinutes), [20 * 60 + 30, 21 * 60 + 40])
+    }
+
+    func testGridFirstMonthEmptyCellsDoNotCreateCandidates() throws {
+        let fixture = try gridFirstFixture(day: 5)
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        XCTAssertThrowsError(try fixture.parser.parseMonth(
+            observations: [],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )) { error in
+            XCTAssertEqual(error as? CalendarPhotoImportParseError, .noCandidates)
+        }
+
+        let day = try XCTUnwrap(diagnostics?.cellDiagnostics.first { $0.day == 5 })
+        XCTAssertFalse(day.candidateCreated)
+        XCTAssertEqual(day.rejectedReason, .noObservations)
+    }
+
+    func testGridFirstMonthPrintedDayOnlyDoesNotCreateCandidate() throws {
+        let fixture = try gridFirstFixture(day: 24)
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        XCTAssertThrowsError(try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("２４", in: fixture.region, line: 0)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )) { error in
+            XCTAssertEqual(error as? CalendarPhotoImportParseError, .noCandidates)
+        }
+
+        let day = try XCTUnwrap(diagnostics?.cellDiagnostics.first { $0.day == 24 })
+        XCTAssertEqual(day.observationCount, 1)
+        XCTAssertEqual(day.printedDayObservationCount, 1)
+        XCTAssertTrue(day.rawTexts.isEmpty)
+        XCTAssertFalse(day.candidateCreated)
+        XCTAssertEqual(day.rejectedReason, .printedDayOnly)
+    }
+
     func testMainGridSelectorRejectsSmallerMiniCalendar() throws {
         let selected = try XCTUnwrap(CalendarPhotoGridSelector().selectMainGrid(
             from: [
@@ -991,6 +1179,52 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(result.candidates[0].startTimeMinutes, 10 * 60)
         XCTAssertNil(result.candidates[0].endTimeMinutes)
         XCTAssertTrue(result.candidates[0].needsReview)
+    }
+
+    private func gridFirstFixture(
+        day: Int
+    ) throws -> (
+        parser: CalendarPhotoGridFirstParser,
+        yearMonth: CalendarImportYearMonth,
+        grid: CalendarPhotoGridGeometry,
+        region: CalendarImportDayRegion
+    ) {
+        let parser = CalendarPhotoGridFirstParser()
+        let yearMonth = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 9))
+        let grid = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 0.7, height: 0.5),
+            columns: 7,
+            rows: 5
+        )
+        let region = try XCTUnwrap(parser.dayRegions(
+            yearMonth: yearMonth,
+            weekStart: .sunday,
+            grid: grid,
+            calendar: utcGregorianCalendar()
+        ).first { $0.day == day })
+        return (parser, yearMonth, grid, region)
+    }
+
+    private func gridFirstObservation(
+        _ text: String,
+        in region: CalendarImportDayRegion,
+        line: Int,
+        confidence: Float = 0.95
+    ) -> CalendarOCRObservation {
+        let height = region.boundingBox.height * 0.14
+        let y = region.boundingBox.maxY
+            - region.boundingBox.height * (0.12 + Double(line) * 0.22)
+            - height
+        return CalendarOCRObservation(
+            text: text,
+            confidence: confidence,
+            boundingBox: CalendarOCRBoundingBox(
+                x: region.boundingBox.minX + region.boundingBox.width * 0.08,
+                y: y,
+                width: region.boundingBox.width * 0.8,
+                height: height
+            )
+        )
     }
 
 }

@@ -527,7 +527,11 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     yearMonth: yearMonth,
                     weekStart: weekStart,
                     grid: grid,
-                    defaultCalendarID: defaultCalendarID
+                    defaultCalendarID: defaultCalendarID,
+                    orientationDiagnostics: orientationDiagnostics,
+                    diagnosticsHandler: { [weak self] diagnostics in
+                        self?.recordDiagnostics(diagnostics)
+                    }
                 )
                 recognizedYearMonth = result.yearMonth
                 candidates = result.candidates
