@@ -674,9 +674,11 @@
 "calendar_photo_import.select_year_month" = "Select Year and Month";
 "calendar_photo_import.apply_year_month" = "Use Selected Month";
 "calendar_photo_import.candidate_count" = "Event Candidates";
+"calendar_photo_import.candidate_count_format" = "%d items";
 "calendar_photo_import.selected" = "Include";
 "calendar_photo_import.date" = "Date";
 "calendar_photo_import.time" = "Time";
+"calendar_photo_import.schedule" = "Event";
 "calendar_photo_import.start_time" = "Start Time";
 "calendar_photo_import.end_time" = "End Time";
 "calendar_photo_import.set_time" = "Set a Time";
@@ -713,6 +715,7 @@
 "calendar_photo_import.month_scan" = "Month Scan";
 "calendar_photo_import.day_scan" = "Day Scan";
 "calendar_photo_import.select_date" = "Select Date";
-"calendar_photo_import.week_start" = "Week Starts";
+"calendar_photo_import.week_start" = "First Day of the Week";
+"calendar_photo_import.week_start_help" = "Choose the weekday shown in the first column of the paper calendar. This is used to match each box to the correct date.";
 "calendar_photo_import.sunday_first" = "Sunday";
 "calendar_photo_import.monday_first" = "Monday";

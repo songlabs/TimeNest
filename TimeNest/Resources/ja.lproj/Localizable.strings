@@ -674,9 +674,11 @@
 "calendar_photo_import.select_year_month" = "年月を選択";
 "calendar_photo_import.apply_year_month" = "選択した年月を使用";
 "calendar_photo_import.candidate_count" = "予定候補";
+"calendar_photo_import.candidate_count_format" = "%d件";
 "calendar_photo_import.selected" = "追加する";
 "calendar_photo_import.date" = "日付";
 "calendar_photo_import.time" = "時刻";
+"calendar_photo_import.schedule" = "予定";
 "calendar_photo_import.start_time" = "開始時刻";
 "calendar_photo_import.end_time" = "終了時刻";
 "calendar_photo_import.set_time" = "時刻を設定";
@@ -713,6 +715,7 @@
 "calendar_photo_import.month_scan" = "月スキャン";
 "calendar_photo_import.day_scan" = "日スキャン";
 "calendar_photo_import.select_date" = "日付を選択";
-"calendar_photo_import.week_start" = "週の開始";
+"calendar_photo_import.week_start" = "週の開始曜日";
+"calendar_photo_import.week_start_help" = "紙の月間カレンダーの一番左の列にある曜日を選んでください。各マスの日付を正しく判断するために使用します。";
 "calendar_photo_import.sunday_first" = "日曜日";
 "calendar_photo_import.monday_first" = "月曜日";

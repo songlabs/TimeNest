@@ -468,6 +468,10 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         candidates.filter(\.isSelected).count
     }
 
+    var commonTargetCalendarID: UUID? {
+        candidates.first?.targetCalendarID
+    }
+
     var canSave: Bool {
         let writableIDs = Set(availableCalendars.map(\.id))
         let selected = candidates.filter(\.isSelected)
@@ -581,6 +585,14 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
 
     func deleteCandidate(id: UUID) {
         candidates.removeAll { $0.id == id }
+    }
+
+    func setTargetCalendarID(_ calendarID: UUID) {
+        candidates = candidates.map { candidate in
+            var updated = candidate
+            updated.targetCalendarID = calendarID
+            return updated
+        }
     }
 
     func startOver() {
@@ -846,8 +858,16 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     }
 }
 
+private enum CalendarPhotoImportResultLayout {
+    static let selectionColumnWidth: CGFloat = 28
+    static let dateColumnWidth: CGFloat = 46
+    static let timeColumnWidth: CGFloat = 92
+    static let columnSpacing: CGFloat = 8
+}
+
 struct CalendarPhotoImportView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @EnvironmentObject private var localization: LocalizationManager
     @StateObject private var viewModel: CalendarPhotoImportViewModel
     @State private var selectedPhoto: PhotosPickerItem?
@@ -953,92 +973,122 @@ struct CalendarPhotoImportView: View {
     }
 
     private var sourceView: some View {
-        VStack(spacing: 20) {
-            Picker(
-                localization.localized(.calendarPhotoImportScanMode),
-                selection: $viewModel.scanMode
-            ) {
-                Text(localization.localized(.calendarPhotoImportMonthScan))
-                    .tag(CalendarPhotoScanMode.month)
-                Text(localization.localized(.calendarPhotoImportDayScan))
-                    .tag(CalendarPhotoScanMode.day)
-            }
-            .pickerStyle(.segmented)
-            .accessibilityIdentifier("calendarPhotoImport.scanMode")
-
-            if viewModel.scanMode == .month {
-                LabeledContent(localization.localized(.calendarPhotoImportSelectYearMonth)) {
-                    HStack(spacing: 8) {
-                        Picker(localization.localized(.yearLabel), selection: yearSelectionBinding) {
-                            ForEach(1900...2200, id: \.self) { Text(verbatim: "\($0)").tag($0) }
-                        }
-                        Picker(localization.localized(.monthLabel), selection: monthSelectionBinding) {
-                            ForEach(1...12, id: \.self) { Text(verbatim: "\($0)").tag($0) }
-                        }
+        GeometryReader { proxy in
+            ScrollView {
+                VStack(spacing: 20) {
+                    Picker(
+                        localization.localized(.calendarPhotoImportScanMode),
+                        selection: $viewModel.scanMode
+                    ) {
+                        Text(localization.localized(.calendarPhotoImportMonthScan))
+                            .tag(CalendarPhotoScanMode.month)
+                        Text(localization.localized(.calendarPhotoImportDayScan))
+                            .tag(CalendarPhotoScanMode.day)
                     }
-                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("calendarPhotoImport.scanMode")
+
+                    if viewModel.scanMode == .month {
+                        LabeledContent(localization.localized(.calendarPhotoImportSelectYearMonth)) {
+                            HStack(spacing: 8) {
+                                Picker(
+                                    localization.localized(.yearLabel),
+                                    selection: yearSelectionBinding
+                                ) {
+                                    ForEach(1900...2200, id: \.self) {
+                                        Text(verbatim: "\($0)").tag($0)
+                                    }
+                                }
+                                Picker(
+                                    localization.localized(.monthLabel),
+                                    selection: monthSelectionBinding
+                                ) {
+                                    ForEach(1...12, id: \.self) {
+                                        Text(verbatim: "\($0)").tag($0)
+                                    }
+                                }
+                            }
+                            .labelsHidden()
+                        }
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(localization.localized(.calendarPhotoImportWeekStart))
+                                .font(.subheadline.weight(.semibold))
+
+                            Picker(
+                                localization.localized(.calendarPhotoImportWeekStart),
+                                selection: $viewModel.weekStart
+                            ) {
+                                Text(localization.localized(.calendarPhotoImportSundayFirst))
+                                    .tag(CalendarPhotoImportWeekStart.sunday)
+                                Text(localization.localized(.calendarPhotoImportMondayFirst))
+                                    .tag(CalendarPhotoImportWeekStart.monday)
+                            }
+                            .pickerStyle(.segmented)
+                            .accessibilityIdentifier("calendarPhotoImport.weekStart")
+
+                            Text(localization.localized(.calendarPhotoImportWeekStartHelp))
+                                .font(.footnote)
+                                .foregroundStyle(SettingsModalSurface.secondaryText)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        DatePicker(
+                            localization.localized(.calendarPhotoImportSelectDate),
+                            selection: $viewModel.daySelection,
+                            displayedComponents: .date
+                        )
+                    }
+
+                    Spacer()
+                    Image(systemName: "camera.viewfinder")
+                        .font(.system(size: 54, weight: .medium))
+                        .foregroundColor(ShiftCalendarColors.primaryBlue)
+                        .accessibilityHidden(true)
+
+                    Text(localization.localized(.calendarPhotoImportSourceMessage))
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+
+                    Button(action: openCamera) {
+                        Label(
+                            localization.localized(.calendarPhotoImportCamera),
+                            systemImage: "camera"
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(viewModel.availableCalendars.isEmpty)
+                    .accessibilityIdentifier("calendarPhotoImport.camera")
+
+                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                        Label(
+                            localization.localized(.calendarPhotoImportPhotos),
+                            systemImage: "photo.on.rectangle"
+                        )
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 48)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(viewModel.availableCalendars.isEmpty)
+                    .accessibilityIdentifier("calendarPhotoImport.photos")
+
+                    if viewModel.availableCalendars.isEmpty {
+                        Text(localization.localized(.calendarPhotoImportNoWritableCalendar))
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                    }
+                    Spacer()
                 }
-                Picker(
-                    localization.localized(.calendarPhotoImportWeekStart),
-                    selection: $viewModel.weekStart
-                ) {
-                    Text(localization.localized(.calendarPhotoImportSundayFirst))
-                        .tag(CalendarPhotoImportWeekStart.sunday)
-                    Text(localization.localized(.calendarPhotoImportMondayFirst))
-                        .tag(CalendarPhotoImportWeekStart.monday)
-                }
-                .pickerStyle(.segmented)
-            } else {
-                DatePicker(
-                    localization.localized(.calendarPhotoImportSelectDate),
-                    selection: $viewModel.daySelection,
-                    displayedComponents: .date
-                )
-            }
-
-            Spacer()
-            Image(systemName: "camera.viewfinder")
-                .font(.system(size: 54, weight: .medium))
-                .foregroundColor(ShiftCalendarColors.primaryBlue)
-                .accessibilityHidden(true)
-
-            Text(localization.localized(.calendarPhotoImportSourceMessage))
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            Button(action: openCamera) {
-                Label(
-                    localization.localized(.calendarPhotoImportCamera),
-                    systemImage: "camera"
-                )
                 .frame(maxWidth: .infinity)
-                .frame(height: 48)
+                .frame(minHeight: proxy.size.height)
+                .padding(.horizontal, SettingsModalSurface.horizontalPadding)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(viewModel.availableCalendars.isEmpty)
-            .accessibilityIdentifier("calendarPhotoImport.camera")
-
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Label(
-                    localization.localized(.calendarPhotoImportPhotos),
-                    systemImage: "photo.on.rectangle"
-                )
-                .frame(maxWidth: .infinity)
-                .frame(height: 48)
-            }
-            .buttonStyle(.bordered)
-            .disabled(viewModel.availableCalendars.isEmpty)
-            .accessibilityIdentifier("calendarPhotoImport.photos")
-
-            if viewModel.availableCalendars.isEmpty {
-                Text(localization.localized(.calendarPhotoImportNoWritableCalendar))
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-            }
-            Spacer()
+            .scrollBounceBehavior(.basedOnSize)
         }
-        .padding(.horizontal, SettingsModalSurface.horizontalPadding)
         .background(SettingsModalSurface.background)
     }
 
@@ -1058,30 +1108,41 @@ struct CalendarPhotoImportView: View {
     private var reviewView: some View {
         Form {
             Section(localization.localized(.calendarPhotoImportResults)) {
-                if let yearMonth = viewModel.recognizedYearMonth,
-                   let date = yearMonth.date() {
-                    LabeledContent(
-                        localization.localized(.calendarPhotoImportRecognizedMonth),
-                        value: monthText(date)
-                    )
-                } else {
-                    Label(
-                        localization.localized(.calendarPhotoImportYearMonthRequired),
-                        systemImage: "exclamationmark.triangle.fill"
-                    )
-                    .foregroundStyle(.orange)
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
+                    if viewModel.scanMode == .month,
+                       let yearMonth = viewModel.recognizedYearMonth,
+                       let date = yearMonth.date() {
+                        Text(monthText(date))
+                            .font(.headline)
+                    } else if viewModel.scanMode == .day {
+                        Text(candidateHeader(viewModel.daySelection))
+                            .font(.headline)
+                    } else {
+                        Label(
+                            localization.localized(.calendarPhotoImportYearMonthRequired),
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .foregroundStyle(.orange)
+                    }
+
+                    Spacer(minLength: 8)
+
+                    Text(candidateCountText)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                 }
 
-                LabeledContent(
-                    localization.localized(.calendarPhotoImportCandidateCount),
-                    value: "\(viewModel.candidates.count)"
-                )
-
-                if viewModel.scanMode == .day {
-                    LabeledContent(
-                        localization.localized(.calendarPhotoImportSelectDate),
-                        value: viewModel.daySelection.formatted(date: .numeric, time: .omitted)
-                    )
+                if !viewModel.candidates.isEmpty {
+                    Picker(
+                        localization.localized(.calendarPhotoImportTargetCalendar),
+                        selection: commonTargetCalendarBinding
+                    ) {
+                        ForEach(viewModel.availableCalendars) { calendar in
+                            Text(calendar.name).tag(Optional(calendar.id))
+                        }
+                    }
+                    .accessibilityIdentifier("calendarPhotoImport.targetCalendar")
                 }
 
                 if let failureMessage = viewModel.failureMessage,
@@ -1095,8 +1156,14 @@ struct CalendarPhotoImportView: View {
                 diagnosticsSection(diagnostics)
             }
 
-            ForEach($viewModel.candidates) { $candidate in
-                candidateSection(candidate: $candidate)
+            if !viewModel.candidates.isEmpty {
+                Section {
+                    ForEach($viewModel.candidates) { $candidate in
+                        candidateRow(candidate: $candidate)
+                    }
+                } header: {
+                    candidateTableHeader
+                }
             }
         }
         .safeAreaInset(edge: .bottom) {
@@ -1174,127 +1241,271 @@ struct CalendarPhotoImportView: View {
     }
 
     @ViewBuilder
-    private func candidateSection(
+    private var candidateTableHeader: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            HStack(spacing: CalendarPhotoImportResultLayout.columnSpacing) {
+                Color.clear
+                    .frame(width: CalendarPhotoImportResultLayout.selectionColumnWidth)
+                Text(
+                    [
+                        localization.localized(.calendarPhotoImportDate),
+                        localization.localized(.calendarPhotoImportTime),
+                        localization.localized(.calendarPhotoImportSchedule)
+                    ].joined(separator: " · ")
+                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        } else {
+            HStack(spacing: CalendarPhotoImportResultLayout.columnSpacing) {
+                Color.clear
+                    .frame(width: CalendarPhotoImportResultLayout.selectionColumnWidth)
+                Text(localization.localized(.calendarPhotoImportDate))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(
+                        width: CalendarPhotoImportResultLayout.dateColumnWidth,
+                        alignment: .leading
+                    )
+                Text(localization.localized(.calendarPhotoImportTime))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(
+                        width: CalendarPhotoImportResultLayout.timeColumnWidth,
+                        alignment: .leading
+                    )
+                Text(localization.localized(.calendarPhotoImportSchedule))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private func candidateRow(
         candidate: Binding<CalendarImportCandidate>
     ) -> some View {
-        Section {
-            Toggle(
-                localization.localized(.calendarPhotoImportSelected),
-                isOn: candidate.isSelected
-            )
-
-            TextField(
-                localization.localized(.editorTitle),
-                text: candidate.title,
-                axis: .vertical
-            )
-            .textInputAutocapitalization(.sentences)
-
-            DatePicker(
-                localization.localized(.calendarPhotoImportDate),
-                selection: candidate.date,
-                displayedComponents: .date
-            )
-
-            if candidate.wrappedValue.startTimeMinutes != nil {
-                DatePicker(
-                    localization.localized(.calendarPhotoImportStartTime),
-                    selection: timeBinding(
-                        minutes: candidate.startTimeMinutes,
-                        date: candidate.wrappedValue.date
-                    ),
-                    displayedComponents: .hourAndMinute
+        HStack(spacing: CalendarPhotoImportResultLayout.columnSpacing) {
+            Button {
+                candidate.wrappedValue.isSelected.toggle()
+            } label: {
+                Image(
+                    systemName: candidate.wrappedValue.isSelected
+                        ? "checkmark.circle.fill"
+                        : "circle"
                 )
-                if candidate.wrappedValue.endTimeMinutes != nil {
+                .font(.title3)
+                .foregroundStyle(
+                    candidate.wrappedValue.isSelected
+                        ? ShiftCalendarColors.primaryBlue
+                        : SettingsModalSurface.secondaryText
+                )
+                .frame(width: CalendarPhotoImportResultLayout.selectionColumnWidth)
+                .frame(minHeight: 36)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localization.localized(.calendarPhotoImportSelected))
+            .accessibilityAddTraits(
+                candidate.wrappedValue.isSelected ? .isSelected : []
+            )
+
+            NavigationLink {
+                candidateDetailView(candidate: candidate)
+            } label: {
+                candidateRowContent(candidate.wrappedValue)
+            }
+            .buttonStyle(.plain)
+        }
+        .swipeActions(edge: .trailing) {
+            Button(role: .destructive) {
+                viewModel.deleteCandidate(id: candidate.wrappedValue.id)
+            } label: {
+                Label(
+                    localization.localized(.calendarPhotoImportDeleteCandidate),
+                    systemImage: "trash"
+                )
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder
+    private func candidateRowContent(_ candidate: CalendarImportCandidate) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 10) {
+                    Text(candidateDateText(candidate.date))
+                    Text(candidateTimeText(candidate))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    candidateReviewIndicator(candidate)
+                }
+                .font(.subheadline)
+
+                Text(candidate.effectiveTitle)
+                    .font(.body)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .foregroundStyle(
+                candidate.isSelected
+                    ? SettingsModalSurface.primaryText
+                    : SettingsModalSurface.secondaryText
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            HStack(spacing: CalendarPhotoImportResultLayout.columnSpacing) {
+                Text(candidateDateText(candidate.date))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .frame(
+                        width: CalendarPhotoImportResultLayout.dateColumnWidth,
+                        alignment: .leading
+                    )
+                Text(candidateTimeText(candidate))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(
+                        width: CalendarPhotoImportResultLayout.timeColumnWidth,
+                        alignment: .leading
+                    )
+                Text(candidate.effectiveTitle)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                candidateReviewIndicator(candidate)
+            }
+            .font(.subheadline)
+            .foregroundStyle(
+                candidate.isSelected
+                    ? SettingsModalSurface.primaryText
+                    : SettingsModalSurface.secondaryText
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    @ViewBuilder
+    private func candidateReviewIndicator(_ candidate: CalendarImportCandidate) -> some View {
+        if candidate.needsReview || !candidate.isValidForSaving {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .accessibilityLabel(localization.localized(.calendarPhotoImportNeedsReview))
+        }
+    }
+
+    private func candidateDetailView(
+        candidate: Binding<CalendarImportCandidate>
+    ) -> some View {
+        Form {
+            Section {
+                Toggle(
+                    localization.localized(.calendarPhotoImportSelected),
+                    isOn: candidate.isSelected
+                )
+
+                TextField(
+                    localization.localized(.editorTitle),
+                    text: candidate.title,
+                    axis: .vertical
+                )
+                .textInputAutocapitalization(.sentences)
+
+                DatePicker(
+                    localization.localized(.calendarPhotoImportDate),
+                    selection: candidate.date,
+                    displayedComponents: .date
+                )
+
+                if candidate.wrappedValue.startTimeMinutes != nil {
                     DatePicker(
-                        localization.localized(.calendarPhotoImportEndTime),
+                        localization.localized(.calendarPhotoImportStartTime),
                         selection: timeBinding(
-                            minutes: candidate.endTimeMinutes,
+                            minutes: candidate.startTimeMinutes,
                             date: candidate.wrappedValue.date
                         ),
                         displayedComponents: .hourAndMinute
                     )
+                    if candidate.wrappedValue.endTimeMinutes != nil {
+                        DatePicker(
+                            localization.localized(.calendarPhotoImportEndTime),
+                            selection: timeBinding(
+                                minutes: candidate.endTimeMinutes,
+                                date: candidate.wrappedValue.date
+                            ),
+                            displayedComponents: .hourAndMinute
+                        )
+                    } else {
+                        Button(localization.localized(.calendarPhotoImportAddEndTime)) {
+                            let start = candidate.wrappedValue.startTimeMinutes ?? 9 * 60
+                            candidate.wrappedValue.endTimeMinutes = min(
+                                start + 60,
+                                23 * 60 + 59
+                            )
+                        }
+                        .foregroundStyle(.orange)
+                    }
+                    Button(localization.localized(.calendarPhotoImportMakeAllDay)) {
+                        candidate.wrappedValue.startTimeMinutes = nil
+                        candidate.wrappedValue.endTimeMinutes = nil
+                    }
                 } else {
-                    Button(localization.localized(.calendarPhotoImportAddEndTime)) {
-                        let start = candidate.wrappedValue.startTimeMinutes ?? 9 * 60
-                        candidate.wrappedValue.endTimeMinutes = min(start + 60, 23 * 60 + 59)
-                    }
-                    .foregroundStyle(.orange)
-                }
-                Button(localization.localized(.calendarPhotoImportMakeAllDay)) {
-                    candidate.wrappedValue.startTimeMinutes = nil
-                    candidate.wrappedValue.endTimeMinutes = nil
-                }
-            } else {
-                LabeledContent(
-                    localization.localized(.calendarPhotoImportTime),
-                    value: localization.localized(.calendarPhotoImportAllDay)
-                )
-                Button(localization.localized(.calendarPhotoImportSetTime)) {
-                    candidate.wrappedValue.startTimeMinutes = 9 * 60
-                    candidate.wrappedValue.endTimeMinutes = nil
-                    candidate.wrappedValue.needsReview = true
-                }
-            }
-
-            Picker(
-                localization.localized(.calendarPhotoImportTargetCalendar),
-                selection: candidate.targetCalendarID
-            ) {
-                ForEach(viewModel.availableCalendars) { calendar in
-                    Text(calendar.name).tag(calendar.id)
-                }
-            }
-
-            if let personToken = candidate.wrappedValue.personToken {
-                LabeledContent(
-                    localization.localized(.calendarPhotoImportPersonToken),
-                    value: personToken
-                )
-                Toggle(
-                    localization.localized(.calendarPhotoImportIncludePersonInTitle),
-                    isOn: candidate.includesPersonTokenInTitle
-                )
-            }
-
-            DisclosureGroup(localization.localized(.calendarPhotoImportOriginalText)) {
-                Text(candidate.wrappedValue.originalText)
-                    .textSelection(.enabled)
-                Text(confidenceText(candidate.wrappedValue.confidence))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if candidate.wrappedValue.needsReview {
-                HStack {
-                    Label(
-                        localization.localized(.calendarPhotoImportNeedsReview),
-                        systemImage: "exclamationmark.triangle.fill"
+                    LabeledContent(
+                        localization.localized(.calendarPhotoImportTime),
+                        value: localization.localized(.calendarPhotoImportAllDay)
                     )
-                    .foregroundStyle(.orange)
-                    Spacer()
-                    Button(localization.localized(.calendarPhotoImportMarkReviewed)) {
-                        candidate.wrappedValue.needsReview = false
+                    Button(localization.localized(.calendarPhotoImportSetTime)) {
+                        candidate.wrappedValue.startTimeMinutes = 9 * 60
+                        candidate.wrappedValue.endTimeMinutes = nil
+                        candidate.wrappedValue.needsReview = true
                     }
+                }
+
+                if let personToken = candidate.wrappedValue.personToken {
+                    LabeledContent(
+                        localization.localized(.calendarPhotoImportPersonToken),
+                        value: personToken
+                    )
+                    Toggle(
+                        localization.localized(.calendarPhotoImportIncludePersonInTitle),
+                        isOn: candidate.includesPersonTokenInTitle
+                    )
+                }
+
+                if candidate.wrappedValue.needsReview {
+                    HStack {
+                        Label(
+                            localization.localized(.calendarPhotoImportNeedsReview),
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .foregroundStyle(.orange)
+                        Spacer()
+                        Button(localization.localized(.calendarPhotoImportMarkReviewed)) {
+                            candidate.wrappedValue.needsReview = false
+                        }
+                    }
+                }
+
+                if !candidate.wrappedValue.isValidForSaving {
+                    Text(localization.localized(.calendarPhotoImportInvalidCandidate))
+                        .font(.footnote)
+                        .foregroundStyle(.red)
                 }
             }
 
-            if !candidate.wrappedValue.isValidForSaving {
-                Text(localization.localized(.calendarPhotoImportInvalidCandidate))
-                    .font(.footnote)
-                    .foregroundStyle(.red)
+            Section {
+                DisclosureGroup(localization.localized(.calendarPhotoImportOriginalText)) {
+                    Text(candidate.wrappedValue.originalText)
+                        .textSelection(.enabled)
+                    Text(confidenceText(candidate.wrappedValue.confidence))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-
-            Button(
-                localization.localized(.calendarPhotoImportDeleteCandidate),
-                role: .destructive
-            ) {
-                viewModel.deleteCandidate(id: candidate.wrappedValue.id)
-            }
-        } header: {
-            Text(candidateHeader(candidate.wrappedValue))
         }
-        .accessibilityElement(children: .contain)
+        .navigationTitle(candidateHeader(candidate.wrappedValue.date))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private var addButtonTitle: String {
@@ -1302,6 +1513,24 @@ struct CalendarPhotoImportView: View {
             format: localization.localized(.calendarPhotoImportAddCountFormat),
             locale: localization.currentLocale,
             viewModel.selectedCandidateCount
+        )
+    }
+
+    private var candidateCountText: String {
+        String(
+            format: localization.localized(.calendarPhotoImportCandidateCountFormat),
+            locale: localization.currentLocale,
+            viewModel.candidates.count
+        )
+    }
+
+    private var commonTargetCalendarBinding: Binding<UUID?> {
+        Binding(
+            get: { viewModel.commonTargetCalendarID },
+            set: { calendarID in
+                guard let calendarID else { return }
+                viewModel.setTargetCalendarID(calendarID)
+            }
         )
     }
 
@@ -1343,12 +1572,42 @@ struct CalendarPhotoImportView: View {
         viewModel.monthSelection = date
     }
 
-    private func candidateHeader(_ candidate: CalendarImportCandidate) -> String {
+    private func candidateHeader(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.locale = localization.currentLocale
         formatter.calendar = Calendar(identifier: .gregorian)
         formatter.setLocalizedDateFormatFromTemplate("MMMEd")
-        return formatter.string(from: candidate.date)
+        return formatter.string(from: date)
+    }
+
+    private func candidateDateText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = localization.currentLocale
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.setLocalizedDateFormatFromTemplate("Md")
+        return formatter.string(from: date)
+    }
+
+    private func candidateTimeText(_ candidate: CalendarImportCandidate) -> String {
+        switch (candidate.startTimeMinutes, candidate.endTimeMinutes) {
+        case (nil, nil):
+            return localization.localized(.calendarPhotoImportAllDay)
+        case let (start?, end?):
+            return "\(timeText(start))–\(timeText(end))"
+        case let (start?, nil):
+            return "\(timeText(start))–"
+        case let (nil, end?):
+            return "–\(timeText(end))"
+        }
+    }
+
+    private func timeText(_ minutes: Int) -> String {
+        let calendar = Calendar(identifier: .gregorian)
+        let startOfDay = calendar.startOfDay(for: Date(timeIntervalSinceReferenceDate: 0))
+        guard let date = calendar.date(byAdding: .minute, value: minutes, to: startOfDay) else {
+            return ""
+        }
+        return localization.dateFormatter(dateFormat: "HH:mm").string(from: date)
     }
 
     private func monthText(_ date: Date) -> String {
