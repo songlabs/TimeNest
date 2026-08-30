@@ -2,7 +2,7 @@
 
 ## Repository configuration
 
-The project uses `TimeNest.xcodeproj`, the shared `TimeNest` scheme, automatic signing, and Apple team `JCABFH9F66`. The Release archive contains the `TimeNest` app (`com.song.TimeNest`) and `TimeNestWidgetExtension` (`com.song.TimeNest.TimeNestWidgetExtension`). CI does not regenerate the project with Tuist: `Project.swift` is the source manifest, while the checked-in Xcode project is the build input.
+The project uses `TimeNest.xcodeproj`, the shared `TimeNest` scheme, and Apple team `JCABFH9F66`. Main App and Widget Debug builds use automatic signing. TestFlight Release archives use manual signing with one fixed Apple Distribution certificate and the fixed `TimeNest App Store` / `TimeNest Widget App Store` profiles. The Release archive contains the `TimeNest` app (`com.song.TimeNest`) and `TimeNestWidgetExtension` (`com.song.TimeNest.TimeNestWidgetExtension`). CI does not regenerate the project with Tuist: `Project.swift` is the source manifest, while the checked-in Xcode project is the build input.
 
 The workflows run on GitHub-hosted `macos-15` and explicitly select `/Applications/Xcode_26.3.app`; they do not rely on the runner's default Xcode. Each job prints `xcodebuild -version` and the iPhoneOS SDK version, then fails before dependency resolution unless the SDK major version is at least 26. Ordinary pushes to `main` and pull requests run simulator unit tests and a Release simulator build. They never upload. Only a manual run of the **TestFlight** workflow archives and uploads.
 
@@ -17,12 +17,16 @@ In GitHub, open **Settings → Environments**, create an environment named `test
 | `ASC_KEY_ID` | The App Store Connect API key ID. |
 | `ASC_ISSUER_ID` | The issuer ID shown on the App Store Connect Integrations page. |
 | `ASC_PRIVATE_KEY` | The complete contents of the downloaded `AuthKey_<KEY_ID>.p8` file, including its BEGIN/END lines. |
+| `APPLE_DISTRIBUTION_P12_BASE64` | Base64 for the existing Apple Distribution certificate and its private key exported as a password-protected `.p12`. |
+| `APPLE_DISTRIBUTION_P12_PASSWORD` | Password used when exporting that `.p12`. |
+| `PROFILE_TIMENEST_BASE64` | Base64 for the active App Store profile named `TimeNest App Store` and bundle ID `com.song.TimeNest`. |
+| `PROFILE_TIMENEST_WIDGET_BASE64` | Base64 for the active App Store profile named `TimeNest Widget App Store` and bundle ID `com.song.TimeNest.TimeNestWidgetExtension`. |
 
-Create the key in **App Store Connect → Users and Access → Integrations → App Store Connect API** with an **App Manager** role. Download the `.p8` once and store it directly as the secret; never add it to this repository. App Manager access alone does not guarantee permission to use cloud-managed distribution certificates or create/download provisioning profiles. An Account Holder/Admin may also need to grant the key access to **Certificates, Identifiers & Profiles** (developer resources).
+Create the key in **App Store Connect → Users and Access → Integrations → App Store Connect API** with an **App Manager** role. Download the `.p8` once and store it directly as the secret; never add it to this repository. The API key remains limited to upload and App Store Connect operations; Archive and Export do not use it to create or fetch signing resources.
 
-The API key must have access to the TimeNest app. Automatic signing must already have valid App ID capabilities and App Store provisioning available for both bundle identifiers. The workflow asks Xcode to fetch/manage these profiles; no certificate, profile, or password is committed or uploaded as an artifact.
+The API key must have access to the TimeNest app. Before encoding the profiles, confirm that both are active, unexpired App Store profiles linked to the same fixed Apple Distribution certificate. The Main profile must include App Group, iCloud/CloudKit Production, iCloud Extended Share Access, and WeatherKit; the Widget profile must include its App Group. The workflow validates these properties before Archive and does not use `-allowProvisioningUpdates` or any automatic-signing fallback. No certificate, profile, or password is committed or uploaded as an artifact.
 
-On the first signed run, preserve the complete non-sensitive output from the failing `xcodebuild archive` or `xcodebuild -exportArchive` command if Apple reports a cloud-signing, certificate-access, or provisioning permission error. Do not change either bundle ID or remove App Group, CloudKit, WeatherKit, Widget, or other entitlements to bypass it. Report the failed command and Apple's non-sensitive error, then have an Account Holder/Admin grant the API key the minimum app-management and developer-resource access required by that error. The retained archive/export logs make this diagnosis possible without exposing the private key.
+On the first signed run, preserve the complete non-sensitive output from the signing-material validation, `xcodebuild archive`, or `xcodebuild -exportArchive` step if certificate/profile matching fails. Do not change either bundle ID or remove App Group, CloudKit, WeatherKit, Widget, or other entitlements to bypass it. Regenerate only the affected App Store profile against the existing distribution certificate, replace its GitHub Environment secret, and retry. The retained archive/export logs make this diagnosis possible without exposing the private key.
 
 ## Manual release
 
@@ -46,4 +50,4 @@ Physical-device behavior, production CloudKit data, WeatherKit responses, Widget
 
 ## Failure diagnostics
 
-Both workflows retain test results and non-secret build logs for seven days. The TestFlight workflow does not retain the archive or IPA because they contain signed production binaries and embedded provisioning profiles. The temporary API key is removed in an `always()` step.
+Both workflows retain test results and non-secret build logs for seven days. The TestFlight workflow does not retain the archive or IPA because they contain signed production binaries and embedded provisioning profiles. The temporary API key, imported profiles, `.p12`, signing directory, and temporary keychain are removed in `always()` steps.

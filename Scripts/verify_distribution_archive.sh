@@ -30,6 +30,7 @@ assert_plist_value "$app_entitlements" "com.apple.security.application-groups:0"
 assert_plist_value "$app_entitlements" "com.apple.developer.icloud-container-identifiers:0" "iCloud.com.song.TimeNest"
 assert_plist_value "$app_entitlements" "com.apple.developer.icloud-services:0" "CloudKit"
 assert_plist_value "$app_entitlements" "com.apple.developer.icloud-container-environment" "Production"
+assert_plist_value "$app_entitlements" "com.apple.developer.icloud-extended-share-access:0" "InProcessOneTimeLinks"
 assert_plist_value "$app_entitlements" "com.apple.developer.weatherkit" "true"
 assert_plist_value "$widget_entitlements" "com.apple.security.application-groups:0" "group.com.songlabs.timenest"
 

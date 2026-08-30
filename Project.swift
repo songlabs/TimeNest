@@ -46,7 +46,6 @@ let project = Project(
                     "ASSETCATALOG_COMPILER_APPICON_NAME": "AppIcon",
                     "GENERATE_INFOPLIST_FILE": "NO",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNest/TimeNest.entitlements",
-                    "CODE_SIGN_STYLE": "Automatic",
                     "CURRENT_PROJECT_VERSION": .string(buildNumber),
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "MARKETING_VERSION": .string(marketingVersion),
@@ -56,6 +55,7 @@ let project = Project(
                     .debug(
                         name: "Debug",
                         settings: [
+                            "CODE_SIGN_STYLE": "Automatic",
                             "ICLOUD_CONTAINER_ENVIRONMENT": "Development",
                             "TIMENEST_ADMOB_APP_ID": "ca-app-pub-3940256099942544~1458002511",
                             "TIMENEST_ADMOB_BANNER_UNIT_ID": "ca-app-pub-3940256099942544/2435281174",
@@ -65,7 +65,10 @@ let project = Project(
                     .release(
                         name: "Release",
                         settings: [
+                            "CODE_SIGN_IDENTITY": "Apple Distribution",
+                            "CODE_SIGN_STYLE": "Manual",
                             "ICLOUD_CONTAINER_ENVIRONMENT": "Production",
+                            "PROVISIONING_PROFILE_SPECIFIER": "TimeNest App Store",
                             "TIMENEST_ADMOB_APP_ID": "ca-app-pub-7907716708037277~6985657856",
                             "TIMENEST_ADMOB_BANNER_UNIT_ID": "ca-app-pub-7907716708037277/8542282103",
                             "TIMENEST_ADMOB_APP_ID[sdk=iphonesimulator*]": "ca-app-pub-3940256099942544~1458002511",
@@ -102,7 +105,6 @@ let project = Project(
                 base: [
                     "APPLICATION_EXTENSION_API_ONLY": "YES",
                     "CODE_SIGN_ENTITLEMENTS": "TimeNestWidgetExtension/TimeNestWidgetExtension.entitlements",
-                    "CODE_SIGN_STYLE": "Automatic",
                     "CURRENT_PROJECT_VERSION": .string(buildNumber),
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "GENERATE_INFOPLIST_FILE": "YES",
@@ -110,6 +112,22 @@ let project = Project(
                     "PRODUCT_BUNDLE_IDENTIFIER": "com.song.TimeNest.TimeNestWidgetExtension",
                     "SKIP_INSTALL": "YES",
                     "TARGETED_DEVICE_FAMILY": "1,2"
+                ],
+                configurations: [
+                    .debug(
+                        name: "Debug",
+                        settings: [
+                            "CODE_SIGN_STYLE": "Automatic"
+                        ]
+                    ),
+                    .release(
+                        name: "Release",
+                        settings: [
+                            "CODE_SIGN_IDENTITY": "Apple Distribution",
+                            "CODE_SIGN_STYLE": "Manual",
+                            "PROVISIONING_PROFILE_SPECIFIER": "TimeNest Widget App Store"
+                        ]
+                    )
                 ]
             )
         ),
