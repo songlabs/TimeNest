@@ -123,6 +123,24 @@ private enum CalendarPhotoImportImageNormalizer {
         return rotated
     }
 
+    static func upscaledCGImage(_ image: CGImage, factor: Int) throws -> CGImage {
+        guard factor > 1,
+              let context = bitmapContext(
+                width: image.width * factor,
+                height: image.height * factor
+              ) else { return image }
+        context.interpolationQuality = .high
+        context.draw(image, in: CGRect(
+            x: 0, y: 0,
+            width: image.width * factor,
+            height: image.height * factor
+        ))
+        guard let result = context.makeImage() else {
+            throw CalendarPhotoImportImageError.invalidImage
+        }
+        return result
+    }
+
     private static func bitmapContext(width: Int, height: Int) -> CGContext? {
         CGContext(
             data: nil,
@@ -153,16 +171,21 @@ private struct CalendarVisionOCRService {
         expectedGridRows: Int?
     ) async throws -> CalendarVisionOCRResult {
         try await Task.detached(priority: .userInitiated) {
-            let observations = try Self.recognizeSynchronously(
-                image: image,
-                preferredLanguageCode: preferredLanguageCode,
-                recognitionLevel: .accurate
-            )
             let grid: CalendarPhotoGridGeometry?
             if let expectedGridRows {
                 grid = try Self.detectMainGrid(image: image, expectedRows: expectedGridRows)
             } else {
                 grid = nil
+            }
+            let observations: [CalendarOCRObservation]
+            if expectedGridRows == nil {
+                observations = try Self.recognizeSynchronously(
+                    image: image,
+                    preferredLanguageCode: preferredLanguageCode,
+                    recognitionLevel: .accurate
+                )
+            } else {
+                observations = []
             }
             return CalendarVisionOCRResult(
                 rotation: .degrees0,
@@ -175,6 +198,38 @@ private struct CalendarVisionOCRService {
                 ),
                 grid: grid
             )
+        }.value
+    }
+
+    func recognizeMonthCells(
+        image: CGImage,
+        regions: [CalendarImportDayRegion],
+        preferredLanguageCode: String
+    ) async throws -> [CalendarOCRObservation] {
+        try await Task.detached(priority: .userInitiated) {
+            var output: [CalendarOCRObservation] = []
+            for region in regions {
+                let pixelRect = Self.pixelRect(for: region.boundingBox, image: image)
+                guard pixelRect.width >= 2, pixelRect.height >= 2,
+                      let crop = image.cropping(to: pixelRect) else { continue }
+                let minimumOCRDimension = 700
+                let factor = min(3, max(1, Int(ceil(
+                    Double(minimumOCRDimension) / Double(min(crop.width, crop.height))
+                ))))
+                let ocrImage = factor > 1
+                    ? try CalendarPhotoImportImageNormalizer.upscaledCGImage(crop, factor: factor)
+                    : crop
+                let local = try Self.recognizeSynchronously(
+                    image: ocrImage,
+                    preferredLanguageCode: preferredLanguageCode,
+                    recognitionLevel: .accurate
+                )
+                output.append(contentsOf: local.map {
+                    Self.map($0, from: region.boundingBox)
+                })
+                Self.debugLogCell(region: region, crop: crop, ocrImage: ocrImage)
+            }
+            return output
         }.value
     }
 
@@ -306,6 +361,56 @@ private struct CalendarVisionOCRService {
         )
     }
 
+    private static func pixelRect(
+        for box: CalendarOCRBoundingBox,
+        image: CGImage
+    ) -> CGRect {
+        let imageWidth = CGFloat(image.width)
+        let imageHeight = CGFloat(image.height)
+        let minX = ceil(CGFloat(box.minX) * imageWidth)
+        let maxX = floor(CGFloat(box.maxX) * imageWidth)
+        let minY = ceil(CGFloat(1 - box.maxY) * imageHeight)
+        let maxY = floor(CGFloat(1 - box.minY) * imageHeight)
+        return CGRect(
+            x: minX,
+            y: minY,
+            width: max(0, maxX - minX),
+            height: max(0, maxY - minY)
+        ).intersection(CGRect(x: 0, y: 0, width: imageWidth, height: imageHeight))
+    }
+
+    private static func map(
+        _ observation: CalendarOCRObservation,
+        from cell: CalendarOCRBoundingBox
+    ) -> CalendarOCRObservation {
+        CalendarOCRObservation(
+            text: observation.text,
+            confidence: observation.confidence,
+            boundingBox: CalendarOCRBoundingBox(
+                x: cell.minX + observation.boundingBox.x * cell.width,
+                y: cell.minY + observation.boundingBox.y * cell.height,
+                width: observation.boundingBox.width * cell.width,
+                height: observation.boundingBox.height * cell.height
+            ),
+            candidateDiagnostics: observation.candidateDiagnostics,
+            selectionReason: observation.selectionReason
+        )
+    }
+
+    private static func debugLogCell(
+        region: CalendarImportDayRegion,
+        crop: CGImage,
+        ocrImage: CGImage
+    ) {
+        #if DEBUG
+        print(
+            "[CalendarImport] ocrMode=perCell day=\(region.day) "
+                + "cellPixels=\(crop.width)x\(crop.height) "
+                + "ocrPixels=\(ocrImage.width)x\(ocrImage.height)"
+        )
+        #endif
+    }
+
     private static func recognizeSynchronously(
         image: CGImage,
         preferredLanguageCode: String,
@@ -332,17 +437,32 @@ private struct CalendarVisionOCRService {
         )
         try handler.perform([request])
         return (request.results ?? []).compactMap { observation in
-            guard let candidate = observation.topCandidates(1).first else { return nil }
+            let alternatives = observation.topCandidates(5).map {
+                CalendarOCRCandidate(text: $0.string, confidence: $0.confidence)
+            }
+            guard let candidate = CalendarOCRCandidateSelector.select(from: alternatives) else {
+                return nil
+            }
             let box = observation.boundingBox
+            #if DEBUG
+            for (index, alternative) in alternatives.enumerated() {
+                print("[CalendarImport] OCR candidate[\(index)] text=\(alternative.text) confidence=\(alternative.confidence)")
+            }
+            if candidate != alternatives.first {
+                print("[CalendarImport] OCR selectedBy=timeRange text=\(candidate.text)")
+            }
+            #endif
             return CalendarOCRObservation(
-                text: candidate.string,
+                text: candidate.text,
                 confidence: candidate.confidence,
                 boundingBox: CalendarOCRBoundingBox(
                     x: Double(box.origin.x),
                     y: Double(box.origin.y),
                     width: Double(box.size.width),
                     height: Double(box.size.height)
-                )
+                ),
+                candidateDiagnostics: alternatives,
+                selectionReason: candidate == alternatives.first ? nil : "validTimeRange"
             )
         }
     }
@@ -494,6 +614,13 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         do {
             let normalizedImage = try CalendarPhotoImportImageNormalizer
                 .normalizedCGImage(from: image)
+            #if DEBUG
+            let rawSize = image.cgImage.map { "\($0.width)x\($0.height)" } ?? "unknown"
+            print(
+                "[CalendarImport] sourcePixels=\(rawSize) "
+                    + "normalizedPixels=\(normalizedImage.width)x\(normalizedImage.height)"
+            )
+            #endif
             let yearMonth = selectedYearMonth
             let expectedRows: Int?
             switch scanMode {
@@ -522,7 +649,18 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                 guard let yearMonth, let grid = recognized.grid else {
                     throw CalendarPhotoImportParseError.noDateStructure
                 }
-                let result = try CalendarPhotoGridFirstParser().parseMonth(
+                let monthParser = CalendarPhotoGridFirstParser()
+                let regions = monthParser.dayRegions(
+                    yearMonth: yearMonth,
+                    weekStart: weekStart,
+                    grid: grid
+                )
+                observations = try await ocrService.recognizeMonthCells(
+                    image: normalizedImage,
+                    regions: regions,
+                    preferredLanguageCode: languageCode
+                )
+                let result = try monthParser.parseMonth(
                     observations: observations,
                     yearMonth: yearMonth,
                     weekStart: weekStart,

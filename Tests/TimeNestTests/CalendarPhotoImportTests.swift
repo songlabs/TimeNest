@@ -44,11 +44,34 @@ final class CalendarPhotoImportTests: XCTestCase {
             CalendarImportParsedTime(startMinutes: 10 * 60, endMinutes: nil)
         )
         XCTAssertEqual(
+            CalendarImportTimeParser.parse("17.30-20.30"),
+            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+        )
+        XCTAssertEqual(
+            CalendarImportTimeParser.parse("17:30-2030"),
+            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+        )
+        XCTAssertNil(CalendarImportTimeParser.parse("2030"))
+        XCTAssertEqual(
             CalendarImportTimeParser.parse("17時30分"),
             CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: nil)
         )
         XCTAssertNil(CalendarImportTimeParser.parse("25:90 Meeting"))
         XCTAssertNil(CalendarImportTimeParser.parse("No time"))
+    }
+
+    func testOCRCandidateSelectorPrefersValidRangeButLeavesTitlesUntouched() throws {
+        let selected = try XCTUnwrap(CalendarOCRCandidateSelector.select(from: [
+            CalendarOCRCandidate(text: "17:3020:30", confidence: 0.96),
+            CalendarOCRCandidate(text: "17:30-20:30", confidence: 0.82)
+        ]))
+        XCTAssertEqual(selected.text, "17:30-20:30")
+
+        let title = try XCTUnwrap(CalendarOCRCandidateSelector.select(from: [
+            CalendarOCRCandidate(text: "適性検査対策", confidence: 0.91),
+            CalendarOCRCandidate(text: "適正検査対策", confidence: 0.89)
+        ]))
+        XCTAssertEqual(title.text, "適性検査対策")
     }
 
     func testSingleTimeCandidateRequiresReviewAndDoesNotGuessEndTime() throws {
@@ -86,6 +109,23 @@ final class CalendarPhotoImportTests: XCTestCase {
         )
 
         XCTAssertEqual(CalendarPhotoParser.day(for: content, in: regions), 4)
+    }
+
+    func testCellAssignmentUsesHalfOpenHorizontalAndVerticalBoundaries() {
+        let lowerLeft = CalendarImportDayRegion(
+            day: 1,
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 0.5, height: 0.5)
+        )
+        let upperRight = CalendarImportDayRegion(
+            day: 2,
+            boundingBox: CalendarOCRBoundingBox(x: 0.5, y: 0.5, width: 0.5, height: 0.5)
+        )
+        let boundary = CalendarOCRObservation(
+            text: "2", confidence: 0.9,
+            boundingBox: CalendarOCRBoundingBox(x: 0.5, y: 0.5, width: 0.02, height: 0.02)
+        )
+        XCTAssertFalse(lowerLeft.contains(boundary))
+        XCTAssertTrue(upperRight.contains(boundary))
     }
 
     func testMultipleEventsAndPersonMarkersRemainIndependentCandidates() throws {

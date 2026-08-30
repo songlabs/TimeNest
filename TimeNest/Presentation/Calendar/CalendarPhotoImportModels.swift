@@ -35,6 +35,35 @@ struct CalendarOCRObservation: Equatable, Sendable {
     let text: String
     let confidence: Float
     let boundingBox: CalendarOCRBoundingBox
+    var candidateDiagnostics: [CalendarOCRCandidate] = []
+    var selectionReason: String? = nil
+}
+
+struct CalendarOCRCandidate: Equatable, Sendable {
+    let text: String
+    let confidence: Float
+}
+
+struct CalendarOCRCandidateSelector {
+    static func select(from candidates: [CalendarOCRCandidate]) -> CalendarOCRCandidate? {
+        guard let first = candidates.first else { return nil }
+        guard candidates.contains(where: { CalendarImportTimeParser.parseRangeOnly($0.text) != nil }) else {
+            return first
+        }
+        return candidates.max { lhs, rhs in
+            score(lhs) < score(rhs)
+        }
+    }
+
+    private static func score(_ candidate: CalendarOCRCandidate) -> Double {
+        guard let range = CalendarImportTimeParser.parseRangeOnly(candidate.text),
+              let end = range.endMinutes, end > range.startMinutes else {
+            return Double(candidate.confidence)
+        }
+        // A structurally valid range outweighs the small confidence differences
+        // between alternatives from the same Vision observation.
+        return 2 + Double(candidate.confidence)
+    }
 }
 
 enum CalendarPhotoScanMode: String, CaseIterable, Equatable, Sendable {
@@ -705,6 +734,11 @@ struct CalendarImportTimeParser {
         match(in: text)?.time
     }
 
+    static func parseRangeOnly(_ text: String) -> CalendarImportParsedTime? {
+        guard let parsed = parse(text), parsed.endMinutes != nil else { return nil }
+        return parsed
+    }
+
     static func removingTime(from text: String) -> String {
         guard let match = match(in: text),
               let range = Range(match.range, in: text) else {
@@ -716,7 +750,9 @@ struct CalendarImportTimeParser {
     }
 
     private static func match(in text: String) -> MatchResult? {
-        let clockPattern = #"(?<!\d)(\d{1,2})\s*[:：]\s*(\d{2})(?:\s*[-–—〜～~]\s*(\d{1,2})\s*[:：]\s*(\d{2}))?(?!\d)"#
+        // A compact end time (for example 2030) is accepted only after an
+        // explicit range separator; unrelated four-digit text is never guessed.
+        let clockPattern = #"(?<!\d)(\d{1,2})\s*[:：.]\s*(\d{2})(?:\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.]?\s*(\d{2}))?(?!\d)"#
         if let match = firstMatch(pattern: clockPattern, text: text),
            let parsed = parsedTime(match: match, text: text) {
             return MatchResult(time: parsed, range: match.range)
