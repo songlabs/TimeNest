@@ -108,12 +108,14 @@ struct CalendarPhotoOrientationDiagnostics: Equatable, Sendable {
 struct CalendarPhotoOrientationSelector {
     func selectBest(
         from candidates: [CalendarPhotoOrientationCandidate],
+        overridingYearMonth: CalendarImportYearMonth? = nil,
         calendar: Calendar = Calendar(identifier: .gregorian)
     ) -> CalendarPhotoOrientationSelection? {
         let parser = CalendarPhotoParser()
         let selections = candidates.map { candidate in
             let evidence = parser.orientationEvidence(
                 observations: candidate.observations,
+                overridingYearMonth: overridingYearMonth,
                 calendar: calendar
             )
             return CalendarPhotoOrientationSelection(
@@ -144,7 +146,9 @@ struct CalendarPhotoOrientationSelector {
                 observationCount: candidate.observations.count,
                 dateAnchorCount: selection.evidence.dateAnchorObservationCount,
                 distinctDayCount: selection.evidence.dateAnchorCount,
-                hasInferredYearMonth: selection.evidence.yearMonth != nil,
+                hasInferredYearMonth: CalendarPhotoParser.inferYearMonth(
+                    from: candidate.observations
+                ) != nil,
                 gridColumnCount: selection.evidence.columnCount,
                 gridRowCount: selection.evidence.rowCount,
                 matchedDateAnchorCount: selection.evidence.matchedDateAnchorCount,
@@ -936,6 +940,7 @@ struct CalendarPhotoParser {
 
     func orientationEvidence(
         observations: [CalendarOCRObservation],
+        overridingYearMonth: CalendarImportYearMonth? = nil,
         calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
     ) -> CalendarPhotoOrientationEvidence {
         let meaningful = observations.filter {
@@ -944,7 +949,7 @@ struct CalendarPhotoParser {
         let reliableTextCount = meaningful.filter { $0.confidence >= 0.4 }.count
         let numericAnchors = meaningful.compactMap(Self.dateAnchor)
         let dateAnchorCount = Set(numericAnchors.map(\.day)).count
-        let yearMonth = Self.inferYearMonth(from: meaningful)
+        let yearMonth = overridingYearMonth ?? Self.inferYearMonth(from: meaningful)
 
         var calendar = inputCalendar
         calendar.locale = Locale(identifier: "en_US_POSIX")

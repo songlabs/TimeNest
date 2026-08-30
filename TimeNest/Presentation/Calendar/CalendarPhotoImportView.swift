@@ -139,6 +139,7 @@ private enum CalendarPhotoImportImageNormalizer {
 private struct CalendarVisionOCRResult: Sendable {
     let rotation: CalendarPhotoRotation
     let observations: [CalendarOCRObservation]
+    let accurateCandidates: [CalendarPhotoOrientationCandidate]
     let orientationDiagnostics: CalendarPhotoOrientationDiagnostics
 }
 
@@ -195,8 +196,11 @@ private struct CalendarVisionOCRService {
 
             // If the low-cost pass chose on weak OCR evidence, evaluate the other
             // full-resolution directions before committing observations to parsing.
+            // Keep all four accurate candidates when automatic year/month recognition
+            // failed so a later manual selection can re-evaluate orientation.
             if fastSelection.evidence.hasReliableCalendarStructure != true
-                || accurateSelection?.evidence.hasReliableCalendarStructure != true {
+                || accurateSelection?.evidence.hasReliableCalendarStructure != true
+                || accurateSelection?.evidence.yearMonth == nil {
                 for rotation in CalendarPhotoRotation.allCases
                     where rotation != fastSelection.rotation {
                     let rotated = try CalendarPhotoImportImageNormalizer.rotatedCGImage(
@@ -232,6 +236,7 @@ private struct CalendarVisionOCRService {
             return CalendarVisionOCRResult(
                 rotation: accurateSelection.rotation,
                 observations: accurateSelection.observations,
+                accurateCandidates: accurateCandidates,
                 orientationDiagnostics: orientationDiagnostics
             )
         }.value
@@ -373,6 +378,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     private let parser = CalendarPhotoParser()
     private let ocrService = CalendarVisionOCRService()
     private var observations: [CalendarOCRObservation] = []
+    private var accurateOrientationCandidates: [CalendarPhotoOrientationCandidate] = []
     private var orientationDiagnostics: CalendarPhotoOrientationDiagnostics?
 
     init(
@@ -420,6 +426,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                 preferredLanguageCode: languageCode
             )
             observations = recognized.observations
+            accurateOrientationCandidates = recognized.accurateCandidates
             orientationDiagnostics = recognized.orientationDiagnostics
             try applyParse(overridingYearMonth: nil)
             step = .review
@@ -441,6 +448,17 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             return
         }
         do {
+            if let selection = CalendarPhotoOrientationSelector().selectBest(
+                from: accurateOrientationCandidates,
+                overridingYearMonth: yearMonth
+            ) {
+                observations = selection.observations
+                orientationDiagnostics = CalendarPhotoOrientationDiagnostics(
+                    selectedRotation: selection.rotation,
+                    evidencePhase: .accurate,
+                    candidates: selection.candidateDiagnostics
+                )
+            }
             try applyParse(overridingYearMonth: yearMonth)
         } catch {
             failureMessage = localizedMessage(for: error)
@@ -453,6 +471,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
 
     func startOver() {
         observations = []
+        accurateOrientationCandidates = []
         orientationDiagnostics = nil
         candidates = []
         recognizedYearMonth = nil

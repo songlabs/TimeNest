@@ -622,6 +622,90 @@ final class CalendarPhotoImportTests: XCTestCase {
         )
     }
 
+    func testManualYearMonthReevaluatesAllOrientationsWithSpecifiedMonth() throws {
+        var weakAutomaticChoice = (1...30).map { day in
+            let index = day - 1
+            return observation(
+                "\(day)",
+                column: index % 7,
+                row: index / 7,
+                line: -1
+            )
+        }
+        weakAutomaticChoice.append(observation(
+            "Meeting",
+            column: 4,
+            row: 1,
+            line: 0
+        ))
+
+        var correctSeptemberOrientation = september2026CurrentMonthDateObservations()
+        correctSeptemberOrientation.append(observation("Meeting", day: 12, line: 0))
+        let candidates = CalendarPhotoRotation.allCases.map { rotation in
+            let candidateObservations: [CalendarOCRObservation]
+            switch rotation {
+            case .degrees0:
+                candidateObservations = weakAutomaticChoice
+            case .degrees90:
+                candidateObservations = correctSeptemberOrientation
+            case .degrees180, .degrees270:
+                candidateObservations = []
+            }
+            return CalendarPhotoOrientationCandidate(
+                rotation: rotation,
+                observations: candidateObservations
+            )
+        }
+        let selector = CalendarPhotoOrientationSelector()
+
+        let automaticSelection = try XCTUnwrap(selector.selectBest(
+            from: candidates,
+            calendar: utcGregorianCalendar()
+        ))
+        XCTAssertEqual(automaticSelection.rotation, .degrees0)
+        XCTAssertNil(automaticSelection.evidence.yearMonth)
+
+        let selectedYearMonth = try XCTUnwrap(
+            CalendarImportYearMonth(year: 2026, month: 9)
+        )
+        let manualSelection = try XCTUnwrap(selector.selectBest(
+            from: candidates,
+            overridingYearMonth: selectedYearMonth,
+            calendar: utcGregorianCalendar()
+        ))
+
+        XCTAssertEqual(manualSelection.rotation, .degrees90)
+        XCTAssertEqual(manualSelection.evidence.yearMonth, selectedYearMonth)
+        XCTAssertTrue(manualSelection.evidence.hasReliableCalendarStructure)
+        XCTAssertEqual(manualSelection.evidence.columnCount, 7)
+        XCTAssertEqual(manualSelection.evidence.rowCount, 5)
+        XCTAssertEqual(manualSelection.evidence.matchedDateAnchorCount, 30)
+        XCTAssertEqual(manualSelection.candidateDiagnostics.count, 4)
+        XCTAssertTrue(manualSelection.candidateDiagnostics.allSatisfy {
+            !$0.hasInferredYearMonth
+        })
+
+        let orientationDiagnostics = CalendarPhotoOrientationDiagnostics(
+            selectedRotation: manualSelection.rotation,
+            evidencePhase: .accurate,
+            candidates: manualSelection.candidateDiagnostics
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        let result = try CalendarPhotoParser().parse(
+            observations: manualSelection.observations,
+            overridingYearMonth: selectedYearMonth,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            orientationDiagnostics: orientationDiagnostics,
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        XCTAssertEqual(result.candidates.map(\.title), ["Meeting"])
+        XCTAssertEqual(diagnostics?.orientation?.selectedRotation, .degrees90)
+        XCTAssertEqual(diagnostics?.gridAccepted, true)
+        XCTAssertEqual(diagnostics?.parseStage, .completed)
+    }
+
     func testMissingDatesAndEmptyOCRFailSafely() {
         XCTAssertThrowsError(try CalendarPhotoParser().parse(
             observations: [],
