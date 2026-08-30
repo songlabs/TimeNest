@@ -709,3 +709,10 @@
 "calendar_photo_import.diagnostics" = "诊断信息";
 "calendar_photo_import.copy_diagnostics" = "复制诊断信息";
 "calendar_photo_import.diagnostics_copied" = "已复制";
+"calendar_photo_import.scan_mode" = "扫描方式";
+"calendar_photo_import.month_scan" = "月扫描";
+"calendar_photo_import.day_scan" = "日扫描";
+"calendar_photo_import.select_date" = "选择日期";
+"calendar_photo_import.week_start" = "周起始";
+"calendar_photo_import.sunday_first" = "星期日";
+"calendar_photo_import.monday_first" = "星期一";

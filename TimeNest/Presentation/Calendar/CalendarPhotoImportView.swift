@@ -141,10 +141,42 @@ private struct CalendarVisionOCRResult: Sendable {
     let observations: [CalendarOCRObservation]
     let accurateCandidates: [CalendarPhotoOrientationCandidate]
     let orientationDiagnostics: CalendarPhotoOrientationDiagnostics
+    let grid: CalendarPhotoGridGeometry?
 }
 
 private struct CalendarVisionOCRService {
     private static let directionDetectionMaximumDimension = 1_600
+
+    func recognize(
+        image: CGImage,
+        preferredLanguageCode: String,
+        expectedGridRows: Int?
+    ) async throws -> CalendarVisionOCRResult {
+        try await Task.detached(priority: .userInitiated) {
+            let observations = try Self.recognizeSynchronously(
+                image: image,
+                preferredLanguageCode: preferredLanguageCode,
+                recognitionLevel: .accurate
+            )
+            let grid: CalendarPhotoGridGeometry?
+            if let expectedGridRows {
+                grid = try Self.detectMainGrid(image: image, expectedRows: expectedGridRows)
+            } else {
+                grid = nil
+            }
+            return CalendarVisionOCRResult(
+                rotation: .degrees0,
+                observations: observations,
+                accurateCandidates: [],
+                orientationDiagnostics: CalendarPhotoOrientationDiagnostics(
+                    selectedRotation: .degrees0,
+                    evidencePhase: .accurate,
+                    candidates: []
+                ),
+                grid: grid
+            )
+        }.value
+    }
 
     func recognizeBestOrientation(
         image: CGImage,
@@ -237,9 +269,39 @@ private struct CalendarVisionOCRService {
                 rotation: accurateSelection.rotation,
                 observations: accurateSelection.observations,
                 accurateCandidates: accurateCandidates,
-                orientationDiagnostics: orientationDiagnostics
+                orientationDiagnostics: orientationDiagnostics,
+                grid: nil
             )
         }.value
+    }
+
+    private static func detectMainGrid(
+        image: CGImage,
+        expectedRows: Int
+    ) throws -> CalendarPhotoGridGeometry? {
+        let request = VNDetectRectanglesRequest()
+        request.maximumObservations = 24
+        request.minimumConfidence = 0.45
+        request.minimumAspectRatio = 0.25
+        request.maximumAspectRatio = 1
+        request.minimumSize = 0.08
+        request.quadratureTolerance = 25
+        try VNImageRequestHandler(cgImage: image, orientation: .up).perform([request])
+        let candidates = (request.results ?? []).map { rectangle in
+            CalendarPhotoGridCandidate(
+                boundingBox: CalendarOCRBoundingBox(
+                    x: Double(rectangle.boundingBox.minX),
+                    y: Double(rectangle.boundingBox.minY),
+                    width: Double(rectangle.boundingBox.width),
+                    height: Double(rectangle.boundingBox.height)
+                ),
+                structuralConfidence: Double(rectangle.confidence)
+            )
+        }
+        return CalendarPhotoGridSelector().selectMainGrid(
+            from: candidates,
+            expectedRows: expectedRows
+        )
     }
 
     private static func recognizeSynchronously(
@@ -370,6 +432,9 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     @Published private(set) var recognizedYearMonth: CalendarImportYearMonth?
     @Published private(set) var latestDiagnostics: CalendarPhotoImportDiagnostics?
     @Published var monthSelection: Date
+    @Published var daySelection: Date
+    @Published var scanMode: CalendarPhotoScanMode = .month
+    @Published var weekStart: CalendarPhotoImportWeekStart
     @Published private(set) var isSaving = false
     @Published var failureMessage: String?
 
@@ -389,6 +454,8 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         self.eventUseCase = eventUseCase
         self.sharingStore = sharingStore
         self.monthSelection = initialDate
+        self.daySelection = initialDate
+        self.weekStart = Calendar.current.firstWeekday == 2 ? .monday : .sunday
     }
 
     var availableCalendars: [TimeNestCalendar] {
@@ -421,19 +488,64 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         do {
             let normalizedImage = try CalendarPhotoImportImageNormalizer
                 .normalizedCGImage(from: image)
-            let recognized = try await ocrService.recognizeBestOrientation(
+            let yearMonth = selectedYearMonth
+            let expectedRows: Int?
+            switch scanMode {
+            case .month:
+                guard let yearMonth else { throw CalendarPhotoImportParseError.missingYearMonth }
+                expectedRows = CalendarPhotoGridFirstParser().expectedRows(
+                    yearMonth: yearMonth,
+                    weekStart: weekStart
+                )
+            case .day:
+                expectedRows = nil
+            }
+            let recognized = try await ocrService.recognize(
                 image: normalizedImage,
-                preferredLanguageCode: languageCode
+                preferredLanguageCode: languageCode,
+                expectedGridRows: expectedRows
             )
             observations = recognized.observations
             accurateOrientationCandidates = recognized.accurateCandidates
             orientationDiagnostics = recognized.orientationDiagnostics
-            try applyParse(overridingYearMonth: nil)
+            guard let defaultCalendarID else {
+                throw CalendarPhotoImportImageError.noWritableCalendar
+            }
+            switch scanMode {
+            case .month:
+                guard let yearMonth, let grid = recognized.grid else {
+                    throw CalendarPhotoImportParseError.noDateStructure
+                }
+                let result = try CalendarPhotoGridFirstParser().parseMonth(
+                    observations: observations,
+                    yearMonth: yearMonth,
+                    weekStart: weekStart,
+                    grid: grid,
+                    defaultCalendarID: defaultCalendarID
+                )
+                recognizedYearMonth = result.yearMonth
+                candidates = result.candidates
+            case .day:
+                let result = try CalendarPhotoDayParser().parse(
+                    observations: observations,
+                    selectedDate: daySelection,
+                    defaultCalendarID: defaultCalendarID
+                )
+                recognizedYearMonth = result.yearMonth
+                candidates = result.candidates
+            }
             step = .review
         } catch {
             step = latestDiagnostics == nil ? .source : .review
             failureMessage = localizedMessage(for: error)
         }
+    }
+
+    private var selectedYearMonth: CalendarImportYearMonth? {
+        let components = Calendar(identifier: .gregorian)
+            .dateComponents([.year, .month], from: monthSelection)
+        guard let year = components.year, let month = components.month else { return nil }
+        return CalendarImportYearMonth(year: year, month: month)
     }
 
     func applySelectedYearMonth() {
@@ -840,6 +952,48 @@ struct CalendarPhotoImportView: View {
 
     private var sourceView: some View {
         VStack(spacing: 20) {
+            Picker(
+                localization.localized(.calendarPhotoImportScanMode),
+                selection: $viewModel.scanMode
+            ) {
+                Text(localization.localized(.calendarPhotoImportMonthScan))
+                    .tag(CalendarPhotoScanMode.month)
+                Text(localization.localized(.calendarPhotoImportDayScan))
+                    .tag(CalendarPhotoScanMode.day)
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("calendarPhotoImport.scanMode")
+
+            if viewModel.scanMode == .month {
+                LabeledContent(localization.localized(.calendarPhotoImportSelectYearMonth)) {
+                    HStack(spacing: 8) {
+                        Picker(localization.localized(.yearLabel), selection: yearSelectionBinding) {
+                            ForEach(1900...2200, id: \.self) { Text(verbatim: "\($0)").tag($0) }
+                        }
+                        Picker(localization.localized(.monthLabel), selection: monthSelectionBinding) {
+                            ForEach(1...12, id: \.self) { Text(verbatim: "\($0)").tag($0) }
+                        }
+                    }
+                    .labelsHidden()
+                }
+                Picker(
+                    localization.localized(.calendarPhotoImportWeekStart),
+                    selection: $viewModel.weekStart
+                ) {
+                    Text(localization.localized(.calendarPhotoImportSundayFirst))
+                        .tag(CalendarPhotoImportWeekStart.sunday)
+                    Text(localization.localized(.calendarPhotoImportMondayFirst))
+                        .tag(CalendarPhotoImportWeekStart.monday)
+                }
+                .pickerStyle(.segmented)
+            } else {
+                DatePicker(
+                    localization.localized(.calendarPhotoImportSelectDate),
+                    selection: $viewModel.daySelection,
+                    displayedComponents: .date
+                )
+            }
+
             Spacer()
             Image(systemName: "camera.viewfinder")
                 .font(.system(size: 54, weight: .medium))
@@ -921,39 +1075,12 @@ struct CalendarPhotoImportView: View {
                     value: "\(viewModel.candidates.count)"
                 )
 
-                LabeledContent(
-                    localization.localized(.calendarPhotoImportSelectYearMonth)
-                ) {
-                    HStack(spacing: 8) {
-                        Picker(
-                            localization.localized(.yearLabel),
-                            selection: yearSelectionBinding
-                        ) {
-                            ForEach(1900...2200, id: \.self) { year in
-                                Text(verbatim: "\(year)").tag(year)
-                            }
-                        }
-                        .labelsHidden()
-                        .accessibilityLabel(localization.localized(.yearLabel))
-
-                        Picker(
-                            localization.localized(.monthLabel),
-                            selection: monthSelectionBinding
-                        ) {
-                            ForEach(1...12, id: \.self) { month in
-                                Text(verbatim: "\(month)").tag(month)
-                            }
-                        }
-                        .labelsHidden()
-                        .accessibilityLabel(localization.localized(.monthLabel))
-                    }
+                if viewModel.scanMode == .day {
+                    LabeledContent(
+                        localization.localized(.calendarPhotoImportSelectDate),
+                        value: viewModel.daySelection.formatted(date: .numeric, time: .omitted)
+                    )
                 }
-                .accessibilityIdentifier("calendarPhotoImport.yearMonth")
-
-                Button(localization.localized(.calendarPhotoImportApplyYearMonth)) {
-                    viewModel.applySelectedYearMonth()
-                }
-                .accessibilityIdentifier("calendarPhotoImport.applyYearMonth")
 
                 if let failureMessage = viewModel.failureMessage,
                    viewModel.visibleDiagnostics != nil {

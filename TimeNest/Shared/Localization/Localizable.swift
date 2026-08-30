@@ -528,6 +528,13 @@ enum LocalizedString: String {
     // MARK: - Calendar Photo Import
 
     case calendarPhotoImportTitle = "calendar_photo_import.title"
+    case calendarPhotoImportScanMode = "calendar_photo_import.scan_mode"
+    case calendarPhotoImportMonthScan = "calendar_photo_import.month_scan"
+    case calendarPhotoImportDayScan = "calendar_photo_import.day_scan"
+    case calendarPhotoImportSelectDate = "calendar_photo_import.select_date"
+    case calendarPhotoImportWeekStart = "calendar_photo_import.week_start"
+    case calendarPhotoImportSundayFirst = "calendar_photo_import.sunday_first"
+    case calendarPhotoImportMondayFirst = "calendar_photo_import.monday_first"
     case calendarPhotoImportSourceMessage = "calendar_photo_import.source_message"
     case calendarPhotoImportCamera = "calendar_photo_import.camera"
     case calendarPhotoImportPhotos = "calendar_photo_import.photos"
