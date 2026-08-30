@@ -68,6 +68,17 @@ assert_plist_array_contains() {
   }
 }
 
+assert_plist_array_contains_any() {
+  local plist=$1 key_path=$2 first_expected=$3 second_expected=$4 description=$5
+  local values
+  values="$(read_plist "$plist" "$key_path" 2>/dev/null || true)"
+  if ! printf '%s\n' "$values" | grep -Fq "$first_expected" && \
+     ! printf '%s\n' "$values" | grep -Fq "$second_expected"; then
+    echo "Profile validation failed for $description." >&2
+    exit 1
+  fi
+}
+
 for profile_definition in "${profiles[@]}"; do
   IFS='|' read -r secret_name expected_bundle_id expected_name target_kind <<< "$profile_definition"
   profile_base64="${!secret_name:-}"
@@ -114,9 +125,9 @@ for profile_definition in "${profiles[@]}"; do
   if [[ "$target_kind" = "main" ]]; then
     assert_plist_array_contains "$decoded_profile" "Entitlements:com.apple.developer.icloud-container-identifiers" \
       "iCloud.com.song.TimeNest" "$expected_bundle_id iCloud container entitlement"
-    assert_plist_array_contains "$decoded_profile" "Entitlements:com.apple.developer.icloud-services" \
-      "CloudKit" "$expected_bundle_id CloudKit entitlement"
-    assert_plist_value "$decoded_profile" "Entitlements:com.apple.developer.icloud-container-environment" \
+    assert_plist_array_contains_any "$decoded_profile" "Entitlements:com.apple.developer.icloud-services" \
+      "CloudKit" "*" "$expected_bundle_id CloudKit entitlement"
+    assert_plist_array_contains "$decoded_profile" "Entitlements:com.apple.developer.icloud-container-environment" \
       "Production" "$expected_bundle_id production CloudKit environment"
     assert_plist_array_contains "$decoded_profile" "Entitlements:com.apple.developer.icloud-extended-share-access" \
       "InProcessOneTimeLinks" "$expected_bundle_id iCloud extended share entitlement"
