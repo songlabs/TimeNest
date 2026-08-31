@@ -35,9 +35,34 @@ assert_plist_value() {
   }
 }
 
+assert_plist_value_or_array_contains() {
+  local plist=$1 key_path=$2 expected=$3
+  local actual index element
+
+  if ! actual=$(/usr/libexec/PlistBuddy -c "Print :$key_path" "$plist" 2>/dev/null); then
+    echo "Missing entitlement $key_path: expected '$expected' as a scalar or array element" >&2
+    exit 1
+  fi
+
+  if test "$actual" = "$expected"; then
+    return
+  fi
+
+  index=0
+  while element=$(/usr/libexec/PlistBuddy -c "Print :$key_path:$index" "$plist" 2>/dev/null); do
+    if test "$element" = "$expected"; then
+      return
+    fi
+    index=$((index + 1))
+  done
+
+  echo "Unexpected entitlement $key_path: expected '$expected' or an array containing '$expected', got '$actual'" >&2
+  exit 1
+}
+
 assert_plist_value "$app_entitlements" "com.apple.security.application-groups:0" "group.com.songlabs.timenest"
 assert_plist_value "$source_entitlements" "com.apple.developer.devicecheck.appattest-environment" "production"
-assert_plist_value "$app_profile" "Entitlements:com.apple.developer.devicecheck.appattest-environment" "production"
+assert_plist_value_or_array_contains "$app_profile" "Entitlements:com.apple.developer.devicecheck.appattest-environment" "production"
 assert_plist_value "$app_entitlements" "com.apple.developer.devicecheck.appattest-environment" "production"
 assert_plist_value "$app_entitlements" "com.apple.developer.icloud-container-identifiers:0" "iCloud.com.song.TimeNest"
 assert_plist_value "$app_entitlements" "com.apple.developer.icloud-services:0" "CloudKit"
