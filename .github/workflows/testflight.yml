@@ -40,9 +40,7 @@ jobs:
           test "${SDK_VERSION%%.*}" -ge 26
 
       - name: Install pinned Tuist
-        uses: tuist/install@v0
-        with:
-          version: 4.65.0
+        uses: jdx/mise-action@v2
 
       - name: Generate Xcode project
         run: |
