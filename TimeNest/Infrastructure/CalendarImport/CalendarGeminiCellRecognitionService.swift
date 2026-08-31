@@ -1,18 +1,12 @@
-import FirebaseAI
+import FirebaseAILogic
 import FirebaseCore
 import Foundation
 import UIKit
 
-enum CalendarGeminiRecognitionError: Error {
-    case firebaseNotConfigured
-    case invalidCrop
-    case emptyResponse
-    case invalidResponse
-    case timedOut
-}
-
 struct CalendarGeminiCellRecognitionService {
-    private let timeoutSeconds: UInt64 = 20
+    private let coordinator = CalendarGeminiCellRecognitionCoordinator(
+        maximumConcurrentRequests: 4
+    )
 
     func recognizeMonthCells(
         image: CGImage,
@@ -20,63 +14,80 @@ struct CalendarGeminiCellRecognitionService {
         yearMonth: CalendarImportYearMonth,
         calendarID: UUID,
         languageCode: String
-    ) async throws -> [CalendarImportCandidate] {
-        try configureFirebaseIfNeeded()
-        let model = FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
-            modelName: "gemini-2.5-flash"
+    ) async throws -> CalendarGeminiMonthRecognitionResult {
+        let outcomes: [CalendarGeminiCellRecognitionOutcome]
+        if FirebaseApp.app() == nil {
+            outcomes = try await coordinator.recognize(
+                regions: regions,
+                requester: CalendarGeminiUnavailableCellRequester()
+            )
+        } else {
+            let model = FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
+                modelName: "gemini-2.5-flash"
+            )
+            outcomes = try await coordinator.recognize(
+                regions: regions,
+                requester: FirebaseCalendarGeminiCellRequester(
+                    image: image,
+                    yearMonth: yearMonth,
+                    languageCode: languageCode,
+                    model: model
+                )
+            )
+        }
+        return try CalendarGeminiMonthResultBuilder().makeResult(
+            outcomes: outcomes,
+            yearMonth: yearMonth,
+            calendarID: calendarID
         )
-        var candidates: [CalendarImportCandidate] = []
-        let calendar = Calendar(identifier: .gregorian)
-        guard let monthStart = yearMonth.date(calendar: calendar) else {
-            throw CalendarGeminiRecognitionError.invalidResponse
-        }
+    }
+}
 
-        // One locally dated cell per request: model output can never change its date.
-        for region in regions {
-            guard let crop = crop(region.boundingBox, from: image) else {
-                throw CalendarGeminiRecognitionError.invalidCrop
-            }
-            let cellImage = UIImage(cgImage: crop)
-            let response = try await withTimeout {
-                try await model.generateContent(
-                    prompt(day: region.day, yearMonth: yearMonth, languageCode: languageCode),
-                    cellImage
-                )
-            }
-            guard let text = response.text, !text.isEmpty else {
-                throw CalendarGeminiRecognitionError.emptyResponse
-            }
-            let events = try CalendarGeminiResponseDecoder.decode(text)
-            guard let date = calendar.date(byAdding: .day, value: region.day - 1, to: monthStart) else {
-                continue
-            }
-            candidates.append(contentsOf: events.map { event in
-                CalendarImportCandidate(
-                    id: UUID(), date: date,
-                    startTimeMinutes: event.startMinutes,
-                    endTimeMinutes: event.endMinutes,
-                    title: event.title, originalText: event.originalText,
-                    personToken: nil, confidence: event.confidence,
-                    isSelected: true,
-                    needsReview: event.confidence < 0.75 || event.title.isEmpty,
-                    targetCalendarID: calendarID,
-                    includesPersonTokenInTitle: false
-                )
-            })
+private struct CalendarGeminiUnavailableCellRequester: CalendarGeminiCellRequesting {
+    func recognizeCell(
+        in region: CalendarImportDayRegion
+    ) async throws -> [CalendarGeminiRecognizedEvent] {
+        throw CalendarGeminiRecognitionError.firebaseNotConfigured
+    }
+}
+
+private struct FirebaseCalendarGeminiCellRequester: CalendarGeminiCellRequesting {
+    let image: CGImage
+    let yearMonth: CalendarImportYearMonth
+    let languageCode: String
+    let model: GenerativeModel
+
+    private let timeoutSeconds: UInt64 = 20
+
+    func recognizeCell(
+        in region: CalendarImportDayRegion
+    ) async throws -> [CalendarGeminiRecognizedEvent] {
+        guard let crop = crop(region.boundingBox, from: image) else {
+            throw CalendarGeminiRecognitionError.invalidCrop
         }
-        return candidates
+        let cellImage = UIImage(cgImage: crop)
+        let response = try await withTimeout {
+            try await model.generateContent(
+                prompt(
+                    day: region.day,
+                    yearMonth: yearMonth,
+                    languageCode: languageCode
+                ),
+                cellImage
+            )
+        }
+        guard let text = response.text,
+              !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw CalendarGeminiRecognitionError.emptyResponse
+        }
+        return try CalendarGeminiResponseDecoder.decode(text)
     }
 
-    private func configureFirebaseIfNeeded() throws {
-        guard FirebaseApp.app() == nil else { return }
-        guard let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
-              let options = FirebaseOptions(contentsOfFile: path) else {
-            throw CalendarGeminiRecognitionError.firebaseNotConfigured
-        }
-        FirebaseApp.configure(options: options)
-    }
-
-    private func prompt(day: Int, yearMonth: CalendarImportYearMonth, languageCode: String) -> String {
+    private func prompt(
+        day: Int,
+        yearMonth: CalendarImportYearMonth,
+        languageCode: String
+    ) -> String {
         """
         This image is exactly one calendar cell for \(yearMonth.year)-\(String(format: "%02d", yearMonth.month))-\(String(format: "%02d", day)).
         The app calculated this date from grid position. Do not detect, infer, return, or correct the date.
@@ -89,7 +100,8 @@ struct CalendarGeminiCellRecognitionService {
     }
 
     private func crop(_ box: CalendarOCRBoundingBox, from image: CGImage) -> CGImage? {
-        let width = CGFloat(image.width), height = CGFloat(image.height)
+        let width = CGFloat(image.width)
+        let height = CGFloat(image.height)
         let rect = CGRect(
             x: ceil(CGFloat(box.minX) * width),
             y: ceil(CGFloat(1 - box.maxY) * height),

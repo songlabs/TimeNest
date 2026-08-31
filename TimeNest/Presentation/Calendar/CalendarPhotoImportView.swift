@@ -209,25 +209,34 @@ private struct CalendarVisionOCRService {
         try await Task.detached(priority: .userInitiated) {
             var output: [CalendarOCRObservation] = []
             for region in regions {
-                let pixelRect = Self.pixelRect(for: region.boundingBox, image: image)
-                guard pixelRect.width >= 2, pixelRect.height >= 2,
-                      let crop = image.cropping(to: pixelRect) else { continue }
-                let minimumOCRDimension = 700
-                let factor = min(3, max(1, Int(ceil(
-                    Double(minimumOCRDimension) / Double(min(crop.width, crop.height))
-                ))))
-                let ocrImage = factor > 1
-                    ? try CalendarPhotoImportImageNormalizer.upscaledCGImage(crop, factor: factor)
-                    : crop
-                let local = try Self.recognizeSynchronously(
-                    image: ocrImage,
-                    preferredLanguageCode: preferredLanguageCode,
-                    recognitionLevel: .accurate
-                )
-                output.append(contentsOf: local.map {
-                    Self.map($0, from: region.boundingBox)
-                })
-                Self.debugLogCell(region: region, crop: crop, ocrImage: ocrImage)
+                try Task.checkCancellation()
+                do {
+                    let pixelRect = Self.pixelRect(for: region.boundingBox, image: image)
+                    guard pixelRect.width >= 2, pixelRect.height >= 2,
+                          let crop = image.cropping(to: pixelRect) else { continue }
+                    let minimumOCRDimension = 700
+                    let factor = min(3, max(1, Int(ceil(
+                        Double(minimumOCRDimension) / Double(min(crop.width, crop.height))
+                    ))))
+                    let ocrImage = factor > 1
+                        ? try CalendarPhotoImportImageNormalizer.upscaledCGImage(crop, factor: factor)
+                        : crop
+                    let local = try Self.recognizeSynchronously(
+                        image: ocrImage,
+                        preferredLanguageCode: preferredLanguageCode,
+                        recognitionLevel: .accurate
+                    )
+                    output.append(contentsOf: local.map {
+                        Self.map($0, from: region.boundingBox)
+                    })
+                    Self.debugLogCell(region: region, crop: crop, ocrImage: ocrImage)
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    #if DEBUG
+                    print("[CalendarImport] Vision fallback failed for day=\(region.day)")
+                    #endif
+                }
             }
             return output
         }.value
@@ -656,24 +665,22 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     weekStart: weekStart,
                     grid: grid
                 )
-                do {
-                    candidates = try await geminiService.recognizeMonthCells(
-                        image: normalizedImage,
-                        regions: regions,
-                        yearMonth: yearMonth,
-                        calendarID: defaultCalendarID,
-                        languageCode: languageCode
-                    )
-                    recognizedYearMonth = yearMonth
-                    step = .review
-                    return
-                } catch {
-                    #if DEBUG
-                    print("[CalendarImport] Gemini unavailable; falling back to Vision: \(error)")
-                    #endif
+                let geminiResult = try await geminiService.recognizeMonthCells(
+                    image: normalizedImage,
+                    regions: regions,
+                    yearMonth: yearMonth,
+                    calendarID: defaultCalendarID,
+                    languageCode: languageCode
+                )
+                let fallbackRegions = regions.filter {
+                    geminiResult.failedDays.contains($0.day)
+                }
+                if fallbackRegions.isEmpty {
+                    observations = []
+                } else {
                     observations = try await ocrService.recognizeMonthCells(
                         image: normalizedImage,
-                        regions: regions,
+                        regions: fallbackRegions,
                         preferredLanguageCode: languageCode
                     )
                 }
@@ -684,6 +691,9 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     grid: grid,
                     defaultCalendarID: defaultCalendarID,
                     orientationDiagnostics: orientationDiagnostics,
+                    prebuiltCandidates: geminiResult.candidates,
+                    visionFallbackRegions: fallbackRegions,
+                    recognitionCellDiagnostics: geminiResult.cellDiagnostics,
                     diagnosticsHandler: { [weak self] diagnostics in
                         self?.recordDiagnostics(diagnostics)
                     }

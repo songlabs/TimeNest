@@ -236,6 +236,7 @@ final class CalendarPhotoImportTests: XCTestCase {
             },
             [
                 "scanMode", "selectedDate", "gridDetection",
+                "recognitionMode", "geminiSuccessCells", "visionFallbackCells",
                 "manualYearMonth", "resolvedYearMonth", "selectedRotation",
                 "orientationEvidencePhase", "ocrObservations", "meaningful",
                 "pureNumeric", "dateAnchors", "distinctDays", "duplicateDays",
@@ -1269,6 +1270,176 @@ final class CalendarPhotoImportTests: XCTestCase {
 
 }
 
+private struct MockCalendarGeminiCellRequester: CalendarGeminiCellRequesting {
+    let responses: [Int: Result<[CalendarGeminiRecognizedEvent], CalendarGeminiRecognitionError>]
+
+    func recognizeCell(
+        in region: CalendarImportDayRegion
+    ) async throws -> [CalendarGeminiRecognizedEvent] {
+        guard let response = responses[region.day] else {
+            throw CalendarGeminiRecognitionError.invalidResponse
+        }
+        return try response.get()
+    }
+}
+
+final class CalendarGeminiMonthRecognitionTests: XCTestCase {
+    private let calendarID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
+    private let yearMonth = CalendarImportYearMonth(year: 2026, month: 9)!
+
+    func testEmptyGeminiEventsForSeptember22DoNotFallbackOrCreateCandidate() async throws {
+        let result = try await recognize(responses: [22: .success([])])
+
+        XCTAssertTrue(result.candidates.isEmpty)
+        XCTAssertTrue(result.failedDays.isEmpty)
+        let diagnostics = try XCTUnwrap(result.cellDiagnostics.first)
+        XCTAssertEqual(diagnostics.day, 22)
+        XCTAssertTrue(diagnostics.geminiRequested)
+        XCTAssertTrue(diagnostics.geminiSucceeded)
+        XCTAssertEqual(diagnostics.recognitionSource, .gemini)
+        XCTAssertEqual(diagnostics.geminiEvents, 0)
+        XCTAssertNil(diagnostics.geminiError)
+        XCTAssertFalse(diagnostics.fallbackUsed)
+    }
+
+    func testOneGeminiEventCreatesOneCandidate() async throws {
+        let result = try await recognize(responses: [4: .success([event(title: "Dinner")])])
+
+        XCTAssertEqual(result.candidates.map(\.title), ["Dinner"])
+        XCTAssertEqual(day(of: try XCTUnwrap(result.candidates.first)), 4)
+        XCTAssertEqual(result.cellDiagnostics.first?.geminiEvents, 1)
+    }
+
+    func testTwoGeminiEventsCreateTwoCandidatesOnSameLocalDate() async throws {
+        let result = try await recognize(responses: [
+            12: .success([event(title: "First"), event(title: "Second")])
+        ])
+
+        XCTAssertEqual(result.candidates.map(\.title), ["First", "Second"])
+        XCTAssertEqual(result.candidates.map { day(of: $0) }, [12, 12])
+        XCTAssertEqual(result.cellDiagnostics.first?.geminiEvents, 2)
+    }
+
+    func testSingleCellTimeoutFallsBackWithoutDiscardingOtherGeminiCells() async throws {
+        let result = try await recognize(responses: [
+            1: .success([event(title: "Day One")]),
+            2: .failure(.timedOut),
+            3: .success([event(title: "Day Three")])
+        ])
+
+        XCTAssertEqual(result.candidates.map(\.title), ["Day One", "Day Three"])
+        XCTAssertEqual(result.candidates.map { day(of: $0) }, [1, 3])
+        XCTAssertEqual(result.failedDays, [2])
+        let timeout = try XCTUnwrap(result.cellDiagnostics.first { $0.day == 2 })
+        XCTAssertFalse(timeout.geminiSucceeded)
+        XCTAssertEqual(timeout.recognitionSource, .visionOCR)
+        XCTAssertEqual(timeout.geminiError, .timeout)
+        XCTAssertTrue(timeout.fallbackUsed)
+    }
+
+    func testFirebaseNotConfiguredUsesPerCellVisionFallback() async throws {
+        let result = try await recognize(responses: [
+            7: .failure(.firebaseNotConfigured)
+        ])
+
+        XCTAssertEqual(result.failedDays, [7])
+        let diagnostics = try XCTUnwrap(result.cellDiagnostics.first)
+        XCTAssertEqual(diagnostics.recognitionSource, .visionOCR)
+        XCTAssertEqual(diagnostics.geminiError, .firebaseNotConfigured)
+        XCTAssertTrue(diagnostics.fallbackUsed)
+    }
+
+    func testMixedMonthDiagnosticsReportSourceAndStablePerCellStatus() async throws {
+        let gemini = try await recognize(responses: [
+            1: .success([event(title: "Day One")]),
+            2: .failure(.timedOut)
+        ])
+        let grid = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
+            columns: 7,
+            rows: 5
+        )
+        let parser = CalendarPhotoGridFirstParser()
+        let regions = parser.dayRegions(
+            yearMonth: yearMonth,
+            weekStart: .sunday,
+            grid: grid,
+            calendar: utcGregorianCalendar()
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        _ = try parser.parseMonth(
+            observations: [],
+            yearMonth: yearMonth,
+            weekStart: .sunday,
+            grid: grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            prebuiltCandidates: gemini.candidates,
+            visionFallbackRegions: regions.filter { gemini.failedDays.contains($0.day) },
+            recognitionCellDiagnostics: gemini.cellDiagnostics,
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        let captured = try XCTUnwrap(diagnostics)
+        XCTAssertEqual(captured.recognitionMode, .mixed)
+        XCTAssertEqual(captured.geminiSuccessCellCount, 1)
+        XCTAssertEqual(captured.visionFallbackCellCount, 1)
+        XCTAssertTrue(captured.shouldDisplay)
+        XCTAssertTrue(captured.plainText.contains("recognitionMode=mixed"))
+        XCTAssertTrue(captured.plainText.contains(
+            "day=1 geminiRequested=true geminiSucceeded=true recognitionSource=gemini geminiEvents=1 geminiError=none fallbackUsed=false"
+        ))
+        XCTAssertTrue(captured.plainText.contains(
+            "day=2 geminiRequested=true geminiSucceeded=false recognitionSource=visionOCR geminiEvents=0 geminiError=timeout fallbackUsed=true"
+        ))
+    }
+
+    private func recognize(
+        responses: [Int: Result<[CalendarGeminiRecognizedEvent], CalendarGeminiRecognitionError>]
+    ) async throws -> CalendarGeminiMonthRecognitionResult {
+        let regions = responses.keys.sorted().map { day in
+            CalendarImportDayRegion(
+                day: day,
+                boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1)
+            )
+        }
+        let outcomes = try await CalendarGeminiCellRecognitionCoordinator(
+            maximumConcurrentRequests: 4
+        ).recognize(
+            regions: regions,
+            requester: MockCalendarGeminiCellRequester(responses: responses)
+        )
+        return try CalendarGeminiMonthResultBuilder().makeResult(
+            outcomes: outcomes,
+            yearMonth: yearMonth,
+            calendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+    }
+
+    private func event(title: String) -> CalendarGeminiRecognizedEvent {
+        CalendarGeminiRecognizedEvent(
+            title: title,
+            originalText: title,
+            startMinutes: nil,
+            endMinutes: nil,
+            confidence: 0.9
+        )
+    }
+
+    private func day(of candidate: CalendarImportCandidate) -> Int {
+        utcGregorianCalendar().component(.day, from: candidate.date)
+    }
+
+    private func utcGregorianCalendar() -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        return calendar
+    }
+}
+
 final class CalendarGeminiResponseDecoderTests: XCTestCase {
     func testDecodesMultipleSchedulesAndTimeRanges() throws {
         let events = try CalendarGeminiResponseDecoder.decode(
@@ -1282,10 +1453,11 @@ final class CalendarGeminiResponseDecoderTests: XCTestCase {
     }
 
     func testRejectsInvalidOrPartialTimes() throws {
-        let events = try CalendarGeminiResponseDecoder.decode(
+        XCTAssertThrowsError(try CalendarGeminiResponseDecoder.decode(
             #"{"events":[{"title":"bad","original_text":"bad","start_minutes":1050,"end_minutes":null,"confidence":0.9},{"title":"also bad","original_text":"bad","start_minutes":1500,"end_minutes":1600,"confidence":0.9}]}"#
-        )
-        XCTAssertTrue(events.isEmpty)
+        )) { error in
+            XCTAssertEqual(error as? CalendarGeminiRecognitionError, .invalidResponse)
+        }
     }
 
     func testAcceptsEmptyCell() throws {

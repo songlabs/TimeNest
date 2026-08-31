@@ -35,11 +35,14 @@ jobs:
       - name: Generate Xcode project
         run: |
           set -euo pipefail
+          test ! -e TimeNest/Resources/Firebase/GoogleService-Info.plist
           test "$(tuist version)" = "4.65.0"
           tuist install
           tuist generate --no-open
           grep -Fq 'CalendarGeminiCellRecognitionService.swift' TimeNest.xcodeproj/project.pbxproj
-          grep -Fq 'FirebaseAI' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'TimeNestFirebaseBootstrap.swift' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'FirebaseAILogic' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'FirebaseAppCheck' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'FirebaseCore' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'GoogleMobileAds' TimeNest.xcodeproj/project.pbxproj
 

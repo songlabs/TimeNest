@@ -8,6 +8,78 @@ struct CalendarGeminiRecognizedEvent: Equatable, Sendable {
     let confidence: Float
 }
 
+enum CalendarGeminiRecognitionError: Error, Equatable, Sendable {
+    case firebaseNotConfigured
+    case invalidCrop
+    case emptyResponse
+    case invalidResponse
+    case timedOut
+}
+
+enum CalendarGeminiErrorCategory: String, Equatable, Sendable {
+    case firebaseNotConfigured
+    case invalidCrop
+    case timeout
+    case appCheckRejected
+    case network
+    case invalidResponse
+    case firebase
+
+    static func classify(_ error: Error) -> CalendarGeminiErrorCategory {
+        if let recognitionError = error as? CalendarGeminiRecognitionError {
+            switch recognitionError {
+            case .firebaseNotConfigured:
+                return .firebaseNotConfigured
+            case .invalidCrop:
+                return .invalidCrop
+            case .timedOut:
+                return .timeout
+            case .emptyResponse, .invalidResponse:
+                return .invalidResponse
+            }
+        }
+        if error is DecodingError {
+            return .invalidResponse
+        }
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain {
+            return nsError.code == URLError.timedOut.rawValue ? .timeout : .network
+        }
+        let appCheckEvidence = "\(nsError.domain) \(nsError.localizedDescription)".lowercased()
+        if appCheckEvidence.contains("appcheck") || appCheckEvidence.contains("app check") {
+            return .appCheckRejected
+        }
+        return .firebase
+    }
+}
+
+enum CalendarPhotoCellRecognitionSource: String, Equatable, Sendable {
+    case gemini
+    case visionOCR
+}
+
+enum CalendarPhotoRecognitionMode: String, Equatable, Sendable {
+    case gemini
+    case mixed
+    case visionOCR
+}
+
+struct CalendarPhotoCellRecognitionDiagnostics: Equatable, Sendable {
+    let day: Int
+    let geminiRequested: Bool
+    let geminiSucceeded: Bool
+    let recognitionSource: CalendarPhotoCellRecognitionSource
+    let geminiEvents: Int
+    let geminiError: CalendarGeminiErrorCategory?
+    let fallbackUsed: Bool
+}
+
+struct CalendarGeminiCellRecognitionOutcome: Equatable, Sendable {
+    let day: Int
+    let events: [CalendarGeminiRecognizedEvent]
+    let errorCategory: CalendarGeminiErrorCategory?
+}
+
 enum CalendarGeminiResponseDecoder {
     private struct Envelope: Decodable { let events: [Event] }
     private struct Event: Decodable {
@@ -33,14 +105,14 @@ enum CalendarGeminiResponseDecoder {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
         }
         let envelope = try JSONDecoder().decode(Envelope.self, from: Data(json.utf8))
-        return envelope.events.compactMap { event in
+        return try envelope.events.map { event in
             let title = event.title.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !title.isEmpty,
                   (0...1).contains(event.confidence),
                   valid(event.startMinutes), valid(event.endMinutes),
                   (event.startMinutes == nil) == (event.endMinutes == nil),
                   event.endMinutes.map({ end in event.startMinutes.map { end > $0 } ?? false }) ?? true
-            else { return nil }
+            else { throw CalendarGeminiRecognitionError.invalidResponse }
             return CalendarGeminiRecognizedEvent(
                 title: title,
                 originalText: event.originalText,
@@ -315,6 +387,76 @@ struct CalendarImportDayRegion: Equatable, Sendable {
     }
 }
 
+protocol CalendarGeminiCellRequesting: Sendable {
+    func recognizeCell(
+        in region: CalendarImportDayRegion
+    ) async throws -> [CalendarGeminiRecognizedEvent]
+}
+
+struct CalendarGeminiCellRecognitionCoordinator {
+    let maximumConcurrentRequests: Int
+
+    init(maximumConcurrentRequests: Int = 4) {
+        self.maximumConcurrentRequests = max(1, maximumConcurrentRequests)
+    }
+
+    func recognize(
+        regions: [CalendarImportDayRegion],
+        requester: any CalendarGeminiCellRequesting
+    ) async throws -> [CalendarGeminiCellRecognitionOutcome] {
+        let orderedRegions = regions.sorted { $0.day < $1.day }
+        guard !orderedRegions.isEmpty else { return [] }
+
+        return try await withThrowingTaskGroup(
+            of: CalendarGeminiCellRecognitionOutcome.self
+        ) { group in
+            let initialCount = min(maximumConcurrentRequests, orderedRegions.count)
+            for region in orderedRegions.prefix(initialCount) {
+                group.addTask {
+                    try await Self.recognize(region: region, requester: requester)
+                }
+            }
+
+            var outcomes: [CalendarGeminiCellRecognitionOutcome] = []
+            var nextIndex = initialCount
+            while let outcome = try await group.next() {
+                outcomes.append(outcome)
+                if nextIndex < orderedRegions.count {
+                    let region = orderedRegions[nextIndex]
+                    nextIndex += 1
+                    group.addTask {
+                        try await Self.recognize(region: region, requester: requester)
+                    }
+                }
+            }
+            return outcomes.sorted { $0.day < $1.day }
+        }
+    }
+
+    private static func recognize(
+        region: CalendarImportDayRegion,
+        requester: any CalendarGeminiCellRequesting
+    ) async throws -> CalendarGeminiCellRecognitionOutcome {
+        try Task.checkCancellation()
+        do {
+            let events = try await requester.recognizeCell(in: region)
+            return CalendarGeminiCellRecognitionOutcome(
+                day: region.day,
+                events: events,
+                errorCategory: nil
+            )
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            return CalendarGeminiCellRecognitionOutcome(
+                day: region.day,
+                events: [],
+                errorCategory: CalendarGeminiErrorCategory.classify(error)
+            )
+        }
+    }
+}
+
 struct CalendarImportParsedTime: Equatable, Sendable {
     let startMinutes: Int
     let endMinutes: Int?
@@ -358,6 +500,81 @@ struct CalendarImportCandidate: Identifiable, Equatable {
 
     var isValidForSaving: Bool {
         !effectiveTitle.isEmpty && hasCompleteTimeRange
+    }
+}
+
+struct CalendarGeminiMonthRecognitionResult {
+    let candidates: [CalendarImportCandidate]
+    let cellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics]
+    let failedDays: Set<Int>
+}
+
+struct CalendarGeminiMonthResultBuilder {
+    func makeResult(
+        outcomes: [CalendarGeminiCellRecognitionOutcome],
+        yearMonth: CalendarImportYearMonth,
+        calendarID: UUID,
+        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
+    ) throws -> CalendarGeminiMonthRecognitionResult {
+        var calendar = inputCalendar
+        calendar.locale = Locale(identifier: "en_US_POSIX")
+        guard let monthStart = yearMonth.date(calendar: calendar) else {
+            throw CalendarGeminiRecognitionError.invalidResponse
+        }
+
+        var candidates: [CalendarImportCandidate] = []
+        var diagnostics: [CalendarPhotoCellRecognitionDiagnostics] = []
+        var failedDays = Set<Int>()
+        for outcome in outcomes.sorted(by: { $0.day < $1.day }) {
+            if let errorCategory = outcome.errorCategory {
+                failedDays.insert(outcome.day)
+                diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
+                    day: outcome.day,
+                    geminiRequested: true,
+                    geminiSucceeded: false,
+                    recognitionSource: .visionOCR,
+                    geminiEvents: 0,
+                    geminiError: errorCategory,
+                    fallbackUsed: true
+                ))
+                continue
+            }
+            diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
+                day: outcome.day,
+                geminiRequested: true,
+                geminiSucceeded: true,
+                recognitionSource: .gemini,
+                geminiEvents: outcome.events.count,
+                geminiError: nil,
+                fallbackUsed: false
+            ))
+            guard let date = calendar.date(
+                byAdding: .day,
+                value: outcome.day - 1,
+                to: monthStart
+            ) else { continue }
+            candidates.append(contentsOf: outcome.events.map { event in
+                CalendarImportCandidate(
+                    id: UUID(),
+                    date: date,
+                    startTimeMinutes: event.startMinutes,
+                    endTimeMinutes: event.endMinutes,
+                    title: event.title,
+                    originalText: event.originalText,
+                    personToken: nil,
+                    confidence: event.confidence,
+                    isSelected: true,
+                    needsReview: event.confidence < 0.75 || event.title.isEmpty,
+                    targetCalendarID: calendarID,
+                    includesPersonTokenInTitle: false
+                )
+            })
+        }
+        return CalendarGeminiMonthRecognitionResult(
+            candidates: candidates,
+            cellDiagnostics: diagnostics,
+            failedDays: failedDays
+        )
     }
 }
 
@@ -475,6 +692,8 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var scanMode: CalendarPhotoScanMode? = nil
     var selectedDate: Date? = nil
     var gridDetection: String = "legacy"
+    var recognitionMode: CalendarPhotoRecognitionMode? = nil
+    var recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics] = []
     var cellDiagnostics: [CalendarPhotoCellDiagnostics] = []
     var unassignedRawTexts: [String] = []
     var unassignedNormalizedTexts: [String] = []
@@ -508,7 +727,18 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     let failureReason: CalendarPhotoImportParseError?
 
     var shouldDisplay: Bool {
-        failureReason != nil || candidateCount == 0 || !cellDiagnostics.isEmpty
+        failureReason != nil
+            || candidateCount == 0
+            || recognitionMode != nil
+            || !cellDiagnostics.isEmpty
+    }
+
+    var geminiSuccessCellCount: Int {
+        recognitionCellDiagnostics.filter(\.geminiSucceeded).count
+    }
+
+    var visionFallbackCellCount: Int {
+        recognitionCellDiagnostics.filter(\.fallbackUsed).count
     }
 
     var displayFields: [(label: String, value: String)] {
@@ -516,6 +746,9 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ("Scan Mode", scanMode?.rawValue ?? "legacy"),
             ("Selected Date", Self.dateText(selectedDate)),
             ("Grid Detection", gridDetection),
+            ("Recognition", recognitionMode?.rawValue ?? "legacy"),
+            ("Gemini Success Cells", "\(geminiSuccessCellCount)"),
+            ("Vision Fallback Cells", "\(visionFallbackCellCount)"),
             ("Manual YM", Self.yearMonthText(manualYearMonth)),
             ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
             ("Selected Rotation", orientation.map { "\($0.selectedRotation.rawValue)" } ?? "none"),
@@ -550,6 +783,9 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             "scanMode=\(scanMode?.rawValue ?? "legacy")",
             "selectedDate=\(Self.dateText(selectedDate))",
             "gridDetection=\(gridDetection)",
+            "recognitionMode=\(recognitionMode?.rawValue ?? "legacy")",
+            "geminiSuccessCells=\(geminiSuccessCellCount)",
+            "visionFallbackCells=\(visionFallbackCellCount)",
             "manualYearMonth=\(Self.yearMonthText(manualYearMonth))",
             "resolvedYearMonth=\(Self.yearMonthText(resolvedYearMonth))",
             "selectedRotation=\(orientation.map { String($0.selectedRotation.rawValue) } ?? "none")",
@@ -593,6 +829,19 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 "score=\(candidate.evidenceScore)"
             ].joined(separator: " ")
         } ?? []
+        let recognitionLines = recognitionCellDiagnostics
+            .sorted { $0.day < $1.day }
+            .map { cell in
+                [
+                    "day=\(cell.day)",
+                    "geminiRequested=\(cell.geminiRequested)",
+                    "geminiSucceeded=\(cell.geminiSucceeded)",
+                    "recognitionSource=\(cell.recognitionSource.rawValue)",
+                    "geminiEvents=\(cell.geminiEvents)",
+                    "geminiError=\(cell.geminiError?.rawValue ?? "none")",
+                    "fallbackUsed=\(cell.fallbackUsed)"
+                ].joined(separator: " ")
+            }
 
         let gridAttemptLines = gridAttempts.map { attempt in
             [
@@ -679,6 +928,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
 
         return [
             summary,
+            Self.section(title: "RecognitionCells", lines: recognitionLines),
             Self.section(title: "Orientations", lines: orientationLines),
             Self.section(title: "GridAttempts", lines: gridAttemptLines),
             Self.section(title: "XCenters", lines: xCenterLines),
@@ -927,6 +1177,9 @@ struct CalendarPhotoGridFirstParser {
         defaultCalendarID: UUID,
         calendar inputCalendar: Calendar = Calendar(identifier: .gregorian),
         orientationDiagnostics: CalendarPhotoOrientationDiagnostics? = nil,
+        prebuiltCandidates: [CalendarImportCandidate] = [],
+        visionFallbackRegions: [CalendarImportDayRegion]? = nil,
+        recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics] = [],
         diagnosticsHandler: ((CalendarPhotoImportDiagnostics) -> Void)? = nil
     ) throws -> CalendarPhotoImportParseResult {
         var calendar = inputCalendar
@@ -951,6 +1204,8 @@ struct CalendarPhotoGridFirstParser {
                     candidates: [],
                     cellDiagnostics: []
                 ),
+                candidateCount: prebuiltCandidates.count,
+                recognitionCellDiagnostics: recognitionCellDiagnostics,
                 orientationDiagnostics: orientationDiagnostics,
                 stage: .dayRegions,
                 failureReason: .noDateStructure
@@ -959,12 +1214,14 @@ struct CalendarPhotoGridFirstParser {
         }
         let buildResult = CalendarImportCandidateBuilder().makeMonthCandidates(
             observations: observations,
-            regions: regions,
+            regions: visionFallbackRegions ?? regions,
             monthStart: monthStart,
             calendarID: defaultCalendarID,
             calendar: calendar
         )
-        let candidates = buildResult.candidates
+        let candidates = Self.stablyOrderedByDate(
+            prebuiltCandidates + buildResult.candidates
+        )
         let failureReason: CalendarPhotoImportParseError? = candidates.isEmpty
             ? .noCandidates
             : nil
@@ -975,6 +1232,8 @@ struct CalendarPhotoGridFirstParser {
             grid: grid,
             regions: regions,
             buildResult: buildResult,
+            candidateCount: candidates.count,
+            recognitionCellDiagnostics: recognitionCellDiagnostics,
             orientationDiagnostics: orientationDiagnostics,
             stage: candidates.isEmpty ? .candidates : .completed,
             failureReason: failureReason
@@ -1010,6 +1269,8 @@ struct CalendarPhotoGridFirstParser {
         grid: CalendarPhotoGridGeometry,
         regions: [CalendarImportDayRegion],
         buildResult: CalendarPhotoMonthCandidateBuildResult,
+        candidateCount: Int,
+        recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics],
         orientationDiagnostics: CalendarPhotoOrientationDiagnostics?,
         stage: CalendarPhotoImportParseStage,
         failureReason: CalendarPhotoImportParseError?
@@ -1033,6 +1294,8 @@ struct CalendarPhotoGridFirstParser {
             scanMode: .month,
             selectedDate: nil,
             gridDetection: "visionRectangle",
+            recognitionMode: Self.recognitionMode(for: recognitionCellDiagnostics),
+            recognitionCellDiagnostics: recognitionCellDiagnostics,
             cellDiagnostics: buildResult.cellDiagnostics,
             unassignedRawTexts: buildResult.unassignedRawTexts,
             unassignedNormalizedTexts: buildResult.unassignedNormalizedTexts,
@@ -1067,10 +1330,31 @@ struct CalendarPhotoGridFirstParser {
             selectedGridAttempt: nil,
             gridAttempts: [],
             dayRegionCount: regions.count,
-            candidateCount: buildResult.candidates.count,
+            candidateCount: candidateCount,
             parseStage: stage,
             failureReason: failureReason
         )
+    }
+
+    private static func recognitionMode(
+        for cells: [CalendarPhotoCellRecognitionDiagnostics]
+    ) -> CalendarPhotoRecognitionMode? {
+        guard !cells.isEmpty else { return nil }
+        let fallbackCount = cells.filter(\.fallbackUsed).count
+        if fallbackCount == 0 { return .gemini }
+        if fallbackCount == cells.count { return .visionOCR }
+        return .mixed
+    }
+
+    private static func stablyOrderedByDate(
+        _ candidates: [CalendarImportCandidate]
+    ) -> [CalendarImportCandidate] {
+        candidates.enumerated().sorted { lhs, rhs in
+            if lhs.element.date != rhs.element.date {
+                return lhs.element.date < rhs.element.date
+            }
+            return lhs.offset < rhs.offset
+        }.map(\.element)
     }
 }
 
