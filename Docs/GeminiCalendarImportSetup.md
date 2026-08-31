@@ -1,6 +1,6 @@
 # Gemini calendar-cell recognition setup
 
-TimeNest uses Firebase AI Logic with the Gemini Developer API for monthly photo imports. Grid detection and every cell's date remain local. The app sends one cropped day cell to `gemini-2.5-flash`; only a failed cell falls back to Vision OCR. A successful `{"events":[]}` response means that the cell is empty and does not trigger fallback.
+TimeNest uses Firebase AI Logic with the Gemini Developer API for monthly photo imports. Grid detection and every cell's date remain local. The app sends one cropped day cell to `gemini-3.7-flash`; only a failed cell falls back to Vision OCR. A successful `{"events":[]}` response means that the cell is empty and does not trigger fallback.
 
 ## Firebase Apple SDK
 

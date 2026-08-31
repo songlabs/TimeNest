@@ -23,7 +23,7 @@ struct CalendarGeminiCellRecognitionService {
             )
         } else {
             let model = FirebaseAI.firebaseAI(backend: .googleAI()).generativeModel(
-                modelName: "gemini-2.5-flash"
+                modelName: "gemini-3.7-flash"
             )
             outcomes = try await coordinator.recognize(
                 regions: regions,
