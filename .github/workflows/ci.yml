@@ -29,6 +29,22 @@ jobs:
           echo "iOS SDK $SDK_VERSION"
           test "${SDK_VERSION%%.*}" -ge 26
 
+      - name: Install pinned Tuist
+        uses: tuist/install@v0
+        with:
+          version: 4.65.0
+
+      - name: Generate Xcode project
+        run: |
+          set -euo pipefail
+          test "$(tuist version)" = "4.65.0"
+          tuist install
+          tuist generate --no-open
+          grep -Fq 'CalendarGeminiCellRecognitionService.swift' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'FirebaseAI' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'FirebaseCore' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'GoogleMobileAds' TimeNest.xcodeproj/project.pbxproj
+
       - name: Resolve Swift packages
         run: xcodebuild -resolvePackageDependencies -project TimeNest.xcodeproj -scheme TimeNest
 

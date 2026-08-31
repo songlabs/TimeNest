@@ -36,7 +36,7 @@ TimeNest is ad-supported and includes a one-time Apple In-App Purchase to remove
 - SwiftUI
 - SwiftData local persistence
 - iOS 18.0 or later
-- Tuist project description with a checked-in Xcode project/workspace
+- Tuist project description used to generate the Xcode project/workspace
 - Google Mobile Ads and Google User Messaging Platform through Swift Package Manager
 - Apple CloudKit calendar sharing
 
@@ -67,7 +67,7 @@ The checked-in Xcode project and `Project.swift` define the same three build set
 - `TIMENEST_ADMOB_APP_ID`: Google's official test App ID in Debug and simulator builds; Release device/archive builds use the production App ID configured in `Project.swift` and the checked-in Xcode project.
 - `TIMENEST_ADMOB_BANNER_UNIT_ID`: Google's official test Banner Unit ID in Debug and simulator builds; Release device/archive builds use the production Banner Unit ID configured in `Project.swift` and the checked-in Xcode project.
 
-`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. Release device/archive values must be the approved production IDs, while simulator overrides keep development builds on Google's official test IDs. `Scripts/validate_admob_release_config.sh` rejects a production Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. Keep `Project.swift` and `TimeNest.xcodeproj/project.pbxproj` aligned when changing the two production values.
+`TimeNest/Info.plist` expands `GADApplicationIdentifier` and the banner setting from these values. Release device/archive values must be the approved production IDs, while simulator overrides keep development builds on Google's official test IDs. `Scripts/validate_admob_release_config.sh` rejects a production Release build when advertising is disabled or either identifier is empty, a placeholder, malformed, or a Google test ID. `AdConfiguration` repeats the validation at startup as defense in depth. `Project.swift` is the source of truth for these settings; regenerate the Xcode project after changing it.
 
 The Remove Ads StoreKit product ID is `com.song.TimeNest.remove_ads`; keep `AdConfiguration.removeAdsProductID`, `TimeNest.storekit`, App Store Connect, and release documents aligned when reviewing IAP.
 
@@ -97,8 +97,8 @@ TimeNest/
   Shared/              Date, localization, notification, style, and theme utilities
 Tests/TimeNestTests/    Unit-test sources
 Docs/                  App Store, TestFlight, metadata, and privacy drafts
-Project.swift          Tuist project definition
-TimeNest.xcodeproj/     Checked-in Xcode project used by the shared scheme
+Project.swift          Source-of-truth Tuist project definition
+TimeNest.xcodeproj/     Checked-in local convenience project; CI regenerates it
 ```
 
 ## Localization
