@@ -1287,6 +1287,100 @@ final class CalendarGeminiMonthRecognitionTests: XCTestCase {
     private let calendarID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
     private let yearMonth = CalendarImportYearMonth(year: 2026, month: 9)!
 
+    func testFirebaseBackendDiagnosticsExposeOnlySanitizedStructuredEvidence() throws {
+        let apiKey = "AIza0123456789abcdefghijklmnop"
+        let token = "header.payload0123456789012345.signature0123456789"
+        let error = NSError(
+            domain: "com.google.firebase.firebaseai.BackendError",
+            code: 403,
+            userInfo: [
+                NSLocalizedDescriptionKey: """
+                PERMISSION_DENIED apiKey=\(apiKey) token=\(token)
+                (com.google.firebase.firebaseai.BackendError - HTTP 403 PERMISSION_DENIED)
+                """
+            ]
+        )
+
+        let diagnostics = CalendarGeminiErrorDiagnostics(error: error)
+
+        XCTAssertEqual(diagnostics.domain, "com.google.firebase.firebaseai.BackendError")
+        XCTAssertEqual(diagnostics.code, 403)
+        XCTAssertEqual(diagnostics.aiLogicCode, "PERMISSION_DENIED")
+        XCTAssertEqual(diagnostics.httpStatus, 403)
+        XCTAssertLessThanOrEqual(diagnostics.message.count, 240)
+        XCTAssertTrue(diagnostics.message.contains("<redacted>"))
+        XCTAssertFalse(diagnostics.message.contains(apiKey))
+        XCTAssertFalse(diagnostics.message.contains(token))
+        XCTAssertFalse(diagnostics.message.contains("\n"))
+    }
+
+    func testRepeatedFirebaseFailuresAreAggregatedWithSafeErrorDetails() throws {
+        let details = CalendarGeminiErrorDiagnostics(error: NSError(
+            domain: "com.google.firebase.firebaseai.BackendError",
+            code: 403,
+            userInfo: [
+                NSLocalizedDescriptionKey:
+                    "Permission denied (com.google.firebase.firebaseai.BackendError - HTTP 403 PERMISSION_DENIED)"
+            ]
+        ))
+        let failureOutcomes = (1...3).map { day in
+            CalendarGeminiCellRecognitionOutcome(
+                day: day,
+                events: [],
+                errorCategory: .firebase,
+                errorDiagnostics: details
+            )
+        }
+        let successOutcome = CalendarGeminiCellRecognitionOutcome(
+            day: 4,
+            events: [event(title: "Day Four")],
+            errorCategory: nil,
+            errorDiagnostics: nil
+        )
+        let gemini = try CalendarGeminiMonthResultBuilder().makeResult(
+            outcomes: failureOutcomes + [successOutcome],
+            yearMonth: yearMonth,
+            calendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+        let grid = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
+            columns: 7,
+            rows: 5
+        )
+        let parser = CalendarPhotoGridFirstParser()
+        let regions = parser.dayRegions(
+            yearMonth: yearMonth,
+            weekStart: .sunday,
+            grid: grid,
+            calendar: utcGregorianCalendar()
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        _ = try parser.parseMonth(
+            observations: [],
+            yearMonth: yearMonth,
+            weekStart: .sunday,
+            grid: grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            prebuiltCandidates: gemini.candidates,
+            visionFallbackRegions: regions.filter { gemini.failedDays.contains($0.day) },
+            recognitionCellDiagnostics: gemini.cellDiagnostics,
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        let text = try XCTUnwrap(diagnostics).plainText
+        XCTAssertTrue(text.contains(
+            "days=1-3 count=3 geminiRequested=true geminiSucceeded=false "
+                + "recognitionSource=visionOCR geminiEvents=0 geminiError=firebase "
+                + "fallbackUsed=true geminiErrorDomain=com.google.firebase.firebaseai.BackendError "
+                + "geminiErrorCode=403 geminiAILogicCode=PERMISSION_DENIED "
+                + "geminiHTTPStatus=403 geminiErrorMessage=Permission denied"
+        ))
+        XCTAssertEqual(text.components(separatedBy: "geminiErrorDomain=").count - 1, 1)
+    }
+
     func testEmptyGeminiEventsForSeptember22DoNotFallbackOrCreateCandidate() async throws {
         let result = try await recognize(responses: [22: .success([])])
 

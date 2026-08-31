@@ -67,14 +67,24 @@ private struct FirebaseCalendarGeminiCellRequester: CalendarGeminiCellRequesting
         }
         let cellImage = UIImage(cgImage: crop)
         let response = try await withTimeout {
-            try await model.generateContent(
-                prompt(
-                    day: region.day,
-                    yearMonth: yearMonth,
-                    languageCode: languageCode
-                ),
-                cellImage
-            )
+            do {
+                return try await model.generateContent(
+                    prompt(
+                        day: region.day,
+                        yearMonth: yearMonth,
+                        languageCode: languageCode
+                    ),
+                    cellImage
+                )
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                let diagnosticError = Self.diagnosticError(from: error)
+                throw CalendarGeminiRequestFailure(
+                    category: CalendarGeminiErrorCategory.classify(diagnosticError),
+                    diagnostics: CalendarGeminiErrorDiagnostics(error: diagnosticError)
+                )
+            }
         }
         guard let text = response.text,
               !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -110,6 +120,19 @@ private struct FirebaseCalendarGeminiCellRequester: CalendarGeminiCellRequesting
         ).intersection(CGRect(x: 0, y: 0, width: width, height: height))
         guard rect.width >= 2, rect.height >= 2 else { return nil }
         return image.cropping(to: rect)
+    }
+
+    private static func diagnosticError(from error: Error) -> Error {
+        guard let generateContentError = error as? GenerateContentError else {
+            return error
+        }
+        switch generateContentError {
+        case let .internalError(underlying),
+             let .promptImageContentError(underlying):
+            return diagnosticError(from: underlying)
+        case .promptBlocked, .responseStoppedEarly:
+            return error
+        }
     }
 
     private func withTimeout<T: Sendable>(
