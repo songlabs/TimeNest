@@ -75,7 +75,7 @@ struct CalendarGeminiErrorDiagnostics: Equatable, Sendable {
             (#"\bAIza[0-9A-Za-z_-]{20,}\b"#, "<redacted>"),
             (#"\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\b"#, "<redacted>"),
             (#"(?i)\b(bearer|firebase)\s+[A-Za-z0-9._~+/=-]{12,}"#, "$1 <redacted>"),
-            (#"(?i)\b(api[ _-]?key|app[ _-]?check[ _-]?token|access[ _-]?token|refresh[ _-]?token|auth(?:orization)?|credential|password|secret)\b(\s*[:=]\s*)([^,\s;&]+)"#, "$1$2<redacted>"),
+            (#"(?i)\b(api[ _-]?key|app[ _-]?check[ _-]?token|access[ _-]?token|refresh[ _-]?token|token|auth(?:orization)?|credential|password|secret)\b(\s*[:=]\s*)([^,\s;&]+)"#, "$1$2<redacted>"),
             (#"(?i)([?&](?:key|api_key|token|access_token|credential|secret)=)[^&\s]+"#, "$1<redacted>"),
             (#"\b[A-Za-z0-9+/_=-]{96,}\b"#, "<redacted>")
         ]
