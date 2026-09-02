@@ -459,30 +459,33 @@ private final class PPOCRONNXSessions {
             PPOCRMonotonicClock.nowMilliseconds - currentStart
 
         let candidateStart = PPOCRMonotonicClock.nowMilliseconds
+        var candidateRecognizerValue: PPOCRONNXSession? = nil
+        var candidateCharactersValue: [String] = []
+        var candidateInitializationErrorValue: String? = nil
         do {
             let candidateRecognizerURL = try Self.resourceURL(
                 PPOCRModelManifest.candidateRecognizer,
                 bundle: bundle
             )
-            candidateCharacters = try Self.characters(
+            let characters = try Self.characters(
                 model: PPOCRModelManifest.candidateRecognitionCharacters,
                 expectedCount: PPOCRModelManifest.candidateRecognitionCharacterCount,
                 bundle: bundle
             )
-            candidateRecognizer = try PPOCRONNXSession(
+            let recognizer = try PPOCRONNXSession(
                 environment: sharedEnvironment,
                 modelURL: candidateRecognizerURL
             )
-            candidateInitializationError = nil
+            candidateRecognizerValue = recognizer
+            candidateCharactersValue = characters
         } catch let error as PPOCRError {
-            candidateRecognizer = nil
-            candidateCharacters = []
-            candidateInitializationError = error.diagnosticCode
+            candidateInitializationErrorValue = error.diagnosticCode
         } catch {
-            candidateRecognizer = nil
-            candidateCharacters = []
-            candidateInitializationError = "runtimeFailure:candidateModelInit"
+            candidateInitializationErrorValue = "runtimeFailure:candidateModelInit"
         }
+        candidateRecognizer = candidateRecognizerValue
+        candidateCharacters = candidateCharactersValue
+        candidateInitializationError = candidateInitializationErrorValue
         candidateInitializationMilliseconds =
             PPOCRMonotonicClock.nowMilliseconds - candidateStart
     }
