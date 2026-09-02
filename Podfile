@@ -8,6 +8,10 @@ target 'TimeNest' do
 
   # Microsoft-owned CocoaPod; keep the exact version for reproducible POC builds.
   pod 'onnxruntime-objc', '1.29.0'
+
+  target 'TimeNestTests' do
+    inherit! :search_paths
+  end
 end
 
 post_install do |installer|
