@@ -1091,7 +1091,7 @@ final class CalendarPhotoImportTests: XCTestCase {
             #"rawTexts=["⑤","20:20–21:40"]"#
         ))
         XCTAssertTrue(captured.plainText.contains(
-            #"parsedStart=20:20 parsedEnd=21:40 remainingTitle="⑤" candidateCreated=true"#
+            #"parsedStart=20:20 parsedEnd=21:40 remainingTitle="⑤" ocrConfidence=0.7250 quality=standard needsReview=true defaultSelected=true candidateCreated=true"#
         ))
     }
 
