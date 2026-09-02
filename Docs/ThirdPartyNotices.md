@@ -1,6 +1,6 @@
 # TimeNest Third-Party Notices
 
-This inventory covers the checked-in Swift package resolutions and PP-OCRv6 iOS dependencies as of 2026-09-02. Recheck this document whenever package, CocoaPod, or bundled-model versions change.
+This inventory covers the checked-in Swift package resolutions and PP-OCR iOS dependencies as of 2026-09-03. Recheck this document whenever package, CocoaPod, or bundled-model versions change.
 
 ## Google Mobile Ads
 
@@ -37,7 +37,7 @@ The wrapper package downloads Google's precompiled User Messaging Platform XCFra
 - Copyright notice: Copyright (c) Microsoft Corporation
 - License text: https://github.com/microsoft/onnxruntime/blob/v1.29.0/LICENSE
 
-PP-OCRv6 uses ONNX Runtime locally on iOS. No ONNX Runtime Swift wrapper or third-party binary mirror is used.
+PP-OCR uses ONNX Runtime locally on iOS. No ONNX Runtime Swift wrapper or third-party binary mirror is used.
 
 ## RapidOCR
 
@@ -53,14 +53,14 @@ The Swift implementation is a modified rewrite for TimeNest iOS. It does not inc
 
 ## PaddleOCR / PP-OCR Models
 
-- Models: `PP-OCRv6_det_small.onnx`, `ch_ppocr_mobile_v2.0_cls_mobile.onnx`, and `PP-OCRv6_rec_small.onnx`
+- Models: `PP-OCRv6_det_small.onnx`, `ch_ppocr_mobile_v2.0_cls_mobile.onnx`, `PP-OCRv6_rec_small.onnx`, and diagnostic-only `ch_PP-OCRv5_rec_mobile.onnx`
 - Source: https://www.modelscope.cn/models/RapidAI/RapidOCR (revision `v3.9.2`)
 - Upstream project: https://github.com/PaddlePaddle/PaddleOCR
 - License: Apache License 2.0
 - Model copyright: Baidu
 - License text: https://github.com/PaddlePaddle/PaddleOCR/blob/main/LICENSE
 
-The three ONNX files and the recognition dictionary extracted from the exact recognition model are bundled for local PP-OCRv6 recognition. Their source URLs, byte sizes, and SHA256 values are recorded in `Docs/PPOCRv6IOSPOC.md` and verified in CI.
+The four ONNX files and their matching recognition dictionaries are bundled for local PP-OCR recognition. Their source URLs, byte sizes, SHA256 values, and the PP-OCRv5 official-weight provenance are recorded in `Docs/PPOCRv6IOSPOC.md` and verified in CI. The PP-OCRv5 model is used only for recognition A/B diagnostics; PP-OCRv6 remains the Calendar Candidate input.
 
 ## Apache License 2.0 Attribution
 

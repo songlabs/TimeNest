@@ -37,7 +37,16 @@ verify_file \
   "PP-OCRv6_rec_small.characters.txt" \
   "74947" \
   "b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d"
+verify_file \
+  "ch_PP-OCRv5_rec_mobile.onnx" \
+  "16631306" \
+  "5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5"
+verify_file \
+  "ppocrv5_dict.txt" \
+  "74012" \
+  "d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b"
 
 test "$(wc -l < "$resource_dir/PP-OCRv6_rec_small.characters.txt" | tr -d '[:space:]')" = "18708"
+test "$(wc -l < "$resource_dir/ppocrv5_dict.txt" | tr -d '[:space:]')" = "18383"
 
-echo "PP-OCRv6 resources verified."
+echo "PP-OCR resources verified."

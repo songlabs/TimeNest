@@ -91,6 +91,35 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertNil(CalendarImportTimeParser.parseRangeOnly("17:30.20.30"))
     }
 
+    func testTimeParserSupportsBoundedCompactRangesAndRejectsAmbiguousDigits() {
+        let expected1730 = CalendarImportParsedTime(
+            startMinutes: 17 * 60 + 30,
+            endMinutes: 20 * 60 + 30
+        )
+        let expected0730 = CalendarImportParsedTime(
+            startMinutes: 7 * 60 + 30,
+            endMinutes: 20 * 60 + 30
+        )
+        XCTAssertEqual(CalendarImportTimeParser.parse("1730-20.30"), expected1730)
+        XCTAssertEqual(CalendarImportTimeParser.parse("1730-20:30"), expected1730)
+        XCTAssertEqual(CalendarImportTimeParser.parse("730-20.30"), expected0730)
+        XCTAssertEqual(CalendarImportTimeParser.parse("730-20:30"), expected0730)
+        XCTAssertEqual(CalendarImportTimeParser.parse("1730-2030"), expected1730)
+        XCTAssertEqual(
+            CalendarImportTimeParser.removingTime(from: "Meeting 1730-2030"),
+            "Meeting "
+        )
+
+        [
+            "317302030",
+            "17230-2030",
+            "2460-2030",
+            "1730-2560",
+            "Release1730",
+            "abc730-2030xyz"
+        ].forEach { XCTAssertNil(CalendarImportTimeParser.parse($0), $0) }
+    }
+
     func testOCRCandidateSelectorPrefersValidRangeButLeavesTitlesUntouched() throws {
         let selected = try XCTUnwrap(CalendarOCRCandidateSelector.select(from: [
             CalendarOCRCandidate(text: "17:3020:30", confidence: 0.96),
@@ -1083,8 +1112,76 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(candidate.startTimeMinutes, 17 * 60 + 30)
         XCTAssertEqual(candidate.endTimeMinutes, 20 * 60 + 30)
         XCTAssertEqual(candidate.title, "")
+        XCTAssertEqual(candidate.quality, .standard)
+        XCTAssertTrue(candidate.isSelected)
         XCTAssertTrue(candidate.needsReview)
         XCTAssertFalse(candidate.isValidForSaving)
+    }
+
+    func testGridFirstMonthKeepsLowInformationNumericCandidatesUnselected() throws {
+        for title in ["4", "40", "20002", "9/8"] {
+            let fixture = try gridFirstFixture(day: 12)
+            var diagnostics: CalendarPhotoImportDiagnostics?
+            let result = try fixture.parser.parseMonth(
+                observations: [
+                    gridFirstObservation(
+                        title,
+                        in: fixture.region,
+                        line: 0,
+                        confidence: 0.42
+                    )
+                ],
+                yearMonth: fixture.yearMonth,
+                weekStart: .sunday,
+                grid: fixture.grid,
+                defaultCalendarID: calendarID,
+                calendar: utcGregorianCalendar(),
+                diagnosticsHandler: { diagnostics = $0 }
+            )
+
+            var candidates = result.candidates
+            var candidate = try XCTUnwrap(candidates.first)
+            XCTAssertEqual(result.candidates.count, 1, title)
+            XCTAssertEqual(candidate.title, title)
+            XCTAssertEqual(candidate.quality, .lowInformation, title)
+            XCTAssertTrue(candidate.needsReview, title)
+            XCTAssertFalse(candidate.isSelected, title)
+            XCTAssertEqual(candidates.filter(\.isSelected).count, 0, title)
+            candidate.isSelected = true
+            XCTAssertTrue(candidate.isSelected, title)
+            candidates[0] = candidate
+            XCTAssertEqual(candidates.filter(\.isSelected).count, 1, title)
+
+            let cell = try XCTUnwrap(
+                diagnostics?.cellDiagnostics.first(where: { $0.day == 12 })
+            )
+            let candidateDiagnostics = try XCTUnwrap(cell.candidates.first)
+            XCTAssertEqual(candidateDiagnostics.ocrConfidence, 0.42, accuracy: 0.000_001)
+            XCTAssertEqual(candidateDiagnostics.quality, .lowInformation)
+            XCTAssertTrue(candidateDiagnostics.needsReview)
+            XCTAssertFalse(candidateDiagnostics.defaultSelected)
+            XCTAssertTrue(try XCTUnwrap(diagnostics).plainText.contains(
+                "quality=lowInformation needsReview=true defaultSelected=false"
+            ))
+        }
+    }
+
+    func testGridFirstMonthDoesNotMisclassifyTextualCandidatesAsLowInformation() throws {
+        for title in ["Meeting", "1on1", "会議 2", "Meeting 2", "Room 3", "A班"] {
+            let fixture = try gridFirstFixture(day: 12)
+            let result = try fixture.parser.parseMonth(
+                observations: [gridFirstObservation(title, in: fixture.region, line: 0)],
+                yearMonth: fixture.yearMonth,
+                weekStart: .sunday,
+                grid: fixture.grid,
+                defaultCalendarID: calendarID,
+                calendar: utcGregorianCalendar()
+            )
+
+            let candidate = try XCTUnwrap(result.candidates.first)
+            XCTAssertEqual(candidate.quality, .standard, title)
+            XCTAssertTrue(candidate.isSelected, title)
+        }
     }
 
     func testGridFirstMonthKeepsUnparseableNumericTextAsWarningFallback() throws {
@@ -1579,7 +1676,8 @@ final class CalendarPhotoImportTests: XCTestCase {
         let fixture = try gridFirstFixture(day: 26)
         let run = ppOCRRun(cells: [ppOCRCell(
             day: 26,
-            text: "Meeting 17:30–20:30"
+            text: "Meeting 17:30–20:30",
+            candidateText: "ミーティング 17:30–20:30"
         )])
         let plan = PPOCRMonthRecognitionRouter().makePlan(
             run: run,
@@ -1594,11 +1692,13 @@ final class CalendarPhotoImportTests: XCTestCase {
             defaultCalendarID: calendarID,
             calendar: utcGregorianCalendar(),
             recognitionCellDiagnostics: plan.cellDiagnostics,
+            recognitionModelPOC: plan.recognitionModelPOC,
             diagnosticsHandler: { diagnostics = $0 }
         )
 
         XCTAssertTrue(plan.visionFallbackRegions.isEmpty)
         let observation = try XCTUnwrap(plan.candidateInputObservations.first)
+        XCTAssertEqual(observation.text, "Meeting 17:30–20:30")
         XCTAssertTrue(fixture.region.contains(observation))
         XCTAssertEqual(
             observation.boundingBox.x,
@@ -1618,6 +1718,10 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertTrue(text.contains("ppocrSuccessCells=1"))
         XCTAssertTrue(text.contains("visionFallbackCells=0"))
         XCTAssertTrue(text.contains("candidateInput=true"))
+        XCTAssertTrue(text.contains("[RecognitionModelPOC]"))
+        XCTAssertTrue(text.contains("candidateInput=currentModel"))
+        XCTAssertTrue(text.contains("currentText=\"Meeting 17:30–20:30\""))
+        XCTAssertTrue(text.contains("candidateText=\"ミーティング 17:30–20:30\""))
         XCTAssertTrue(text.contains("day=26 recognitionSource=ppocrv6 cellBounds="))
         XCTAssertTrue(text.contains("sourcePixels=3000x2000"))
         XCTAssertTrue(text.contains("cropRect=(x=100,y=200,w=461,h=345)"))
@@ -1681,6 +1785,17 @@ final class CalendarPhotoImportTests: XCTestCase {
             modelInitializedThisRun: true,
             modelInitializationMilliseconds: 10,
             totalMilliseconds: 20,
+            recognitionModelPOC: PPOCRRecognitionModelPOC(
+                currentModel: PPOCRModelManifest.recognizer.displayName,
+                candidateModel: PPOCRModelManifest.candidateRecognizer.displayName,
+                currentInitializedThisRun: true,
+                candidateInitializedThisRun: true,
+                currentInitializationMilliseconds: 8,
+                candidateInitializationMilliseconds: 6,
+                candidateInitializationError: nil,
+                currentTotalMilliseconds: 5,
+                candidateTotalMilliseconds: 7
+            ),
             cells: cells
         )
     }
@@ -1688,6 +1803,7 @@ final class CalendarPhotoImportTests: XCTestCase {
     private func ppOCRCell(
         day: Int,
         text: String? = nil,
+        candidateText: String? = nil,
         error: String? = nil
     ) -> PPOCRCellRecognitionResult {
         PPOCRCellRecognitionResult(
@@ -1704,6 +1820,20 @@ final class CalendarPhotoImportTests: XCTestCase {
                     boundingBox: CalendarOCRBoundingBox(
                         x: 0.08, y: 0.2, width: 0.8, height: 0.15
                     )
+                )]
+            } ?? [],
+            recognitionModelComparisons: text.map { currentText in
+                [PPOCRRecognitionModelComparison(
+                    boundingBox: CalendarOCRBoundingBox(
+                        x: 0.08, y: 0.2, width: 0.8, height: 0.15
+                    ),
+                    currentText: currentText,
+                    currentConfidence: 0.9,
+                    currentMilliseconds: 5,
+                    candidateText: candidateText ?? currentText,
+                    candidateConfidence: 0.88,
+                    candidateMilliseconds: 7,
+                    candidateError: nil
                 )]
             } ?? [],
             detectionCount: text == nil ? 0 : 1,

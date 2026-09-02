@@ -54,6 +54,23 @@ enum PPOCRModelManifest {
         byteCount: 74_947,
         sha256: "b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d"
     )
+    static let candidateRecognizer = PPOCRModelFile(
+        resourceName: "ch_PP-OCRv5_rec_mobile",
+        fileExtension: "onnx",
+        displayName: "PP-OCRv5_mobile_rec (ch_PP-OCRv5_rec_mobile.onnx)",
+        byteCount: 16_631_306,
+        sha256: "5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5"
+    )
+    static let candidateRecognitionCharacters = PPOCRModelFile(
+        resourceName: "ppocrv5_dict",
+        fileExtension: "txt",
+        displayName: "PP-OCRv5_mobile_rec characters (ppocrv5_dict.txt)",
+        byteCount: 74_012,
+        sha256: "d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b"
+    )
+
+    static let recognitionCharacterCount = 18_708
+    static let candidateRecognitionCharacterCount = 18_383
 }
 
 struct PPOCRModelFile: Equatable, Sendable {
@@ -133,6 +150,29 @@ struct PPOCRTextResult: Equatable, Sendable {
     let boundingBox: CalendarOCRBoundingBox
 }
 
+struct PPOCRRecognitionModelComparison: Equatable, Sendable {
+    let boundingBox: CalendarOCRBoundingBox
+    let currentText: String
+    let currentConfidence: Float
+    let currentMilliseconds: Double
+    let candidateText: String?
+    let candidateConfidence: Float?
+    let candidateMilliseconds: Double?
+    let candidateError: String?
+}
+
+struct PPOCRRecognitionModelPOC: Equatable, Sendable {
+    let currentModel: String
+    let candidateModel: String
+    let currentInitializedThisRun: Bool
+    let candidateInitializedThisRun: Bool
+    let currentInitializationMilliseconds: Double
+    let candidateInitializationMilliseconds: Double
+    let candidateInitializationError: String?
+    let currentTotalMilliseconds: Double
+    let candidateTotalMilliseconds: Double
+}
+
 struct PPOCRCellTiming: Equatable, Sendable {
     let preprocessMilliseconds: Double
     let detectionMilliseconds: Double
@@ -150,6 +190,7 @@ struct PPOCRCellRecognitionResult: Equatable, Sendable {
     let cellPixels: PPOCRImageSize
     let detectorInputPixels: PPOCRImageSize?
     let results: [PPOCRTextResult]
+    let recognitionModelComparisons: [PPOCRRecognitionModelComparison]
     let detectionCount: Int
     let timing: PPOCRCellTiming
     let error: String?
@@ -160,6 +201,7 @@ struct PPOCRRecognitionRun: Equatable, Sendable {
     let modelInitializedThisRun: Bool
     let modelInitializationMilliseconds: Double
     let totalMilliseconds: Double
+    let recognitionModelPOC: PPOCRRecognitionModelPOC
     let cells: [PPOCRCellRecognitionResult]
 }
 
@@ -167,6 +209,7 @@ struct PPOCRMonthRecognitionPlan: Equatable, Sendable {
     let candidateInputObservations: [CalendarOCRObservation]
     let visionFallbackRegions: [CalendarImportDayRegion]
     let cellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics]
+    let recognitionModelPOC: CalendarPhotoRecognitionModelPOCDiagnostics
 }
 
 struct PPOCRMonthRecognitionRouter {
@@ -212,7 +255,21 @@ struct PPOCRMonthRecognitionRouter {
         return PPOCRMonthRecognitionPlan(
             candidateInputObservations: observations,
             visionFallbackRegions: fallbackRegions,
-            cellDiagnostics: diagnostics
+            cellDiagnostics: diagnostics,
+            recognitionModelPOC: CalendarPhotoRecognitionModelPOCDiagnostics(
+                currentModel: run.recognitionModelPOC.currentModel,
+                candidateModel: run.recognitionModelPOC.candidateModel,
+                currentInitializedThisRun: run.recognitionModelPOC.currentInitializedThisRun,
+                candidateInitializedThisRun: run.recognitionModelPOC.candidateInitializedThisRun,
+                currentInitializationMilliseconds:
+                    run.recognitionModelPOC.currentInitializationMilliseconds,
+                candidateInitializationMilliseconds:
+                    run.recognitionModelPOC.candidateInitializationMilliseconds,
+                candidateInitializationError:
+                    run.recognitionModelPOC.candidateInitializationError,
+                currentTotalMilliseconds: run.recognitionModelPOC.currentTotalMilliseconds,
+                candidateTotalMilliseconds: run.recognitionModelPOC.candidateTotalMilliseconds
+            )
         )
     }
 
@@ -251,6 +308,18 @@ struct PPOCRMonthRecognitionRouter {
                     cellLocalBoundingBox: bounds,
                     distanceToTopPixels: max(0, 1 - bounds.maxY) * cropHeight,
                     distanceToBottomPixels: max(0, bounds.minY) * cropHeight
+                )
+            },
+            recognitionModelComparisons: cell.recognitionModelComparisons.map { comparison in
+                CalendarPhotoRecognitionModelComparisonDiagnostics(
+                    boundingBox: comparison.boundingBox,
+                    currentText: comparison.currentText,
+                    currentConfidence: comparison.currentConfidence,
+                    currentMilliseconds: comparison.currentMilliseconds,
+                    candidateText: comparison.candidateText,
+                    candidateConfidence: comparison.candidateConfidence,
+                    candidateMilliseconds: comparison.candidateMilliseconds,
+                    candidateError: comparison.candidateError
                 )
             },
             ppOCRText: cell.results.map(\.text),

@@ -480,7 +480,7 @@
 "third_party_licenses.user_messaging_platform" = "Google User Messaging Platform Swift Package Manager wrapper";
 "third_party_licenses.onnx_runtime" = "Microsoft ONNX Runtime 1.29.0";
 "third_party_licenses.rapidocr" = "RapidOCR 前处理与后处理";
-"third_party_licenses.ppocr_models" = "PaddleOCR / PP-OCRv6 small 模型";
+"third_party_licenses.ppocr_models" = "PaddleOCR / PP-OCR 模型";
 "third_party_licenses.apache_2" = "Apache-2.0";
 "third_party_licenses.mit" = "MIT";
 "third_party_licenses.google_copyright" = "Copyright 2021 Google LLC";

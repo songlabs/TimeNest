@@ -76,6 +76,8 @@ jobs:
           grep -Fq 'GoogleMobileAds' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'PPOCRService.swift' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'PP-OCRv6_det_small.onnx' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'ch_PP-OCRv5_rec_mobile.onnx' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'ppocrv5_dict.txt' TimeNest.xcodeproj/project.pbxproj
 
       - name: Install official ONNX Runtime pod
         run: |

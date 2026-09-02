@@ -28,6 +28,29 @@ struct CalendarPhotoOCRDetectionDiagnostics: Equatable, Sendable {
     let distanceToBottomPixels: Double
 }
 
+struct CalendarPhotoRecognitionModelComparisonDiagnostics: Equatable, Sendable {
+    let boundingBox: CalendarOCRBoundingBox
+    let currentText: String
+    let currentConfidence: Float
+    let currentMilliseconds: Double
+    let candidateText: String?
+    let candidateConfidence: Float?
+    let candidateMilliseconds: Double?
+    let candidateError: String?
+}
+
+struct CalendarPhotoRecognitionModelPOCDiagnostics: Equatable, Sendable {
+    let currentModel: String
+    let candidateModel: String
+    let currentInitializedThisRun: Bool
+    let candidateInitializedThisRun: Bool
+    let currentInitializationMilliseconds: Double
+    let candidateInitializationMilliseconds: Double
+    let candidateInitializationError: String?
+    let currentTotalMilliseconds: Double
+    let candidateTotalMilliseconds: Double
+}
+
 struct CalendarPhotoCellRecognitionDiagnostics: Equatable, Sendable {
     let day: Int
     let recognitionSource: CalendarPhotoCellRecognitionSource
@@ -37,6 +60,7 @@ struct CalendarPhotoCellRecognitionDiagnostics: Equatable, Sendable {
     let cropImagePixels: CalendarPhotoPixelSizeDiagnostics
     let paddingApplied: Bool
     let detections: [CalendarPhotoOCRDetectionDiagnostics]
+    let recognitionModelComparisons: [CalendarPhotoRecognitionModelComparisonDiagnostics]
     let ppOCRText: [String]
     let ppOCRError: String?
 
@@ -364,6 +388,37 @@ struct CalendarImportParsedTime: Equatable, Sendable {
     let endMinutes: Int?
 }
 
+enum CalendarImportCandidateQuality: String, Equatable, Sendable {
+    case standard
+    case lowInformation
+}
+
+struct CalendarImportCandidateQualityEvaluator {
+    static func quality(
+        title: String,
+        parsedTime: CalendarImportParsedTime?
+    ) -> CalendarImportCandidateQuality {
+        guard parsedTime == nil else { return .standard }
+        let normalized = title
+            .folding(
+                options: .widthInsensitive,
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty,
+              normalized.range(
+                of: #"^[\p{N}\p{P}\p{S}\s]+$"#,
+                options: .regularExpression
+              ) != nil else {
+            return .standard
+        }
+        let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
+        let numberCount = (try? NSRegularExpression(pattern: #"\p{N}"#))?
+            .numberOfMatches(in: normalized, range: range) ?? 0
+        return (1...5).contains(numberCount) ? .lowInformation : .standard
+    }
+}
+
 struct CalendarImportCandidate: Identifiable, Equatable {
     let id: UUID
     var date: Date
@@ -373,6 +428,7 @@ struct CalendarImportCandidate: Identifiable, Equatable {
     let originalText: String
     let personToken: String?
     let confidence: Float
+    let quality: CalendarImportCandidateQuality
     var isSelected: Bool
     var needsReview: Bool
     var targetCalendarID: UUID
@@ -497,6 +553,10 @@ struct CalendarPhotoCellCandidateDiagnostics: Equatable, Sendable {
     let parsedStartMinutes: Int?
     let parsedEndMinutes: Int?
     let remainingTitle: String
+    let ocrConfidence: Float
+    let quality: CalendarImportCandidateQuality
+    let needsReview: Bool
+    let defaultSelected: Bool
     let candidateCreated: Bool
     let rejectedReason: CalendarPhotoCellRejectionReason?
 }
@@ -521,6 +581,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var gridDetection: String = "legacy"
     var recognitionMode: CalendarPhotoRecognitionMode? = nil
     var recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics] = []
+    var recognitionModelPOC: CalendarPhotoRecognitionModelPOCDiagnostics? = nil
     var cellDiagnostics: [CalendarPhotoCellDiagnostics] = []
     var unassignedRawTexts: [String] = []
     var unassignedNormalizedTexts: [String] = []
@@ -662,6 +723,40 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ].joined(separator: " ")
         } ?? []
         let recognitionLines = Self.recognitionLines(recognitionCellDiagnostics)
+        let recognitionModelPOCLines: [String] = recognitionModelPOC.map { poc in
+            let summary = [
+                "currentModel=\(Self.quotedText(poc.currentModel))",
+                "candidateModel=\(Self.quotedText(poc.candidateModel))",
+                "currentInitializedThisRun=\(poc.currentInitializedThisRun)",
+                "candidateInitializedThisRun=\(poc.candidateInitializedThisRun)",
+                "currentInitializationMs=\(Self.decimalText(poc.currentInitializationMilliseconds))",
+                "candidateInitializationMs=\(Self.decimalText(poc.candidateInitializationMilliseconds))",
+                "candidateInitializationError=\(poc.candidateInitializationError ?? "none")",
+                "currentTotalMs=\(Self.decimalText(poc.currentTotalMilliseconds))",
+                "candidateTotalMs=\(Self.decimalText(poc.candidateTotalMilliseconds))",
+                "candidateInput=currentModel"
+            ].joined(separator: " ")
+            let comparisons = recognitionCellDiagnostics
+                .sorted(by: { $0.day < $1.day })
+                .flatMap { cell in
+                    cell.recognitionModelComparisons.enumerated().map { index, comparison in
+                        let bounds = comparison.boundingBox
+                        return [
+                            "day=\(cell.day)",
+                            "detection=\(index + 1)",
+                            "bbox=(x=\(Self.decimalText(bounds.x)),y=\(Self.decimalText(bounds.y)),w=\(Self.decimalText(bounds.width)),h=\(Self.decimalText(bounds.height)))",
+                            "currentText=\(Self.quotedText(comparison.currentText))",
+                            "currentConfidence=\(Self.decimalText(Double(comparison.currentConfidence)))",
+                            "candidateText=\(comparison.candidateText.map(Self.quotedText) ?? "none")",
+                            "candidateConfidence=\(Self.decimalText(comparison.candidateConfidence.map(Double.init)))",
+                            "currentRecognitionMs=\(Self.decimalText(comparison.currentMilliseconds))",
+                            "candidateRecognitionMs=\(Self.decimalText(comparison.candidateMilliseconds))",
+                            "candidateError=\(comparison.candidateError ?? "none")"
+                        ].joined(separator: " ")
+                    }
+                }
+            return [summary] + comparisons
+        } ?? []
         let geometryLines: [String] = gridGeometry.map { grid in
             let rows = (0...grid.rows).map { boundary in
                 guard let pixels = grid.rectifiedGridPixels else { return 0 }
@@ -744,6 +839,10 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 "parsedStart=\(Self.timeText(firstCandidate?.parsedStartMinutes))",
                 "parsedEnd=\(Self.timeText(firstCandidate?.parsedEndMinutes))",
                 "remainingTitle=\(Self.quotedText(firstCandidate?.remainingTitle ?? ""))",
+                "ocrConfidence=\(Self.decimalText(firstCandidate.map { Double($0.ocrConfidence) }))",
+                "quality=\(firstCandidate?.quality.rawValue ?? "none")",
+                "needsReview=\(firstCandidate?.needsReview.description ?? "none")",
+                "defaultSelected=\(firstCandidate?.defaultSelected.description ?? "none")",
                 "cellBounds=(x=\(Self.decimalText(bounds.x)),y=\(Self.decimalText(bounds.y)),w=\(Self.decimalText(bounds.width)),h=\(Self.decimalText(bounds.height)))",
                 "observations=\(cell.observationCount)",
                 "printedDay=\(cell.printedDayObservationCount)",
@@ -760,6 +859,10 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                     "parsedStart=\(Self.timeText(candidate.parsedStartMinutes))",
                     "parsedEnd=\(Self.timeText(candidate.parsedEndMinutes))",
                     "remainingTitle=\(Self.quotedText(candidate.remainingTitle))",
+                    "ocrConfidence=\(Self.decimalText(Double(candidate.ocrConfidence)))",
+                    "quality=\(candidate.quality.rawValue)",
+                    "needsReview=\(candidate.needsReview)",
+                    "defaultSelected=\(candidate.defaultSelected)",
                     "candidateCreated=\(candidate.candidateCreated)",
                     "rejectedReason=\(candidate.rejectedReason?.rawValue ?? "none")"
                 ].joined(separator: " ")
@@ -792,6 +895,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         return [
             summary,
             Self.section(title: "RecognitionCells", lines: recognitionLines),
+            Self.section(title: "RecognitionModelPOC", lines: recognitionModelPOCLines),
             Self.section(title: "PPOCRDetections", lines: ppOCRDetectionLines),
             Self.section(title: "GridGeometry", lines: geometryLines),
             Self.section(title: "Orientations", lines: orientationLines),
@@ -984,6 +1088,20 @@ struct CalendarImportTimeParser {
         // PP-OCR can confuse the hour/minute punctuation with `=` or `.`.
         // Accept those weaker separators only inside a complete time range so
         // ordinary version numbers or key/value text are not treated as time.
+        // Compact HMM/HHMM is accepted only as one complete, bounded range
+        // endpoint. This deliberately rejects five-digit or embedded OCR noise.
+        let compactToDelimitedRangePattern = #"(?<![\p{L}\p{N}])(\d{1,2})(\d{2})\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.=]\s*(\d{2})(?![\p{L}\p{N}])"#
+        if let match = firstMatch(pattern: compactToDelimitedRangePattern, text: text),
+           let parsed = parsedTime(match: match, text: text) {
+            return MatchResult(time: parsed, range: match.range)
+        }
+
+        let compactRangePattern = #"(?<![\p{L}\p{N}])(\d{1,2})(\d{2})\s*[-–—〜～~]\s*(\d{1,2})(\d{2})(?![\p{L}\p{N}])"#
+        if let match = firstMatch(pattern: compactRangePattern, text: text),
+           let parsed = parsedTime(match: match, text: text) {
+            return MatchResult(time: parsed, range: match.range)
+        }
+
         let ocrRangePattern = #"(?<!\d)(\d{1,2})\s*[.=]\s*(\d{2})\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.=]?\s*(\d{2})(?!\d)"#
         if let match = firstMatch(pattern: ocrRangePattern, text: text),
            let parsed = parsedTime(match: match, text: text) {
@@ -1110,6 +1228,7 @@ struct CalendarPhotoGridFirstParser {
         calendar inputCalendar: Calendar = Calendar(identifier: .gregorian),
         orientationDiagnostics: CalendarPhotoOrientationDiagnostics? = nil,
         recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics] = [],
+        recognitionModelPOC: CalendarPhotoRecognitionModelPOCDiagnostics? = nil,
         diagnosticsHandler: ((CalendarPhotoImportDiagnostics) -> Void)? = nil
     ) throws -> CalendarPhotoImportParseResult {
         var calendar = inputCalendar
@@ -1136,6 +1255,7 @@ struct CalendarPhotoGridFirstParser {
                 ),
                 candidateCount: 0,
                 recognitionCellDiagnostics: recognitionCellDiagnostics,
+                recognitionModelPOC: recognitionModelPOC,
                 orientationDiagnostics: orientationDiagnostics,
                 stage: .dayRegions,
                 failureReason: .noDateStructure
@@ -1162,6 +1282,7 @@ struct CalendarPhotoGridFirstParser {
             buildResult: buildResult,
             candidateCount: candidates.count,
             recognitionCellDiagnostics: recognitionCellDiagnostics,
+            recognitionModelPOC: recognitionModelPOC,
             orientationDiagnostics: orientationDiagnostics,
             stage: candidates.isEmpty ? .candidates : .completed,
             failureReason: failureReason
@@ -1199,6 +1320,7 @@ struct CalendarPhotoGridFirstParser {
         buildResult: CalendarPhotoMonthCandidateBuildResult,
         candidateCount: Int,
         recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics],
+        recognitionModelPOC: CalendarPhotoRecognitionModelPOCDiagnostics?,
         orientationDiagnostics: CalendarPhotoOrientationDiagnostics?,
         stage: CalendarPhotoImportParseStage,
         failureReason: CalendarPhotoImportParseError?
@@ -1224,6 +1346,7 @@ struct CalendarPhotoGridFirstParser {
             gridDetection: "visionRectangle",
             recognitionMode: Self.recognitionMode(for: recognitionCellDiagnostics),
             recognitionCellDiagnostics: recognitionCellDiagnostics,
+            recognitionModelPOC: recognitionModelPOC,
             cellDiagnostics: buildResult.cellDiagnostics,
             unassignedRawTexts: buildResult.unassignedRawTexts,
             unassignedNormalizedTexts: buildResult.unassignedNormalizedTexts,
@@ -1441,7 +1564,8 @@ private struct CalendarImportCandidateBuilder {
             return CalendarImportCandidate(
                 id: UUID(), date: date, startTimeMinutes: time.startMinutes,
                 endTimeMinutes: time.endMinutes, title: title, originalText: original,
-                personToken: token, confidence: confidence, isSelected: true,
+                personToken: token, confidence: confidence, quality: .standard,
+                isSelected: true,
                 needsReview: confidence < 0.75 || time.endMinutes == nil || title.isEmpty || token != nil,
                 targetCalendarID: calendarID, includesPersonTokenInTitle: token != nil
             )
@@ -1485,6 +1609,11 @@ private struct CalendarImportCandidateBuilder {
             let candidateObservations = sourceLines.flatMap(\.observations)
             let confidence = candidateObservations.map(\.confidence).reduce(0, +)
                 / Float(max(candidateObservations.count, 1))
+            let quality = CalendarImportCandidateQualityEvaluator.quality(
+                title: title,
+                parsedTime: time
+            )
+            let defaultSelected = quality != .lowInformation
             let incompleteTime: Bool
             if let time {
                 if let endMinutes = time.endMinutes {
@@ -1504,8 +1633,10 @@ private struct CalendarImportCandidateBuilder {
                 originalText: originalText,
                 personToken: personToken,
                 confidence: confidence,
-                isSelected: true,
-                needsReview: confidence < 0.75
+                quality: quality,
+                isSelected: defaultSelected,
+                needsReview: quality == .lowInformation
+                    || confidence < 0.75
                     || incompleteTime
                     || title.isEmpty
                     || personToken != nil,
@@ -1516,6 +1647,14 @@ private struct CalendarImportCandidateBuilder {
                 parsedStartMinutes: time?.startMinutes,
                 parsedEndMinutes: time?.endMinutes,
                 remainingTitle: title,
+                ocrConfidence: confidence,
+                quality: quality,
+                needsReview: quality == .lowInformation
+                    || confidence < 0.75
+                    || incompleteTime
+                    || title.isEmpty
+                    || personToken != nil,
+                defaultSelected: defaultSelected,
                 candidateCreated: true,
                 rejectedReason: nil
             ))
@@ -2396,7 +2535,12 @@ struct CalendarPhotoParser {
                 title = Self.cleanedTitle(title)
                 let confidence = sorted.map(\.confidence).reduce(0, +)
                     / Float(max(sorted.count, 1))
-                let needsReview = confidence < 0.75
+                let quality = CalendarImportCandidateQualityEvaluator.quality(
+                    title: title,
+                    parsedTime: time
+                )
+                let needsReview = quality == .lowInformation
+                    || confidence < 0.75
                     || (time != nil && time?.endMinutes == nil)
                     || title.isEmpty
                     || personToken != nil
@@ -2409,7 +2553,8 @@ struct CalendarPhotoParser {
                     originalText: originalText,
                     personToken: personToken,
                     confidence: confidence,
-                    isSelected: true,
+                    quality: quality,
+                    isSelected: quality != .lowInformation,
                     needsReview: needsReview,
                     targetCalendarID: calendarID,
                     includesPersonTokenInTitle: personToken != nil

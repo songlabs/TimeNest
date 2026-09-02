@@ -1,4 +1,4 @@
-# PP-OCRv6 iOS Calendar Recognition
+# PP-OCR iOS Calendar Recognition and Recognition-Only A/B POC
 
 PP-OCRv6 is the primary per-cell OCR engine for monthly Calendar Photo Import. Its locally recognized text and visual-order bounding boxes feed the existing `CalendarImportCandidateBuilder`. Apple Vision runs only for cells where PP-OCR cannot initialize or returns a technical inference error.
 
@@ -24,8 +24,12 @@ All files come from the RapidAI/RapidOCR official ModelScope model repository, r
 | Classification | `ch_ppocr_mobile_v2.0_cls_mobile.onnx` | 585,532 | `e47acedf663230f8863ff1ab0e64dd2d82b838fceb5957146dab185a89d6215c` | `https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv4/cls/ch_ppocr_mobile_v2.0_cls_mobile.onnx` |
 | Recognition | `PP-OCRv6_rec_small.onnx` | 21,234,383 | `6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884` | `https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv6/rec/PP-OCRv6_rec_small.onnx` |
 | Recognition characters | `PP-OCRv6_rec_small.characters.txt` | 74,947 | `b5f2bfe2bdd9448429e3e82b51c789775d9b42f2403d082b00662eb77e401c5d` | mechanically extracted from the `character` metadata of the exact recognition ONNX file |
+| A/B candidate recognition | `ch_PP-OCRv5_rec_mobile.onnx` | 16,631,306 | `5825fc7ebf84ae7a412be049820b4d86d77620f204a041697b0494669b1742c5` | `https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/onnx/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile.onnx` |
+| A/B candidate characters | `ppocrv5_dict.txt` | 74,012 | `d1979e9f794c464c0d2e0b70a7fe14dd978e9dc644c0e71f14158cdf8342af1b` | `https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.9.2/paddle/PP-OCRv5/rec/ch_PP-OCRv5_rec_mobile/ppocrv5_dict.txt` |
 
-The largest file is below GitHub's 100 MB per-file limit. Git LFS is not used. The three ONNX files total 31,749,509 bytes (about 30.28 MiB) before App Store compression or archive thinning.
+The candidate weights originate from PaddleOCR's official `PP-OCRv5_mobile_rec_infer.tar` (`566b9512b34e34a9f0db54d87b51fa5a0b9ed2cf1ab7e49728cc0b8b5a64f414`) at `https://paddle-model-ecology.bj.bcebos.com/paddlex/official_inference_model/paddle3.0.0//PP-OCRv5_mobile_rec_infer.tar`. The checked-in dictionary has 18,383 entries and was verified entry-for-entry against both that official package's `PostProcess.character_dict` and the converted ONNX `character` metadata. The ONNX is RapidOCR's conversion of those PaddleOCR weights; its published checksum was independently verified.
+
+The largest file is below GitHub's 100 MB per-file limit. Git LFS is not used. The four ONNX files total 48,380,815 bytes (about 46.14 MiB) before App Store compression or archive thinning. The candidate ONNX and dictionary add 16,705,318 bytes (about 15.93 MiB) to the uncompressed resources.
 
 ## Recognition parameters
 
@@ -43,7 +47,17 @@ The largest file is below GitHub's 100 MB per-file limit. Git LFS is not used. T
 - Recognition model: PP-OCRv6 small
 - `rec_img_shape = [3, 48, 320]`, with RapidOCR-compatible dynamic width expansion
 
-No CLAHE, binarization, sharpening, custom grayscale conversion, OCR output repair, punctuation repair, time normalization, or multi-version A/B path is applied.
+No CLAHE, binarization, sharpening, custom grayscale conversion, OCR output repair, or global punctuation replacement is applied.
+
+## Recognition-only A/B POC
+
+The current candidate input remains `PP-OCRv6_rec_small`. The A/B candidate is PaddleOCR's official `PP-OCRv5_mobile_rec`, represented by RapidOCR's `ch_PP-OCRv5_rec_mobile.onnx` conversion. PaddleOCR documents this model family as supporting Simplified Chinese, Traditional Chinese, English, and Japanese in one model and as targeting difficult scenarios including handwriting. The mobile model was selected instead of the roughly 81 MB server model to bound iOS bundle and runtime cost; this selection does not assert that it is more accurate on the TimeNest photo.
+
+For every rectified Cell, TimeNest runs the existing detector once and the existing 0/180 classifier once. After classification, both recognition models receive the exact same recognition tensor derived from the exact same detected line crop. Candidate text is diagnostic-only and never enters `CalendarOCRObservation`, `CalendarImportCandidateBuilder`, or Vision fallback routing.
+
+Both recognition sessions initialize at most once for a `PPOCRService` instance. A candidate resource, initialization, shape, or inference failure is reported in `[RecognitionModelPOC]` and does not fail the current model's Cell. Diagnostics record model names, initialization time/error, total per-model recognition time, and for each detection its day, bbox, text, confidence, and comparable model-run-plus-CTC-decode time.
+
+Compatibility was checked with ONNX Runtime 1.29.0. Both models have one float input shaped `[N, 3, 48, dynamicWidth]` and one CTC output shaped `[N, timeSteps, classes]`. The candidate uses ONNX opset 14 and outputs 18,385 classes, exactly matching blank + 18,383 dictionary entries + appended space. Physical iOS initialization, memory, latency, and Japanese handwriting quality still require Xcode/TestFlight validation.
 
 ## Ported behavior and known compatibility boundary
 

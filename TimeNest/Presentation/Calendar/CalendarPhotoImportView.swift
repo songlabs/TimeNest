@@ -764,6 +764,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     defaultCalendarID: defaultCalendarID,
                     orientationDiagnostics: orientationDiagnostics,
                     recognitionCellDiagnostics: recognitionPlan.cellDiagnostics,
+                    recognitionModelPOC: recognitionPlan.recognitionModelPOC,
                     diagnosticsHandler: { [weak self] diagnostics in
                         self?.recordDiagnostics(diagnostics)
                     }

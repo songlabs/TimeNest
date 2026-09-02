@@ -3,7 +3,6 @@ import Foundation
 
 actor PPOCRService {
     private var sessions: PPOCRONNXSessions?
-    private var initialModelInitializationMilliseconds: Double?
 
     func recognizeMonthCells(
         image: CGImage,
@@ -19,8 +18,6 @@ actor PPOCRService {
                 let created = try PPOCRONNXSessions()
                 sessions = created
                 loadedSessions = created
-                initialModelInitializationMilliseconds =
-                    PPOCRMonotonicClock.nowMilliseconds - modelStart
             }
         } catch is CancellationError {
             throw CancellationError()
@@ -71,8 +68,29 @@ actor PPOCRService {
         return PPOCRRecognitionRun(
             runtimeVersion: loadedSessions.runtimeVersion,
             modelInitializedThisRun: modelInitializedThisRun,
-            modelInitializationMilliseconds: initialModelInitializationMilliseconds ?? 0,
+            modelInitializationMilliseconds: loadedSessions.currentInitializationMilliseconds,
             totalMilliseconds: PPOCRMonotonicClock.nowMilliseconds - recognitionStart,
+            recognitionModelPOC: PPOCRRecognitionModelPOC(
+                currentModel: PPOCRModelManifest.recognizer.displayName,
+                candidateModel: PPOCRModelManifest.candidateRecognizer.displayName,
+                currentInitializedThisRun: modelInitializedThisRun,
+                candidateInitializedThisRun: modelInitializedThisRun
+                    && loadedSessions.candidateRecognizer != nil,
+                currentInitializationMilliseconds:
+                    loadedSessions.currentInitializationMilliseconds,
+                candidateInitializationMilliseconds:
+                    loadedSessions.candidateInitializationMilliseconds,
+                candidateInitializationError:
+                    loadedSessions.candidateInitializationError,
+                currentTotalMilliseconds: cells
+                    .flatMap(\.recognitionModelComparisons)
+                    .map(\.currentMilliseconds)
+                    .reduce(0, +),
+                candidateTotalMilliseconds: cells
+                    .flatMap(\.recognitionModelComparisons)
+                    .compactMap(\.candidateMilliseconds)
+                    .reduce(0, +)
+            ),
             cells: cells
         )
     }
@@ -132,6 +150,7 @@ actor PPOCRService {
         var classificationMilliseconds = 0.0
         var recognitionMilliseconds = 0.0
         var textResults: [PPOCRTextResult] = []
+        var modelComparisons: [PPOCRRecognitionModelComparison] = []
         for box in boxes {
             try Task.checkCancellation()
             let classificationStart = PPOCRMonotonicClock.nowMilliseconds
@@ -158,33 +177,66 @@ actor PPOCRService {
                 PPOCRMonotonicClock.nowMilliseconds - classificationStart
 
             try Task.checkCancellation()
-            let recognitionStart = PPOCRMonotonicClock.nowMilliseconds
             let recognitionTensor = try PPOCRPreprocessor.recognitionTensor(from: lineImage)
-            let recognitionOutput = try sessions.recognizer.run(
+            let currentStart = PPOCRMonotonicClock.nowMilliseconds
+            let decoded = try Self.recognize(
                 tensor: recognitionTensor,
+                session: sessions.recognizer,
+                characters: sessions.characters,
                 stage: "recognition"
             )
-            guard recognitionOutput.shape.count == 3,
-                  recognitionOutput.shape[0] == 1 else {
-                throw PPOCRError.invalidOutput("recognitionShape")
+            let currentMilliseconds = PPOCRMonotonicClock.nowMilliseconds - currentStart
+            recognitionMilliseconds += currentMilliseconds
+            let localBoundingBox = Self.boundingBox(for: box, imageSize: cellImage.size)
+
+            let candidateDecoded: PPOCRDecodedText?
+            let candidateMilliseconds: Double?
+            let candidateError: String?
+            if let candidateRecognizer = sessions.candidateRecognizer {
+                let candidateStart = PPOCRMonotonicClock.nowMilliseconds
+                do {
+                    candidateDecoded = try Self.recognize(
+                        tensor: recognitionTensor,
+                        session: candidateRecognizer,
+                        characters: sessions.candidateCharacters,
+                        stage: "candidateRecognition"
+                    )
+                    candidateMilliseconds =
+                        PPOCRMonotonicClock.nowMilliseconds - candidateStart
+                    candidateError = nil
+                } catch let error as PPOCRError {
+                    candidateDecoded = nil
+                    candidateMilliseconds =
+                        PPOCRMonotonicClock.nowMilliseconds - candidateStart
+                    candidateError = error.diagnosticCode
+                } catch {
+                    candidateDecoded = nil
+                    candidateMilliseconds =
+                        PPOCRMonotonicClock.nowMilliseconds - candidateStart
+                    candidateError = "runtimeFailure:candidateRecognition"
+                }
+            } else {
+                candidateDecoded = nil
+                candidateMilliseconds = nil
+                candidateError = sessions.candidateInitializationError
+                    ?? "runtimeFailure:candidateModelUnavailable"
             }
-            let decoded = try PPOCRCTCDecoder.decode(
-                logits: recognitionOutput.values,
-                timeSteps: recognitionOutput.shape[1],
-                classCount: recognitionOutput.shape[2],
-                characters: sessions.characters
-            )
-            recognitionMilliseconds +=
-                PPOCRMonotonicClock.nowMilliseconds - recognitionStart
+            modelComparisons.append(PPOCRRecognitionModelComparison(
+                boundingBox: localBoundingBox,
+                currentText: decoded.text,
+                currentConfidence: decoded.confidence,
+                currentMilliseconds: currentMilliseconds,
+                candidateText: candidateDecoded?.text,
+                candidateConfidence: candidateDecoded?.confidence,
+                candidateMilliseconds: candidateMilliseconds,
+                candidateError: candidateError
+            ))
             if !decoded.text.isEmpty,
                decoded.confidence >= PPOCRConfiguration.textScore {
                 textResults.append(PPOCRTextResult(
                     text: decoded.text,
                     confidence: decoded.confidence,
-                    boundingBox: Self.boundingBox(
-                        for: box,
-                        imageSize: cellImage.size
-                    )
+                    boundingBox: localBoundingBox
                 ))
             }
         }
@@ -197,6 +249,7 @@ actor PPOCRService {
             cellPixels: cellImage.size,
             detectorInputPixels: detectorInputSize,
             results: textResults,
+            recognitionModelComparisons: modelComparisons,
             detectionCount: boxes.count,
             timing: PPOCRCellTiming(
                 preprocessMilliseconds: preprocessMilliseconds,
@@ -222,6 +275,17 @@ actor PPOCRService {
             modelInitializedThisRun: initializedThisRun,
             modelInitializationMilliseconds: initializationMilliseconds,
             totalMilliseconds: 0,
+            recognitionModelPOC: PPOCRRecognitionModelPOC(
+                currentModel: PPOCRModelManifest.recognizer.displayName,
+                candidateModel: PPOCRModelManifest.candidateRecognizer.displayName,
+                currentInitializedThisRun: false,
+                candidateInitializedThisRun: false,
+                currentInitializationMilliseconds: initializationMilliseconds,
+                candidateInitializationMilliseconds: 0,
+                candidateInitializationError: "notAttempted:currentModelInit",
+                currentTotalMilliseconds: 0,
+                candidateTotalMilliseconds: 0
+            ),
             cells: regions.sorted(by: { $0.day < $1.day }).map {
                 failureCell(image: image, region: $0, errorCode: errorCode)
             }
@@ -247,6 +311,7 @@ actor PPOCRService {
             cellPixels: cellSize,
             detectorInputPixels: nil,
             results: [],
+            recognitionModelComparisons: [],
             detectionCount: 0,
             timing: PPOCRCellTiming(
                 preprocessMilliseconds: 0,
@@ -257,6 +322,26 @@ actor PPOCRService {
                 totalMilliseconds: 0
             ),
             error: errorCode
+        )
+    }
+
+    private static func recognize(
+        tensor: PPOCRTensor,
+        session: PPOCRONNXSession,
+        characters: [String],
+        stage: String
+    ) throws -> PPOCRDecodedText {
+        let output = try session.run(tensor: tensor, stage: stage)
+        guard output.shape.count == 3,
+              output.shape[0] == 1,
+              output.shape[2] == characters.count else {
+            throw PPOCRError.invalidOutput("\(stage)Shape")
+        }
+        return try PPOCRCTCDecoder.decode(
+            logits: output.values,
+            timeSteps: output.shape[1],
+            classCount: output.shape[2],
+            characters: characters
         )
     }
 
@@ -328,9 +413,15 @@ private final class PPOCRONNXSessions {
     let classifier: PPOCRONNXSession
     let recognizer: PPOCRONNXSession
     let characters: [String]
+    let candidateRecognizer: PPOCRONNXSession?
+    let candidateCharacters: [String]
+    let currentInitializationMilliseconds: Double
+    let candidateInitializationMilliseconds: Double
+    let candidateInitializationError: String?
     private let environment: ORTEnv
 
     init(bundle: Bundle = .main) throws {
+        let currentStart = PPOCRMonotonicClock.nowMilliseconds
         let runtimeVersion = ORTVersion() ?? "unknown"
         guard runtimeVersion == PPOCRModelManifest.onnxRuntimeVersion else {
             throw PPOCRError.runtimeFailure("versionMismatch")
@@ -348,18 +439,15 @@ private final class PPOCRONNXSessions {
             PPOCRModelManifest.recognizer,
             bundle: bundle
         )
-        let characterURL = try Self.characterResourceURL(bundle: bundle)
-        let rawCharacters = try String(contentsOf: characterURL, encoding: .utf8)
-            .split(separator: "\n", omittingEmptySubsequences: false)
-            .map { String($0).trimmingCharacters(in: CharacterSet(charactersIn: "\r")) }
-            .dropLastWhileEmpty()
-        guard rawCharacters.count == 18_708,
-              rawCharacters.allSatisfy({ !$0.isEmpty }) else {
-            throw PPOCRError.invalidCharacterDictionary
-        }
-        characters = ["blank"] + rawCharacters + [" "]
+        characters = try Self.characters(
+            model: PPOCRModelManifest.recognitionCharacters,
+            expectedCount: PPOCRModelManifest.recognitionCharacterCount,
+            bundle: bundle
+        )
+        let sharedEnvironment: ORTEnv
         do {
             let environment = try ORTEnv(loggingLevel: .warning)
+            sharedEnvironment = environment
             self.environment = environment
             detector = try PPOCRONNXSession(environment: environment, modelURL: detectorURL)
             classifier = try PPOCRONNXSession(environment: environment, modelURL: classifierURL)
@@ -367,6 +455,36 @@ private final class PPOCRONNXSessions {
         } catch {
             throw PPOCRError.runtimeFailure("modelInit")
         }
+        currentInitializationMilliseconds =
+            PPOCRMonotonicClock.nowMilliseconds - currentStart
+
+        let candidateStart = PPOCRMonotonicClock.nowMilliseconds
+        do {
+            let candidateRecognizerURL = try Self.resourceURL(
+                PPOCRModelManifest.candidateRecognizer,
+                bundle: bundle
+            )
+            candidateCharacters = try Self.characters(
+                model: PPOCRModelManifest.candidateRecognitionCharacters,
+                expectedCount: PPOCRModelManifest.candidateRecognitionCharacterCount,
+                bundle: bundle
+            )
+            candidateRecognizer = try PPOCRONNXSession(
+                environment: sharedEnvironment,
+                modelURL: candidateRecognizerURL
+            )
+            candidateInitializationError = nil
+        } catch let error as PPOCRError {
+            candidateRecognizer = nil
+            candidateCharacters = []
+            candidateInitializationError = error.diagnosticCode
+        } catch {
+            candidateRecognizer = nil
+            candidateCharacters = []
+            candidateInitializationError = "runtimeFailure:candidateModelInit"
+        }
+        candidateInitializationMilliseconds =
+            PPOCRMonotonicClock.nowMilliseconds - candidateStart
     }
 
     private static func resourceURL(
@@ -386,19 +504,21 @@ private final class PPOCRONNXSessions {
         return url
     }
 
-    private static func characterResourceURL(bundle: Bundle) throws -> URL {
-        let model = PPOCRModelManifest.recognitionCharacters
-        guard let url = bundle.url(
-            forResource: model.resourceName,
-            withExtension: model.fileExtension
-        ) else { throw PPOCRError.missingModel(model.fileName) }
-        let byteCount = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? -1
-        try PPOCRModelFileValidator.validate(
-            fileName: model.fileName,
-            actualByteCount: byteCount,
-            expectedByteCount: model.byteCount
-        )
-        return url
+    private static func characters(
+        model: PPOCRModelFile,
+        expectedCount: Int,
+        bundle: Bundle
+    ) throws -> [String] {
+        let url = try resourceURL(model, bundle: bundle)
+        let rawCharacters = try String(contentsOf: url, encoding: .utf8)
+            .split(separator: "\n", omittingEmptySubsequences: false)
+            .map { String($0).trimmingCharacters(in: CharacterSet(charactersIn: "\r")) }
+            .dropLastWhileEmpty()
+        guard rawCharacters.count == expectedCount,
+              rawCharacters.allSatisfy({ !$0.isEmpty }) else {
+            throw PPOCRError.invalidCharacterDictionary
+        }
+        return ["blank"] + rawCharacters + [" "]
     }
 }
 
