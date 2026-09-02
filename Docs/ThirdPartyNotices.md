@@ -1,6 +1,6 @@
 # TimeNest Third-Party Notices
 
-This inventory is based on both checked-in `Package.resolved` files as of 2026-06-25. They resolve the same two Google Swift Package Manager wrapper repositories. Recheck this document whenever package versions change.
+This inventory covers the checked-in Swift package resolutions and the experimental PP-OCRv6 iOS POC dependencies as of 2026-09-02. Recheck this document whenever package, CocoaPod, or bundled-model versions change.
 
 ## Google Mobile Ads
 
@@ -27,14 +27,49 @@ The wrapper package downloads Google's precompiled Google Mobile Ads XCFramework
 
 The wrapper package downloads Google's precompiled User Messaging Platform XCFramework. Use of the binary SDK and consent service is also subject to Google's applicable terms and privacy requirements.
 
+## Microsoft ONNX Runtime
+
+- Product/module: `onnxruntime-objc`
+- Exact CocoaPod version: `1.29.0`
+- Distribution: Microsoft official CocoaPod archive resolved by CocoaPods 1.16.2
+- Repository: https://github.com/microsoft/onnxruntime
+- License: MIT
+- Copyright notice: Copyright (c) Microsoft Corporation
+- License text: https://github.com/microsoft/onnxruntime/blob/v1.29.0/LICENSE
+
+The PP-OCRv6 POC uses ONNX Runtime locally on iOS. No ONNX Runtime Swift wrapper or third-party binary mirror is used.
+
+## RapidOCR
+
+- Component: preprocessing, DB postprocessing, box sorting, classifier handling, dynamic recognition resize, and CTC decoding behavior ported to Swift
+- Model repository revision: `v3.9.2`
+- Reference implementation commit: `0e629c8be05635035c01a829d10a91bbcd56a27a`
+- Repository: https://github.com/RapidAI/RapidOCR
+- License: Apache License 2.0
+- Copyright notice: Copyright (c) 2021 RapidOCR Authors
+- License text: https://github.com/RapidAI/RapidOCR/blob/0e629c8be05635035c01a829d10a91bbcd56a27a/LICENSE
+
+The Swift implementation is a modified rewrite for the experimental TimeNest iOS POC. It does not include the RapidOCR Python runtime, OpenCV, pyclipper, Shapely, or any network service.
+
+## PaddleOCR / PP-OCR Models
+
+- Models: `PP-OCRv6_det_small.onnx`, `ch_ppocr_mobile_v2.0_cls_mobile.onnx`, and `PP-OCRv6_rec_small.onnx`
+- Source: https://www.modelscope.cn/models/RapidAI/RapidOCR (revision `v3.9.2`)
+- Upstream project: https://github.com/PaddlePaddle/PaddleOCR
+- License: Apache License 2.0
+- Model copyright: Baidu
+- License text: https://github.com/PaddlePaddle/PaddleOCR/blob/main/LICENSE
+
+The three ONNX files and the recognition dictionary extracted from the exact recognition model are bundled only for the local PP-OCRv6 benchmark. Their source URLs, byte sizes, and SHA256 values are recorded in `Docs/PPOCRv6IOSPOC.md` and verified in CI.
+
 ## Apache License 2.0 Attribution
 
-The two wrapper repositories above are licensed under the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). They are redistributed without modification through Swift Package Manager. Unless required by applicable law or agreed to in writing, software distributed under that license is provided on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+The Google wrappers, RapidOCR reference implementation, and PaddleOCR/PP-OCR model distribution above use the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). Unless required by applicable law or agreed to in writing, software distributed under that license is provided on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-No `NOTICE` file is present at the root of either resolved wrapper repository. No GPL or AGPL dependency appears in the checked-in Swift package resolution.
+No GPL or AGPL dependency is introduced by the POC.
 
 ## Distribution Check
 
-TimeNest exposes a concise version of these notices in Settings > Third-party Licenses, including both wrapper names, the Apache-2.0 license type, Google attribution, and repository links.
+TimeNest exposes concise notices in Settings > Third-party Licenses for the two Google wrappers, ONNX Runtime, RapidOCR, and the PP-OCR models, including license types, attribution, and source links.
 
-Before App Store submission, confirm the exact archive contains only the dependencies above and retain these complete notices with the release records. Also review the then-current Google Mobile Ads SDK terms, AdMob program policies, consent-message configuration, and data-disclosure guidance; those service obligations are not open-source licenses.
+Before App Store submission, confirm the exact archive dependency/model inventory and retain these complete notices with the release records. Also review the then-current Google Mobile Ads SDK terms, AdMob program policies, consent-message configuration, and data-disclosure guidance; those service obligations are not open-source licenses.

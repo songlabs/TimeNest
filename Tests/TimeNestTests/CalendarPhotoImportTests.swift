@@ -1268,6 +1268,169 @@ final class CalendarPhotoImportTests: XCTestCase {
         )
     }
 
+    func testPPOCRTensorResizeAndNormalizationAreDeterministic() throws {
+        XCTAssertEqual(
+            try PPOCRPreprocessor.detectionInputSize(
+                for: PPOCRImageSize(width: 234, height: 123)
+            ),
+            PPOCRImageSize(width: 1_824, height: 960)
+        )
+        let image = try PPOCRBGRImage(
+            width: 1,
+            height: 1,
+            pixels: [0, 127, 255]
+        )
+        let first = try PPOCRPreprocessor.classificationTensor(from: image)
+        let second = try PPOCRPreprocessor.classificationTensor(from: image)
+
+        XCTAssertEqual(first, second)
+        XCTAssertEqual(first.shape, [1, 3, 48, 192])
+        let channelStride = 48 * 192
+        XCTAssertEqual(first.values[0], -1, accuracy: 0.000_001)
+        XCTAssertEqual(first.values[channelStride], -0.003_921_57, accuracy: 0.000_001)
+        XCTAssertEqual(first.values[channelStride * 2], 1, accuracy: 0.000_001)
+        XCTAssertEqual(first.values[48], 0, accuracy: 0.000_001)
+    }
+
+    func testPPOCRCTCDecoderCollapsesAdjacentDuplicateTokens() throws {
+        let decoded = try PPOCRCTCDecoder.decode(
+            tokenIndices: [1, 1, 2, 2],
+            probabilities: [0.8, 0.9, 0.7, 0.6],
+            characters: ["blank", "A", "B", " "]
+        )
+        XCTAssertEqual(decoded.text, "AB")
+    }
+
+    func testPPOCRCTCDecoderRemovesBlankTokens() throws {
+        let decoded = try PPOCRCTCDecoder.decode(
+            tokenIndices: [0, 1, 0, 2, 0],
+            probabilities: [0.99, 0.8, 0.99, 0.7, 0.99],
+            characters: ["blank", "A", "B", " "]
+        )
+        XCTAssertEqual(decoded.text, "AB")
+    }
+
+    func testPPOCRCTCDecoderAveragesOnlyAcceptedTokenConfidence() throws {
+        let decoded = try PPOCRCTCDecoder.decode(
+            tokenIndices: [1, 1, 0, 2],
+            probabilities: [0.8, 0.9, 0.99, 0.6],
+            characters: ["blank", "A", "B", " "]
+        )
+        XCTAssertEqual(decoded.confidence, 0.7, accuracy: 0.000_001)
+    }
+
+    func testPPOCRBoxCoordinateConversionScalesAndClips() {
+        let converted = PPOCRBoxCoordinateConverter.convert(
+            points: [
+                PPOCRPoint(x: 10, y: 20),
+                PPOCRPoint(x: 110, y: -10)
+            ],
+            mapSize: PPOCRImageSize(width: 100, height: 200),
+            destinationSize: PPOCRImageSize(width: 1_000, height: 500)
+        )
+        XCTAssertEqual(converted, [
+            PPOCRPoint(x: 100, y: 50),
+            PPOCRPoint(x: 999, y: 0)
+        ])
+    }
+
+    func testPPOCRDetectionBoxSortingUsesLinesThenHorizontalPosition() {
+        func box(x: Double, y: Double) -> PPOCRDetectedBox {
+            PPOCRDetectedBox(
+                points: [
+                    PPOCRPoint(x: x, y: y),
+                    PPOCRPoint(x: x + 5, y: y),
+                    PPOCRPoint(x: x + 5, y: y + 5),
+                    PPOCRPoint(x: x, y: y + 5)
+                ],
+                score: 0.9
+            )
+        }
+        let sorted = PPOCRBoxSorter.sorted([
+            box(x: 100, y: 20),
+            box(x: 50, y: 5),
+            box(x: 10, y: 20)
+        ])
+        XCTAssertEqual(sorted.compactMap { $0.points.first?.x }, [50, 10, 100])
+    }
+
+    func testPPOCRInvalidModelFileReturnsExplicitError() {
+        XCTAssertThrowsError(try PPOCRModelFileValidator.validate(
+            fileName: "broken.onnx",
+            actualByteCount: 12,
+            expectedByteCount: 1_024
+        )) { error in
+            XCTAssertEqual(error as? PPOCRError, .invalidModelFile("broken.onnx"))
+        }
+    }
+
+    func testPPOCRCellFailureDoesNotDiscardOtherCellResults() throws {
+        let results = try PPOCRCellFailureIsolator.run(
+            items: [18, 19, 24],
+            day: { $0 }
+        ) { day in
+            if day == 19 { throw PPOCRError.runtimeFailure("recognition") }
+            return "day-\(day)"
+        }
+
+        guard case .success(let firstDay, let firstValue) = results[0],
+              case .failure(let failedDay, let errorCode) = results[1],
+              case .success(let lastDay, let lastValue) = results[2] else {
+            return XCTFail("Unexpected isolated cell results")
+        }
+        XCTAssertEqual(firstDay, 18)
+        XCTAssertEqual(firstValue, "day-18")
+        XCTAssertEqual(failedDay, 19)
+        XCTAssertEqual(errorCode, "runtimeFailure:recognition")
+        XCTAssertEqual(lastDay, 24)
+        XCTAssertEqual(lastValue, "day-24")
+    }
+
+    func testPPOCRPOCFilterIsSeptemberOnlyAndDoesNotMutateCandidates() throws {
+        let allRegions = (1...30).map {
+            CalendarImportDayRegion(
+                day: $0,
+                boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1)
+            )
+        }
+        let september = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 9))
+        let october = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 10))
+        XCTAssertEqual(
+            PPOCRPOCConfiguration.targetRegions(from: allRegions, yearMonth: september)
+                .map(\.day),
+            [18, 19, 24, 25, 26]
+        )
+        XCTAssertTrue(
+            PPOCRPOCConfiguration.targetRegions(from: allRegions, yearMonth: october).isEmpty
+        )
+
+        let fixture = try gridFirstFixture(day: 26)
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        let parsed = try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("17:30–20:30", in: fixture.region, line: 0)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+        let candidatesBeforeDiagnosticsAttachment = parsed.candidates
+        var attachedDiagnostics = try XCTUnwrap(diagnostics)
+        attachedDiagnostics.ppOCRPOC = PPOCRPOCDiagnostics(
+            runtimeVersion: PPOCRModelManifest.onnxRuntimeVersion,
+            modelInitializedThisRun: true,
+            modelInitializationMilliseconds: 10,
+            fiveCellTotalMilliseconds: 20,
+            cells: []
+        )
+
+        XCTAssertEqual(parsed.candidates, candidatesBeforeDiagnosticsAttachment)
+        XCTAssertTrue(attachedDiagnostics.plainText.contains("[PPOCRv6 POC]"))
+    }
+
 }
 
 private struct MockCalendarGeminiCellRequester: CalendarGeminiCellRequesting {

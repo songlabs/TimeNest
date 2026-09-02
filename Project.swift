@@ -27,6 +27,7 @@ let project = Project(
             resources: [
                 "TimeNest/Resources/**/*.strings",
                 "TimeNest/Resources/Firebase/**",
+                "TimeNest/Resources/PPOCR/**",
                 "TimeNest/PrivacyInfo.xcprivacy",
                 "TimeNest/Resources/Assets.xcassets"
             ],
@@ -57,6 +58,7 @@ let project = Project(
                     "CURRENT_PROJECT_VERSION": .string(buildNumber),
                     "DEVELOPMENT_TEAM": "JCABFH9F66",
                     "MARKETING_VERSION": .string(marketingVersion),
+                    "SWIFT_OBJC_BRIDGING_HEADER": "TimeNest/Infrastructure/CalendarImport/PPOCR/TimeNest-Bridging-Header.h",
                     "TARGETED_DEVICE_FAMILY": "1,2"
                 ],
                 configurations: [

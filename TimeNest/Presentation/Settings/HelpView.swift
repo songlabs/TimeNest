@@ -316,6 +316,8 @@ private struct HelpFAQCategoryView: View {
 
 private struct ThirdPartyDependency: Identifiable {
     let nameKey: LocalizedString
+    let licenseKey: LocalizedString
+    let copyrightKey: LocalizedString
     let repositoryURL: URL
 
     var id: String { nameKey.rawValue }
@@ -328,11 +330,33 @@ struct ThirdPartyLicensesView: View {
     private let dependencies = [
         ThirdPartyDependency(
             nameKey: .thirdPartyGoogleMobileAds,
+            licenseKey: .thirdPartyLicenseApache,
+            copyrightKey: .thirdPartyCopyrightGoogle,
             repositoryURL: URL(string: "https://github.com/googleads/swift-package-manager-google-mobile-ads")!
         ),
         ThirdPartyDependency(
             nameKey: .thirdPartyUserMessagingPlatform,
+            licenseKey: .thirdPartyLicenseApache,
+            copyrightKey: .thirdPartyCopyrightGoogle,
             repositoryURL: URL(string: "https://github.com/googleads/swift-package-manager-google-user-messaging-platform")!
+        ),
+        ThirdPartyDependency(
+            nameKey: .thirdPartyONNXRuntime,
+            licenseKey: .thirdPartyLicenseMIT,
+            copyrightKey: .thirdPartyCopyrightMicrosoft,
+            repositoryURL: URL(string: "https://github.com/microsoft/onnxruntime")!
+        ),
+        ThirdPartyDependency(
+            nameKey: .thirdPartyRapidOCR,
+            licenseKey: .thirdPartyLicenseApache,
+            copyrightKey: .thirdPartyCopyrightRapidOCR,
+            repositoryURL: URL(string: "https://github.com/RapidAI/RapidOCR")!
+        ),
+        ThirdPartyDependency(
+            nameKey: .thirdPartyPPOCRModels,
+            licenseKey: .thirdPartyLicenseApache,
+            copyrightKey: .thirdPartyCopyrightBaidu,
+            repositoryURL: URL(string: "https://www.modelscope.cn/models/RapidAI/RapidOCR")!
         )
     ]
 
@@ -355,11 +379,11 @@ struct ThirdPartyLicensesView: View {
                                 Text(localization.localized(.thirdPartyLicenseType))
                                     .foregroundColor(SettingsModalSurface.secondaryText)
                                 Spacer(minLength: 12)
-                                Text(localization.localized(.thirdPartyLicenseApache))
+                                Text(localization.localized(dependency.licenseKey))
                                     .foregroundColor(SettingsModalSurface.primaryText)
                             }
 
-                            Text(localization.localized(.thirdPartyCopyrightGoogle))
+                            Text(localization.localized(dependency.copyrightKey))
                                 .font(.footnote)
                                 .foregroundColor(SettingsModalSurface.secondaryText)
 

@@ -478,8 +478,15 @@
 "third_party_licenses.repository" = "소스 저장소 보기";
 "third_party_licenses.google_mobile_ads" = "Google Mobile Ads Swift Package Manager wrapper";
 "third_party_licenses.user_messaging_platform" = "Google User Messaging Platform Swift Package Manager wrapper";
+"third_party_licenses.onnx_runtime" = "Microsoft ONNX Runtime 1.29.0";
+"third_party_licenses.rapidocr" = "RapidOCR 전처리 및 후처리";
+"third_party_licenses.ppocr_models" = "PaddleOCR / PP-OCRv6 small 모델";
 "third_party_licenses.apache_2" = "Apache-2.0";
+"third_party_licenses.mit" = "MIT";
 "third_party_licenses.google_copyright" = "Copyright 2021 Google LLC";
+"third_party_licenses.microsoft_copyright" = "Copyright (c) Microsoft Corporation";
+"third_party_licenses.rapidocr_copyright" = "Copyright (c) 2021 RapidOCR Authors";
+"third_party_licenses.baidu_copyright" = "PP-OCR 모델 저작권: Baidu";
 
 /* Widgets */
 "widget.calendar.title" = "캘린더";

@@ -239,8 +239,15 @@ enum LocalizedString: String {
     case thirdPartyLicenseRepository = "third_party_licenses.repository"
     case thirdPartyGoogleMobileAds = "third_party_licenses.google_mobile_ads"
     case thirdPartyUserMessagingPlatform = "third_party_licenses.user_messaging_platform"
+    case thirdPartyONNXRuntime = "third_party_licenses.onnx_runtime"
+    case thirdPartyRapidOCR = "third_party_licenses.rapidocr"
+    case thirdPartyPPOCRModels = "third_party_licenses.ppocr_models"
     case thirdPartyLicenseApache = "third_party_licenses.apache_2"
+    case thirdPartyLicenseMIT = "third_party_licenses.mit"
     case thirdPartyCopyrightGoogle = "third_party_licenses.google_copyright"
+    case thirdPartyCopyrightMicrosoft = "third_party_licenses.microsoft_copyright"
+    case thirdPartyCopyrightRapidOCR = "third_party_licenses.rapidocr_copyright"
+    case thirdPartyCopyrightBaidu = "third_party_licenses.baidu_copyright"
 
     // MARK: - Notification
 

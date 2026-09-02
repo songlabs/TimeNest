@@ -1,0 +1,4 @@
+TimeNest/Resources/PPOCR/*.onnx binary
+TimeNest/Resources/PPOCR/*.characters.txt text eol=lf
+Scripts/verify_ppocr_resources.sh text eol=lf
+Podfile text eol=lf

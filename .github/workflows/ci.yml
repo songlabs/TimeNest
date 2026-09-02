@@ -32,11 +32,17 @@ jobs:
       - name: Install pinned Tuist
         uses: jdx/mise-action@v2
 
+      - name: Install pinned CocoaPods
+        run: |
+          sudo gem install cocoapods -v 1.16.2 --no-document
+          test "$(pod --version)" = "1.16.2"
+
       - name: Generate Xcode project
         run: |
           set -euo pipefail
           test ! -e TimeNest/Resources/Firebase/GoogleService-Info.plist
           test "$(tuist version)" = "4.65.0"
+          bash Scripts/verify_ppocr_resources.sh
           tuist install
           tuist generate --no-open
           grep -Fq 'CalendarGeminiCellRecognitionService.swift' TimeNest.xcodeproj/project.pbxproj
@@ -45,9 +51,18 @@ jobs:
           grep -Fq 'FirebaseAppCheck' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'FirebaseCore' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'GoogleMobileAds' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'PPOCRService.swift' TimeNest.xcodeproj/project.pbxproj
+          grep -Fq 'PP-OCRv6_det_small.onnx' TimeNest.xcodeproj/project.pbxproj
+
+      - name: Install official ONNX Runtime pod
+        run: |
+          set -euo pipefail
+          pod install
+          grep -Fq 'onnxruntime-objc (1.29.0)' Podfile.lock
+          grep -Fq 'Pods.xcodeproj' TimeNest.xcworkspace/contents.xcworkspacedata
 
       - name: Resolve Swift packages
-        run: xcodebuild -resolvePackageDependencies -project TimeNest.xcodeproj -scheme TimeNest
+        run: xcodebuild -resolvePackageDependencies -workspace TimeNest.xcworkspace -scheme TimeNest
 
       - name: Select simulator
         run: |
@@ -69,7 +84,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild test \
-            -project TimeNest.xcodeproj \
+            -workspace TimeNest.xcworkspace \
             -scheme TimeNest \
             -configuration Debug \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
@@ -80,7 +95,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build \
-            -project TimeNest.xcodeproj \
+            -workspace TimeNest.xcworkspace \
             -scheme TimeNest \
             -configuration Release \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \

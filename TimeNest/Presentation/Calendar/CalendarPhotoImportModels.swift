@@ -791,6 +791,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var cellDiagnostics: [CalendarPhotoCellDiagnostics] = []
     var unassignedRawTexts: [String] = []
     var unassignedNormalizedTexts: [String] = []
+    var ppOCRPOC: PPOCRPOCDiagnostics? = nil
     let orientation: CalendarPhotoOrientationDiagnostics?
     let manualYearMonth: CalendarImportYearMonth?
     let resolvedYearMonth: CalendarImportYearMonth?
@@ -825,6 +826,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             || candidateCount == 0
             || recognitionMode != nil
             || !cellDiagnostics.isEmpty
+            || ppOCRPOC != nil
     }
 
     var geminiSuccessCellCount: Int {
@@ -843,6 +845,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ("Recognition", recognitionMode?.rawValue ?? "legacy"),
             ("Gemini Success Cells", "\(geminiSuccessCellCount)"),
             ("Vision Fallback Cells", "\(visionFallbackCellCount)"),
+            ("PP-OCR POC Cells", "\(ppOCRPOC?.cells.count ?? 0)"),
             ("Manual YM", Self.yearMonthText(manualYearMonth)),
             ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
             ("Selected Rotation", orientation.map { "\($0.selectedRotation.rawValue)" } ?? "none"),
@@ -1018,7 +1021,8 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             Self.section(title: "Anchors", lines: anchorLines),
             Self.section(title: "AnchorMapping", lines: mappingLines),
             Self.section(title: "Cells", lines: cellLines),
-            Self.section(title: "Unassigned", lines: unassignedLines)
+            Self.section(title: "Unassigned", lines: unassignedLines),
+            Self.section(title: "PPOCRv6 POC", lines: ppOCRPOC?.plainTextLines ?? [])
         ].joined(separator: "\n\n")
     }
 
