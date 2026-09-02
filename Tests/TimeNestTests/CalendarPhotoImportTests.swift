@@ -275,7 +275,7 @@ final class CalendarPhotoImportTests: XCTestCase {
                 "anchorMedianWidth", "anchorMedianHeight", "topQuarterAnchors",
                 "bottomThreeQuarterAnchors", "leftHalfAnchors", "rightHalfAnchors",
                 "anchorExtent",
-                "sundayScore", "mondayScore", "weekStart", "grid", "matched",
+                "sundayScore", "mondayScore", "weekStart", "grid", "gridGeometry", "matched",
                 "rejected", "threshold", "gridAccepted", "dayRegions",
                 "candidates", "stage", "failure"
             ]
