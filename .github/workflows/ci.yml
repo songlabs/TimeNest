@@ -34,8 +34,25 @@ jobs:
 
       - name: Install pinned CocoaPods
         run: |
-          sudo gem install cocoapods -v 1.16.2 --no-document
-          test "$(pod --version)" = "1.16.2"
+          set -euo pipefail
+
+          GEM_HOME="$RUNNER_TEMP/cocoapods-gems"
+          BIN_DIR="$RUNNER_TEMP/cocoapods-bin"
+          export GEM_HOME
+          export GEM_PATH="$GEM_HOME"
+
+          gem install cocoapods -v 1.16.2 \
+            --no-document \
+            --install-dir "$GEM_HOME" \
+            --bindir "$BIN_DIR"
+
+          echo "GEM_HOME=$GEM_HOME" >> "$GITHUB_ENV"
+          echo "GEM_PATH=$GEM_PATH" >> "$GITHUB_ENV"
+          echo "$BIN_DIR" >> "$GITHUB_PATH"
+
+          echo "Using CocoaPods:"
+          "$BIN_DIR/pod" --version
+          test "$("$BIN_DIR/pod" --version)" = "1.16.2"
 
       - name: Generate Xcode project
         run: |
