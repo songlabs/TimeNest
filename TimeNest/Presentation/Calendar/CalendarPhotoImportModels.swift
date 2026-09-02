@@ -1,219 +1,21 @@
 import Foundation
 
-struct CalendarGeminiRecognizedEvent: Equatable, Sendable {
-    let title: String
-    let originalText: String
-    let startMinutes: Int?
-    let endMinutes: Int?
-    let confidence: Float
-}
-
-enum CalendarGeminiRecognitionError: Error, Equatable, Sendable {
-    case firebaseNotConfigured
-    case invalidCrop
-    case emptyResponse
-    case invalidResponse
-    case timedOut
-}
-
-struct CalendarGeminiErrorDiagnostics: Equatable, Sendable {
-    let domain: String
-    let code: Int
-    let aiLogicCode: String?
-    let httpStatus: Int?
-    let message: String
-
-    private static let firebaseAIBackendErrorDomain =
-        "com.google.firebase.firebaseai.BackendError"
-    private static let messageLimit = 240
-    private static let aiLogicCodes: Set<String> = [
-        "OK",
-        "CANCELLED",
-        "UNKNOWN",
-        "INVALID_ARGUMENT",
-        "DEADLINE_EXCEEDED",
-        "NOT_FOUND",
-        "ALREADY_EXISTS",
-        "PERMISSION_DENIED",
-        "UNAUTHENTICATED",
-        "RESOURCE_EXHAUSTED",
-        "FAILED_PRECONDITION",
-        "ABORTED",
-        "OUT_OF_RANGE",
-        "UNIMPLEMENTED",
-        "INTERNAL",
-        "UNAVAILABLE",
-        "DATA_LOSS"
-    ]
-
-    init(error: Error) {
-        let nsError = error as NSError
-        let sanitizedMessage = Self.sanitize(nsError.localizedDescription)
-        domain = Self.sanitize(nsError.domain, limit: 120)
-        code = nsError.code
-        aiLogicCode = nsError.domain == Self.firebaseAIBackendErrorDomain
-            ? Self.aiLogicCode(in: sanitizedMessage)
-            : nil
-        httpStatus = nsError.domain == Self.firebaseAIBackendErrorDomain
-            && (100...599).contains(nsError.code)
-            ? nsError.code
-            : nil
-        message = sanitizedMessage
-    }
-
-    private static func aiLogicCode(in message: String) -> String? {
-        let allowed = CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "_"))
-        return message
-            .uppercased()
-            .components(separatedBy: allowed.inverted)
-            .first { aiLogicCodes.contains($0) }
-    }
-
-    private static func sanitize(_ value: String, limit: Int = messageLimit) -> String {
-        var sanitized = value
-        let replacements = [
-            (#"\bAIza[0-9A-Za-z_-]{20,}\b"#, "<redacted>"),
-            (#"\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\b"#, "<redacted>"),
-            (#"(?i)\b(bearer|firebase)\s+[A-Za-z0-9._~+/=-]{12,}"#, "$1 <redacted>"),
-            (#"(?i)\b(api[ _-]?key|app[ _-]?check[ _-]?token|access[ _-]?token|refresh[ _-]?token|token|auth(?:orization)?|credential|password|secret)\b(\s*[:=]\s*)([^,\s;&]+)"#, "$1$2<redacted>"),
-            (#"(?i)([?&](?:key|api_key|token|access_token|credential|secret)=)[^&\s]+"#, "$1<redacted>"),
-            (#"\b[A-Za-z0-9+/_=-]{96,}\b"#, "<redacted>")
-        ]
-        for (pattern, replacement) in replacements {
-            guard let expression = try? NSRegularExpression(pattern: pattern) else { continue }
-            sanitized = expression.stringByReplacingMatches(
-                in: sanitized,
-                range: NSRange(sanitized.startIndex..., in: sanitized),
-                withTemplate: replacement
-            )
-        }
-        sanitized = sanitized
-            .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        guard sanitized.count > limit else { return sanitized }
-        guard limit > 1 else { return String(sanitized.prefix(limit)) }
-        return String(sanitized.prefix(limit - 1)) + "…"
-    }
-}
-
-enum CalendarGeminiErrorCategory: String, Equatable, Sendable {
-    case firebaseNotConfigured
-    case invalidCrop
-    case timeout
-    case appCheckRejected
-    case network
-    case invalidResponse
-    case firebase
-
-    static func classify(_ error: Error) -> CalendarGeminiErrorCategory {
-        if let recognitionError = error as? CalendarGeminiRecognitionError {
-            switch recognitionError {
-            case .firebaseNotConfigured:
-                return .firebaseNotConfigured
-            case .invalidCrop:
-                return .invalidCrop
-            case .timedOut:
-                return .timeout
-            case .emptyResponse, .invalidResponse:
-                return .invalidResponse
-            }
-        }
-        if error is DecodingError {
-            return .invalidResponse
-        }
-        let nsError = error as NSError
-        if nsError.domain == NSURLErrorDomain {
-            return nsError.code == URLError.timedOut.rawValue ? .timeout : .network
-        }
-        let appCheckEvidence = "\(nsError.domain) \(nsError.localizedDescription)".lowercased()
-        if appCheckEvidence.contains("appcheck") || appCheckEvidence.contains("app check") {
-            return .appCheckRejected
-        }
-        return .firebase
-    }
-}
-
 enum CalendarPhotoCellRecognitionSource: String, Equatable, Sendable {
-    case gemini
-    case visionOCR
+    case ppocrv6
+    case visionFallback
 }
 
 enum CalendarPhotoRecognitionMode: String, Equatable, Sendable {
-    case gemini
-    case mixed
-    case visionOCR
+    case ppocrv6
 }
 
 struct CalendarPhotoCellRecognitionDiagnostics: Equatable, Sendable {
     let day: Int
-    let geminiRequested: Bool
-    let geminiSucceeded: Bool
     let recognitionSource: CalendarPhotoCellRecognitionSource
-    let geminiEvents: Int
-    let geminiError: CalendarGeminiErrorCategory?
-    let geminiErrorDiagnostics: CalendarGeminiErrorDiagnostics?
-    let fallbackUsed: Bool
-}
+    let ppOCRText: [String]
+    let ppOCRError: String?
 
-struct CalendarGeminiCellRecognitionOutcome: Equatable, Sendable {
-    let day: Int
-    let events: [CalendarGeminiRecognizedEvent]
-    let errorCategory: CalendarGeminiErrorCategory?
-    let errorDiagnostics: CalendarGeminiErrorDiagnostics?
-}
-
-struct CalendarGeminiRequestFailure: Error, Equatable, Sendable {
-    let category: CalendarGeminiErrorCategory
-    let diagnostics: CalendarGeminiErrorDiagnostics
-}
-
-enum CalendarGeminiResponseDecoder {
-    private struct Envelope: Decodable { let events: [Event] }
-    private struct Event: Decodable {
-        let title: String
-        let originalText: String
-        let startMinutes: Int?
-        let endMinutes: Int?
-        let confidence: Float
-
-        enum CodingKeys: String, CodingKey {
-            case title, confidence
-            case originalText = "original_text"
-            case startMinutes = "start_minutes"
-            case endMinutes = "end_minutes"
-        }
-    }
-
-    static func decode(_ response: String) throws -> [CalendarGeminiRecognizedEvent] {
-        var json = response.trimmingCharacters(in: .whitespacesAndNewlines)
-        if json.hasPrefix("```") {
-            json = json.replacingOccurrences(of: "```json", with: "")
-                .replacingOccurrences(of: "```", with: "")
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        let envelope = try JSONDecoder().decode(Envelope.self, from: Data(json.utf8))
-        return try envelope.events.map { event in
-            let title = event.title.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !title.isEmpty,
-                  (0...1).contains(event.confidence),
-                  valid(event.startMinutes), valid(event.endMinutes),
-                  (event.startMinutes == nil) == (event.endMinutes == nil),
-                  event.endMinutes.map({ end in event.startMinutes.map { end > $0 } ?? false }) ?? true
-            else { throw CalendarGeminiRecognitionError.invalidResponse }
-            return CalendarGeminiRecognizedEvent(
-                title: title,
-                originalText: event.originalText,
-                startMinutes: event.startMinutes,
-                endMinutes: event.endMinutes,
-                confidence: event.confidence
-            )
-        }
-    }
-
-    private static func valid(_ minutes: Int?) -> Bool {
-        minutes.map { (0..<1_440).contains($0) } ?? true
-    }
+    var fallbackUsed: Bool { recognitionSource == .visionFallback }
 }
 
 struct CalendarImportYearMonth: Equatable, Sendable {
@@ -475,80 +277,6 @@ struct CalendarImportDayRegion: Equatable, Sendable {
     }
 }
 
-protocol CalendarGeminiCellRequesting: Sendable {
-    func recognizeCell(
-        in region: CalendarImportDayRegion
-    ) async throws -> [CalendarGeminiRecognizedEvent]
-}
-
-struct CalendarGeminiCellRecognitionCoordinator {
-    let maximumConcurrentRequests: Int
-
-    init(maximumConcurrentRequests: Int = 4) {
-        self.maximumConcurrentRequests = max(1, maximumConcurrentRequests)
-    }
-
-    func recognize(
-        regions: [CalendarImportDayRegion],
-        requester: any CalendarGeminiCellRequesting
-    ) async throws -> [CalendarGeminiCellRecognitionOutcome] {
-        let orderedRegions = regions.sorted { $0.day < $1.day }
-        guard !orderedRegions.isEmpty else { return [] }
-
-        return try await withThrowingTaskGroup(
-            of: CalendarGeminiCellRecognitionOutcome.self
-        ) { group in
-            let initialCount = min(maximumConcurrentRequests, orderedRegions.count)
-            for region in orderedRegions.prefix(initialCount) {
-                group.addTask {
-                    try await Self.recognize(region: region, requester: requester)
-                }
-            }
-
-            var outcomes: [CalendarGeminiCellRecognitionOutcome] = []
-            var nextIndex = initialCount
-            while let outcome = try await group.next() {
-                outcomes.append(outcome)
-                if nextIndex < orderedRegions.count {
-                    let region = orderedRegions[nextIndex]
-                    nextIndex += 1
-                    group.addTask {
-                        try await Self.recognize(region: region, requester: requester)
-                    }
-                }
-            }
-            return outcomes.sorted { $0.day < $1.day }
-        }
-    }
-
-    private static func recognize(
-        region: CalendarImportDayRegion,
-        requester: any CalendarGeminiCellRequesting
-    ) async throws -> CalendarGeminiCellRecognitionOutcome {
-        try Task.checkCancellation()
-        do {
-            let events = try await requester.recognizeCell(in: region)
-            return CalendarGeminiCellRecognitionOutcome(
-                day: region.day,
-                events: events,
-                errorCategory: nil,
-                errorDiagnostics: nil
-            )
-        } catch is CancellationError {
-            throw CancellationError()
-        } catch {
-            let requestFailure = error as? CalendarGeminiRequestFailure
-            return CalendarGeminiCellRecognitionOutcome(
-                day: region.day,
-                events: [],
-                errorCategory: requestFailure?.category
-                    ?? CalendarGeminiErrorCategory.classify(error),
-                errorDiagnostics: requestFailure?.diagnostics
-            )
-        }
-    }
-}
-
 struct CalendarImportParsedTime: Equatable, Sendable {
     let startMinutes: Int
     let endMinutes: Int?
@@ -592,83 +320,6 @@ struct CalendarImportCandidate: Identifiable, Equatable {
 
     var isValidForSaving: Bool {
         !effectiveTitle.isEmpty && hasCompleteTimeRange
-    }
-}
-
-struct CalendarGeminiMonthRecognitionResult {
-    let candidates: [CalendarImportCandidate]
-    let cellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics]
-    let failedDays: Set<Int>
-}
-
-struct CalendarGeminiMonthResultBuilder {
-    func makeResult(
-        outcomes: [CalendarGeminiCellRecognitionOutcome],
-        yearMonth: CalendarImportYearMonth,
-        calendarID: UUID,
-        calendar inputCalendar: Calendar = Calendar(identifier: .gregorian)
-    ) throws -> CalendarGeminiMonthRecognitionResult {
-        var calendar = inputCalendar
-        calendar.locale = Locale(identifier: "en_US_POSIX")
-        guard let monthStart = yearMonth.date(calendar: calendar) else {
-            throw CalendarGeminiRecognitionError.invalidResponse
-        }
-
-        var candidates: [CalendarImportCandidate] = []
-        var diagnostics: [CalendarPhotoCellRecognitionDiagnostics] = []
-        var failedDays = Set<Int>()
-        for outcome in outcomes.sorted(by: { $0.day < $1.day }) {
-            if let errorCategory = outcome.errorCategory {
-                failedDays.insert(outcome.day)
-                diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
-                    day: outcome.day,
-                    geminiRequested: true,
-                    geminiSucceeded: false,
-                    recognitionSource: .visionOCR,
-                    geminiEvents: 0,
-                    geminiError: errorCategory,
-                    geminiErrorDiagnostics: outcome.errorDiagnostics,
-                    fallbackUsed: true
-                ))
-                continue
-            }
-            diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
-                day: outcome.day,
-                geminiRequested: true,
-                geminiSucceeded: true,
-                recognitionSource: .gemini,
-                geminiEvents: outcome.events.count,
-                geminiError: nil,
-                geminiErrorDiagnostics: nil,
-                fallbackUsed: false
-            ))
-            guard let date = calendar.date(
-                byAdding: .day,
-                value: outcome.day - 1,
-                to: monthStart
-            ) else { continue }
-            candidates.append(contentsOf: outcome.events.map { event in
-                CalendarImportCandidate(
-                    id: UUID(),
-                    date: date,
-                    startTimeMinutes: event.startMinutes,
-                    endTimeMinutes: event.endMinutes,
-                    title: event.title,
-                    originalText: event.originalText,
-                    personToken: nil,
-                    confidence: event.confidence,
-                    isSelected: true,
-                    needsReview: event.confidence < 0.75 || event.title.isEmpty,
-                    targetCalendarID: calendarID,
-                    includesPersonTokenInTitle: false
-                )
-            })
-        }
-        return CalendarGeminiMonthRecognitionResult(
-            candidates: candidates,
-            cellDiagnostics: diagnostics,
-            failedDays: failedDays
-        )
     }
 }
 
@@ -791,7 +442,6 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var cellDiagnostics: [CalendarPhotoCellDiagnostics] = []
     var unassignedRawTexts: [String] = []
     var unassignedNormalizedTexts: [String] = []
-    var ppOCRPOC: PPOCRPOCDiagnostics? = nil
     let orientation: CalendarPhotoOrientationDiagnostics?
     let manualYearMonth: CalendarImportYearMonth?
     let resolvedYearMonth: CalendarImportYearMonth?
@@ -826,11 +476,12 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             || candidateCount == 0
             || recognitionMode != nil
             || !cellDiagnostics.isEmpty
-            || ppOCRPOC != nil
     }
 
-    var geminiSuccessCellCount: Int {
-        recognitionCellDiagnostics.filter(\.geminiSucceeded).count
+    var ppOCRSuccessCellCount: Int {
+        recognitionCellDiagnostics.filter {
+            $0.recognitionSource == .ppocrv6
+        }.count
     }
 
     var visionFallbackCellCount: Int {
@@ -843,9 +494,8 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ("Selected Date", Self.dateText(selectedDate)),
             ("Grid Detection", gridDetection),
             ("Recognition", recognitionMode?.rawValue ?? "legacy"),
-            ("Gemini Success Cells", "\(geminiSuccessCellCount)"),
+            ("PP-OCR Success Cells", "\(ppOCRSuccessCellCount)"),
             ("Vision Fallback Cells", "\(visionFallbackCellCount)"),
-            ("PP-OCR POC Cells", "\(ppOCRPOC?.cells.count ?? 0)"),
             ("Manual YM", Self.yearMonthText(manualYearMonth)),
             ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
             ("Selected Rotation", orientation.map { "\($0.selectedRotation.rawValue)" } ?? "none"),
@@ -881,8 +531,9 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             "selectedDate=\(Self.dateText(selectedDate))",
             "gridDetection=\(gridDetection)",
             "recognitionMode=\(recognitionMode?.rawValue ?? "legacy")",
-            "geminiSuccessCells=\(geminiSuccessCellCount)",
+            "ppocrSuccessCells=\(ppOCRSuccessCellCount)",
             "visionFallbackCells=\(visionFallbackCellCount)",
+            "candidateInput=\(recognitionMode == .ppocrv6)",
             "manualYearMonth=\(Self.yearMonthText(manualYearMonth))",
             "resolvedYearMonth=\(Self.yearMonthText(resolvedYearMonth))",
             "selectedRotation=\(orientation.map { String($0.selectedRotation.rawValue) } ?? "none")",
@@ -976,17 +627,28 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 ].joined(separator: " ")
             }
         }
+        let recognitionByDay = Dictionary(
+            uniqueKeysWithValues: recognitionCellDiagnostics.map { ($0.day, $0) }
+        )
         let cellLines = cellDiagnostics.flatMap { cell -> [String] in
             let bounds = cell.cellBounds
+            let recognition = recognitionByDay[cell.day]
+            let firstCandidate = cell.candidates.first
             let header = [
                 "day=\(cell.day)",
+                "recognitionSource=\(recognition?.recognitionSource.rawValue ?? "unknown")",
+                "ppocrText=\(Self.textList(recognition?.ppOCRText ?? []))",
+                "ppocrError=\(recognition?.ppOCRError ?? "none")",
+                "candidateCreated=\(cell.candidateCreated)",
+                "parsedStart=\(Self.timeText(firstCandidate?.parsedStartMinutes))",
+                "parsedEnd=\(Self.timeText(firstCandidate?.parsedEndMinutes))",
+                "remainingTitle=\(Self.quotedText(firstCandidate?.remainingTitle ?? ""))",
                 "cellBounds=(x=\(Self.decimalText(bounds.x)),y=\(Self.decimalText(bounds.y)),w=\(Self.decimalText(bounds.width)),h=\(Self.decimalText(bounds.height)))",
                 "observations=\(cell.observationCount)",
                 "printedDay=\(cell.printedDayObservationCount)",
                 "content=\(cell.contentObservationCount)",
                 "rawTexts=\(Self.textList(cell.rawTexts))",
                 "normalizedTexts=\(Self.textList(cell.normalizedTexts))",
-                "candidateCreated=\(cell.candidateCreated)",
                 "candidates=\(cell.candidates.count)",
                 "rejectedReason=\(cell.rejectedReason?.rawValue ?? "none")"
             ].joined(separator: " ")
@@ -1021,59 +683,22 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             Self.section(title: "Anchors", lines: anchorLines),
             Self.section(title: "AnchorMapping", lines: mappingLines),
             Self.section(title: "Cells", lines: cellLines),
-            Self.section(title: "Unassigned", lines: unassignedLines),
-            Self.section(title: "PPOCRv6 POC", lines: ppOCRPOC?.plainTextLines ?? [])
+            Self.section(title: "Unassigned", lines: unassignedLines)
         ].joined(separator: "\n\n")
     }
 
     private static func recognitionLines(
         _ cells: [CalendarPhotoCellRecognitionDiagnostics]
     ) -> [String] {
-        var groups: [(cell: CalendarPhotoCellRecognitionDiagnostics, days: [Int])] = []
-        for cell in cells.sorted(by: { $0.day < $1.day }) {
-            if let index = groups.firstIndex(where: { sameRecognition($0.cell, cell) }) {
-                groups[index].days.append(cell.day)
-            } else {
-                groups.append((cell: cell, days: [cell.day]))
-            }
-        }
-        return groups.map { group in
-            let cell = group.cell
-            var fields = group.days.count == 1
-                ? ["day=\(group.days[0])"]
-                : ["days=\(dayRangesText(group.days))", "count=\(group.days.count)"]
-            fields.append(contentsOf: [
-                "geminiRequested=\(cell.geminiRequested)",
-                "geminiSucceeded=\(cell.geminiSucceeded)",
+        cells.sorted(by: { $0.day < $1.day }).map { cell in
+            [
+                "day=\(cell.day)",
                 "recognitionSource=\(cell.recognitionSource.rawValue)",
-                "geminiEvents=\(cell.geminiEvents)",
-                "geminiError=\(cell.geminiError?.rawValue ?? "none")",
+                "ppocrText=\(textList(cell.ppOCRText))",
+                "ppocrError=\(cell.ppOCRError ?? "none")",
                 "fallbackUsed=\(cell.fallbackUsed)"
-            ])
-            if let diagnostics = cell.geminiErrorDiagnostics {
-                fields.append(contentsOf: [
-                    "geminiErrorDomain=\(diagnostics.domain)",
-                    "geminiErrorCode=\(diagnostics.code)",
-                    "geminiAILogicCode=\(diagnostics.aiLogicCode ?? "none")",
-                    "geminiHTTPStatus=\(diagnostics.httpStatus.map(String.init) ?? "none")",
-                    "geminiErrorMessage=\(diagnostics.message)"
-                ])
-            }
-            return fields.joined(separator: " ")
+            ].joined(separator: " ")
         }
-    }
-
-    private static func sameRecognition(
-        _ lhs: CalendarPhotoCellRecognitionDiagnostics,
-        _ rhs: CalendarPhotoCellRecognitionDiagnostics
-    ) -> Bool {
-        lhs.geminiRequested == rhs.geminiRequested
-            && lhs.geminiSucceeded == rhs.geminiSucceeded
-            && lhs.recognitionSource == rhs.recognitionSource
-            && lhs.geminiEvents == rhs.geminiEvents
-            && lhs.geminiError == rhs.geminiError
-            && lhs.geminiErrorDiagnostics == rhs.geminiErrorDiagnostics
-            && lhs.fallbackUsed == rhs.fallbackUsed
     }
 
     private static func dayRangesText(_ days: [Int]) -> String {
@@ -1332,8 +957,6 @@ struct CalendarPhotoGridFirstParser {
         defaultCalendarID: UUID,
         calendar inputCalendar: Calendar = Calendar(identifier: .gregorian),
         orientationDiagnostics: CalendarPhotoOrientationDiagnostics? = nil,
-        prebuiltCandidates: [CalendarImportCandidate] = [],
-        visionFallbackRegions: [CalendarImportDayRegion]? = nil,
         recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics] = [],
         diagnosticsHandler: ((CalendarPhotoImportDiagnostics) -> Void)? = nil
     ) throws -> CalendarPhotoImportParseResult {
@@ -1359,7 +982,7 @@ struct CalendarPhotoGridFirstParser {
                     candidates: [],
                     cellDiagnostics: []
                 ),
-                candidateCount: prebuiltCandidates.count,
+                candidateCount: 0,
                 recognitionCellDiagnostics: recognitionCellDiagnostics,
                 orientationDiagnostics: orientationDiagnostics,
                 stage: .dayRegions,
@@ -1369,14 +992,12 @@ struct CalendarPhotoGridFirstParser {
         }
         let buildResult = CalendarImportCandidateBuilder().makeMonthCandidates(
             observations: observations,
-            regions: visionFallbackRegions ?? regions,
+            regions: regions,
             monthStart: monthStart,
             calendarID: defaultCalendarID,
             calendar: calendar
         )
-        let candidates = Self.stablyOrderedByDate(
-            prebuiltCandidates + buildResult.candidates
-        )
+        let candidates = Self.stablyOrderedByDate(buildResult.candidates)
         let failureReason: CalendarPhotoImportParseError? = candidates.isEmpty
             ? .noCandidates
             : nil
@@ -1494,11 +1115,7 @@ struct CalendarPhotoGridFirstParser {
     private static func recognitionMode(
         for cells: [CalendarPhotoCellRecognitionDiagnostics]
     ) -> CalendarPhotoRecognitionMode? {
-        guard !cells.isEmpty else { return nil }
-        let fallbackCount = cells.filter(\.fallbackUsed).count
-        if fallbackCount == 0 { return .gemini }
-        if fallbackCount == cells.count { return .visionOCR }
-        return .mixed
+        cells.isEmpty ? nil : .ppocrv6
     }
 
     private static func stablyOrderedByDate(

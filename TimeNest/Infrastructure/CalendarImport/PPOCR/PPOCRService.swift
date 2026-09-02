@@ -5,10 +5,10 @@ actor PPOCRService {
     private var sessions: PPOCRONNXSessions?
     private var initialModelInitializationMilliseconds: Double?
 
-    func benchmarkMonthCells(
+    func recognizeMonthCells(
         image: CGImage,
         regions: [CalendarImportDayRegion]
-    ) async throws -> PPOCRInferenceRun {
+    ) async throws -> PPOCRRecognitionRun {
         let modelInitializedThisRun = sessions == nil
         let modelStart = PPOCRMonotonicClock.nowMilliseconds
         let loadedSessions: PPOCRONNXSessions
@@ -44,7 +44,7 @@ actor PPOCRService {
             )
         }
 
-        let fiveCellStart = PPOCRMonotonicClock.nowMilliseconds
+        let recognitionStart = PPOCRMonotonicClock.nowMilliseconds
         let sortedRegions = regions.sorted(by: { $0.day < $1.day })
         let workResults = try PPOCRCellFailureIsolator.run(
             items: sortedRegions,
@@ -59,20 +59,20 @@ actor PPOCRService {
         )
         var regionsByDay: [Int: CalendarImportDayRegion] = [:]
         for region in sortedRegions { regionsByDay[region.day] = region }
-        let cells = workResults.compactMap { result -> PPOCRCellInferenceBenchmark? in
+        let cells = workResults.compactMap { result -> PPOCRCellRecognitionResult? in
             switch result {
-            case .success(_, let benchmark):
-                return benchmark
+            case .success(_, let recognition):
+                return recognition
             case .failure(let day, let errorCode):
                 guard let region = regionsByDay[day] else { return nil }
                 return failureCell(image: image, region: region, errorCode: errorCode)
             }
         }
-        return PPOCRInferenceRun(
+        return PPOCRRecognitionRun(
             runtimeVersion: loadedSessions.runtimeVersion,
             modelInitializedThisRun: modelInitializedThisRun,
             modelInitializationMilliseconds: initialModelInitializationMilliseconds ?? 0,
-            fiveCellTotalMilliseconds: PPOCRMonotonicClock.nowMilliseconds - fiveCellStart,
+            totalMilliseconds: PPOCRMonotonicClock.nowMilliseconds - recognitionStart,
             cells: cells
         )
     }
@@ -81,7 +81,7 @@ actor PPOCRService {
         image: CGImage,
         region: CalendarImportDayRegion,
         sessions: PPOCRONNXSessions
-    ) throws -> PPOCRCellInferenceBenchmark {
+    ) throws -> PPOCRCellRecognitionResult {
         let totalStart = PPOCRMonotonicClock.nowMilliseconds
         let imageSize = PPOCRImageSize(width: image.width, height: image.height)
         guard let pixelRect = PPOCRCellPixelRectConverter.pixelRect(
@@ -151,7 +151,7 @@ actor PPOCRService {
                 > classificationOutput.values[0] ? 1 : 0
             let predictedAngleScore = classificationOutput.values[predictedAngleIndex]
             if predictedAngleIndex == 1,
-               predictedAngleScore > PPOCRPOCConfiguration.classificationThreshold {
+               predictedAngleScore > PPOCRConfiguration.classificationThreshold {
                 lineImage = try lineImage.rotated180Degrees()
             }
             classificationMilliseconds +=
@@ -177,15 +177,19 @@ actor PPOCRService {
             recognitionMilliseconds +=
                 PPOCRMonotonicClock.nowMilliseconds - recognitionStart
             if !decoded.text.isEmpty,
-               decoded.confidence >= PPOCRPOCConfiguration.textScore {
+               decoded.confidence >= PPOCRConfiguration.textScore {
                 textResults.append(PPOCRTextResult(
                     text: decoded.text,
-                    confidence: decoded.confidence
+                    confidence: decoded.confidence,
+                    boundingBox: Self.boundingBox(
+                        for: box,
+                        imageSize: cellImage.size
+                    )
                 ))
             }
         }
 
-        return PPOCRCellInferenceBenchmark(
+        return PPOCRCellRecognitionResult(
             day: region.day,
             cellPixels: cellImage.size,
             detectorInputPixels: detectorInputSize,
@@ -209,12 +213,12 @@ actor PPOCRService {
         initializedThisRun: Bool,
         initializationMilliseconds: Double,
         errorCode: String
-    ) -> PPOCRInferenceRun {
-        PPOCRInferenceRun(
+    ) -> PPOCRRecognitionRun {
+        PPOCRRecognitionRun(
             runtimeVersion: PPOCRModelManifest.onnxRuntimeVersion,
             modelInitializedThisRun: initializedThisRun,
             modelInitializationMilliseconds: initializationMilliseconds,
-            fiveCellTotalMilliseconds: 0,
+            totalMilliseconds: 0,
             cells: regions.sorted(by: { $0.day < $1.day }).map {
                 failureCell(image: image, region: $0, errorCode: errorCode)
             }
@@ -225,12 +229,12 @@ actor PPOCRService {
         image: CGImage,
         region: CalendarImportDayRegion,
         errorCode: String
-    ) -> PPOCRCellInferenceBenchmark {
+    ) -> PPOCRCellRecognitionResult {
         let cellSize = PPOCRCellPixelRectConverter.pixelRect(
             for: region.boundingBox,
             imageSize: PPOCRImageSize(width: image.width, height: image.height)
         )?.size ?? PPOCRImageSize(width: 0, height: 0)
-        return PPOCRCellInferenceBenchmark(
+        return PPOCRCellRecognitionResult(
             day: region.day,
             cellPixels: cellSize,
             detectorInputPixels: nil,
@@ -245,6 +249,26 @@ actor PPOCRService {
                 totalMilliseconds: 0
             ),
             error: errorCode
+        )
+    }
+
+    private static func boundingBox(
+        for box: PPOCRDetectedBox,
+        imageSize: PPOCRImageSize
+    ) -> CalendarOCRBoundingBox {
+        let xs = box.points.map(\.x)
+        let ys = box.points.map(\.y)
+        let minX = xs.min() ?? 0
+        let maxX = xs.max() ?? minX
+        let minY = ys.min() ?? 0
+        let maxY = ys.max() ?? minY
+        let width = Double(max(imageSize.width, 1))
+        let height = Double(max(imageSize.height, 1))
+        return CalendarOCRBoundingBox(
+            x: min(max(minX / width, 0), 1),
+            y: min(max(1 - maxY / height, 0), 1),
+            width: min(max((maxX - minX) / width, 0), 1),
+            height: min(max((maxY - minY) / height, 0), 1)
         )
     }
 }

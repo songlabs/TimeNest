@@ -358,7 +358,6 @@ final class TimeNestAppDelegate: NSObject, UIApplicationDelegate {
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        TimeNestFirebaseBootstrap.configureIfAvailable()
         let bundleHash = CalendarSharingDiagnostics.identifierHash(
             Bundle.main.bundleIdentifier ?? "unavailable"
         )

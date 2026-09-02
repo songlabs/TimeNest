@@ -13,9 +13,9 @@ enum PPOCRDBPostprocessor {
             throw PPOCRError.invalidOutput("detectionShape")
         }
         var mask = probabilities.map {
-            $0 > PPOCRPOCConfiguration.detectionThreshold ? UInt8(1) : UInt8(0)
+            $0 > PPOCRConfiguration.detectionThreshold ? UInt8(1) : UInt8(0)
         }
-        if PPOCRPOCConfiguration.detectionUsesDilation {
+        if PPOCRConfiguration.detectionUsesDilation {
             mask = dilated2x2(mask, size: mapSize)
         }
 
@@ -29,10 +29,10 @@ enum PPOCRDBPostprocessor {
                 mapSize: mapSize,
                 box: rectangle.points
             )
-            guard score >= PPOCRPOCConfiguration.detectionBoxThreshold else { continue }
+            guard score >= PPOCRConfiguration.detectionBoxThreshold else { continue }
             let expanded = expandedRectangle(
                 rectangle,
-                ratio: PPOCRPOCConfiguration.detectionUnclipRatio
+                ratio: PPOCRConfiguration.detectionUnclipRatio
             )
             guard expanded.minimumSide >= 5 else { continue }
             let converted = orderClockwise(PPOCRBoxCoordinateConverter.convert(

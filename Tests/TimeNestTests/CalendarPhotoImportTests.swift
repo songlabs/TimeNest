@@ -236,7 +236,8 @@ final class CalendarPhotoImportTests: XCTestCase {
             },
             [
                 "scanMode", "selectedDate", "gridDetection",
-                "recognitionMode", "geminiSuccessCells", "visionFallbackCells",
+                "recognitionMode", "ppocrSuccessCells", "visionFallbackCells",
+                "candidateInput",
                 "manualYearMonth", "resolvedYearMonth", "selectedRotation",
                 "orientationEvidencePhase", "ocrObservations", "meaningful",
                 "pureNumeric", "dateAnchors", "distinctDays", "duplicateDays",
@@ -1386,338 +1387,123 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(lastValue, "day-24")
     }
 
-    func testPPOCRPOCFilterIsSeptemberOnlyAndDoesNotMutateCandidates() throws {
-        let allRegions = (1...30).map {
-            CalendarImportDayRegion(
-                day: $0,
-                boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1)
-            )
-        }
-        let september = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 9))
-        let october = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 10))
-        XCTAssertEqual(
-            PPOCRPOCConfiguration.targetRegions(from: allRegions, yearMonth: september)
-                .map(\.day),
-            [18, 19, 24, 25, 26]
-        )
-        XCTAssertTrue(
-            PPOCRPOCConfiguration.targetRegions(from: allRegions, yearMonth: october).isEmpty
-        )
-
+    func testPPOCRTextBecomesMonthCandidateInput() throws {
         let fixture = try gridFirstFixture(day: 26)
+        let run = ppOCRRun(cells: [ppOCRCell(
+            day: 26,
+            text: "Meeting 17:30–20:30"
+        )])
+        let plan = PPOCRMonthRecognitionRouter().makePlan(
+            run: run,
+            regions: [fixture.region]
+        )
         var diagnostics: CalendarPhotoImportDiagnostics?
         let parsed = try fixture.parser.parseMonth(
-            observations: [
-                gridFirstObservation("17:30–20:30", in: fixture.region, line: 0)
-            ],
+            observations: plan.candidateInputObservations,
             yearMonth: fixture.yearMonth,
             weekStart: .sunday,
             grid: fixture.grid,
             defaultCalendarID: calendarID,
             calendar: utcGregorianCalendar(),
+            recognitionCellDiagnostics: plan.cellDiagnostics,
             diagnosticsHandler: { diagnostics = $0 }
         )
-        let candidatesBeforeDiagnosticsAttachment = parsed.candidates
-        var attachedDiagnostics = try XCTUnwrap(diagnostics)
-        attachedDiagnostics.ppOCRPOC = PPOCRPOCDiagnostics(
+
+        XCTAssertTrue(plan.visionFallbackRegions.isEmpty)
+        XCTAssertEqual(parsed.candidates.map(\.title), ["Meeting"])
+        XCTAssertEqual(parsed.candidates.first?.startTimeMinutes, 1_050)
+        XCTAssertEqual(parsed.candidates.first?.endTimeMinutes, 1_230)
+        let text = try XCTUnwrap(diagnostics).plainText
+        XCTAssertTrue(text.contains("recognitionMode=ppocrv6"))
+        XCTAssertTrue(text.contains("ppocrSuccessCells=1"))
+        XCTAssertTrue(text.contains("visionFallbackCells=0"))
+        XCTAssertTrue(text.contains("candidateInput=true"))
+        XCTAssertTrue(text.contains("day=26 recognitionSource=ppocrv6"))
+        XCTAssertTrue(text.contains("ppocrText=[\"Meeting 17:30–20:30\"]"))
+        XCTAssertTrue(text.contains("candidateCreated=true"))
+        XCTAssertTrue(text.contains("parsedStart=17:30"))
+        XCTAssertTrue(text.contains("parsedEnd=20:30"))
+        XCTAssertTrue(text.contains("remainingTitle=\"Meeting\""))
+    }
+
+    func testPPOCRSuccessfulEmptyCellDoesNotUseVisionFallback() {
+        let region = CalendarImportDayRegion(
+            day: 22,
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1)
+        )
+        let plan = PPOCRMonthRecognitionRouter().makePlan(
+            run: ppOCRRun(cells: [ppOCRCell(day: 22)]),
+            regions: [region]
+        )
+
+        XCTAssertTrue(plan.candidateInputObservations.isEmpty)
+        XCTAssertTrue(plan.visionFallbackRegions.isEmpty)
+        XCTAssertEqual(plan.cellDiagnostics.first?.recognitionSource, .ppocrv6)
+        XCTAssertNil(plan.cellDiagnostics.first?.ppOCRError)
+    }
+
+    func testPPOCRTechnicalFailureAloneRequestsVisionFallback() {
+        let successful = CalendarImportDayRegion(
+            day: 1,
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 0.5, height: 1)
+        )
+        let failed = CalendarImportDayRegion(
+            day: 2,
+            boundingBox: CalendarOCRBoundingBox(x: 0.5, y: 0, width: 0.5, height: 1)
+        )
+        let plan = PPOCRMonthRecognitionRouter().makePlan(
+            run: ppOCRRun(cells: [
+                ppOCRCell(day: 1, text: "09:00 Meeting"),
+                ppOCRCell(day: 2, error: "runtimeFailure:recognition")
+            ]),
+            regions: [successful, failed]
+        )
+
+        XCTAssertEqual(plan.candidateInputObservations.map(\.text), ["09:00 Meeting"])
+        XCTAssertEqual(plan.visionFallbackRegions.map(\.day), [2])
+        XCTAssertEqual(plan.cellDiagnostics.map(\.recognitionSource), [
+            .ppocrv6, .visionFallback
+        ])
+        XCTAssertEqual(plan.cellDiagnostics.last?.ppOCRError, "runtimeFailure:recognition")
+    }
+    private func ppOCRRun(cells: [PPOCRCellRecognitionResult]) -> PPOCRRecognitionRun {
+        PPOCRRecognitionRun(
             runtimeVersion: PPOCRModelManifest.onnxRuntimeVersion,
             modelInitializedThisRun: true,
             modelInitializationMilliseconds: 10,
-            fiveCellTotalMilliseconds: 20,
-            cells: []
-        )
-
-        XCTAssertEqual(parsed.candidates, candidatesBeforeDiagnosticsAttachment)
-        XCTAssertTrue(attachedDiagnostics.plainText.contains("[PPOCRv6 POC]"))
-    }
-
-}
-
-private struct MockCalendarGeminiCellRequester: CalendarGeminiCellRequesting {
-    let responses: [Int: Result<[CalendarGeminiRecognizedEvent], CalendarGeminiRecognitionError>]
-
-    func recognizeCell(
-        in region: CalendarImportDayRegion
-    ) async throws -> [CalendarGeminiRecognizedEvent] {
-        guard let response = responses[region.day] else {
-            throw CalendarGeminiRecognitionError.invalidResponse
-        }
-        return try response.get()
-    }
-}
-
-final class CalendarGeminiMonthRecognitionTests: XCTestCase {
-    private let calendarID = UUID(uuidString: "00000000-0000-0000-0000-000000000099")!
-    private let yearMonth = CalendarImportYearMonth(year: 2026, month: 9)!
-
-    func testFirebaseBackendDiagnosticsExposeOnlySanitizedStructuredEvidence() throws {
-        let apiKey = "AIza0123456789abcdefghijklmnop"
-        let token = "header.payload0123456789012345.signature0123456789"
-        let error = NSError(
-            domain: "com.google.firebase.firebaseai.BackendError",
-            code: 403,
-            userInfo: [
-                NSLocalizedDescriptionKey: """
-                PERMISSION_DENIED apiKey=\(apiKey) token=\(token)
-                (com.google.firebase.firebaseai.BackendError - HTTP 403 PERMISSION_DENIED)
-                """
-            ]
-        )
-
-        let diagnostics = CalendarGeminiErrorDiagnostics(error: error)
-
-        XCTAssertEqual(diagnostics.domain, "com.google.firebase.firebaseai.BackendError")
-        XCTAssertEqual(diagnostics.code, 403)
-        XCTAssertEqual(diagnostics.aiLogicCode, "PERMISSION_DENIED")
-        XCTAssertEqual(diagnostics.httpStatus, 403)
-        XCTAssertLessThanOrEqual(diagnostics.message.count, 240)
-        XCTAssertTrue(diagnostics.message.contains("<redacted>"))
-        XCTAssertFalse(diagnostics.message.contains(apiKey))
-        XCTAssertFalse(diagnostics.message.contains(token))
-        XCTAssertFalse(diagnostics.message.contains("\n"))
-    }
-
-    func testRepeatedFirebaseFailuresAreAggregatedWithSafeErrorDetails() throws {
-        let details = CalendarGeminiErrorDiagnostics(error: NSError(
-            domain: "com.google.firebase.firebaseai.BackendError",
-            code: 403,
-            userInfo: [
-                NSLocalizedDescriptionKey:
-                    "Permission denied (com.google.firebase.firebaseai.BackendError - HTTP 403 PERMISSION_DENIED)"
-            ]
-        ))
-        let failureOutcomes = (1...3).map { day in
-            CalendarGeminiCellRecognitionOutcome(
-                day: day,
-                events: [],
-                errorCategory: .firebase,
-                errorDiagnostics: details
-            )
-        }
-        let successOutcome = CalendarGeminiCellRecognitionOutcome(
-            day: 4,
-            events: [event(title: "Day Four")],
-            errorCategory: nil,
-            errorDiagnostics: nil
-        )
-        let gemini = try CalendarGeminiMonthResultBuilder().makeResult(
-            outcomes: failureOutcomes + [successOutcome],
-            yearMonth: yearMonth,
-            calendarID: calendarID,
-            calendar: utcGregorianCalendar()
-        )
-        let grid = CalendarPhotoGridGeometry(
-            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
-            columns: 7,
-            rows: 5
-        )
-        let parser = CalendarPhotoGridFirstParser()
-        let regions = parser.dayRegions(
-            yearMonth: yearMonth,
-            weekStart: .sunday,
-            grid: grid,
-            calendar: utcGregorianCalendar()
-        )
-        var diagnostics: CalendarPhotoImportDiagnostics?
-
-        _ = try parser.parseMonth(
-            observations: [],
-            yearMonth: yearMonth,
-            weekStart: .sunday,
-            grid: grid,
-            defaultCalendarID: calendarID,
-            calendar: utcGregorianCalendar(),
-            prebuiltCandidates: gemini.candidates,
-            visionFallbackRegions: regions.filter { gemini.failedDays.contains($0.day) },
-            recognitionCellDiagnostics: gemini.cellDiagnostics,
-            diagnosticsHandler: { diagnostics = $0 }
-        )
-
-        let text = try XCTUnwrap(diagnostics).plainText
-        XCTAssertTrue(text.contains(
-            "days=1-3 count=3 geminiRequested=true geminiSucceeded=false "
-                + "recognitionSource=visionOCR geminiEvents=0 geminiError=firebase "
-                + "fallbackUsed=true geminiErrorDomain=com.google.firebase.firebaseai.BackendError "
-                + "geminiErrorCode=403 geminiAILogicCode=PERMISSION_DENIED "
-                + "geminiHTTPStatus=403 geminiErrorMessage=Permission denied"
-        ))
-        XCTAssertEqual(text.components(separatedBy: "geminiErrorDomain=").count - 1, 1)
-    }
-
-    func testEmptyGeminiEventsForSeptember22DoNotFallbackOrCreateCandidate() async throws {
-        let result = try await recognize(responses: [22: .success([])])
-
-        XCTAssertTrue(result.candidates.isEmpty)
-        XCTAssertTrue(result.failedDays.isEmpty)
-        let diagnostics = try XCTUnwrap(result.cellDiagnostics.first)
-        XCTAssertEqual(diagnostics.day, 22)
-        XCTAssertTrue(diagnostics.geminiRequested)
-        XCTAssertTrue(diagnostics.geminiSucceeded)
-        XCTAssertEqual(diagnostics.recognitionSource, .gemini)
-        XCTAssertEqual(diagnostics.geminiEvents, 0)
-        XCTAssertNil(diagnostics.geminiError)
-        XCTAssertFalse(diagnostics.fallbackUsed)
-    }
-
-    func testOneGeminiEventCreatesOneCandidate() async throws {
-        let result = try await recognize(responses: [4: .success([event(title: "Dinner")])])
-
-        XCTAssertEqual(result.candidates.map(\.title), ["Dinner"])
-        XCTAssertEqual(day(of: try XCTUnwrap(result.candidates.first)), 4)
-        XCTAssertEqual(result.cellDiagnostics.first?.geminiEvents, 1)
-    }
-
-    func testTwoGeminiEventsCreateTwoCandidatesOnSameLocalDate() async throws {
-        let result = try await recognize(responses: [
-            12: .success([event(title: "First"), event(title: "Second")])
-        ])
-
-        XCTAssertEqual(result.candidates.map(\.title), ["First", "Second"])
-        XCTAssertEqual(result.candidates.map { day(of: $0) }, [12, 12])
-        XCTAssertEqual(result.cellDiagnostics.first?.geminiEvents, 2)
-    }
-
-    func testSingleCellTimeoutFallsBackWithoutDiscardingOtherGeminiCells() async throws {
-        let result = try await recognize(responses: [
-            1: .success([event(title: "Day One")]),
-            2: .failure(.timedOut),
-            3: .success([event(title: "Day Three")])
-        ])
-
-        XCTAssertEqual(result.candidates.map(\.title), ["Day One", "Day Three"])
-        XCTAssertEqual(result.candidates.map { day(of: $0) }, [1, 3])
-        XCTAssertEqual(result.failedDays, [2])
-        let timeout = try XCTUnwrap(result.cellDiagnostics.first { $0.day == 2 })
-        XCTAssertFalse(timeout.geminiSucceeded)
-        XCTAssertEqual(timeout.recognitionSource, .visionOCR)
-        XCTAssertEqual(timeout.geminiError, .timeout)
-        XCTAssertTrue(timeout.fallbackUsed)
-    }
-
-    func testFirebaseNotConfiguredUsesPerCellVisionFallback() async throws {
-        let result = try await recognize(responses: [
-            7: .failure(.firebaseNotConfigured)
-        ])
-
-        XCTAssertEqual(result.failedDays, [7])
-        let diagnostics = try XCTUnwrap(result.cellDiagnostics.first)
-        XCTAssertEqual(diagnostics.recognitionSource, .visionOCR)
-        XCTAssertEqual(diagnostics.geminiError, .firebaseNotConfigured)
-        XCTAssertTrue(diagnostics.fallbackUsed)
-    }
-
-    func testMixedMonthDiagnosticsReportSourceAndStablePerCellStatus() async throws {
-        let gemini = try await recognize(responses: [
-            1: .success([event(title: "Day One")]),
-            2: .failure(.timedOut)
-        ])
-        let grid = CalendarPhotoGridGeometry(
-            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
-            columns: 7,
-            rows: 5
-        )
-        let parser = CalendarPhotoGridFirstParser()
-        let regions = parser.dayRegions(
-            yearMonth: yearMonth,
-            weekStart: .sunday,
-            grid: grid,
-            calendar: utcGregorianCalendar()
-        )
-        var diagnostics: CalendarPhotoImportDiagnostics?
-
-        _ = try parser.parseMonth(
-            observations: [],
-            yearMonth: yearMonth,
-            weekStart: .sunday,
-            grid: grid,
-            defaultCalendarID: calendarID,
-            calendar: utcGregorianCalendar(),
-            prebuiltCandidates: gemini.candidates,
-            visionFallbackRegions: regions.filter { gemini.failedDays.contains($0.day) },
-            recognitionCellDiagnostics: gemini.cellDiagnostics,
-            diagnosticsHandler: { diagnostics = $0 }
-        )
-
-        let captured = try XCTUnwrap(diagnostics)
-        XCTAssertEqual(captured.recognitionMode, .mixed)
-        XCTAssertEqual(captured.geminiSuccessCellCount, 1)
-        XCTAssertEqual(captured.visionFallbackCellCount, 1)
-        XCTAssertTrue(captured.shouldDisplay)
-        XCTAssertTrue(captured.plainText.contains("recognitionMode=mixed"))
-        XCTAssertTrue(captured.plainText.contains(
-            "day=1 geminiRequested=true geminiSucceeded=true recognitionSource=gemini geminiEvents=1 geminiError=none fallbackUsed=false"
-        ))
-        XCTAssertTrue(captured.plainText.contains(
-            "day=2 geminiRequested=true geminiSucceeded=false recognitionSource=visionOCR geminiEvents=0 geminiError=timeout fallbackUsed=true"
-        ))
-    }
-
-    private func recognize(
-        responses: [Int: Result<[CalendarGeminiRecognizedEvent], CalendarGeminiRecognitionError>]
-    ) async throws -> CalendarGeminiMonthRecognitionResult {
-        let regions = responses.keys.sorted().map { day in
-            CalendarImportDayRegion(
-                day: day,
-                boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1)
-            )
-        }
-        let outcomes = try await CalendarGeminiCellRecognitionCoordinator(
-            maximumConcurrentRequests: 4
-        ).recognize(
-            regions: regions,
-            requester: MockCalendarGeminiCellRequester(responses: responses)
-        )
-        return try CalendarGeminiMonthResultBuilder().makeResult(
-            outcomes: outcomes,
-            yearMonth: yearMonth,
-            calendarID: calendarID,
-            calendar: utcGregorianCalendar()
+            totalMilliseconds: 20,
+            cells: cells
         )
     }
 
-    private func event(title: String) -> CalendarGeminiRecognizedEvent {
-        CalendarGeminiRecognizedEvent(
-            title: title,
-            originalText: title,
-            startMinutes: nil,
-            endMinutes: nil,
-            confidence: 0.9
+    private func ppOCRCell(
+        day: Int,
+        text: String? = nil,
+        error: String? = nil
+    ) -> PPOCRCellRecognitionResult {
+        PPOCRCellRecognitionResult(
+            day: day,
+            cellPixels: PPOCRImageSize(width: 461, height: 345),
+            detectorInputPixels: PPOCRImageSize(width: 1_280, height: 960),
+            results: text.map {
+                [PPOCRTextResult(
+                    text: $0,
+                    confidence: 0.9,
+                    boundingBox: CalendarOCRBoundingBox(
+                        x: 0.08, y: 0.2, width: 0.8, height: 0.15
+                    )
+                )]
+            } ?? [],
+            detectionCount: text == nil ? 0 : 1,
+            timing: PPOCRCellTiming(
+                preprocessMilliseconds: 1,
+                detectionMilliseconds: 2,
+                detectionPostprocessMilliseconds: 3,
+                classificationMilliseconds: 4,
+                recognitionMilliseconds: 5,
+                totalMilliseconds: 15
+            ),
+            error: error
         )
-    }
-
-    private func day(of candidate: CalendarImportCandidate) -> Int {
-        utcGregorianCalendar().component(.day, from: candidate.date)
-    }
-
-    private func utcGregorianCalendar() -> Calendar {
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        calendar.locale = Locale(identifier: "en_US_POSIX")
-        return calendar
-    }
-}
-
-final class CalendarGeminiResponseDecoderTests: XCTestCase {
-    func testDecodesMultipleSchedulesAndTimeRanges() throws {
-        let events = try CalendarGeminiResponseDecoder.decode(
-            #"{"events":[{"title":"夕食","original_text":"17:30-20:30 夕食","start_minutes":1050,"end_minutes":1230,"confidence":0.92},{"title":"買い物","original_text":"買い物","start_minutes":null,"end_minutes":null,"confidence":0.8}]}"#
-        )
-
-        XCTAssertEqual(events.count, 2)
-        XCTAssertEqual(events[0].startMinutes, 1_050)
-        XCTAssertEqual(events[0].endMinutes, 1_230)
-        XCTAssertNil(events[1].startMinutes)
-    }
-
-    func testRejectsInvalidOrPartialTimes() throws {
-        XCTAssertThrowsError(try CalendarGeminiResponseDecoder.decode(
-            #"{"events":[{"title":"bad","original_text":"bad","start_minutes":1050,"end_minutes":null,"confidence":0.9},{"title":"also bad","original_text":"bad","start_minutes":1500,"end_minutes":1600,"confidence":0.9}]}"#
-        )) { error in
-            XCTAssertEqual(error as? CalendarGeminiRecognitionError, .invalidResponse)
-        }
-    }
-
-    func testAcceptsEmptyCell() throws {
-        XCTAssertTrue(try CalendarGeminiResponseDecoder.decode(#"{"events":[]}"#).isEmpty)
     }
 }

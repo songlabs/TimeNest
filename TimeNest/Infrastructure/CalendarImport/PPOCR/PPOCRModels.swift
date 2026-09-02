@@ -3,13 +3,7 @@ import Foundation
 // Portions of the OCR decoding and configuration behavior are derived from
 // RapidOCR/PaddleOCR (Apache-2.0) and were rewritten for Swift/iOS by TimeNest.
 
-// This entire namespace is an experimental, observation-only benchmark.
-// It must never be used to create or mutate CalendarImportCandidate values.
-enum PPOCRPOCConfiguration {
-    static let targetYear = 2026
-    static let targetMonth = 9
-    static let targetDays = [18, 19, 24, 25, 26]
-
+enum PPOCRConfiguration {
     static let textScore: Float = 0.30
 
     static let detectionLimitSideLength = 960
@@ -25,21 +19,6 @@ enum PPOCRPOCConfiguration {
     static let classificationImageShape = [3, 48, 192]
     static let classificationThreshold: Float = 0.9
     static let recognitionImageShape = [3, 48, 320]
-
-    static func shouldRun(for yearMonth: CalendarImportYearMonth) -> Bool {
-        yearMonth.year == targetYear && yearMonth.month == targetMonth
-    }
-
-    static func targetRegions(
-        from regions: [CalendarImportDayRegion],
-        yearMonth: CalendarImportYearMonth
-    ) -> [CalendarImportDayRegion] {
-        guard shouldRun(for: yearMonth) else { return [] }
-        let allowedDays = Set(targetDays)
-        return regions
-            .filter { allowedDays.contains($0.day) }
-            .sorted { $0.day < $1.day }
-    }
 }
 
 enum PPOCRModelManifest {
@@ -151,14 +130,7 @@ struct PPOCRDetectedBox: Equatable, Sendable {
 struct PPOCRTextResult: Equatable, Sendable {
     let text: String
     let confidence: Float
-}
-
-struct PPOCRVisionCellBenchmark: Equatable, Sendable {
-    let day: Int
-    let cellPixels: PPOCRImageSize
-    let results: [PPOCRTextResult]
-    let totalMilliseconds: Double
-    let error: String?
+    let boundingBox: CalendarOCRBoundingBox
 }
 
 struct PPOCRCellTiming: Equatable, Sendable {
@@ -170,7 +142,7 @@ struct PPOCRCellTiming: Equatable, Sendable {
     let totalMilliseconds: Double
 }
 
-struct PPOCRCellInferenceBenchmark: Equatable, Sendable {
+struct PPOCRCellRecognitionResult: Equatable, Sendable {
     let day: Int
     let cellPixels: PPOCRImageSize
     let detectorInputPixels: PPOCRImageSize?
@@ -180,122 +152,77 @@ struct PPOCRCellInferenceBenchmark: Equatable, Sendable {
     let error: String?
 }
 
-struct PPOCRInferenceRun: Equatable, Sendable {
+struct PPOCRRecognitionRun: Equatable, Sendable {
     let runtimeVersion: String
     let modelInitializedThisRun: Bool
     let modelInitializationMilliseconds: Double
-    let fiveCellTotalMilliseconds: Double
-    let cells: [PPOCRCellInferenceBenchmark]
+    let totalMilliseconds: Double
+    let cells: [PPOCRCellRecognitionResult]
 }
 
-struct PPOCRPOCCellDiagnostics: Equatable, Sendable {
-    let day: Int
-    let cellPixels: PPOCRImageSize
-    let detectorInputPixels: PPOCRImageSize?
-    let visionResults: [PPOCRTextResult]
-    let visionMilliseconds: Double
-    let ppOCRResults: [PPOCRTextResult]
-    let detectionCount: Int
-    let timing: PPOCRCellTiming
-    let error: String?
+struct PPOCRMonthRecognitionPlan: Equatable, Sendable {
+    let candidateInputObservations: [CalendarOCRObservation]
+    let visionFallbackRegions: [CalendarImportDayRegion]
+    let cellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics]
 }
 
-struct PPOCRPOCDiagnostics: Equatable, Sendable {
-    let runtimeVersion: String
-    let modelInitializedThisRun: Bool
-    let modelInitializationMilliseconds: Double
-    let fiveCellTotalMilliseconds: Double
-    let cells: [PPOCRPOCCellDiagnostics]
+struct PPOCRMonthRecognitionRouter {
+    func makePlan(
+        run: PPOCRRecognitionRun,
+        regions: [CalendarImportDayRegion]
+    ) -> PPOCRMonthRecognitionPlan {
+        let regionsByDay = Dictionary(
+            uniqueKeysWithValues: regions.map { ($0.day, $0) }
+        )
+        var observations: [CalendarOCRObservation] = []
+        var fallbackRegions: [CalendarImportDayRegion] = []
+        var diagnostics: [CalendarPhotoCellRecognitionDiagnostics] = []
 
-    static func merge(
-        vision: [PPOCRVisionCellBenchmark],
-        ppOCR: PPOCRInferenceRun
-    ) -> PPOCRPOCDiagnostics {
-        let visionByDay = Dictionary(uniqueKeysWithValues: vision.map { ($0.day, $0) })
-        let cells = ppOCR.cells.map { inference -> PPOCRPOCCellDiagnostics in
-            let visionCell = visionByDay[inference.day]
-            let errors = [visionCell?.error, inference.error].compactMap { $0 }
-            return PPOCRPOCCellDiagnostics(
-                day: inference.day,
-                cellPixels: inference.cellPixels,
-                detectorInputPixels: inference.detectorInputPixels,
-                visionResults: visionCell?.results ?? [],
-                visionMilliseconds: visionCell?.totalMilliseconds ?? 0,
-                ppOCRResults: inference.results,
-                detectionCount: inference.detectionCount,
-                timing: inference.timing,
-                error: errors.isEmpty ? nil : errors.joined(separator: ",")
-            )
+        for cell in run.cells.sorted(by: { $0.day < $1.day }) {
+            guard let region = regionsByDay[cell.day] else { continue }
+            if let error = cell.error {
+                fallbackRegions.append(region)
+                diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
+                    day: cell.day,
+                    recognitionSource: .visionFallback,
+                    ppOCRText: [],
+                    ppOCRError: error
+                ))
+                continue
+            }
+
+            observations.append(contentsOf: cell.results.map { result in
+                CalendarOCRObservation(
+                    text: result.text,
+                    confidence: result.confidence,
+                    boundingBox: Self.map(result.boundingBox, into: region.boundingBox)
+                )
+            })
+            diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
+                day: cell.day,
+                recognitionSource: .ppocrv6,
+                ppOCRText: cell.results.map(\.text),
+                ppOCRError: nil
+            ))
         }
-        return PPOCRPOCDiagnostics(
-            runtimeVersion: ppOCR.runtimeVersion,
-            modelInitializedThisRun: ppOCR.modelInitializedThisRun,
-            modelInitializationMilliseconds: ppOCR.modelInitializationMilliseconds,
-            fiveCellTotalMilliseconds: ppOCR.fiveCellTotalMilliseconds,
-            cells: cells
+
+        return PPOCRMonthRecognitionPlan(
+            candidateInputObservations: observations,
+            visionFallbackRegions: fallbackRegions,
+            cellDiagnostics: diagnostics
         )
     }
 
-    var plainTextLines: [String] {
-        var lines = [
-            "scope=2026-09 days=18,19,24,25,26",
-            "localOnly=true candidateInput=false",
-            "onnxRuntime=onnxruntime-objc \(runtimeVersion)",
-            "modelInitializedThisRun=\(modelInitializedThisRun)",
-            "modelInitMs=\(Self.milliseconds(modelInitializationMilliseconds))",
-            "fiveCellTotalMs=\(Self.milliseconds(fiveCellTotalMilliseconds))"
-        ]
-        for cell in cells.sorted(by: { $0.day < $1.day }) {
-            lines.append(contentsOf: [
-                "",
-                "day=\(cell.day)",
-                "cellPixels=\(cell.cellPixels.text)",
-                "detectorInputPixels=\(cell.detectorInputPixels?.text ?? "none")",
-                "Vision:",
-                "  text=\(Self.textList(cell.visionResults.map(\.text)))",
-                "  confidence=\(Self.confidenceList(cell.visionResults.map(\.confidence)))",
-                "  totalMs=\(Self.milliseconds(cell.visionMilliseconds))",
-                "PPOCR:",
-                "  text=\(Self.textList(cell.ppOCRResults.map(\.text)))",
-                "  confidence=\(Self.confidenceList(cell.ppOCRResults.map(\.confidence)))",
-                "PPOCR detections=\(cell.detectionCount)",
-                "model:",
-                "  det=\(PPOCRModelManifest.detector.displayName)",
-                "  cls=\(PPOCRModelManifest.classifier.displayName)",
-                "  rec=\(PPOCRModelManifest.recognizer.displayName)",
-                "timing:",
-                "  modelInitMs=\(Self.milliseconds(modelInitializationMilliseconds))",
-                "  preprocessMs=\(Self.milliseconds(cell.timing.preprocessMilliseconds))",
-                "  detMs=\(Self.milliseconds(cell.timing.detectionMilliseconds))",
-                "  detPostprocessMs=\(Self.milliseconds(cell.timing.detectionPostprocessMilliseconds))",
-                "  clsMs=\(Self.milliseconds(cell.timing.classificationMilliseconds))",
-                "  recMs=\(Self.milliseconds(cell.timing.recognitionMilliseconds))",
-                "  totalMs=\(Self.milliseconds(cell.timing.totalMilliseconds))",
-                "error=\(cell.error ?? "none")"
-            ])
-        }
-        return lines
-    }
-
-    private static func milliseconds(_ value: Double) -> String {
-        String(format: "%.2f", value)
-    }
-
-    private static func confidenceList(_ values: [Float]) -> String {
-        "[" + values.map { String(format: "%.5f", Double($0)) }.joined(separator: ",") + "]"
-    }
-
-    private static func textList(_ values: [String]) -> String {
-        "[" + values.map(quotedText).joined(separator: ",") + "]"
-    }
-
-    private static func quotedText(_ value: String) -> String {
-        let escaped = value
-            .replacingOccurrences(of: "\\", with: "\\\\")
-            .replacingOccurrences(of: "\"", with: "\\\"")
-            .replacingOccurrences(of: "\n", with: "\\n")
-            .replacingOccurrences(of: "\r", with: "\\r")
-        return "\"\(escaped)\""
+    private static func map(
+        _ local: CalendarOCRBoundingBox,
+        into cell: CalendarOCRBoundingBox
+    ) -> CalendarOCRBoundingBox {
+        CalendarOCRBoundingBox(
+            x: cell.minX + local.x * cell.width,
+            y: cell.minY + local.y * cell.height,
+            width: local.width * cell.width,
+            height: local.height * cell.height
+        )
     }
 }
 

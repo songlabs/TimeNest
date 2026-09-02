@@ -280,8 +280,8 @@ enum PPOCRPreprocessor {
             throw PPOCRError.invalidImage
         }
         let minimumSide = min(imageSize.width, imageSize.height)
-        let ratio = minimumSide < PPOCRPOCConfiguration.detectionLimitSideLength
-            ? Double(PPOCRPOCConfiguration.detectionLimitSideLength) / Double(minimumSide)
+        let ratio = minimumSide < PPOCRConfiguration.detectionLimitSideLength
+            ? Double(PPOCRConfiguration.detectionLimitSideLength) / Double(minimumSide)
             : 1
         // RapidOCR truncates the scaled dimensions before rounding each one
         // to the closest multiple of 32.
@@ -310,8 +310,8 @@ enum PPOCRPreprocessor {
     }
 
     static func classificationTensor(from image: PPOCRBGRImage) throws -> PPOCRTensor {
-        let targetHeight = PPOCRPOCConfiguration.classificationImageShape[1]
-        let targetWidth = PPOCRPOCConfiguration.classificationImageShape[2]
+        let targetHeight = PPOCRConfiguration.classificationImageShape[1]
+        let targetWidth = PPOCRConfiguration.classificationImageShape[2]
         let resizedWidth = min(
             targetWidth,
             Int(ceil(Double(targetHeight) * Double(image.width) / Double(image.height)))
@@ -329,8 +329,8 @@ enum PPOCRPreprocessor {
     }
 
     static func recognitionTensor(from image: PPOCRBGRImage) throws -> PPOCRTensor {
-        let targetHeight = PPOCRPOCConfiguration.recognitionImageShape[1]
-        let configuredWidth = PPOCRPOCConfiguration.recognitionImageShape[2]
+        let targetHeight = PPOCRConfiguration.recognitionImageShape[1]
+        let configuredWidth = PPOCRConfiguration.recognitionImageShape[2]
         let configuredRatio = Double(configuredWidth) / Double(targetHeight)
         let imageRatio = Double(image.width) / Double(image.height)
         let maximumRatio = max(configuredRatio, imageRatio)

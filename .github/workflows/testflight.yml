@@ -64,25 +64,6 @@ jobs:
           "$BIN_DIR/pod" --version
           test "$("$BIN_DIR/pod" --version)" = "1.16.2"
 
-      - name: Restore Firebase configuration
-        env:
-          FIREBASE_GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.FIREBASE_GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
-        run: |
-          set -euo pipefail
-          test -n "$FIREBASE_GOOGLE_SERVICE_INFO_PLIST_BASE64" || {
-            echo "Missing FIREBASE_GOOGLE_SERVICE_INFO_PLIST_BASE64" >&2
-            exit 1
-          }
-          mkdir -p TimeNest/Resources/Firebase
-          printf '%s' "$FIREBASE_GOOGLE_SERVICE_INFO_PLIST_BASE64" \
-            | /usr/bin/base64 -D \
-            > TimeNest/Resources/Firebase/GoogleService-Info.plist
-          test -s TimeNest/Resources/Firebase/GoogleService-Info.plist
-          BUNDLE_ID=$(/usr/libexec/PlistBuddy \
-            -c "Print :BUNDLE_ID" \
-            TimeNest/Resources/Firebase/GoogleService-Info.plist)
-          test "$BUNDLE_ID" = "com.song.TimeNest"
-
       - name: Generate Xcode project
         run: |
           set -euo pipefail
@@ -90,16 +71,11 @@ jobs:
           bash Scripts/verify_ppocr_resources.sh
           tuist install
           tuist generate --no-open
-          grep -Fq 'CalendarGeminiCellRecognitionService.swift' TimeNest.xcodeproj/project.pbxproj
-          grep -Fq 'TimeNestFirebaseBootstrap.swift' TimeNest.xcodeproj/project.pbxproj
-          grep -Fq 'FirebaseAILogic' TimeNest.xcodeproj/project.pbxproj
-          grep -Fq 'FirebaseAppCheck' TimeNest.xcodeproj/project.pbxproj
-          grep -Fq 'FirebaseCore' TimeNest.xcodeproj/project.pbxproj
+          ! grep -Fq 'CalendarGeminiCellRecognitionService.swift' TimeNest.xcodeproj/project.pbxproj
+          ! grep -Fq 'FirebaseAILogic' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'GoogleMobileAds' TimeNest.xcodeproj/project.pbxproj
-          grep -Fq 'GoogleService-Info.plist' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'PPOCRService.swift' TimeNest.xcodeproj/project.pbxproj
           grep -Fq 'PP-OCRv6_det_small.onnx' TimeNest.xcodeproj/project.pbxproj
-          test "$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.devicecheck.appattest-environment' TimeNest/TimeNest.entitlements)" = "production"
 
       - name: Install official ONNX Runtime pod
         run: |

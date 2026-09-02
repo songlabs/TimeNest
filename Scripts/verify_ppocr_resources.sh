@@ -40,4 +40,4 @@ verify_file \
 
 test "$(wc -l < "$resource_dir/PP-OCRv6_rec_small.characters.txt" | tr -d '[:space:]')" = "18708"
 
-echo "PP-OCRv6 POC resources verified."
+echo "PP-OCRv6 resources verified."

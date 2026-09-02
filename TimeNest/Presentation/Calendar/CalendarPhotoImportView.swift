@@ -242,70 +242,6 @@ private struct CalendarVisionOCRService {
         }.value
     }
 
-    // Experimental direct per-cell Vision baseline for the PP-OCRv6 POC.
-    // Results are diagnostics-only and are never returned to CalendarPhotoParser.
-    func benchmarkMonthCells(
-        image: CGImage,
-        regions: [CalendarImportDayRegion],
-        preferredLanguageCode: String
-    ) async throws -> [PPOCRVisionCellBenchmark] {
-        try await Task.detached(priority: .userInitiated) {
-            var output: [PPOCRVisionCellBenchmark] = []
-            for region in regions.sorted(by: { $0.day < $1.day }) {
-                try Task.checkCancellation()
-                let startedAt = ProcessInfo.processInfo.systemUptime * 1_000
-                let pixelRect = Self.pixelRect(for: region.boundingBox, image: image)
-                let cellPixels = PPOCRImageSize(
-                    width: max(0, Int(pixelRect.width)),
-                    height: max(0, Int(pixelRect.height))
-                )
-                do {
-                    guard pixelRect.width >= 2, pixelRect.height >= 2,
-                          let crop = image.cropping(to: pixelRect) else {
-                        throw CalendarPhotoImportImageError.invalidImage
-                    }
-                    let minimumOCRDimension = 700
-                    let factor = min(3, max(1, Int(ceil(
-                        Double(minimumOCRDimension) / Double(min(crop.width, crop.height))
-                    ))))
-                    let ocrImage = factor > 1
-                        ? try CalendarPhotoImportImageNormalizer.upscaledCGImage(
-                            crop,
-                            factor: factor
-                        )
-                        : crop
-                    let observations = try Self.recognizeSynchronously(
-                        image: ocrImage,
-                        preferredLanguageCode: preferredLanguageCode,
-                        recognitionLevel: .accurate
-                    )
-                    output.append(PPOCRVisionCellBenchmark(
-                        day: region.day,
-                        cellPixels: cellPixels,
-                        results: observations.map {
-                            PPOCRTextResult(text: $0.text, confidence: $0.confidence)
-                        },
-                        totalMilliseconds:
-                            ProcessInfo.processInfo.systemUptime * 1_000 - startedAt,
-                        error: nil
-                    ))
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch {
-                    output.append(PPOCRVisionCellBenchmark(
-                        day: region.day,
-                        cellPixels: cellPixels,
-                        results: [],
-                        totalMilliseconds:
-                            ProcessInfo.processInfo.systemUptime * 1_000 - startedAt,
-                        error: "visionFailure"
-                    ))
-                }
-            }
-            return output
-        }.value
-    }
-
     func recognizeBestOrientation(
         image: CGImage,
         preferredLanguageCode: String
@@ -637,7 +573,6 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     private let sharingStore: CalendarSharingStore
     private let parser = CalendarPhotoParser()
     private let ocrService = CalendarVisionOCRService()
-    private let geminiService = CalendarGeminiCellRecognitionService()
     private let ppOCRService = PPOCRService()
     private var observations: [CalendarOCRObservation] = []
     private var accurateOrientationCandidates: [CalendarPhotoOrientationCandidate] = []
@@ -730,40 +665,26 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     weekStart: weekStart,
                     grid: grid
                 )
-                let ppOCRPOCDiagnostics: PPOCRPOCDiagnostics?
-                do {
-                    ppOCRPOCDiagnostics = try await runPPOCRPOCIfNeeded(
-                        image: normalizedImage,
-                        regions: regions,
-                        yearMonth: yearMonth,
-                        languageCode: languageCode
-                    )
-                } catch is CancellationError {
-                    throw CancellationError()
-                } catch {
-                    // The observation-only POC must never make the production
-                    // Calendar import fail.
-                    ppOCRPOCDiagnostics = nil
-                }
-                let geminiResult = try await geminiService.recognizeMonthCells(
+                let ppOCRRun = try await ppOCRService.recognizeMonthCells(
                     image: normalizedImage,
-                    regions: regions,
-                    yearMonth: yearMonth,
-                    calendarID: defaultCalendarID,
-                    languageCode: languageCode
+                    regions: regions
                 )
-                let fallbackRegions = regions.filter {
-                    geminiResult.failedDays.contains($0.day)
-                }
-                if fallbackRegions.isEmpty {
-                    observations = []
+                let recognitionPlan = PPOCRMonthRecognitionRouter().makePlan(
+                    run: ppOCRRun,
+                    regions: regions
+                )
+                let visionFallbackObservations: [CalendarOCRObservation]
+                if recognitionPlan.visionFallbackRegions.isEmpty {
+                    visionFallbackObservations = []
                 } else {
-                    observations = try await ocrService.recognizeMonthCells(
+                    visionFallbackObservations = try await ocrService.recognizeMonthCells(
                         image: normalizedImage,
-                        regions: fallbackRegions,
+                        regions: recognitionPlan.visionFallbackRegions,
                         preferredLanguageCode: languageCode
                     )
                 }
+                observations = recognitionPlan.candidateInputObservations
+                    + visionFallbackObservations
                 let result = try monthParser.parseMonth(
                     observations: observations,
                     yearMonth: yearMonth,
@@ -771,13 +692,9 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     grid: grid,
                     defaultCalendarID: defaultCalendarID,
                     orientationDiagnostics: orientationDiagnostics,
-                    prebuiltCandidates: geminiResult.candidates,
-                    visionFallbackRegions: fallbackRegions,
-                    recognitionCellDiagnostics: geminiResult.cellDiagnostics,
+                    recognitionCellDiagnostics: recognitionPlan.cellDiagnostics,
                     diagnosticsHandler: { [weak self] diagnostics in
-                        var diagnosticsWithPOC = diagnostics
-                        diagnosticsWithPOC.ppOCRPOC = ppOCRPOCDiagnostics
-                        self?.recordDiagnostics(diagnosticsWithPOC)
+                        self?.recordDiagnostics(diagnostics)
                     }
                 )
                 recognizedYearMonth = result.yearMonth
@@ -796,32 +713,6 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             step = latestDiagnostics == nil ? .source : .review
             failureMessage = localizedMessage(for: error)
         }
-    }
-
-    private func runPPOCRPOCIfNeeded(
-        image: CGImage,
-        regions: [CalendarImportDayRegion],
-        yearMonth: CalendarImportYearMonth,
-        languageCode: String
-    ) async throws -> PPOCRPOCDiagnostics? {
-        let targetRegions = PPOCRPOCConfiguration.targetRegions(
-            from: regions,
-            yearMonth: yearMonth
-        )
-        guard !targetRegions.isEmpty else { return nil }
-
-        // Run the two local engines sequentially so concurrent CPU contention
-        // does not contaminate the per-engine latency comparison.
-        let vision = try await ocrService.benchmarkMonthCells(
-            image: image,
-            regions: targetRegions,
-            preferredLanguageCode: languageCode
-        )
-        let ppOCR = try await ppOCRService.benchmarkMonthCells(
-            image: image,
-            regions: targetRegions
-        )
-        return PPOCRPOCDiagnostics.merge(vision: vision, ppOCR: ppOCR)
     }
 
     private var selectedYearMonth: CalendarImportYearMonth? {

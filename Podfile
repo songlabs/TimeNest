@@ -6,7 +6,7 @@ workspace 'TimeNest.xcworkspace'
 target 'TimeNest' do
   use_frameworks! :linkage => :static
 
-  # Microsoft-owned CocoaPod; keep the exact version for reproducible POC builds.
+  # Microsoft-owned CocoaPod; keep the exact version for reproducible OCR builds.
   pod 'onnxruntime-objc', '1.29.0'
 
   target 'TimeNestTests' do

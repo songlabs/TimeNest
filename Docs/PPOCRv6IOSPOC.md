@@ -1,6 +1,6 @@
-# PP-OCRv6 iOS Device Recognition POC
+# PP-OCRv6 iOS Calendar Recognition
 
-This is an experimental, observation-only benchmark. It does not replace Apple Vision or Gemini, does not feed `CalendarPhotoParser`, and does not create or mutate any `CalendarImportCandidate`.
+PP-OCRv6 is the primary per-cell OCR engine for monthly Calendar Photo Import. Its locally recognized text and visual-order bounding boxes feed the existing `CalendarImportCandidateBuilder`. Apple Vision runs only for cells where PP-OCR cannot initialize or returns a technical inference error.
 
 ## Runtime integration
 
@@ -10,7 +10,7 @@ This is an experimental, observation-only benchmark. It does not replace Apple V
 - Pod source archive: `https://download.onnxruntime.ai/pod-archive-onnxruntime-objc-1.29.0.zip`
 - Integration order: Tuist generation, `pod install`, workspace package resolution, build/test/archive
 - Swift access: the official Objective-C API through `TimeNest-Bridging-Header.h`
-- Execution provider: default CPU provider; the POC does not enable CoreML or convert the models
+- Execution provider: default CPU provider; the implementation does not enable CoreML or convert the models
 
 The Podfile disables `CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER` only for the official `onnxruntime-objc` target because of the Xcode 26.3 header/runtime issue documented as `microsoft/onnxruntime#27717`.
 
@@ -27,7 +27,7 @@ All files come from the RapidAI/RapidOCR official ModelScope model repository, r
 
 The largest file is below GitHub's 100 MB per-file limit. Git LFS is not used. The three ONNX files total 31,749,509 bytes (about 30.28 MiB) before App Store compression or archive thinning.
 
-## First-round benchmark parameters
+## Recognition parameters
 
 - `Global.text_score = 0.30`
 - Detection model: PP-OCRv6 small
@@ -45,14 +45,14 @@ The largest file is below GitHub's 100 MB per-file limit. Git LFS is not used. T
 
 No CLAHE, binarization, sharpening, custom grayscale conversion, OCR output repair, punctuation repair, time normalization, or multi-version A/B path is applied.
 
-## Ported behavior and known comparison boundary
+## Ported behavior and known compatibility boundary
 
-The POC follows RapidOCR's detection resize/normalization/NCHW layout, thresholding, 2x2 dilation, contour components, minimum-area boxes, fast box score, rectangular unclip distance, clipping, and line sorting. It also follows perspective crop, 0/180 classification, recognition resize/padding, argmax CTC decoding, adjacent duplicate removal, blank removal, and selected-token mean confidence.
+The implementation follows RapidOCR's detection resize/normalization/NCHW layout, thresholding, 2x2 dilation, contour components, minimum-area boxes, fast box score, rectangular unclip distance, clipping, and stable visual line sorting. It also follows perspective crop, 0/180 classification, recognition resize/padding, argmax CTC decoding, adjacent duplicate removal, blank removal, and selected-token mean confidence.
 
-The iOS rewrite uses Core Graphics to obtain cell pixels and a Swift implementation of contour/minimum-area geometry rather than Python OpenCV, pyclipper, and Shapely. Perspective sampling is rewritten in Swift. Therefore exact floating-point boxes, interpolation, and final strings can differ from RapidOCR Python even with the same ONNX weights and parameters; the device benchmark exists to measure that difference rather than assume equivalence.
+The iOS rewrite uses Core Graphics to obtain cell pixels and a Swift implementation of contour/minimum-area geometry rather than Python OpenCV, pyclipper, and Shapely. Perspective sampling is rewritten in Swift. Therefore exact floating-point boxes, interpolation, and final strings can differ from RapidOCR Python even with the same ONNX weights and parameters; physical-device validation must measure that difference rather than assume equivalence.
 
 ## Runtime scope and privacy
 
-The temporary filter runs only for September 2026 and only days 18, 19, 24, 25, and 26. It consumes the existing grid-derived `CalendarImportDayRegion` cell crop. It does not infer year, month, day, grid, or day mapping.
+Every grid-derived `CalendarImportDayRegion` is processed in day order with one shared model/session set per `PPOCRService`. PP-OCR does not infer the year, month, day, grid, or day mapping.
 
-Both Apple Vision and PP-OCR run locally. No image, crop, or OCR text is uploaded by this benchmark. The path has no backend, API key, cloud OCR call, or network dependency, so it is designed to run in airplane mode; actual airplane-mode behavior remains a physical-device/TestFlight acceptance check.
+Both Apple Vision and PP-OCR run locally. No image, crop, or OCR text is uploaded. The path has no backend, API key, cloud OCR call, or network dependency, so it is designed to run in airplane mode; actual airplane-mode behavior remains a physical-device/TestFlight acceptance check.

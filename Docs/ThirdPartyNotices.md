@@ -1,6 +1,6 @@
 # TimeNest Third-Party Notices
 
-This inventory covers the checked-in Swift package resolutions and the experimental PP-OCRv6 iOS POC dependencies as of 2026-09-02. Recheck this document whenever package, CocoaPod, or bundled-model versions change.
+This inventory covers the checked-in Swift package resolutions and PP-OCRv6 iOS dependencies as of 2026-09-02. Recheck this document whenever package, CocoaPod, or bundled-model versions change.
 
 ## Google Mobile Ads
 
@@ -37,7 +37,7 @@ The wrapper package downloads Google's precompiled User Messaging Platform XCFra
 - Copyright notice: Copyright (c) Microsoft Corporation
 - License text: https://github.com/microsoft/onnxruntime/blob/v1.29.0/LICENSE
 
-The PP-OCRv6 POC uses ONNX Runtime locally on iOS. No ONNX Runtime Swift wrapper or third-party binary mirror is used.
+PP-OCRv6 uses ONNX Runtime locally on iOS. No ONNX Runtime Swift wrapper or third-party binary mirror is used.
 
 ## RapidOCR
 
@@ -49,7 +49,7 @@ The PP-OCRv6 POC uses ONNX Runtime locally on iOS. No ONNX Runtime Swift wrapper
 - Copyright notice: Copyright (c) 2021 RapidOCR Authors
 - License text: https://github.com/RapidAI/RapidOCR/blob/0e629c8be05635035c01a829d10a91bbcd56a27a/LICENSE
 
-The Swift implementation is a modified rewrite for the experimental TimeNest iOS POC. It does not include the RapidOCR Python runtime, OpenCV, pyclipper, Shapely, or any network service.
+The Swift implementation is a modified rewrite for TimeNest iOS. It does not include the RapidOCR Python runtime, OpenCV, pyclipper, Shapely, or any network service.
 
 ## PaddleOCR / PP-OCR Models
 
@@ -60,13 +60,13 @@ The Swift implementation is a modified rewrite for the experimental TimeNest iOS
 - Model copyright: Baidu
 - License text: https://github.com/PaddlePaddle/PaddleOCR/blob/main/LICENSE
 
-The three ONNX files and the recognition dictionary extracted from the exact recognition model are bundled only for the local PP-OCRv6 benchmark. Their source URLs, byte sizes, and SHA256 values are recorded in `Docs/PPOCRv6IOSPOC.md` and verified in CI.
+The three ONNX files and the recognition dictionary extracted from the exact recognition model are bundled for local PP-OCRv6 recognition. Their source URLs, byte sizes, and SHA256 values are recorded in `Docs/PPOCRv6IOSPOC.md` and verified in CI.
 
 ## Apache License 2.0 Attribution
 
 The Google wrappers, RapidOCR reference implementation, and PaddleOCR/PP-OCR model distribution above use the [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0). Unless required by applicable law or agreed to in writing, software distributed under that license is provided on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 
-No GPL or AGPL dependency is introduced by the POC.
+No GPL or AGPL dependency is introduced by this implementation.
 
 ## Distribution Check
 
