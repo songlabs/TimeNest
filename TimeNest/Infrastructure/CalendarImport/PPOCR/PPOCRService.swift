@@ -191,6 +191,9 @@ actor PPOCRService {
 
         return PPOCRCellRecognitionResult(
             day: region.day,
+            sourcePixels: imageSize,
+            cropRect: pixelRect,
+            paddingApplied: false,
             cellPixels: cellImage.size,
             detectorInputPixels: detectorInputSize,
             results: textResults,
@@ -230,12 +233,17 @@ actor PPOCRService {
         region: CalendarImportDayRegion,
         errorCode: String
     ) -> PPOCRCellRecognitionResult {
-        let cellSize = PPOCRCellPixelRectConverter.pixelRect(
+        let sourceSize = PPOCRImageSize(width: image.width, height: image.height)
+        let pixelRect = PPOCRCellPixelRectConverter.pixelRect(
             for: region.boundingBox,
-            imageSize: PPOCRImageSize(width: image.width, height: image.height)
-        )?.size ?? PPOCRImageSize(width: 0, height: 0)
+            imageSize: sourceSize
+        )
+        let cellSize = pixelRect?.size ?? PPOCRImageSize(width: 0, height: 0)
         return PPOCRCellRecognitionResult(
             day: region.day,
+            sourcePixels: sourceSize,
+            cropRect: pixelRect,
+            paddingApplied: false,
             cellPixels: cellSize,
             detectorInputPixels: nil,
             results: [],

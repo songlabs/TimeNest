@@ -144,6 +144,9 @@ struct PPOCRCellTiming: Equatable, Sendable {
 
 struct PPOCRCellRecognitionResult: Equatable, Sendable {
     let day: Int
+    let sourcePixels: PPOCRImageSize
+    let cropRect: PPOCRPixelRect?
+    let paddingApplied: Bool
     let cellPixels: PPOCRImageSize
     let detectorInputPixels: PPOCRImageSize?
     let results: [PPOCRTextResult]
@@ -182,11 +185,11 @@ struct PPOCRMonthRecognitionRouter {
             guard let region = regionsByDay[cell.day] else { continue }
             if let error = cell.error {
                 fallbackRegions.append(region)
-                diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
-                    day: cell.day,
+                diagnostics.append(Self.diagnostics(
+                    for: cell,
+                    region: region,
                     recognitionSource: .visionFallback,
-                    ppOCRText: [],
-                    ppOCRError: error
+                    error: error
                 ))
                 continue
             }
@@ -198,11 +201,11 @@ struct PPOCRMonthRecognitionRouter {
                     boundingBox: Self.map(result.boundingBox, into: region.boundingBox)
                 )
             })
-            diagnostics.append(CalendarPhotoCellRecognitionDiagnostics(
-                day: cell.day,
+            diagnostics.append(Self.diagnostics(
+                for: cell,
+                region: region,
                 recognitionSource: .ppocrv6,
-                ppOCRText: cell.results.map(\.text),
-                ppOCRError: nil
+                error: nil
             ))
         }
 
@@ -210,6 +213,48 @@ struct PPOCRMonthRecognitionRouter {
             candidateInputObservations: observations,
             visionFallbackRegions: fallbackRegions,
             cellDiagnostics: diagnostics
+        )
+    }
+
+    private static func diagnostics(
+        for cell: PPOCRCellRecognitionResult,
+        region: CalendarImportDayRegion,
+        recognitionSource: CalendarPhotoCellRecognitionSource,
+        error: String?
+    ) -> CalendarPhotoCellRecognitionDiagnostics {
+        let cropHeight = Double(cell.cellPixels.height)
+        return CalendarPhotoCellRecognitionDiagnostics(
+            day: cell.day,
+            recognitionSource: recognitionSource,
+            cellBounds: region.boundingBox,
+            sourceImagePixels: CalendarPhotoPixelSizeDiagnostics(
+                width: cell.sourcePixels.width,
+                height: cell.sourcePixels.height
+            ),
+            cropRect: cell.cropRect.map {
+                CalendarPhotoPixelRectDiagnostics(
+                    x: $0.x,
+                    y: $0.y,
+                    width: $0.width,
+                    height: $0.height
+                )
+            },
+            cropImagePixels: CalendarPhotoPixelSizeDiagnostics(
+                width: cell.cellPixels.width,
+                height: cell.cellPixels.height
+            ),
+            paddingApplied: cell.paddingApplied,
+            detections: cell.results.map { result in
+                let bounds = result.boundingBox
+                return CalendarPhotoOCRDetectionDiagnostics(
+                    text: result.text,
+                    cellLocalBoundingBox: bounds,
+                    distanceToTopPixels: max(0, 1 - bounds.maxY) * cropHeight,
+                    distanceToBottomPixels: max(0, bounds.minY) * cropHeight
+                )
+            },
+            ppOCRText: cell.results.map(\.text),
+            ppOCRError: error
         )
     }
 

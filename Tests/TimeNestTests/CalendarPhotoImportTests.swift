@@ -60,6 +60,37 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertNil(CalendarImportTimeParser.parse("No time"))
     }
 
+    func testTimeParserSupportsContextBoundOCRSeparatorsWithoutGuessingDigits() {
+        XCTAssertEqual(
+            CalendarImportTimeParser.parse("17=30-20=30"),
+            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+        )
+        XCTAssertEqual(
+            CalendarImportTimeParser.parse("17:30-20=30"),
+            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+        )
+        XCTAssertEqual(
+            CalendarImportTimeParser.parse("20=20—21：40"),
+            CalendarImportParsedTime(startMinutes: 20 * 60 + 20, endMinutes: 21 * 60 + 40)
+        )
+        XCTAssertNil(CalendarImportTimeParser.parse("status=A.B"))
+        XCTAssertNil(CalendarImportTimeParser.parse("key=value"))
+        XCTAssertNil(CalendarImportTimeParser.parse("Release 1.23"))
+        XCTAssertNil(CalendarImportTimeParser.parse("version=17=30"))
+        XCTAssertEqual(
+            CalendarImportTimeParser.removingTime(from: "Release 1.23"),
+            "Release 1.23"
+        )
+        XCTAssertNil(CalendarImportTimeParser.parse("24=00-25=00"))
+        XCTAssertNil(CalendarImportTimeParser.parse("17=60-20=30"))
+        XCTAssertNil(CalendarImportTimeParser.parse("7230-2030"))
+        XCTAssertEqual(
+            CalendarImportTimeParser.parse("17:30.20.30"),
+            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: nil)
+        )
+        XCTAssertNil(CalendarImportTimeParser.parseRangeOnly("17:30.20.30"))
+    }
+
     func testOCRCandidateSelectorPrefersValidRangeButLeavesTitlesUntouched() throws {
         let selected = try XCTUnwrap(CalendarOCRCandidateSelector.select(from: [
             CalendarOCRCandidate(text: "17:3020:30", confidence: 0.96),
@@ -1335,6 +1366,58 @@ final class CalendarPhotoImportTests: XCTestCase {
         ])
     }
 
+    func testPPOCRAdjacentRowCellCropsNeverOverlap() throws {
+        let parser = CalendarPhotoGridFirstParser()
+        let yearMonth = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 9))
+        let regions = parser.dayRegions(
+            yearMonth: yearMonth,
+            weekStart: .sunday,
+            grid: CalendarPhotoGridGeometry(
+                boundingBox: CalendarOCRBoundingBox(
+                    x: 0.037, y: 0.083, width: 0.921, height: 0.769
+                ),
+                columns: 7,
+                rows: 5
+            ),
+            calendar: utcGregorianCalendar()
+        )
+        let imageSize = PPOCRImageSize(width: 4_031, height: 3_023)
+
+        for day in 1...23 {
+            guard let current = regions.first(where: { $0.day == day }),
+                  let nextRow = regions.first(where: { $0.day == day + 7 }),
+                  let currentRect = PPOCRCellPixelRectConverter.pixelRect(
+                    for: current.boundingBox,
+                    imageSize: imageSize
+                  ),
+                  let nextRowRect = PPOCRCellPixelRectConverter.pixelRect(
+                    for: nextRow.boundingBox,
+                    imageSize: imageSize
+                  ) else {
+                return XCTFail("Missing same-column cell geometry for day \(day)")
+            }
+            XCTAssertLessThanOrEqual(
+                currentRect.y + currentRect.height,
+                nextRowRect.y,
+                "day \(day) crop entered day \(day + 7)"
+            )
+        }
+    }
+
+    func testPPOCRPixelRectConversionClipsFractionalImageBoundariesInward() throws {
+        let rect = try XCTUnwrap(PPOCRCellPixelRectConverter.pixelRect(
+            for: CalendarOCRBoundingBox(
+                x: -0.001, y: 0.0001, width: 1.002, height: 0.9998
+            ),
+            imageSize: PPOCRImageSize(width: 101, height: 99)
+        ))
+
+        XCTAssertGreaterThanOrEqual(rect.x, 0)
+        XCTAssertGreaterThanOrEqual(rect.y, 0)
+        XCTAssertLessThanOrEqual(rect.x + rect.width, 101)
+        XCTAssertLessThanOrEqual(rect.y + rect.height, 99)
+    }
+
     func testPPOCRDetectionBoxSortingUsesLinesThenHorizontalPosition() {
         func box(x: Double, y: Double) -> PPOCRDetectedBox {
             PPOCRDetectedBox(
@@ -1410,6 +1493,18 @@ final class CalendarPhotoImportTests: XCTestCase {
         )
 
         XCTAssertTrue(plan.visionFallbackRegions.isEmpty)
+        let observation = try XCTUnwrap(plan.candidateInputObservations.first)
+        XCTAssertTrue(fixture.region.contains(observation))
+        XCTAssertEqual(
+            observation.boundingBox.x,
+            fixture.region.boundingBox.minX + fixture.region.boundingBox.width * 0.08,
+            accuracy: 0.000_001
+        )
+        XCTAssertEqual(
+            observation.boundingBox.y,
+            fixture.region.boundingBox.minY + fixture.region.boundingBox.height * 0.2,
+            accuracy: 0.000_001
+        )
         XCTAssertEqual(parsed.candidates.map(\.title), ["Meeting"])
         XCTAssertEqual(parsed.candidates.first?.startTimeMinutes, 1_050)
         XCTAssertEqual(parsed.candidates.first?.endTimeMinutes, 1_230)
@@ -1418,8 +1513,17 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertTrue(text.contains("ppocrSuccessCells=1"))
         XCTAssertTrue(text.contains("visionFallbackCells=0"))
         XCTAssertTrue(text.contains("candidateInput=true"))
-        XCTAssertTrue(text.contains("day=26 recognitionSource=ppocrv6"))
+        XCTAssertTrue(text.contains("day=26 recognitionSource=ppocrv6 cellBounds="))
+        XCTAssertTrue(text.contains("sourcePixels=3000x2000"))
+        XCTAssertTrue(text.contains("cropRect=(x=100,y=200,w=461,h=345)"))
+        XCTAssertTrue(text.contains("cropPixels=461x345"))
+        XCTAssertTrue(text.contains("padding=false"))
         XCTAssertTrue(text.contains("ppocrText=[\"Meeting 17:30–20:30\"]"))
+        XCTAssertTrue(text.contains("[PPOCRDetections]"))
+        XCTAssertTrue(text.contains(
+            "day=26 detection=1 bbox=(x=0.0800,y=0.2000,w=0.8000,h=0.1500)"
+        ))
+        XCTAssertTrue(text.contains("topPx=224.2500 bottomPx=69.0000"))
         XCTAssertTrue(text.contains("candidateCreated=true"))
         XCTAssertTrue(text.contains("parsedStart=17:30"))
         XCTAssertTrue(text.contains("parsedEnd=20:30"))
@@ -1483,6 +1587,9 @@ final class CalendarPhotoImportTests: XCTestCase {
     ) -> PPOCRCellRecognitionResult {
         PPOCRCellRecognitionResult(
             day: day,
+            sourcePixels: PPOCRImageSize(width: 3_000, height: 2_000),
+            cropRect: PPOCRPixelRect(x: 100, y: 200, width: 461, height: 345),
+            paddingApplied: false,
             cellPixels: PPOCRImageSize(width: 461, height: 345),
             detectorInputPixels: PPOCRImageSize(width: 1_280, height: 960),
             results: text.map {

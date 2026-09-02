@@ -9,9 +9,34 @@ enum CalendarPhotoRecognitionMode: String, Equatable, Sendable {
     case ppocrv6
 }
 
+struct CalendarPhotoPixelSizeDiagnostics: Equatable, Sendable {
+    let width: Int
+    let height: Int
+}
+
+struct CalendarPhotoPixelRectDiagnostics: Equatable, Sendable {
+    let x: Int
+    let y: Int
+    let width: Int
+    let height: Int
+}
+
+struct CalendarPhotoOCRDetectionDiagnostics: Equatable, Sendable {
+    let text: String
+    let cellLocalBoundingBox: CalendarOCRBoundingBox
+    let distanceToTopPixels: Double
+    let distanceToBottomPixels: Double
+}
+
 struct CalendarPhotoCellRecognitionDiagnostics: Equatable, Sendable {
     let day: Int
     let recognitionSource: CalendarPhotoCellRecognitionSource
+    let cellBounds: CalendarOCRBoundingBox
+    let sourceImagePixels: CalendarPhotoPixelSizeDiagnostics
+    let cropRect: CalendarPhotoPixelRectDiagnostics?
+    let cropImagePixels: CalendarPhotoPixelSizeDiagnostics
+    let paddingApplied: Bool
+    let detections: [CalendarPhotoOCRDetectionDiagnostics]
     let ppOCRText: [String]
     let ppOCRError: String?
 
@@ -672,10 +697,26 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 "rawTexts=\(Self.textList(unassignedRawTexts))",
                 "normalizedTexts=\(Self.textList(unassignedNormalizedTexts))"
             ].joined(separator: " ")]
+        let ppOCRDetectionLines = recognitionCellDiagnostics
+            .sorted(by: { $0.day < $1.day })
+            .flatMap { cell in
+                cell.detections.enumerated().map { index, detection in
+                    let bounds = detection.cellLocalBoundingBox
+                    return [
+                        "day=\(cell.day)",
+                        "detection=\(index + 1)",
+                        "bbox=(x=\(Self.decimalText(bounds.x)),y=\(Self.decimalText(bounds.y)),w=\(Self.decimalText(bounds.width)),h=\(Self.decimalText(bounds.height)))",
+                        "topPx=\(Self.decimalText(detection.distanceToTopPixels))",
+                        "bottomPx=\(Self.decimalText(detection.distanceToBottomPixels))",
+                        "text=\(Self.quotedText(detection.text))"
+                    ].joined(separator: " ")
+                }
+            }
 
         return [
             summary,
             Self.section(title: "RecognitionCells", lines: recognitionLines),
+            Self.section(title: "PPOCRDetections", lines: ppOCRDetectionLines),
             Self.section(title: "Orientations", lines: orientationLines),
             Self.section(title: "GridAttempts", lines: gridAttemptLines),
             Self.section(title: "XCenters", lines: xCenterLines),
@@ -691,14 +732,29 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         _ cells: [CalendarPhotoCellRecognitionDiagnostics]
     ) -> [String] {
         cells.sorted(by: { $0.day < $1.day }).map { cell in
-            [
+            let bounds = cell.cellBounds
+            return [
                 "day=\(cell.day)",
                 "recognitionSource=\(cell.recognitionSource.rawValue)",
+                "cellBounds=(x=\(decimalText(bounds.x)),y=\(decimalText(bounds.y)),w=\(decimalText(bounds.width)),h=\(decimalText(bounds.height)))",
+                "sourcePixels=\(pixelSizeText(cell.sourceImagePixels))",
+                "cropRect=\(pixelRectText(cell.cropRect))",
+                "cropPixels=\(pixelSizeText(cell.cropImagePixels))",
+                "padding=\(cell.paddingApplied)",
                 "ppocrText=\(textList(cell.ppOCRText))",
                 "ppocrError=\(cell.ppOCRError ?? "none")",
                 "fallbackUsed=\(cell.fallbackUsed)"
             ].joined(separator: " ")
         }
+    }
+
+    private static func pixelSizeText(_ size: CalendarPhotoPixelSizeDiagnostics) -> String {
+        "\(size.width)x\(size.height)"
+    }
+
+    private static func pixelRectText(_ rect: CalendarPhotoPixelRectDiagnostics?) -> String {
+        guard let rect else { return "none" }
+        return "(x=\(rect.x),y=\(rect.y),w=\(rect.width),h=\(rect.height))"
     }
 
     private static func dayRangesText(_ days: [Int]) -> String {
@@ -838,7 +894,16 @@ struct CalendarImportTimeParser {
     private static func match(in text: String) -> MatchResult? {
         // A compact end time (for example 2030) is accepted only after an
         // explicit range separator; unrelated four-digit text is never guessed.
-        let clockPattern = #"(?<!\d)(\d{1,2})\s*[:：.]\s*(\d{2})(?:\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.]?\s*(\d{2}))?(?!\d)"#
+        // PP-OCR can confuse the hour/minute punctuation with `=` or `.`.
+        // Accept those weaker separators only inside a complete time range so
+        // ordinary version numbers or key/value text are not treated as time.
+        let ocrRangePattern = #"(?<!\d)(\d{1,2})\s*[.=]\s*(\d{2})\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.=]?\s*(\d{2})(?!\d)"#
+        if let match = firstMatch(pattern: ocrRangePattern, text: text),
+           let parsed = parsedTime(match: match, text: text) {
+            return MatchResult(time: parsed, range: match.range)
+        }
+
+        let clockPattern = #"(?<!\d)(\d{1,2})\s*[:：]\s*(\d{2})(?:\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.=]?\s*(\d{2}))?(?!\d)"#
         if let match = firstMatch(pattern: clockPattern, text: text),
            let parsed = parsedTime(match: match, text: text) {
             return MatchResult(time: parsed, range: match.range)
