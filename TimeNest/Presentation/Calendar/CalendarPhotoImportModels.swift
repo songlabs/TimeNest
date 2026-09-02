@@ -118,13 +118,66 @@ struct CalendarPhotoGridGeometry: Equatable, Sendable {
     let boundingBox: CalendarOCRBoundingBox
     let columns: Int
     let rows: Int
+    let topLeft: CalendarPhotoGridPoint?
+    let topRight: CalendarPhotoGridPoint?
+    let bottomLeft: CalendarPhotoGridPoint?
+    let bottomRight: CalendarPhotoGridPoint?
+    let originalImagePixels: CalendarPhotoPixelSizeDiagnostics?
+    let rectifiedGridPixels: CalendarPhotoPixelSizeDiagnostics?
+
+    init(
+        boundingBox: CalendarOCRBoundingBox,
+        columns: Int,
+        rows: Int,
+        topLeft: CalendarPhotoGridPoint? = nil,
+        topRight: CalendarPhotoGridPoint? = nil,
+        bottomLeft: CalendarPhotoGridPoint? = nil,
+        bottomRight: CalendarPhotoGridPoint? = nil,
+        originalImagePixels: CalendarPhotoPixelSizeDiagnostics? = nil,
+        rectifiedGridPixels: CalendarPhotoPixelSizeDiagnostics? = nil
+    ) {
+        self.boundingBox = boundingBox
+        self.columns = columns
+        self.rows = rows
+        self.topLeft = topLeft
+        self.topRight = topRight
+        self.bottomLeft = bottomLeft
+        self.bottomRight = bottomRight
+        self.originalImagePixels = originalImagePixels
+        self.rectifiedGridPixels = rectifiedGridPixels
+    }
 
     var area: Double { boundingBox.width * boundingBox.height }
+}
+
+struct CalendarPhotoGridPoint: Equatable, Sendable {
+    let x: Double
+    let y: Double
 }
 
 struct CalendarPhotoGridCandidate: Equatable, Sendable {
     let boundingBox: CalendarOCRBoundingBox
     let structuralConfidence: Double
+    let topLeft: CalendarPhotoGridPoint?
+    let topRight: CalendarPhotoGridPoint?
+    let bottomLeft: CalendarPhotoGridPoint?
+    let bottomRight: CalendarPhotoGridPoint?
+
+    init(
+        boundingBox: CalendarOCRBoundingBox,
+        structuralConfidence: Double,
+        topLeft: CalendarPhotoGridPoint? = nil,
+        topRight: CalendarPhotoGridPoint? = nil,
+        bottomLeft: CalendarPhotoGridPoint? = nil,
+        bottomRight: CalendarPhotoGridPoint? = nil
+    ) {
+        self.boundingBox = boundingBox
+        self.structuralConfidence = structuralConfidence
+        self.topLeft = topLeft
+        self.topRight = topRight
+        self.bottomLeft = bottomLeft
+        self.bottomRight = bottomRight
+    }
 }
 
 struct CalendarPhotoGridSelector {
@@ -145,7 +198,11 @@ struct CalendarPhotoGridSelector {
         return CalendarPhotoGridGeometry(
             boundingBox: selected.boundingBox,
             columns: 7,
-            rows: expectedRows
+            rows: expectedRows,
+            topLeft: selected.topLeft,
+            topRight: selected.topRight,
+            bottomLeft: selected.bottomLeft,
+            bottomRight: selected.bottomRight
         )
     }
 
@@ -467,6 +524,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var cellDiagnostics: [CalendarPhotoCellDiagnostics] = []
     var unassignedRawTexts: [String] = []
     var unassignedNormalizedTexts: [String] = []
+    var gridGeometry: CalendarPhotoGridGeometry? = nil
     let orientation: CalendarPhotoOrientationDiagnostics?
     let manualYearMonth: CalendarImportYearMonth?
     let resolvedYearMonth: CalendarImportYearMonth?
@@ -580,6 +638,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             "mondayScore=\(mondayStartScore)",
             "weekStart=\(selectedWeekStart?.rawValue ?? "none")",
             "grid=\(gridColumnCount)x\(gridRowCount)",
+            "gridGeometry=\(gridGeometry?.rectifiedGridPixels == nil ? "legacy" : "perspectiveCorrected")",
             "matched=\(gridMatchedAnchorCount)",
             "rejected=\(gridRejectedAnchorCount)",
             "threshold=\(gridAcceptanceThreshold)",
@@ -603,6 +662,23 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ].joined(separator: " ")
         } ?? []
         let recognitionLines = Self.recognitionLines(recognitionCellDiagnostics)
+        let geometryLines: [String] = gridGeometry.map { grid in
+            let rows = (0...grid.rows).map { boundary in
+                guard let pixels = grid.rectifiedGridPixels else { return 0 }
+                return Int((Double(boundary) * Double(pixels.height) / Double(grid.rows)).rounded())
+            }
+            let columns = (0...grid.columns).map { boundary in
+                guard let pixels = grid.rectifiedGridPixels else { return 0 }
+                return Int((Double(boundary) * Double(pixels.width) / Double(grid.columns)).rounded())
+            }
+            return [
+                "gridGeometry=\(grid.rectifiedGridPixels == nil ? "legacy" : "perspectiveCorrected")",
+                "topLeft=\(Self.pointText(grid.topLeft)) topRight=\(Self.pointText(grid.topRight)) bottomLeft=\(Self.pointText(grid.bottomLeft)) bottomRight=\(Self.pointText(grid.bottomRight))",
+                "originalImagePixels=\(Self.optionalPixelSizeText(grid.originalImagePixels)) rectifiedGridPixels=\(Self.optionalPixelSizeText(grid.rectifiedGridPixels))",
+                "gridRows=\(grid.rows) gridColumns=\(grid.columns)",
+                "rowBoundariesPx=\(rows) columnBoundariesPx=\(columns)"
+            ]
+        } ?? []
 
         let gridAttemptLines = gridAttempts.map { attempt in
             [
@@ -717,6 +793,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             summary,
             Self.section(title: "RecognitionCells", lines: recognitionLines),
             Self.section(title: "PPOCRDetections", lines: ppOCRDetectionLines),
+            Self.section(title: "GridGeometry", lines: geometryLines),
             Self.section(title: "Orientations", lines: orientationLines),
             Self.section(title: "GridAttempts", lines: gridAttemptLines),
             Self.section(title: "XCenters", lines: xCenterLines),
@@ -750,6 +827,16 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
 
     private static func pixelSizeText(_ size: CalendarPhotoPixelSizeDiagnostics) -> String {
         "\(size.width)x\(size.height)"
+    }
+
+    private static func optionalPixelSizeText(_ size: CalendarPhotoPixelSizeDiagnostics?) -> String {
+        guard let size else { return "none" }
+        return pixelSizeText(size)
+    }
+
+    private static func pointText(_ point: CalendarPhotoGridPoint?) -> String {
+        guard let point else { return "none" }
+        return "(x=\(decimalText(point.x)),y=\(decimalText(point.y)))"
     }
 
     private static func pixelRectText(_ rect: CalendarPhotoPixelRectDiagnostics?) -> String {
@@ -1140,6 +1227,7 @@ struct CalendarPhotoGridFirstParser {
             cellDiagnostics: buildResult.cellDiagnostics,
             unassignedRawTexts: buildResult.unassignedRawTexts,
             unassignedNormalizedTexts: buildResult.unassignedNormalizedTexts,
+            gridGeometry: grid,
             orientation: orientationDiagnostics,
             manualYearMonth: yearMonth,
             resolvedYearMonth: yearMonth,

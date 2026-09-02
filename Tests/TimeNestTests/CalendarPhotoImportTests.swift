@@ -1212,6 +1212,111 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(selected.boundingBox.width, 0.9)
     }
 
+    func testPerspectiveGridPreservesTrapezoidCornersAndCreatesUniformCells() throws {
+        let corners = (
+            topLeft: CalendarPhotoGridPoint(x: 0.18, y: 0.90),
+            topRight: CalendarPhotoGridPoint(x: 0.82, y: 0.86),
+            bottomLeft: CalendarPhotoGridPoint(x: 0.06, y: 0.08),
+            bottomRight: CalendarPhotoGridPoint(x: 0.94, y: 0.12)
+        )
+        let selected = try XCTUnwrap(CalendarPhotoGridSelector().selectMainGrid(
+            from: [CalendarPhotoGridCandidate(
+                boundingBox: CalendarOCRBoundingBox(x: 0.06, y: 0.08, width: 0.88, height: 0.82),
+                structuralConfidence: 0.95,
+                topLeft: corners.topLeft,
+                topRight: corners.topRight,
+                bottomLeft: corners.bottomLeft,
+                bottomRight: corners.bottomRight
+            )],
+            expectedRows: 5
+        ))
+        let rectified = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
+            columns: selected.columns,
+            rows: selected.rows,
+            topLeft: selected.topLeft,
+            topRight: selected.topRight,
+            bottomLeft: selected.bottomLeft,
+            bottomRight: selected.bottomRight,
+            originalImagePixels: CalendarPhotoPixelSizeDiagnostics(width: 1200, height: 900),
+            rectifiedGridPixels: CalendarPhotoPixelSizeDiagnostics(width: 980, height: 720)
+        )
+        let regions = CalendarPhotoGridFirstParser().dayRegions(
+            yearMonth: CalendarImportYearMonth(year: 2026, month: 9)!,
+            weekStart: .sunday,
+            grid: rectified,
+            calendar: utcGregorianCalendar()
+        )
+
+        XCTAssertEqual(selected.topLeft, corners.topLeft)
+        XCTAssertEqual(Set(regions.map { $0.boundingBox.width }), [1.0 / 7.0])
+        XCTAssertEqual(Set(regions.map { $0.boundingBox.height }), [1.0 / 5.0])
+    }
+
+    func testPerspectiveCorrectionProducesRectifiedImage() throws {
+        let context = try XCTUnwrap(CGContext(
+            data: nil,
+            width: 1_200,
+            height: 900,
+            bitsPerComponent: 8,
+            bytesPerRow: 0,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        ))
+        context.setFillColor(CGColor(gray: 1, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 1_200, height: 900))
+        let image = try XCTUnwrap(context.makeImage())
+        let grid = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0.06, y: 0.08, width: 0.88, height: 0.82),
+            columns: 7,
+            rows: 5,
+            topLeft: CalendarPhotoGridPoint(x: 0.18, y: 0.90),
+            topRight: CalendarPhotoGridPoint(x: 0.82, y: 0.86),
+            bottomLeft: CalendarPhotoGridPoint(x: 0.06, y: 0.08),
+            bottomRight: CalendarPhotoGridPoint(x: 0.94, y: 0.12)
+        )
+
+        let result = try CalendarPhotoGridRectifier.correct(image: image, grid: grid)
+
+        XCTAssertGreaterThan(result.image.width, 0)
+        XCTAssertGreaterThan(result.image.height, 0)
+        XCTAssertEqual(result.geometry.boundingBox, CalendarOCRBoundingBox(
+            x: 0, y: 0, width: 1, height: 1
+        ))
+        XCTAssertEqual(result.geometry.rectifiedGridPixels?.width, result.image.width)
+        XCTAssertEqual(result.geometry.rectifiedGridPixels?.height, result.image.height)
+    }
+
+    func testRectifiedAdjacentRowsDoNotOverlapAndMarkerBelongsOnlyToNextRow() throws {
+        let grid = CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
+            columns: 7,
+            rows: 5
+        )
+        let regions = CalendarPhotoGridFirstParser().dayRegions(
+            yearMonth: CalendarImportYearMonth(year: 2026, month: 9)!,
+            weekStart: .sunday,
+            grid: grid,
+            calendar: utcGregorianCalendar()
+        )
+        let daySix = try XCTUnwrap(regions.first { $0.day == 6 })
+        let dayThirteen = try XCTUnwrap(regions.first { $0.day == 13 })
+        XCTAssertEqual(dayThirteen.boundingBox.maxY, daySix.boundingBox.minY, accuracy: 0.000_001)
+
+        let nextRowTopMarker = CalendarOCRObservation(
+            text: "13",
+            confidence: 1,
+            boundingBox: CalendarOCRBoundingBox(
+                x: dayThirteen.boundingBox.minX + 0.01,
+                y: dayThirteen.boundingBox.maxY - 0.02,
+                width: 0.02,
+                height: 0.015
+            )
+        )
+        XCTAssertFalse(daySix.contains(nextRowTopMarker))
+        XCTAssertTrue(dayThirteen.contains(nextRowTopMarker))
+    }
+
     func testSixRowAndMondayFirstMonthMapping() throws {
         let yearMonth = try XCTUnwrap(CalendarImportYearMonth(year: 2026, month: 3))
         let parser = CalendarPhotoGridFirstParser()
