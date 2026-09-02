@@ -1,4 +1,5 @@
 import AVFoundation
+import CoreImage
 import PhotosUI
 import SwiftUI
 import UIKit
@@ -7,6 +8,58 @@ import UIKit
 private enum CalendarPhotoImportImageError: Error {
     case invalidImage
     case noWritableCalendar
+    case perspectiveCorrectionFailed
+}
+
+enum CalendarPhotoGridRectifier {
+    static func correct(
+        image: CGImage,
+        grid: CalendarPhotoGridGeometry
+    ) throws -> (image: CGImage, geometry: CalendarPhotoGridGeometry) {
+        guard let topLeft = grid.topLeft,
+              let topRight = grid.topRight,
+              let bottomLeft = grid.bottomLeft,
+              let bottomRight = grid.bottomRight else {
+            throw CalendarPhotoImportImageError.perspectiveCorrectionFailed
+        }
+        let width = Double(image.width)
+        let height = Double(image.height)
+        func ciPoint(_ point: CalendarPhotoGridPoint) -> CIVector {
+            CIVector(x: point.x * width, y: point.y * height)
+        }
+        let filter = CIFilter(name: "CIPerspectiveCorrection")
+        filter?.setValue(CIImage(cgImage: image), forKey: kCIInputImageKey)
+        filter?.setValue(ciPoint(topLeft), forKey: "inputTopLeft")
+        filter?.setValue(ciPoint(topRight), forKey: "inputTopRight")
+        filter?.setValue(ciPoint(bottomLeft), forKey: "inputBottomLeft")
+        filter?.setValue(ciPoint(bottomRight), forKey: "inputBottomRight")
+        guard let output = filter?.outputImage,
+              !output.extent.isEmpty,
+              !output.extent.isInfinite,
+              let corrected = CIContext(options: [.cacheIntermediates: false]).createCGImage(
+                output,
+                from: output.extent.integral
+              ) else {
+            throw CalendarPhotoImportImageError.perspectiveCorrectionFailed
+        }
+        return (corrected, CalendarPhotoGridGeometry(
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
+            columns: grid.columns,
+            rows: grid.rows,
+            topLeft: topLeft,
+            topRight: topRight,
+            bottomLeft: bottomLeft,
+            bottomRight: bottomRight,
+            originalImagePixels: CalendarPhotoPixelSizeDiagnostics(
+                width: image.width,
+                height: image.height
+            ),
+            rectifiedGridPixels: CalendarPhotoPixelSizeDiagnostics(
+                width: corrected.width,
+                height: corrected.height
+            )
+        ))
+    }
 }
 
 private enum CalendarPhotoImportStep {
@@ -361,13 +414,21 @@ private struct CalendarVisionOCRService {
                     width: Double(boundingBox.width),
                     height: Double(boundingBox.height)
                 ),
-                structuralConfidence: Double(rectangle.confidence)
+                structuralConfidence: Double(rectangle.confidence),
+                topLeft: point(rectangle.topLeft),
+                topRight: point(rectangle.topRight),
+                bottomLeft: point(rectangle.bottomLeft),
+                bottomRight: point(rectangle.bottomRight)
             )
         }
         return CalendarPhotoGridSelector().selectMainGrid(
             from: candidates,
             expectedRows: expectedRows
         )
+    }
+
+    private static func point(_ point: CGPoint) -> CalendarPhotoGridPoint {
+        CalendarPhotoGridPoint(x: Double(point.x), y: Double(point.y))
     }
 
     private static func pixelRect(
@@ -659,14 +720,24 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                 guard let yearMonth, let grid = recognized.grid else {
                     throw CalendarPhotoImportParseError.noDateStructure
                 }
+                let rectified: (image: CGImage, geometry: CalendarPhotoGridGeometry)
+                do {
+                    rectified = try CalendarPhotoGridRectifier.correct(
+                        image: normalizedImage,
+                        grid: grid
+                    )
+                } catch {
+                    print("[CalendarImport] gridGeometry=perspectiveCorrectionFailed error=\(error)")
+                    throw error
+                }
                 let monthParser = CalendarPhotoGridFirstParser()
                 let regions = monthParser.dayRegions(
                     yearMonth: yearMonth,
                     weekStart: weekStart,
-                    grid: grid
+                    grid: rectified.geometry
                 )
                 let ppOCRRun = try await ppOCRService.recognizeMonthCells(
-                    image: normalizedImage,
+                    image: rectified.image,
                     regions: regions
                 )
                 let recognitionPlan = PPOCRMonthRecognitionRouter().makePlan(
@@ -678,7 +749,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     visionFallbackObservations = []
                 } else {
                     visionFallbackObservations = try await ocrService.recognizeMonthCells(
-                        image: normalizedImage,
+                        image: rectified.image,
                         regions: recognitionPlan.visionFallbackRegions,
                         preferredLanguageCode: languageCode
                     )
@@ -689,7 +760,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     observations: observations,
                     yearMonth: yearMonth,
                     weekStart: weekStart,
-                    grid: grid,
+                    grid: rectified.geometry,
                     defaultCalendarID: defaultCalendarID,
                     orientationDiagnostics: orientationDiagnostics,
                     recognitionCellDiagnostics: recognitionPlan.cellDiagnostics,
@@ -1020,6 +1091,8 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             return LocalizationManager.shared.localized(.calendarPhotoImportPhotoLoadFailed)
         case CalendarPhotoImportImageError.noWritableCalendar:
             return LocalizationManager.shared.localized(.calendarPhotoImportNoWritableCalendar)
+        case CalendarPhotoImportImageError.perspectiveCorrectionFailed:
+            return LocalizationManager.shared.localized(.calendarPhotoImportOCRFailed)
         default:
             return LocalizationManager.shared.localized(.calendarPhotoImportOCRFailed)
         }
