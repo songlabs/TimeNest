@@ -162,11 +162,18 @@ enum PPOCRTimeRecognitionSource: String, Equatable, Sendable {
     case enhancedPPocr
     case candidatePPocr
     case visionSecondary
+    case timeFocusedPPocr
+    case timeFocusedVision
 }
 
 struct PPOCRRecognitionAlternative: Equatable, Sendable {
     let text: String
     let confidence: Float
+}
+
+struct PPOCRLocalizedRecognitionAlternative: Equatable, Sendable {
+    let alternative: PPOCRRecognitionAlternative
+    let boundingBox: CalendarOCRBoundingBox
 }
 
 struct PPOCRTimeRecognitionSelection: Equatable, Sendable {
@@ -188,14 +195,16 @@ enum PPOCRTimeRecoveryPolicy {
            !isInsufficientNumericToken(trimmed) {
             return .lowConfidence
         }
-        return isTimeLikeButUnparsed(trimmed) ? .timeLikeButUnparsed : nil
+        return isTimeLikeEvidence(text) ? .timeLikeButUnparsed : nil
     }
 
     static func select(
         current: PPOCRRecognitionAlternative,
         enhanced: PPOCRRecognitionAlternative?,
         candidate: PPOCRRecognitionAlternative?,
-        vision: PPOCRRecognitionAlternative?
+        vision: PPOCRRecognitionAlternative?,
+        timeFocusedPPocr: PPOCRRecognitionAlternative? = nil,
+        timeFocusedVision: PPOCRRecognitionAlternative? = nil
     ) -> PPOCRTimeRecognitionSelection {
         if CalendarImportTimeParser.parseMonth(current.text) != nil {
             return PPOCRTimeRecognitionSelection(
@@ -207,7 +216,9 @@ enum PPOCRTimeRecoveryPolicy {
         let secondary: [(PPOCRTimeRecognitionSource, PPOCRRecognitionAlternative?)] = [
             (.enhancedPPocr, enhanced),
             (.candidatePPocr, candidate),
-            (.visionSecondary, vision)
+            (.visionSecondary, vision),
+            (.timeFocusedPPocr, timeFocusedPPocr),
+            (.timeFocusedVision, timeFocusedVision)
         ]
         for (source, alternative) in secondary {
             guard let alternative, isUsableRecoveredRange(alternative.text) else { continue }
@@ -232,11 +243,74 @@ enum PPOCRTimeRecoveryPolicy {
         return end > parsed.startMinutes
     }
 
+    static func shouldAttemptTimeFocusedRecovery(
+        current: PPOCRRecognitionAlternative,
+        enhanced: PPOCRRecognitionAlternative?,
+        candidate: PPOCRRecognitionAlternative?,
+        vision: PPOCRRecognitionAlternative?
+    ) -> Bool {
+        [current, enhanced, candidate, vision]
+            .compactMap { $0 }
+            .contains { isTimeLikeEvidence($0.text) }
+    }
+
+    static func preferredLocalizedVisionAlternative(
+        _ candidates: [PPOCRLocalizedRecognitionAlternative]
+    ) -> PPOCRLocalizedRecognitionAlternative? {
+        guard let first = candidates.first else { return nil }
+        return candidates
+            .filter { isUsableRecoveredRange($0.alternative.text) }
+            .max(by: { $0.alternative.confidence < $1.alternative.confidence })
+            ?? candidates
+                .filter { isTimeLikeEvidence($0.alternative.text) }
+                .max(by: { $0.alternative.confidence < $1.alternative.confidence })
+            ?? first
+    }
+
     private static func isInsufficientNumericToken(_ text: String) -> Bool {
         !text.isEmpty && text.allSatisfy(\.isNumber) && !(7...9).contains(text.count)
     }
 
+    static func isTimeLikeEvidence(_ text: String) -> Bool {
+        CalendarImportTimeParser.parseMonth(text) == nil
+            && timeLikeEvidenceRange(in: text) != nil
+    }
+
+    static func timeLikeEvidenceRange(in text: String) -> Range<String.Index>? {
+        let trimmedRange = text.startIndex..<text.endIndex
+        let trimmed = text[trimmedRange]
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if let range = text.range(of: trimmed), isTimeLikeButUnparsed(trimmed) {
+            return range
+        }
+
+        // A prefixed span must retain explicit time punctuation. This permits
+        // localization after a person marker while excluding fields such as
+        // `ID 17302030` from focused recovery.
+        let pattern = #"(?<![\p{L}\p{N}])\d[\d\s:：.=\-–—〜～~]{4,14}\d(?![\p{L}\p{N}])"#
+        guard let expression = try? NSRegularExpression(pattern: pattern) else {
+            return nil
+        }
+        let sourceRange = NSRange(text.startIndex..<text.endIndex, in: text)
+        for match in expression.matches(in: text, range: sourceRange) {
+            guard let range = Range(match.range, in: text) else { continue }
+            let candidate = String(text[range])
+            let punctuation = CharacterSet(charactersIn: ":：.=-–—〜～~")
+            guard candidate.unicodeScalars.contains(where: punctuation.contains),
+                  isTimeLikeButUnparsed(candidate) else {
+                continue
+            }
+            return range
+        }
+        return nil
+    }
+
     private static func isTimeLikeButUnparsed(_ text: String) -> Bool {
+        guard !text.unicodeScalars.contains(where: {
+            CharacterSet.letters.contains($0)
+        }) else {
+            return false
+        }
         let digits = text.filter(\.isNumber).count
         guard digits >= 6 else { return false }
         let significant = text.filter { !$0.isWhitespace }.count
@@ -271,6 +345,17 @@ struct PPOCRRecognitionModelComparison: Equatable, Sendable {
     var visionConfidence: Float? = nil
     var visionMilliseconds: Double? = nil
     var visionError: String? = nil
+    var timeFocusedRecoveryAttempted: Bool = false
+    var timeFocusedCrop: CalendarOCRBoundingBox? = nil
+    var timeFocusedPPocrText: String? = nil
+    var timeFocusedPPocrConfidence: Float? = nil
+    var timeFocusedPPocrMilliseconds: Double? = nil
+    var timeFocusedPPocrError: String? = nil
+    var timeFocusedVisionText: String? = nil
+    var timeFocusedVisionConfidence: Float? = nil
+    var timeFocusedVisionMilliseconds: Double? = nil
+    var timeFocusedVisionError: String? = nil
+    var timeFocusedSelectionReason: String = "notAttempted"
     var selectedText: String? = nil
     var selectedSource: PPOCRTimeRecognitionSource = .currentPPocr
     var selectionReason: String = "recoveryNotTriggered"
@@ -446,6 +531,23 @@ struct PPOCRMonthRecognitionRouter {
                     visionConfidence: comparison.visionConfidence,
                     visionMilliseconds: comparison.visionMilliseconds,
                     visionError: comparison.visionError,
+                    timeFocusedRecoveryAttempted:
+                        comparison.timeFocusedRecoveryAttempted,
+                    timeFocusedCrop: comparison.timeFocusedCrop,
+                    timeFocusedPPocrText: comparison.timeFocusedPPocrText,
+                    timeFocusedPPocrConfidence:
+                        comparison.timeFocusedPPocrConfidence,
+                    timeFocusedPPocrMilliseconds:
+                        comparison.timeFocusedPPocrMilliseconds,
+                    timeFocusedPPocrError: comparison.timeFocusedPPocrError,
+                    timeFocusedVisionText: comparison.timeFocusedVisionText,
+                    timeFocusedVisionConfidence:
+                        comparison.timeFocusedVisionConfidence,
+                    timeFocusedVisionMilliseconds:
+                        comparison.timeFocusedVisionMilliseconds,
+                    timeFocusedVisionError: comparison.timeFocusedVisionError,
+                    timeFocusedSelectionReason:
+                        comparison.timeFocusedSelectionReason,
                     selectedText: comparison.selectedText ?? comparison.currentText,
                     selectedSource: comparison.selectedSource.rawValue,
                     selectionReason: comparison.selectionReason

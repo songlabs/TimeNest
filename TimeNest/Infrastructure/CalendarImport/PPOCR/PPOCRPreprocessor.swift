@@ -17,6 +17,12 @@ struct PPOCRPixelRect: Equatable, Sendable {
     var size: PPOCRImageSize { PPOCRImageSize(width: width, height: height) }
 }
 
+struct PPOCRTimeFocusedCrop: Equatable, Sendable {
+    let boundingBox: CalendarOCRBoundingBox
+    let pixelRect: PPOCRPixelRect
+    let image: PPOCRBGRImage
+}
+
 enum PPOCRCellPixelRectConverter {
     // Mirrors CalendarVisionOCRService.pixelRect exactly. CalendarOCRBoundingBox
     // uses a lower-left normalized origin while CGImage cropping uses top-left pixels.
@@ -95,6 +101,32 @@ struct PPOCRBGRImage: Equatable, Sendable {
             }
         }
         return try PPOCRBGRImage(width: target.width, height: target.height, pixels: output)
+    }
+
+    func cropped(to rect: PPOCRPixelRect) throws -> PPOCRBGRImage {
+        guard rect.x >= 0,
+              rect.y >= 0,
+              rect.width > 0,
+              rect.height > 0,
+              rect.x + rect.width <= width,
+              rect.y + rect.height <= height else {
+            throw PPOCRError.invalidCrop
+        }
+        var output = [UInt8](repeating: 0, count: rect.width * rect.height * 3)
+        for targetY in 0..<rect.height {
+            let sourceStart = ((rect.y + targetY) * width + rect.x) * 3
+            let sourceEnd = sourceStart + rect.width * 3
+            let targetStart = targetY * rect.width * 3
+            output.replaceSubrange(
+                targetStart..<(targetStart + rect.width * 3),
+                with: pixels[sourceStart..<sourceEnd]
+            )
+        }
+        return try PPOCRBGRImage(
+            width: rect.width,
+            height: rect.height,
+            pixels: output
+        )
     }
 
     func perspectiveCrop(points: [PPOCRPoint]) throws -> PPOCRBGRImage {
@@ -279,6 +311,57 @@ enum PPOCRDetectionCropper {
                 )
             )
         }
+    }
+}
+
+enum PPOCRTimeFocusedCropper {
+    // Vision reports lower-left normalized bounds. Convert those bounds back
+    // into the enhanced detection image without inferring any missing text.
+    static func crop(
+        _ image: PPOCRBGRImage,
+        around visionBoundingBox: CalendarOCRBoundingBox,
+        marginRatio: Double = 0.08
+    ) throws -> PPOCRTimeFocusedCrop? {
+        guard marginRatio >= 0,
+              visionBoundingBox.x.isFinite,
+              visionBoundingBox.y.isFinite,
+              visionBoundingBox.width.isFinite,
+              visionBoundingBox.height.isFinite,
+              visionBoundingBox.width > 0,
+              visionBoundingBox.height > 0 else {
+            return nil
+        }
+        let marginX = visionBoundingBox.width * marginRatio
+        let marginY = visionBoundingBox.height * marginRatio
+        let minX = max(0, visionBoundingBox.minX - marginX)
+        let maxX = min(1, visionBoundingBox.maxX + marginX)
+        let minY = max(0, visionBoundingBox.minY - marginY)
+        let maxY = min(1, visionBoundingBox.maxY + marginY)
+        guard maxX > minX, maxY > minY else { return nil }
+
+        let padded = CalendarOCRBoundingBox(
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        )
+        guard let pixelRect = PPOCRCellPixelRectConverter.pixelRect(
+            for: padded,
+            imageSize: image.size
+        ), pixelRect.width < image.width || pixelRect.height < image.height else {
+            return nil
+        }
+        let normalized = CalendarOCRBoundingBox(
+            x: Double(pixelRect.x) / Double(image.width),
+            y: 1 - Double(pixelRect.y + pixelRect.height) / Double(image.height),
+            width: Double(pixelRect.width) / Double(image.width),
+            height: Double(pixelRect.height) / Double(image.height)
+        )
+        return PPOCRTimeFocusedCrop(
+            boundingBox: normalized,
+            pixelRect: pixelRect,
+            image: try image.cropped(to: pixelRect)
+        )
     }
 }
 

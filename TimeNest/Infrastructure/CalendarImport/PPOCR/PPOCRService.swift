@@ -296,6 +296,8 @@ actor PPOCRService {
                 )
             }
             var visionAlternative: PPOCRRecognitionAlternative?
+            var visionLocalizedAlternative: PPOCRLocalizedRecognitionAlternative?
+            var visionInputImage: PPOCRBGRImage?
             var visionMilliseconds: Double?
             var visionError: String?
             if recoveryReason != nil,
@@ -303,13 +305,14 @@ actor PPOCRService {
                CalendarImportTimeParser.parseMonth(decoded.text) == nil {
                 let visionStart = PPOCRMonotonicClock.nowMilliseconds
                 do {
-                    let visionImage = try PPOCRCGImageBridge.cgImage(
-                        from: recoveryImage ?? lineImage.timeRecoveryEnhanced()
-                    )
-                    visionAlternative = try PPOCRVisionTimeRecognizer.recognize(
+                    let inputImage = try recoveryImage ?? lineImage.timeRecoveryEnhanced()
+                    visionInputImage = inputImage
+                    let visionImage = try PPOCRCGImageBridge.cgImage(from: inputImage)
+                    visionLocalizedAlternative = try PPOCRVisionTimeRecognizer.recognize(
                         image: visionImage,
                         ocrLanguage: ocrLanguage
                     )
+                    visionAlternative = visionLocalizedAlternative?.alternative
                     visionMilliseconds = PPOCRMonotonicClock.nowMilliseconds - visionStart
                 } catch is CancellationError {
                     throw CancellationError()
@@ -323,6 +326,133 @@ actor PPOCRService {
                     candidate: candidateAlternative,
                     vision: visionAlternative
                 )
+            }
+            var timeFocusedRecoveryAttempted = false
+            var timeFocusedCrop: CalendarOCRBoundingBox?
+            var timeFocusedPPocrAlternative: PPOCRRecognitionAlternative?
+            var timeFocusedPPocrMilliseconds: Double?
+            var timeFocusedPPocrError: String?
+            var timeFocusedVisionAlternative: PPOCRRecognitionAlternative?
+            var timeFocusedVisionMilliseconds: Double?
+            var timeFocusedVisionError: String?
+            var timeFocusedSelectionReason = "notAttempted"
+            // Only a failed recovery with bounded time-like OCR evidence reaches
+            // this path. Vision's own observation bounds localize the pixels;
+            // the strict month range parser remains the acceptance gate.
+            if recoveryReason != nil,
+               selection.source == .currentPPocr,
+               CalendarImportTimeParser.parseMonth(decoded.text) == nil,
+               PPOCRTimeRecoveryPolicy.shouldAttemptTimeFocusedRecovery(
+                   current: currentAlternative,
+                   enhanced: enhancedAlternative,
+                   candidate: candidateAlternative,
+                   vision: visionAlternative
+               ) {
+                timeFocusedRecoveryAttempted = true
+                if let localized = visionLocalizedAlternative,
+                   PPOCRTimeRecoveryPolicy.isTimeLikeEvidence(
+                       localized.alternative.text
+                   ),
+                   let inputImage = visionInputImage {
+                    do {
+                        if let focusedCrop = try PPOCRTimeFocusedCropper.crop(
+                            inputImage,
+                            around: localized.boundingBox
+                        ) {
+                            timeFocusedCrop = focusedCrop.boundingBox
+                            try Task.checkCancellation()
+                            let ppocrStart = PPOCRMonotonicClock.nowMilliseconds
+                            do {
+                                let tensor = try PPOCRPreprocessor.recognitionTensor(
+                                    from: focusedCrop.image
+                                )
+                                let focusedDecoded = try Self.recognize(
+                                    tensor: tensor,
+                                    session: sessions.recognizer,
+                                    characters: sessions.characters,
+                                    stage: "timeFocusedRecognition"
+                                )
+                                timeFocusedPPocrAlternative = PPOCRRecognitionAlternative(
+                                    text: focusedDecoded.text,
+                                    confidence: focusedDecoded.confidence
+                                )
+                                timeFocusedPPocrMilliseconds =
+                                    PPOCRMonotonicClock.nowMilliseconds - ppocrStart
+                            } catch let error as PPOCRError {
+                                timeFocusedPPocrMilliseconds =
+                                    PPOCRMonotonicClock.nowMilliseconds - ppocrStart
+                                timeFocusedPPocrError = error.diagnosticCode
+                            } catch {
+                                timeFocusedPPocrMilliseconds =
+                                    PPOCRMonotonicClock.nowMilliseconds - ppocrStart
+                                timeFocusedPPocrError =
+                                    "runtimeFailure:timeFocusedRecognition"
+                            }
+
+                            selection = PPOCRTimeRecoveryPolicy.select(
+                                current: currentAlternative,
+                                enhanced: enhancedAlternative,
+                                candidate: candidateAlternative,
+                                vision: visionAlternative,
+                                timeFocusedPPocr: timeFocusedPPocrAlternative
+                            )
+                            if selection.source == .timeFocusedPPocr {
+                                timeFocusedSelectionReason = "validFocusedRangeSelected"
+                            } else {
+                                try Task.checkCancellation()
+                                let focusedVisionStart =
+                                    PPOCRMonotonicClock.nowMilliseconds
+                                do {
+                                    let focusedVisionImage = try PPOCRCGImageBridge.cgImage(
+                                        from: focusedCrop.image
+                                    )
+                                    timeFocusedVisionAlternative = try
+                                        PPOCRVisionTimeRecognizer.recognize(
+                                            image: focusedVisionImage,
+                                            ocrLanguage: ocrLanguage
+                                        )?.alternative
+                                    timeFocusedVisionMilliseconds =
+                                        PPOCRMonotonicClock.nowMilliseconds
+                                            - focusedVisionStart
+                                } catch is CancellationError {
+                                    throw CancellationError()
+                                } catch {
+                                    timeFocusedVisionMilliseconds =
+                                        PPOCRMonotonicClock.nowMilliseconds
+                                            - focusedVisionStart
+                                    timeFocusedVisionError =
+                                        "runtimeFailure:timeFocusedVision"
+                                }
+                                selection = PPOCRTimeRecoveryPolicy.select(
+                                    current: currentAlternative,
+                                    enhanced: enhancedAlternative,
+                                    candidate: candidateAlternative,
+                                    vision: visionAlternative,
+                                    timeFocusedPPocr: timeFocusedPPocrAlternative,
+                                    timeFocusedVision: timeFocusedVisionAlternative
+                                )
+                                timeFocusedSelectionReason = [
+                                    PPOCRTimeRecognitionSource.timeFocusedPPocr,
+                                    .timeFocusedVision
+                                ].contains(selection.source)
+                                    ? "validFocusedRangeSelected"
+                                    : "noValidFocusedResult"
+                            }
+                        } else {
+                            timeFocusedSelectionReason = "noDistinctVisionTimeCrop"
+                        }
+                    } catch is CancellationError {
+                        throw CancellationError()
+                    } catch let error as PPOCRError {
+                        timeFocusedSelectionReason = "focusedCropFailed"
+                        timeFocusedPPocrError = error.diagnosticCode
+                    } catch {
+                        timeFocusedSelectionReason = "focusedCropFailed"
+                        timeFocusedPPocrError = "runtimeFailure:timeFocusedCrop"
+                    }
+                } else {
+                    timeFocusedSelectionReason = "noLocalizedVisionTimeEvidence"
+                }
             }
             modelComparisons.append(PPOCRRecognitionModelComparison(
                 boundingBox: localBoundingBox,
@@ -343,6 +473,17 @@ actor PPOCRService {
                 visionConfidence: visionAlternative?.confidence,
                 visionMilliseconds: visionMilliseconds,
                 visionError: visionError,
+                timeFocusedRecoveryAttempted: timeFocusedRecoveryAttempted,
+                timeFocusedCrop: timeFocusedCrop,
+                timeFocusedPPocrText: timeFocusedPPocrAlternative?.text,
+                timeFocusedPPocrConfidence: timeFocusedPPocrAlternative?.confidence,
+                timeFocusedPPocrMilliseconds: timeFocusedPPocrMilliseconds,
+                timeFocusedPPocrError: timeFocusedPPocrError,
+                timeFocusedVisionText: timeFocusedVisionAlternative?.text,
+                timeFocusedVisionConfidence: timeFocusedVisionAlternative?.confidence,
+                timeFocusedVisionMilliseconds: timeFocusedVisionMilliseconds,
+                timeFocusedVisionError: timeFocusedVisionError,
+                timeFocusedSelectionReason: timeFocusedSelectionReason,
                 selectedText: selection.alternative.text,
                 selectedSource: selection.source,
                 selectionReason: selection.selectionReason
@@ -561,7 +702,7 @@ private enum PPOCRVisionTimeRecognizer {
     static func recognize(
         image: CGImage,
         ocrLanguage: CalendarOCRLanguage
-    ) throws -> PPOCRRecognitionAlternative? {
+    ) throws -> PPOCRLocalizedRecognitionAlternative? {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false
@@ -582,15 +723,29 @@ private enum PPOCRVisionTimeRecognizer {
             options: [:]
         ).perform([request])
         let alternatives = (request.results ?? []).flatMap { observation in
-            observation.topCandidates(5).map {
-                PPOCRRecognitionAlternative(text: $0.string, confidence: $0.confidence)
+            observation.topCandidates(5).map { candidate in
+                let timeLikeRange = PPOCRTimeRecoveryPolicy.timeLikeEvidenceRange(
+                    in: candidate.string
+                )
+                let localizedTime = timeLikeRange.flatMap {
+                    try? candidate.boundingBox(for: $0)
+                }
+                let box = localizedTime?.boundingBox ?? observation.boundingBox
+                return PPOCRLocalizedRecognitionAlternative(
+                    alternative: PPOCRRecognitionAlternative(
+                        text: candidate.string,
+                        confidence: candidate.confidence
+                    ),
+                    boundingBox: CalendarOCRBoundingBox(
+                        x: Double(box.origin.x),
+                        y: Double(box.origin.y),
+                        width: Double(box.width),
+                        height: Double(box.height)
+                    )
+                )
             }
         }
-        guard let first = alternatives.first else { return nil }
-        return alternatives
-            .filter { PPOCRTimeRecoveryPolicy.isUsableRecoveredRange($0.text) }
-            .max(by: { $0.confidence < $1.confidence })
-            ?? first
+        return PPOCRTimeRecoveryPolicy.preferredLocalizedVisionAlternative(alternatives)
     }
 
 }

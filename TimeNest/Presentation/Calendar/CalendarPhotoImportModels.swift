@@ -47,6 +47,17 @@ struct CalendarPhotoRecognitionModelComparisonDiagnostics: Equatable, Sendable {
     let visionConfidence: Float?
     let visionMilliseconds: Double?
     let visionError: String?
+    let timeFocusedRecoveryAttempted: Bool
+    let timeFocusedCrop: CalendarOCRBoundingBox?
+    let timeFocusedPPocrText: String?
+    let timeFocusedPPocrConfidence: Float?
+    let timeFocusedPPocrMilliseconds: Double?
+    let timeFocusedPPocrError: String?
+    let timeFocusedVisionText: String?
+    let timeFocusedVisionConfidence: Float?
+    let timeFocusedVisionMilliseconds: Double?
+    let timeFocusedVisionError: String?
+    let timeFocusedSelectionReason: String
     let selectedText: String
     let selectedSource: String
     let selectionReason: String
@@ -690,6 +701,17 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         recognitionCellDiagnostics.filter(\.fallbackUsed).count
     }
 
+    var unresolvedTimeDetectionCount: Int {
+        recognitionCellDiagnostics
+            .flatMap(\.recognitionModelComparisons)
+            .filter {
+                $0.timeFocusedRecoveryAttempted
+                    && $0.selectedSource == PPOCRTimeRecognitionSource.currentPPocr.rawValue
+                    && $0.selectionReason == "noValidSecondaryResult"
+            }
+            .count
+    }
+
     var displayFields: [(label: String, value: String)] {
         [
             ("Scan Mode", scanMode?.rawValue ?? "legacy"),
@@ -703,6 +725,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ("Recognition", recognitionMode?.rawValue ?? "legacy"),
             ("PP-OCR Success Cells", "\(ppOCRSuccessCellCount)"),
             ("Vision Fallback Cells", "\(visionFallbackCellCount)"),
+            ("Unresolved Time Detections", "\(unresolvedTimeDetectionCount)"),
             ("Manual YM", Self.yearMonthText(manualYearMonth)),
             ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
             ("Selected Rotation", orientation.map { "\($0.selectedRotation.rawValue)" } ?? "none"),
@@ -745,6 +768,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             "recognitionMode=\(recognitionMode?.rawValue ?? "legacy")",
             "ppocrSuccessCells=\(ppOCRSuccessCellCount)",
             "visionFallbackCells=\(visionFallbackCellCount)",
+            "unresolvedTimeDetections=\(unresolvedTimeDetectionCount)",
             "candidateInput=\(recognitionMode == .ppocrv6)",
             "manualYearMonth=\(Self.yearMonthText(manualYearMonth))",
             "resolvedYearMonth=\(Self.yearMonthText(resolvedYearMonth))",
@@ -830,6 +854,18 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                             "visionConfidence=\(Self.decimalText(comparison.visionConfidence.map(Double.init)))",
                             "visionParseResult=\(Self.timeParseResult(comparison.visionText))",
                             "visionError=\(comparison.visionError ?? "none")",
+                            "timeFocusedRecoveryAttempted=\(comparison.timeFocusedRecoveryAttempted)",
+                            "timeFocusedCropSpace=enhancedDetectionNormalized",
+                            "timeFocusedCrop=\(Self.boundingBoxText(comparison.timeFocusedCrop))",
+                            "timeFocusedPPocrText=\(comparison.timeFocusedPPocrText.map(Self.quotedText) ?? "none")",
+                            "timeFocusedPPocrConfidence=\(Self.decimalText(comparison.timeFocusedPPocrConfidence.map(Double.init)))",
+                            "timeFocusedPPocrParseResult=\(Self.timeParseResult(comparison.timeFocusedPPocrText))",
+                            "timeFocusedPPocrError=\(comparison.timeFocusedPPocrError ?? "none")",
+                            "timeFocusedVisionText=\(comparison.timeFocusedVisionText.map(Self.quotedText) ?? "none")",
+                            "timeFocusedVisionConfidence=\(Self.decimalText(comparison.timeFocusedVisionConfidence.map(Double.init)))",
+                            "timeFocusedVisionParseResult=\(Self.timeParseResult(comparison.timeFocusedVisionText))",
+                            "timeFocusedVisionError=\(comparison.timeFocusedVisionError ?? "none")",
+                            "timeFocusedSelectionReason=\(comparison.timeFocusedSelectionReason)",
                             "selectedText=\(Self.quotedText(comparison.selectedText))",
                             "selectedSource=\(comparison.selectedSource)",
                             "selectionReason=\(comparison.selectionReason)",
@@ -1136,6 +1172,11 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         let start = timeText(parsed.startMinutes)
         guard let end = parsed.endMinutes else { return start }
         return "\(start)-\(timeText(end))"
+    }
+
+    private static func boundingBoxText(_ box: CalendarOCRBoundingBox?) -> String {
+        guard let box else { return "none" }
+        return "(x=\(decimalText(box.x)),y=\(decimalText(box.y)),w=\(decimalText(box.width)),h=\(decimalText(box.height)))"
     }
 
     private static func textList(_ values: [String]) -> String {

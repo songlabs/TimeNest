@@ -354,6 +354,7 @@ final class CalendarPhotoImportTests: XCTestCase {
             "52020.21",
             "09012345678",
             "123456789012",
+            "2020-21246",
             "24:80",
             "29:40",
             "2500-2700",
@@ -453,6 +454,27 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(selected.source, .currentPPocr)
         XCTAssertEqual(selected.alternative, broken)
         XCTAssertEqual(selected.selectionReason, "noValidSecondaryResult")
+
+        let focused = PPOCRRecognitionAlternative(text: "20:20-21:40", confidence: 0.57)
+        selected = PPOCRTimeRecoveryPolicy.select(
+            current: broken,
+            enhanced: nil,
+            candidate: nil,
+            vision: PPOCRRecognitionAlternative(text: "2020-21246", confidence: 0.7),
+            timeFocusedVision: focused
+        )
+        XCTAssertEqual(selected.source, .timeFocusedVision)
+        XCTAssertEqual(selected.alternative, focused)
+
+        selected = PPOCRTimeRecoveryPolicy.select(
+            current: broken,
+            enhanced: nil,
+            candidate: nil,
+            vision: PPOCRRecognitionAlternative(text: "2020-21246", confidence: 0.7),
+            timeFocusedPPocr: focused
+        )
+        XCTAssertEqual(selected.source, .timeFocusedPPocr)
+        XCTAssertEqual(selected.alternative, focused)
     }
 
     func testPPOCRTimeRecoveryTriggerUsesConfidenceAndTimeSemantics() {
@@ -465,16 +487,57 @@ final class CalendarPhotoImportTests: XCTestCase {
             .timeLikeButUnparsed
         )
         XCTAssertEqual(
+            PPOCRTimeRecoveryPolicy.reason(
+                text: "○A 2020-21246",
+                confidence: 0.90
+            ),
+            .timeLikeButUnparsed
+        )
+        XCTAssertEqual(
             PPOCRTimeRecoveryPolicy.reason(text: "317302030", confidence: 0.90),
             nil
         )
         XCTAssertNil(PPOCRTimeRecoveryPolicy.reason(text: "4", confidence: 0.20))
         XCTAssertNil(PPOCRTimeRecoveryPolicy.reason(text: "20002", confidence: 0.90))
         XCTAssertNil(PPOCRTimeRecoveryPolicy.reason(text: "20002", confidence: 0.20))
+        XCTAssertNil(PPOCRTimeRecoveryPolicy.reason(text: "ID 17302030", confidence: 0.90))
         XCTAssertNil(PPOCRTimeRecoveryPolicy.reason(
             text: "17:30-20:30",
             confidence: 0.20
         ))
+    }
+
+    func testPPOCRTimeFocusedRecoveryRequiresBoundedTimeLikeEvidence() {
+        let broken = PPOCRRecognitionAlternative(text: "anct-0.0", confidence: 0.55)
+        XCTAssertTrue(PPOCRTimeRecoveryPolicy.shouldAttemptTimeFocusedRecovery(
+            current: broken,
+            enhanced: nil,
+            candidate: nil,
+            vision: PPOCRRecognitionAlternative(text: "2020-21246", confidence: 0.70)
+        ))
+        XCTAssertTrue(PPOCRTimeRecoveryPolicy.isTimeLikeEvidence(
+            "○A 2020-21246"
+        ))
+
+        for text in ["ID 17302030", "09012345678", "123456789012", "Release 1.23"] {
+            XCTAssertFalse(PPOCRTimeRecoveryPolicy.isTimeLikeEvidence(text), text)
+        }
+    }
+
+    func testPPOCRVisionCandidateSelectionUsesTimeLikeTopCandidateForFocusedCrop() throws {
+        let title = PPOCRLocalizedRecognitionAlternative(
+            alternative: PPOCRRecognitionAlternative(text: "Meeting", confidence: 0.94),
+            boundingBox: CalendarOCRBoundingBox(x: 0.05, y: 0.1, width: 0.9, height: 0.8)
+        )
+        let timeLike = PPOCRLocalizedRecognitionAlternative(
+            alternative: PPOCRRecognitionAlternative(text: "2020-21246", confidence: 0.71),
+            boundingBox: CalendarOCRBoundingBox(x: 0.22, y: 0.3, width: 0.65, height: 0.4)
+        )
+
+        let selected = try XCTUnwrap(
+            PPOCRTimeRecoveryPolicy.preferredLocalizedVisionAlternative([title, timeLike])
+        )
+        XCTAssertEqual(selected, timeLike)
     }
 
     func testSingleTimeCandidateRequiresReviewAndDoesNotGuessEndTime() throws {
@@ -650,7 +713,7 @@ final class CalendarPhotoImportTests: XCTestCase {
                 "timeRecognitionEngine", "textRecognitionEngine",
                 "textRecognitionLanguage", "gridDetection",
                 "recognitionMode", "ppocrSuccessCells", "visionFallbackCells",
-                "candidateInput",
+                "unresolvedTimeDetections", "candidateInput",
                 "manualYearMonth", "resolvedYearMonth", "selectedRotation",
                 "orientationEvidencePhase", "ocrObservations", "meaningful",
                 "pureNumeric", "dateAnchors", "distinctDays", "duplicateDays",
@@ -1670,8 +1733,8 @@ final class CalendarPhotoImportTests: XCTestCase {
         var diagnostics: CalendarPhotoImportDiagnostics?
         let result = try fixture.parser.parseMonth(
             observations: [
-                gridFirstObservation("17:30–20:30", in: fixture.region, line: 0),
-                gridFirstObservation("20:20–21:40", in: fixture.region, line: 1)
+                gridFirstObservation("17:30-20.30", in: fixture.region, line: 0),
+                gridFirstObservation("20=20-21:40", in: fixture.region, line: 1)
             ],
             yearMonth: fixture.yearMonth,
             weekStart: .sunday,
@@ -2187,6 +2250,31 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertGreaterThan(expanded[2].x, 90)
     }
 
+    func testPPOCRTimeFocusedCropUsesVisionBoundsWithoutInventingText() throws {
+        let pixels = (0..<(16 * 16 * 3)).map { UInt8($0 % 251) }
+        let image = try PPOCRBGRImage(width: 16, height: 16, pixels: pixels)
+        let crop = try XCTUnwrap(PPOCRTimeFocusedCropper.crop(
+            image,
+            around: CalendarOCRBoundingBox(x: 0.25, y: 0.25, width: 0.5, height: 0.5),
+            marginRatio: 0
+        ))
+
+        XCTAssertEqual(crop.pixelRect, PPOCRPixelRect(x: 4, y: 4, width: 8, height: 8))
+        XCTAssertEqual(crop.boundingBox, CalendarOCRBoundingBox(
+            x: 0.25,
+            y: 0.25,
+            width: 0.5,
+            height: 0.5
+        ))
+        XCTAssertEqual(crop.image.size, PPOCRImageSize(width: 8, height: 8))
+        XCTAssertEqual(crop.image.pixels[0], image.pixels[(4 * 16 + 4) * 3])
+        XCTAssertNil(try PPOCRTimeFocusedCropper.crop(
+            image,
+            around: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1),
+            marginRatio: 0
+        ))
+    }
+
     func testPPOCRCTCDecoderCollapsesAdjacentDuplicateTokens() throws {
         let decoded = try PPOCRCTCDecoder.decode(
             tokenIndices: [1, 1, 2, 2],
@@ -2448,6 +2536,112 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertTrue(text.contains("timeParseQuality=recovered"))
     }
 
+    func testPPOCRTimeFocusedRecoveryReachesCandidateAndReportsCropEvidence() throws {
+        let fixture = try gridFirstFixture(day: 4)
+        let run = ppOCRRun(cells: [ppOCRCell(
+            day: 4,
+            text: "anct-0.0",
+            visionText: "2020-21246",
+            timeFocusedVisionText: "20:20-21:40",
+            timeFocusedCrop: CalendarOCRBoundingBox(
+                x: 0.18,
+                y: 0.22,
+                width: 0.72,
+                height: 0.56
+            ),
+            selectedText: "20:20-21:40",
+            selectedSource: .timeFocusedVision,
+            recoveryReason: .lowConfidence
+        )])
+        let plan = PPOCRMonthRecognitionRouter().makePlan(
+            run: run,
+            regions: [fixture.region]
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        let parsed = try fixture.parser.parseMonth(
+            observations: plan.candidateInputObservations,
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            recognitionCellDiagnostics: plan.cellDiagnostics,
+            recognitionModelPOC: plan.recognitionModelPOC,
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        let candidate = try XCTUnwrap(parsed.candidates.first)
+        XCTAssertEqual(candidate.startTimeMinutes, 20 * 60 + 20)
+        XCTAssertEqual(candidate.endTimeMinutes, 21 * 60 + 40)
+        XCTAssertTrue(candidate.needsReview)
+        let text = try XCTUnwrap(diagnostics).plainText
+        XCTAssertTrue(text.contains("timeFocusedRecoveryAttempted=true"))
+        XCTAssertTrue(text.contains(
+            "timeFocusedCropSpace=enhancedDetectionNormalized"
+        ))
+        XCTAssertTrue(text.contains(
+            "timeFocusedCrop=(x=0.1800,y=0.2200,w=0.7200,h=0.5600)"
+        ))
+        XCTAssertTrue(text.contains(#"timeFocusedVisionText="20:20-21:40""#))
+        XCTAssertTrue(text.contains("timeFocusedVisionParseResult=20:20-21:40"))
+        XCTAssertTrue(text.contains("timeFocusedSelectionReason=validFocusedRangeSelected"))
+        XCTAssertTrue(text.contains("selectedSource=timeFocusedVision"))
+    }
+
+    func testPPOCRFailedTimeFocusedRecoveryDoesNotGuessAndIsNotSilentInDiagnostics() throws {
+        let fixture = try gridFirstFixture(day: 4)
+        let run = ppOCRRun(cells: [ppOCRCell(
+            day: 4,
+            text: "anct-0.0",
+            visionText: "2020-21246",
+            timeFocusedPPocrText: "2020-21246",
+            timeFocusedVisionText: "2020-21246",
+            timeFocusedCrop: CalendarOCRBoundingBox(
+                x: 0.18,
+                y: 0.22,
+                width: 0.72,
+                height: 0.56
+            ),
+            recoveryReason: .lowConfidence
+        )])
+        let plan = PPOCRMonthRecognitionRouter().makePlan(
+            run: run,
+            regions: [fixture.region]
+        )
+        let merged = CalendarMonthOCRObservationMerger().merge(
+            ppOCRObservations: plan.candidateInputObservations,
+            visionObservations: [],
+            regions: [fixture.region],
+            visionFallbackRegions: []
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        XCTAssertTrue(merged.isEmpty)
+        XCTAssertThrowsError(try fixture.parser.parseMonth(
+            observations: merged,
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            recognitionCellDiagnostics: plan.cellDiagnostics,
+            recognitionModelPOC: plan.recognitionModelPOC,
+            diagnosticsHandler: { diagnostics = $0 }
+        )) { error in
+            XCTAssertEqual(error as? CalendarPhotoImportParseError, .noCandidates)
+        }
+
+        let text = try XCTUnwrap(diagnostics).plainText
+        XCTAssertTrue(text.contains(#"visionText="2020-21246""#))
+        XCTAssertTrue(text.contains(#"timeFocusedPPocrText="2020-21246""#))
+        XCTAssertTrue(text.contains("timeFocusedPPocrParseResult=none"))
+        XCTAssertTrue(text.contains("timeFocusedSelectionReason=noValidFocusedResult"))
+        XCTAssertTrue(text.contains(#"selectedText="anct-0.0""#))
+        XCTAssertEqual(diagnostics?.candidateCount, 0)
+        XCTAssertEqual(diagnostics?.unresolvedTimeDetectionCount, 1)
+        XCTAssertTrue(text.contains("unresolvedTimeDetections=1"))
+    }
+
     func testPPOCRSuccessfulEmptyCellDoesNotUseVisionFallback() {
         let region = CalendarImportDayRegion(
             day: 22,
@@ -2514,6 +2708,10 @@ final class CalendarPhotoImportTests: XCTestCase {
         text: String? = nil,
         candidateText: String? = nil,
         enhancedText: String? = nil,
+        visionText: String? = nil,
+        timeFocusedPPocrText: String? = nil,
+        timeFocusedVisionText: String? = nil,
+        timeFocusedCrop: CalendarOCRBoundingBox? = nil,
         selectedText: String? = nil,
         selectedSource: PPOCRTimeRecognitionSource = .currentPPocr,
         recoveryReason: PPOCRTimeRecoveryReason? = nil,
@@ -2556,10 +2754,33 @@ final class CalendarPhotoImportTests: XCTestCase {
                     candidateConfidence: 0.88,
                     candidateMilliseconds: 7,
                     candidateError: nil,
+                    visionText: visionText,
+                    visionConfidence: visionText == nil ? nil : 0.7,
+                    visionMilliseconds: visionText == nil ? nil : 5,
+                    timeFocusedRecoveryAttempted: timeFocusedCrop != nil,
+                    timeFocusedCrop: timeFocusedCrop,
+                    timeFocusedPPocrText: timeFocusedPPocrText,
+                    timeFocusedPPocrConfidence:
+                        timeFocusedPPocrText == nil ? nil : 0.65,
+                    timeFocusedPPocrMilliseconds:
+                        timeFocusedPPocrText == nil ? nil : 3,
+                    timeFocusedVisionText: timeFocusedVisionText,
+                    timeFocusedVisionConfidence:
+                        timeFocusedVisionText == nil ? nil : 0.6,
+                    timeFocusedVisionMilliseconds:
+                        timeFocusedVisionText == nil ? nil : 4,
+                    timeFocusedSelectionReason: timeFocusedCrop == nil
+                        ? "notAttempted"
+                        : (selectedSource == .timeFocusedPPocr
+                            || selectedSource == .timeFocusedVision)
+                            ? "validFocusedRangeSelected"
+                            : "noValidFocusedResult",
                     selectedText: outputText,
                     selectedSource: selectedSource,
                     selectionReason: selectedSource == .currentPPocr
-                        ? "recoveryNotTriggered"
+                        ? recoveryReason == nil
+                            ? "recoveryNotTriggered"
+                            : "noValidSecondaryResult"
                         : "validTimeBeatsUnparsed"
                 )]
             } ?? [],
