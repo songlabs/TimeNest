@@ -752,7 +752,10 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                 let result = try CalendarPhotoDayParser().parse(
                     observations: observations,
                     selectedDate: daySelection,
-                    defaultCalendarID: defaultCalendarID
+                    defaultCalendarID: defaultCalendarID,
+                    diagnosticsHandler: { [weak self] diagnostics in
+                        self?.recordDiagnostics(diagnostics)
+                    }
                 )
                 recognizedYearMonth = result.yearMonth
                 candidates = result.candidates
@@ -975,7 +978,9 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         if let scanOCRLanguage {
             diagnostics.appLanguage = scanOCRLanguage.appLanguage
             diagnostics.ocrLanguage = scanOCRLanguage.visionRecognitionLanguageCode
-            diagnostics.timeRecognitionEngine = "ppocrv6"
+            diagnostics.timeRecognitionEngine = diagnostics.scanMode == .month
+                ? "ppocrv6"
+                : "vision"
             diagnostics.textRecognitionEngine = "vision"
             diagnostics.textRecognitionLanguage = scanOCRLanguage.visionRecognitionLanguageCode
         }
@@ -994,7 +999,9 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             return String(format: "%04d-%02d", yearMonth.year, yearMonth.month)
         }
         print(
-            "[CalendarImport] manualYearMonth=\(value(diagnostics.manualYearMonth)) "
+            "[CalendarImport] appLanguage=\(diagnostics.appLanguage?.rawValue ?? "unknown") "
+                + "ocrLanguage=\(diagnostics.ocrLanguage ?? "unknown") "
+                + "manualYearMonth=\(value(diagnostics.manualYearMonth)) "
                 + "resolvedYearMonth=\(value(diagnostics.resolvedYearMonth)) "
                 + "ocrObservations=\(diagnostics.observationCount) "
                 + "meaningful=\(diagnostics.meaningfulObservationCount) "

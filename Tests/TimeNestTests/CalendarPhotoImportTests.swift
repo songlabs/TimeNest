@@ -153,6 +153,33 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertFalse(merged.contains { $0.text.contains("核查") })
     }
 
+    func testDayParserReportsLanguageReadyStructuralDiagnostics() throws {
+        let selectedDate = try XCTUnwrap(
+            utcGregorianCalendar().date(from: DateComponents(year: 2026, month: 9, day: 12))
+        )
+        let observations = [CalendarOCRObservation(
+            text: "09:00-10:00 Meeting",
+            confidence: 0.9,
+            boundingBox: CalendarOCRBoundingBox(x: 0.1, y: 0.2, width: 0.8, height: 0.1)
+        )]
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        let result = try CalendarPhotoDayParser().parse(
+            observations: observations,
+            selectedDate: selectedDate,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        XCTAssertEqual(result.candidates.map(\.title), ["Meeting"])
+        XCTAssertEqual(diagnostics?.scanMode, .day)
+        XCTAssertEqual(diagnostics?.selectedDate, selectedDate)
+        XCTAssertEqual(diagnostics?.candidateCount, 1)
+        XCTAssertEqual(diagnostics?.parseStage, .completed)
+        XCTAssertNil(diagnostics?.failureReason)
+    }
+
     func testSeptember2026AssignsMonthStartAndEndWithoutAdjacentMonthCells() throws {
         var observations = september2026DateObservations()
         observations.append(contentsOf: [

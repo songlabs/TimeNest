@@ -675,6 +675,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var shouldDisplay: Bool {
         failureReason != nil
             || candidateCount == 0
+            || ocrLanguage != nil
             || recognitionMode != nil
             || !cellDiagnostics.isEmpty
     }
@@ -1154,6 +1155,65 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     private static func section(title: String, lines: [String]) -> String {
         (["[\(title)]"] + (lines.isEmpty ? ["none"] : lines))
             .joined(separator: "\n")
+    }
+
+    static func dayScan(
+        observations: [CalendarOCRObservation],
+        selectedDate: Date,
+        candidateCount: Int,
+        stage: CalendarPhotoImportParseStage,
+        failureReason: CalendarPhotoImportParseError?
+    ) -> CalendarPhotoImportDiagnostics {
+        let meaningful = observations.filter {
+            !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        }
+        let pureNumericCount = meaningful.filter { observation in
+            observation.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                .folding(
+                    options: .widthInsensitive,
+                    locale: Locale(identifier: "en_US_POSIX")
+                )
+                .range(of: #"^\d+$"#, options: .regularExpression) != nil
+        }.count
+        return CalendarPhotoImportDiagnostics(
+            scanMode: .day,
+            selectedDate: selectedDate,
+            gridDetection: "notApplicable",
+            orientation: nil,
+            manualYearMonth: nil,
+            resolvedYearMonth: nil,
+            observationCount: observations.count,
+            meaningfulObservationCount: meaningful.count,
+            pureNumericObservationCount: pureNumericCount,
+            dateAnchorCount: 0,
+            distinctDayCount: 0,
+            sundayStartScore: 0,
+            mondayStartScore: 0,
+            selectedWeekStart: nil,
+            gridColumnCount: 0,
+            gridRowCount: 0,
+            gridMatchedAnchorCount: 0,
+            gridRejectedAnchorCount: 0,
+            gridAcceptanceThreshold: 0,
+            gridAccepted: false,
+            anchorMedianWidth: nil,
+            anchorMedianHeight: nil,
+            duplicateDays: [],
+            anchorSpatialDistribution: CalendarPhotoAnchorSpatialDiagnostics(
+                topQuarterAnchorCount: 0,
+                bottomThreeQuarterAnchorCount: 0,
+                leftHalfAnchorCount: 0,
+                rightHalfAnchorCount: 0,
+                extent: nil
+            ),
+            anchors: [],
+            selectedGridAttempt: nil,
+            gridAttempts: [],
+            dayRegionCount: 0,
+            candidateCount: candidateCount,
+            parseStage: stage,
+            failureReason: failureReason
+        )
     }
 }
 
@@ -1771,20 +1831,46 @@ struct CalendarPhotoDayParser {
         observations: [CalendarOCRObservation],
         selectedDate: Date,
         defaultCalendarID: UUID,
-        calendar: Calendar = Calendar(identifier: .gregorian)
+        calendar: Calendar = Calendar(identifier: .gregorian),
+        diagnosticsHandler: ((CalendarPhotoImportDiagnostics) -> Void)? = nil
     ) throws -> CalendarPhotoImportParseResult {
         let meaningful = observations.filter {
             !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
-        guard !meaningful.isEmpty else { throw CalendarPhotoImportParseError.noText }
+        guard !meaningful.isEmpty else {
+            diagnosticsHandler?(.dayScan(
+                observations: observations,
+                selectedDate: selectedDate,
+                candidateCount: 0,
+                stage: .text,
+                failureReason: .noText
+            ))
+            throw CalendarPhotoImportParseError.noText
+        }
         let candidates = CalendarImportCandidateBuilder().makeDayCandidates(
             observations: meaningful,
             selectedDate: selectedDate,
             calendarID: defaultCalendarID,
             calendar: calendar
         )
-        guard !candidates.isEmpty else { throw CalendarPhotoImportParseError.noCandidates }
+        guard !candidates.isEmpty else {
+            diagnosticsHandler?(.dayScan(
+                observations: observations,
+                selectedDate: selectedDate,
+                candidateCount: 0,
+                stage: .candidates,
+                failureReason: .noCandidates
+            ))
+            throw CalendarPhotoImportParseError.noCandidates
+        }
         let components = calendar.dateComponents([.year, .month], from: selectedDate)
+        diagnosticsHandler?(.dayScan(
+            observations: observations,
+            selectedDate: selectedDate,
+            candidateCount: candidates.count,
+            stage: .completed,
+            failureReason: nil
+        ))
         return CalendarPhotoImportParseResult(
             yearMonth: components.year.flatMap { year in
                 components.month.flatMap { CalendarImportYearMonth(year: year, month: $0) }
