@@ -577,6 +577,7 @@ enum CalendarPhotoCellRejectionReason: String, Equatable, Sendable {
     case noObservations
     case printedDayOnly
     case emptyText
+    case noParsedTime
     case invalidDate
 }
 
@@ -602,9 +603,13 @@ struct CalendarPhotoCellDiagnostics: Equatable, Sendable {
     let rawTexts: [String]
     let normalizedTexts: [String]
     let candidates: [CalendarPhotoCellCandidateDiagnostics]
+    let rejectedNoParsedTimeLineCount: Int
     let rejectedReason: CalendarPhotoCellRejectionReason?
 
     var contentObservationCount: Int { rawTexts.count }
+    var timeLinesDetected: Int {
+        candidates.filter { $0.parsedStartMinutes != nil }.count
+    }
     var candidateCreated: Bool { candidates.contains(where: \.candidateCreated) }
 }
 
@@ -884,8 +889,10 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 "content=\(cell.contentObservationCount)",
                 "rawTexts=\(Self.textList(cell.rawTexts))",
                 "normalizedTexts=\(Self.textList(cell.normalizedTexts))",
+                "timeLinesDetected=\(cell.timeLinesDetected)",
                 "candidates=\(cell.candidates.count)",
-                "rejectedReason=\(cell.rejectedReason?.rawValue ?? "none")"
+                "rejectedReason=\(cell.rejectedReason?.rawValue ?? "none")",
+                "rejectedNoParsedTimeLines=\(cell.rejectedNoParsedTimeLineCount)"
             ].joined(separator: " ")
             let candidateLines = cell.candidates.enumerated().map { index, candidate in
                 [
@@ -1592,10 +1599,15 @@ private struct CalendarImportCandidateBuilder {
             )
             let cellCandidates: [CalendarImportCandidate]
             let candidateDiagnostics: [CalendarPhotoCellCandidateDiagnostics]
+            let rejectedNoParsedTimeLineCount: Int
             if let date {
                 let holidayNames = DateOnly(from: date, in: calendar.timeZone)
                     .map { holidayNamesByDate[$0] ?? [] } ?? []
-                (cellCandidates, candidateDiagnostics) = makeMonthCellCandidates(
+                (
+                    cellCandidates,
+                    candidateDiagnostics,
+                    rejectedNoParsedTimeLineCount
+                ) = makeMonthCellCandidates(
                     observations: meaningful,
                     date: date,
                     calendarID: calendarID,
@@ -1604,20 +1616,25 @@ private struct CalendarImportCandidateBuilder {
             } else {
                 cellCandidates = []
                 candidateDiagnostics = []
+                rejectedNoParsedTimeLineCount = 0
             }
             candidates.append(contentsOf: cellCandidates)
 
             let rejectedReason: CalendarPhotoCellRejectionReason?
-            if !cellCandidates.isEmpty {
-                rejectedReason = nil
-            } else if date == nil {
+            if date == nil {
                 rejectedReason = .invalidDate
             } else if assigned.isEmpty {
                 rejectedReason = .noObservations
             } else if content.isEmpty {
                 rejectedReason = .printedDayOnly
-            } else {
+            } else if meaningful.isEmpty {
                 rejectedReason = .emptyText
+            } else if rejectedNoParsedTimeLineCount > 0 {
+                rejectedReason = .noParsedTime
+            } else if cellCandidates.isEmpty {
+                rejectedReason = .noParsedTime
+            } else {
+                rejectedReason = nil
             }
             diagnostics.append(CalendarPhotoCellDiagnostics(
                 day: region.day,
@@ -1627,6 +1644,7 @@ private struct CalendarImportCandidateBuilder {
                 rawTexts: content.map(\.text),
                 normalizedTexts: content.map { normalizedText($0.text) },
                 candidates: candidateDiagnostics,
+                rejectedNoParsedTimeLineCount: rejectedNoParsedTimeLineCount,
                 rejectedReason: rejectedReason
             ))
         }
@@ -1692,7 +1710,11 @@ private struct CalendarImportCandidateBuilder {
         date: Date,
         calendarID: UUID,
         holidayNames: Set<String>
-    ) -> ([CalendarImportCandidate], [CalendarPhotoCellCandidateDiagnostics]) {
+    ) -> (
+        [CalendarImportCandidate],
+        [CalendarPhotoCellCandidateDiagnostics],
+        rejectedNoParsedTimeLineCount: Int
+    ) {
         let parsedLines = group(observations).compactMap { line -> ParsedLine? in
             let sorted = line.observations.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
             let rawText = sorted.map(\.text).joined(separator: " ")
@@ -1712,10 +1734,12 @@ private struct CalendarImportCandidateBuilder {
         var pendingTitleLines: [ParsedLine] = []
 
         func appendCandidate(from sourceLines: [ParsedLine]) {
-            guard !sourceLines.isEmpty else { return }
+            guard !sourceLines.isEmpty,
+                  let time = sourceLines.compactMap(\.time).first else {
+                return
+            }
             let originalText = sourceLines.map(\.rawText).joined(separator: " ")
             let normalized = sourceLines.map(\.normalizedText).joined(separator: " ")
-            let time = sourceLines.compactMap(\.time).first
             let personToken = personToken(in: normalized)
             var title = CalendarImportTimeParser.removingTime(from: normalized)
             if let personToken, let range = title.range(of: personToken) {
@@ -1729,25 +1753,18 @@ private struct CalendarImportCandidateBuilder {
                 title: title,
                 parsedTime: time
             )
-            let holidayMatch = time == nil
-                && CalendarImportHolidayMatcher.isExactMatch(
-                    title: title,
-                    holidayNames: holidayNames
-                )
+            // Timed candidates remain selectable even when their title matches a holiday.
+            let holidayMatch = false
             let defaultSelected = quality != .lowInformation && !holidayMatch
             let incompleteTime: Bool
-            if let time {
-                if let endMinutes = time.endMinutes {
-                    incompleteTime = endMinutes <= time.startMinutes
-                } else {
-                    incompleteTime = true
-                }
+            if let endMinutes = time.endMinutes {
+                incompleteTime = endMinutes <= time.startMinutes
             } else {
                 incompleteTime = true
             }
             let needsReview = quality == .lowInformation
                 || holidayMatch
-                || time.map { $0.parseQuality != .exact } == true
+                || time.parseQuality != .exact
                 || confidence < 0.75
                 || incompleteTime
                 || title.isEmpty
@@ -1755,8 +1772,8 @@ private struct CalendarImportCandidateBuilder {
             candidates.append(CalendarImportCandidate(
                 id: UUID(),
                 date: date,
-                startTimeMinutes: time?.startMinutes,
-                endTimeMinutes: time?.endMinutes,
+                startTimeMinutes: time.startMinutes,
+                endTimeMinutes: time.endMinutes,
                 title: title,
                 originalText: originalText,
                 personToken: personToken,
@@ -1768,12 +1785,12 @@ private struct CalendarImportCandidateBuilder {
                 includesPersonTokenInTitle: personToken != nil
             ))
             diagnostics.append(CalendarPhotoCellCandidateDiagnostics(
-                parsedStartMinutes: time?.startMinutes,
-                parsedEndMinutes: time?.endMinutes,
+                parsedStartMinutes: time.startMinutes,
+                parsedEndMinutes: time.endMinutes,
                 remainingTitle: title,
                 ocrConfidence: confidence,
                 quality: quality,
-                timeParseQuality: time?.parseQuality,
+                timeParseQuality: time.parseQuality,
                 holidayMatch: holidayMatch,
                 needsReview: needsReview,
                 defaultSelected: defaultSelected,
@@ -1790,8 +1807,7 @@ private struct CalendarImportCandidateBuilder {
             appendCandidate(from: pendingTitleLines + [line])
             pendingTitleLines.removeAll(keepingCapacity: true)
         }
-        appendCandidate(from: pendingTitleLines)
-        return (candidates, diagnostics)
+        return (candidates, diagnostics, pendingTitleLines.count)
     }
 
     private func group(_ observations: [CalendarOCRObservation]) -> [Line] {
@@ -2646,9 +2662,10 @@ struct CalendarPhotoParser {
                 let originalText = sorted.map(\.text)
                     .joined(separator: " ")
                     .trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !originalText.isEmpty else { continue }
-
-                let time = CalendarImportTimeParser.parse(originalText)
+                guard !originalText.isEmpty,
+                      let time = CalendarImportTimeParser.parse(originalText) else {
+                    continue
+                }
                 let personToken = Self.personToken(in: originalText)
                 var title = CalendarImportTimeParser.removingTime(from: originalText)
                 if let personToken, let range = title.range(of: personToken) {
@@ -2663,15 +2680,15 @@ struct CalendarPhotoParser {
                 )
                 let needsReview = quality == .lowInformation
                     || confidence < 0.75
-                    || (time != nil && time?.endMinutes == nil)
-                    || time.map { $0.parseQuality != .exact } == true
+                    || time.endMinutes == nil
+                    || time.parseQuality != .exact
                     || title.isEmpty
                     || personToken != nil
                 result.append(CalendarImportCandidate(
                     id: UUID(),
                     date: date,
-                    startTimeMinutes: time?.startMinutes,
-                    endTimeMinutes: time?.endMinutes,
+                    startTimeMinutes: time.startMinutes,
+                    endTimeMinutes: time.endMinutes,
                     title: title,
                     originalText: originalText,
                     personToken: personToken,
