@@ -383,9 +383,26 @@ struct CalendarImportDayRegion: Equatable, Sendable {
     }
 }
 
+enum CalendarImportTimeParseQuality: String, Equatable, Sendable {
+    case exact
+    case normalized
+    case recovered
+}
+
 struct CalendarImportParsedTime: Equatable, Sendable {
     let startMinutes: Int
     let endMinutes: Int?
+    let parseQuality: CalendarImportTimeParseQuality
+
+    init(
+        startMinutes: Int,
+        endMinutes: Int?,
+        parseQuality: CalendarImportTimeParseQuality = .exact
+    ) {
+        self.startMinutes = startMinutes
+        self.endMinutes = endMinutes
+        self.parseQuality = parseQuality
+    }
 }
 
 enum CalendarImportCandidateQuality: String, Equatable, Sendable {
@@ -412,10 +429,24 @@ struct CalendarImportCandidateQualityEvaluator {
               ) != nil else {
             return .standard
         }
-        let range = NSRange(normalized.startIndex..<normalized.endIndex, in: normalized)
-        let numberCount = (try? NSRegularExpression(pattern: #"\p{N}"#))?
-            .numberOfMatches(in: normalized, range: range) ?? 0
-        return (1...5).contains(numberCount) ? .lowInformation : .standard
+        return .lowInformation
+    }
+}
+
+struct CalendarImportHolidayMatcher {
+    static func isExactMatch(title: String, holidayNames: Set<String>) -> Bool {
+        let normalizedTitle = normalized(title)
+        guard !normalizedTitle.isEmpty else { return false }
+        return holidayNames.contains { normalized($0) == normalizedTitle }
+    }
+
+    private static func normalized(_ value: String) -> String {
+        value
+            .folding(
+                options: .widthInsensitive,
+                locale: Locale(identifier: "en_US_POSIX")
+            )
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -555,6 +586,8 @@ struct CalendarPhotoCellCandidateDiagnostics: Equatable, Sendable {
     let remainingTitle: String
     let ocrConfidence: Float
     let quality: CalendarImportCandidateQuality
+    let timeParseQuality: CalendarImportTimeParseQuality?
+    let holidayMatch: Bool
     let needsReview: Bool
     let defaultSelected: Bool
     let candidateCreated: Bool
@@ -841,6 +874,8 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 "remainingTitle=\(Self.quotedText(firstCandidate?.remainingTitle ?? ""))",
                 "ocrConfidence=\(Self.decimalText(firstCandidate.map { Double($0.ocrConfidence) }))",
                 "quality=\(firstCandidate?.quality.rawValue ?? "none")",
+                "timeParseQuality=\(firstCandidate?.timeParseQuality?.rawValue ?? "none")",
+                "holidayMatch=\(firstCandidate?.holidayMatch.description ?? "none")",
                 "needsReview=\(firstCandidate?.needsReview.description ?? "none")",
                 "defaultSelected=\(firstCandidate?.defaultSelected.description ?? "none")",
                 "cellBounds=(x=\(Self.decimalText(bounds.x)),y=\(Self.decimalText(bounds.y)),w=\(Self.decimalText(bounds.width)),h=\(Self.decimalText(bounds.height)))",
@@ -861,6 +896,8 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                     "remainingTitle=\(Self.quotedText(candidate.remainingTitle))",
                     "ocrConfidence=\(Self.decimalText(Double(candidate.ocrConfidence)))",
                     "quality=\(candidate.quality.rawValue)",
+                    "timeParseQuality=\(candidate.timeParseQuality?.rawValue ?? "none")",
+                    "holidayMatch=\(candidate.holidayMatch)",
                     "needsReview=\(candidate.needsReview)",
                     "defaultSelected=\(candidate.defaultSelected)",
                     "candidateCreated=\(candidate.candidateCreated)",
@@ -1092,34 +1129,104 @@ struct CalendarImportTimeParser {
         // endpoint. This deliberately rejects five-digit or embedded OCR noise.
         let compactToDelimitedRangePattern = #"(?<![\p{L}\p{N}])(\d{1,2})(\d{2})\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.=]\s*(\d{2})(?![\p{L}\p{N}])"#
         if let match = firstMatch(pattern: compactToDelimitedRangePattern, text: text),
-           let parsed = parsedTime(match: match, text: text) {
+           let parsed = parsedTime(match: match, text: text, parseQuality: .recovered) {
             return MatchResult(time: parsed, range: match.range)
         }
 
         let compactRangePattern = #"(?<![\p{L}\p{N}])(\d{1,2})(\d{2})\s*[-–—〜～~]\s*(\d{1,2})(\d{2})(?![\p{L}\p{N}])"#
         if let match = firstMatch(pattern: compactRangePattern, text: text),
-           let parsed = parsedTime(match: match, text: text) {
+           let parsed = parsedTime(match: match, text: text, parseQuality: .recovered) {
             return MatchResult(time: parsed, range: match.range)
         }
 
         let ocrRangePattern = #"(?<!\d)(\d{1,2})\s*[.=]\s*(\d{2})\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.=]?\s*(\d{2})(?!\d)"#
         if let match = firstMatch(pattern: ocrRangePattern, text: text),
-           let parsed = parsedTime(match: match, text: text) {
+           let parsed = parsedTime(
+               match: match,
+               text: text,
+               parseQuality: hasCompactEnd(match: match, text: text)
+                   ? .recovered
+                   : .normalized
+           ) {
             return MatchResult(time: parsed, range: match.range)
         }
 
         let clockPattern = #"(?<!\d)(\d{1,2})\s*[:：]\s*(\d{2})(?:\s*[-–—〜～~]\s*(\d{1,2})\s*[:：.=]?\s*(\d{2}))?(?!\d)"#
         if let match = firstMatch(pattern: clockPattern, text: text),
-           let parsed = parsedTime(match: match, text: text) {
+           let parsed = parsedTime(
+               match: match,
+               text: text,
+               parseQuality: clockParseQuality(match: match, text: text)
+           ) {
             return MatchResult(time: parsed, range: match.range)
         }
 
         let japanesePattern = #"(?<!\d)(\d{1,2})\s*時\s*(\d{1,2})\s*分(?:\s*[-–—〜～~]\s*(\d{1,2})\s*時\s*(\d{1,2})\s*分)?(?!\d)"#
         if let match = firstMatch(pattern: japanesePattern, text: text),
-           let parsed = parsedTime(match: match, text: text) {
+           let parsed = parsedTime(
+               match: match,
+               text: text,
+               parseQuality: containsNormalizedRangeSeparator(match: match, text: text)
+                   ? .normalized
+                   : .exact
+           ) {
             return MatchResult(time: parsed, range: match.range)
         }
         return nil
+    }
+
+    private static func clockParseQuality(
+        match: NSTextCheckingResult,
+        text: String
+    ) -> CalendarImportTimeParseQuality {
+        if hasCompactEnd(match: match, text: text) {
+            return .recovered
+        }
+        guard let matchedText = matchedText(match: match, text: text) else {
+            return .exact
+        }
+        return matchedText.range(
+            of: #"[：.=–—〜～~]"#,
+            options: .regularExpression
+        ) == nil ? .exact : .normalized
+    }
+
+    private static func hasCompactEnd(
+        match: NSTextCheckingResult,
+        text: String
+    ) -> Bool {
+        guard match.numberOfRanges > 4 else { return false }
+        let hourRange = match.range(at: 3)
+        let minuteRange = match.range(at: 4)
+        guard hourRange.location != NSNotFound,
+              minuteRange.location != NSNotFound,
+              minuteRange.location >= NSMaxRange(hourRange) else {
+            return false
+        }
+        let betweenRange = NSRange(
+            location: NSMaxRange(hourRange),
+            length: minuteRange.location - NSMaxRange(hourRange)
+        )
+        guard let range = Range(betweenRange, in: text) else { return false }
+        return text[range].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private static func containsNormalizedRangeSeparator(
+        match: NSTextCheckingResult,
+        text: String
+    ) -> Bool {
+        matchedText(match: match, text: text)?.range(
+            of: #"[–—〜～~]"#,
+            options: .regularExpression
+        ) != nil
+    }
+
+    private static func matchedText(
+        match: NSTextCheckingResult,
+        text: String
+    ) -> String? {
+        guard let range = Range(match.range, in: text) else { return nil }
+        return String(text[range])
     }
 
     private static func firstMatch(pattern: String, text: String) -> NSTextCheckingResult? {
@@ -1130,7 +1237,8 @@ struct CalendarImportTimeParser {
 
     private static func parsedTime(
         match: NSTextCheckingResult,
-        text: String
+        text: String,
+        parseQuality: CalendarImportTimeParseQuality
     ) -> CalendarImportParsedTime? {
         guard let startHour = integer(at: 1, match: match, text: text),
               let startMinute = integer(at: 2, match: match, text: text),
@@ -1150,7 +1258,8 @@ struct CalendarImportTimeParser {
         }
         return CalendarImportParsedTime(
             startMinutes: startHour * 60 + startMinute,
-            endMinutes: end
+            endMinutes: end,
+            parseQuality: parseQuality
         )
     }
 
@@ -1225,6 +1334,7 @@ struct CalendarPhotoGridFirstParser {
         weekStart: CalendarPhotoImportWeekStart,
         grid: CalendarPhotoGridGeometry,
         defaultCalendarID: UUID,
+        holidayNamesByDate: [DateOnly: Set<String>] = [:],
         calendar inputCalendar: Calendar = Calendar(identifier: .gregorian),
         orientationDiagnostics: CalendarPhotoOrientationDiagnostics? = nil,
         recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics] = [],
@@ -1267,6 +1377,7 @@ struct CalendarPhotoGridFirstParser {
             regions: regions,
             monthStart: monthStart,
             calendarID: defaultCalendarID,
+            holidayNamesByDate: holidayNamesByDate,
             calendar: calendar
         )
         let candidates = Self.stablyOrderedByDate(buildResult.candidates)
@@ -1457,6 +1568,7 @@ private struct CalendarImportCandidateBuilder {
         regions: [CalendarImportDayRegion],
         monthStart: Date,
         calendarID: UUID,
+        holidayNamesByDate: [DateOnly: Set<String>],
         calendar: Calendar
     ) -> CalendarPhotoMonthCandidateBuildResult {
         var candidates: [CalendarImportCandidate] = []
@@ -1481,10 +1593,13 @@ private struct CalendarImportCandidateBuilder {
             let cellCandidates: [CalendarImportCandidate]
             let candidateDiagnostics: [CalendarPhotoCellCandidateDiagnostics]
             if let date {
+                let holidayNames = DateOnly(from: date, in: calendar.timeZone)
+                    .map { holidayNamesByDate[$0] ?? [] } ?? []
                 (cellCandidates, candidateDiagnostics) = makeMonthCellCandidates(
                     observations: meaningful,
                     date: date,
-                    calendarID: calendarID
+                    calendarID: calendarID,
+                    holidayNames: holidayNames
                 )
             } else {
                 cellCandidates = []
@@ -1575,7 +1690,8 @@ private struct CalendarImportCandidateBuilder {
     private func makeMonthCellCandidates(
         observations: [CalendarOCRObservation],
         date: Date,
-        calendarID: UUID
+        calendarID: UUID,
+        holidayNames: Set<String>
     ) -> ([CalendarImportCandidate], [CalendarPhotoCellCandidateDiagnostics]) {
         let parsedLines = group(observations).compactMap { line -> ParsedLine? in
             let sorted = line.observations.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
@@ -1613,7 +1729,12 @@ private struct CalendarImportCandidateBuilder {
                 title: title,
                 parsedTime: time
             )
-            let defaultSelected = quality != .lowInformation
+            let holidayMatch = time == nil
+                && CalendarImportHolidayMatcher.isExactMatch(
+                    title: title,
+                    holidayNames: holidayNames
+                )
+            let defaultSelected = quality != .lowInformation && !holidayMatch
             let incompleteTime: Bool
             if let time {
                 if let endMinutes = time.endMinutes {
@@ -1624,6 +1745,13 @@ private struct CalendarImportCandidateBuilder {
             } else {
                 incompleteTime = true
             }
+            let needsReview = quality == .lowInformation
+                || holidayMatch
+                || time.map { $0.parseQuality != .exact } == true
+                || confidence < 0.75
+                || incompleteTime
+                || title.isEmpty
+                || personToken != nil
             candidates.append(CalendarImportCandidate(
                 id: UUID(),
                 date: date,
@@ -1635,11 +1763,7 @@ private struct CalendarImportCandidateBuilder {
                 confidence: confidence,
                 quality: quality,
                 isSelected: defaultSelected,
-                needsReview: quality == .lowInformation
-                    || confidence < 0.75
-                    || incompleteTime
-                    || title.isEmpty
-                    || personToken != nil,
+                needsReview: needsReview,
                 targetCalendarID: calendarID,
                 includesPersonTokenInTitle: personToken != nil
             ))
@@ -1649,11 +1773,9 @@ private struct CalendarImportCandidateBuilder {
                 remainingTitle: title,
                 ocrConfidence: confidence,
                 quality: quality,
-                needsReview: quality == .lowInformation
-                    || confidence < 0.75
-                    || incompleteTime
-                    || title.isEmpty
-                    || personToken != nil,
+                timeParseQuality: time?.parseQuality,
+                holidayMatch: holidayMatch,
+                needsReview: needsReview,
                 defaultSelected: defaultSelected,
                 candidateCreated: true,
                 rejectedReason: nil
@@ -2542,6 +2664,7 @@ struct CalendarPhotoParser {
                 let needsReview = quality == .lowInformation
                     || confidence < 0.75
                     || (time != nil && time?.endMinutes == nil)
+                    || time.map { $0.parseQuality != .exact } == true
                     || title.isEmpty
                     || personToken != nil
                 result.append(CalendarImportCandidate(

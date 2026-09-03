@@ -37,7 +37,11 @@ final class CalendarPhotoImportTests: XCTestCase {
         )
         XCTAssertEqual(
             CalendarImportTimeParser.parse("17:30～20:30"),
-            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+            CalendarImportParsedTime(
+                startMinutes: 17 * 60 + 30,
+                endMinutes: 20 * 60 + 30,
+                parseQuality: .normalized
+            )
         )
         XCTAssertEqual(
             CalendarImportTimeParser.parse("10:00"),
@@ -45,11 +49,19 @@ final class CalendarPhotoImportTests: XCTestCase {
         )
         XCTAssertEqual(
             CalendarImportTimeParser.parse("17.30-20.30"),
-            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+            CalendarImportParsedTime(
+                startMinutes: 17 * 60 + 30,
+                endMinutes: 20 * 60 + 30,
+                parseQuality: .normalized
+            )
         )
         XCTAssertEqual(
             CalendarImportTimeParser.parse("17:30-2030"),
-            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+            CalendarImportParsedTime(
+                startMinutes: 17 * 60 + 30,
+                endMinutes: 20 * 60 + 30,
+                parseQuality: .recovered
+            )
         )
         XCTAssertNil(CalendarImportTimeParser.parse("2030"))
         XCTAssertEqual(
@@ -63,15 +75,27 @@ final class CalendarPhotoImportTests: XCTestCase {
     func testTimeParserSupportsContextBoundOCRSeparatorsWithoutGuessingDigits() {
         XCTAssertEqual(
             CalendarImportTimeParser.parse("17=30-20=30"),
-            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+            CalendarImportParsedTime(
+                startMinutes: 17 * 60 + 30,
+                endMinutes: 20 * 60 + 30,
+                parseQuality: .normalized
+            )
         )
         XCTAssertEqual(
             CalendarImportTimeParser.parse("17:30-20=30"),
-            CalendarImportParsedTime(startMinutes: 17 * 60 + 30, endMinutes: 20 * 60 + 30)
+            CalendarImportParsedTime(
+                startMinutes: 17 * 60 + 30,
+                endMinutes: 20 * 60 + 30,
+                parseQuality: .normalized
+            )
         )
         XCTAssertEqual(
             CalendarImportTimeParser.parse("20=20—21：40"),
-            CalendarImportParsedTime(startMinutes: 20 * 60 + 20, endMinutes: 21 * 60 + 40)
+            CalendarImportParsedTime(
+                startMinutes: 20 * 60 + 20,
+                endMinutes: 21 * 60 + 40,
+                parseQuality: .normalized
+            )
         )
         XCTAssertNil(CalendarImportTimeParser.parse("status=A.B"))
         XCTAssertNil(CalendarImportTimeParser.parse("key=value"))
@@ -94,11 +118,13 @@ final class CalendarPhotoImportTests: XCTestCase {
     func testTimeParserSupportsBoundedCompactRangesAndRejectsAmbiguousDigits() {
         let expected1730 = CalendarImportParsedTime(
             startMinutes: 17 * 60 + 30,
-            endMinutes: 20 * 60 + 30
+            endMinutes: 20 * 60 + 30,
+            parseQuality: .recovered
         )
         let expected0730 = CalendarImportParsedTime(
             startMinutes: 7 * 60 + 30,
-            endMinutes: 20 * 60 + 30
+            endMinutes: 20 * 60 + 30,
+            parseQuality: .recovered
         )
         XCTAssertEqual(CalendarImportTimeParser.parse("1730-20.30"), expected1730)
         XCTAssertEqual(CalendarImportTimeParser.parse("1730-20:30"), expected1730)
@@ -118,6 +144,16 @@ final class CalendarPhotoImportTests: XCTestCase {
             "Release1730",
             "abc730-2030xyz"
         ].forEach { XCTAssertNil(CalendarImportTimeParser.parse($0), $0) }
+    }
+
+    func testTimeParserReportsExactNormalizedAndRecoveredQuality() {
+        XCTAssertEqual(CalendarImportTimeParser.parse("17:30-20:30")?.parseQuality, .exact)
+        XCTAssertEqual(CalendarImportTimeParser.parse("17=30-20=30")?.parseQuality, .normalized)
+        XCTAssertEqual(CalendarImportTimeParser.parse("17:30-20.30")?.parseQuality, .normalized)
+        XCTAssertEqual(CalendarImportTimeParser.parse("20=20—21：40")?.parseQuality, .normalized)
+        XCTAssertEqual(CalendarImportTimeParser.parse("1730-20.30")?.parseQuality, .recovered)
+        XCTAssertEqual(CalendarImportTimeParser.parse("730-20:30")?.parseQuality, .recovered)
+        XCTAssertEqual(CalendarImportTimeParser.parse("1730-2030")?.parseQuality, .recovered)
     }
 
     func testOCRCandidateSelectorPrefersValidRangeButLeavesTitlesUntouched() throws {
@@ -1091,7 +1127,7 @@ final class CalendarPhotoImportTests: XCTestCase {
             #"rawTexts=["⑤","20:20–21:40"]"#
         ))
         XCTAssertTrue(captured.plainText.contains(
-            #"parsedStart=20:20 parsedEnd=21:40 remainingTitle="⑤" ocrConfidence=0.7250 quality=standard needsReview=true defaultSelected=true candidateCreated=true"#
+            #"parsedStart=20:20 parsedEnd=21:40 remainingTitle="⑤" ocrConfidence=0.7250 quality=standard timeParseQuality=normalized holidayMatch=false needsReview=true defaultSelected=true candidateCreated=true"#
         ))
     }
 
@@ -1119,7 +1155,17 @@ final class CalendarPhotoImportTests: XCTestCase {
     }
 
     func testGridFirstMonthKeepsLowInformationNumericCandidatesUnselected() throws {
-        for title in ["4", "40", "20002", "9/8"] {
+        for title in [
+            "4",
+            "40",
+            "20002",
+            "317302030",
+            "320=20—21240",
+            "320=20—24=4",
+            "20=20-21240",
+            "520=20-21",
+            "9/8"
+        ] {
             let fixture = try gridFirstFixture(day: 12)
             var diagnostics: CalendarPhotoImportDiagnostics?
             let result = try fixture.parser.parseMonth(
@@ -1161,13 +1207,23 @@ final class CalendarPhotoImportTests: XCTestCase {
             XCTAssertTrue(candidateDiagnostics.needsReview)
             XCTAssertFalse(candidateDiagnostics.defaultSelected)
             XCTAssertTrue(try XCTUnwrap(diagnostics).plainText.contains(
-                "quality=lowInformation needsReview=true defaultSelected=false"
+                "quality=lowInformation timeParseQuality=none holidayMatch=false "
+                    + "needsReview=true defaultSelected=false"
             ))
         }
     }
 
     func testGridFirstMonthDoesNotMisclassifyTextualCandidatesAsLowInformation() throws {
-        for title in ["Meeting", "1on1", "会議 2", "Meeting 2", "Room 3", "A班"] {
+        for title in [
+            "Meeting",
+            "1on1",
+            "会議 2",
+            "Meeting 2",
+            "Room 3",
+            "A班",
+            "説明会",
+            "適性検査対策"
+        ] {
             let fixture = try gridFirstFixture(day: 12)
             let result = try fixture.parser.parseMonth(
                 observations: [gridFirstObservation(title, in: fixture.region, line: 0)],
@@ -1210,7 +1266,7 @@ final class CalendarPhotoImportTests: XCTestCase {
         let result = try fixture.parser.parseMonth(
             observations: [
                 gridFirstObservation("適性検査対策", in: fixture.region, line: 0),
-                gridFirstObservation("8:50–16:30", in: fixture.region, line: 1)
+                gridFirstObservation("8:50-16:30", in: fixture.region, line: 1)
             ],
             yearMonth: fixture.yearMonth,
             weekStart: .sunday,
@@ -1224,6 +1280,106 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(candidate.startTimeMinutes, 8 * 60 + 50)
         XCTAssertEqual(candidate.endTimeMinutes, 16 * 60 + 30)
         XCTAssertFalse(candidate.needsReview)
+    }
+
+    func testGridFirstMonthTimeParseQualityForcesReviewWithoutChangingSelection() throws {
+        let cases: [(String, CalendarImportTimeParseQuality, Bool)] = [
+            ("Meeting 17:30-20:30", .exact, false),
+            ("Meeting 17=30-20=30", .normalized, true),
+            ("Meeting 1730-20.30", .recovered, true),
+            ("Meeting 2029-21=40", .recovered, true)
+        ]
+
+        for (text, expectedQuality, expectedNeedsReview) in cases {
+            let fixture = try gridFirstFixture(day: 11)
+            var diagnostics: CalendarPhotoImportDiagnostics?
+            let result = try fixture.parser.parseMonth(
+                observations: [gridFirstObservation(text, in: fixture.region, line: 0)],
+                yearMonth: fixture.yearMonth,
+                weekStart: .sunday,
+                grid: fixture.grid,
+                defaultCalendarID: calendarID,
+                calendar: utcGregorianCalendar(),
+                diagnosticsHandler: { diagnostics = $0 }
+            )
+
+            let candidate = try XCTUnwrap(result.candidates.first)
+            XCTAssertEqual(candidate.title, "Meeting", text)
+            XCTAssertEqual(candidate.needsReview, expectedNeedsReview, text)
+            XCTAssertTrue(candidate.isSelected, text)
+            let day = try XCTUnwrap(diagnostics?.cellDiagnostics.first { $0.day == 11 })
+            let candidateDiagnostics = try XCTUnwrap(day.candidates.first)
+            XCTAssertEqual(candidateDiagnostics.timeParseQuality, expectedQuality, text)
+            XCTAssertFalse(candidateDiagnostics.holidayMatch, text)
+            XCTAssertEqual(candidateDiagnostics.needsReview, expectedNeedsReview, text)
+            XCTAssertTrue(candidateDiagnostics.defaultSelected, text)
+        }
+    }
+
+    func testGridFirstMonthHolidayExactMatchIsRetainedForReviewAndInitiallyUnselected() throws {
+        let fixture = try gridFirstFixture(day: 21)
+        let holidayDate = DateOnly(year: 2026, month: 9, day: 21)
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        let result = try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("敬老の日", in: fixture.region, line: 0)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            holidayNamesByDate: [holidayDate: Set(["敬老の日"])],
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        var candidates = result.candidates
+        var candidate = try XCTUnwrap(candidates.first)
+        XCTAssertEqual(candidate.title, "敬老の日")
+        XCTAssertEqual(candidate.quality, .standard)
+        XCTAssertTrue(candidate.needsReview)
+        XCTAssertFalse(candidate.isSelected)
+
+        candidate.isSelected = true
+        candidates[0] = candidate
+        XCTAssertEqual(candidates.filter(\.isSelected).count, 1)
+
+        let day = try XCTUnwrap(diagnostics?.cellDiagnostics.first { $0.day == 21 })
+        let candidateDiagnostics = try XCTUnwrap(day.candidates.first)
+        XCTAssertTrue(candidateDiagnostics.holidayMatch)
+        XCTAssertTrue(candidateDiagnostics.needsReview)
+        XCTAssertFalse(candidateDiagnostics.defaultSelected)
+        XCTAssertTrue(try XCTUnwrap(diagnostics).plainText.contains(
+            "holidayMatch=true needsReview=true defaultSelected=false"
+        ))
+    }
+
+    func testGridFirstMonthHolidayMatchingIsTrimmedWidthInsensitiveAndNotFuzzy() throws {
+        let holidayDate = DateOnly(year: 2026, month: 9, day: 21)
+        let holidayNames = [holidayDate: Set(["敬老の日"])]
+
+        for (title, day, expectedSelected) in [
+            ("　敬老の日　", 21, false),
+            ("敬老の日", 20, true),
+            ("敬老の日 17:30-20:30", 21, true),
+            ("敬老の日 Meeting", 21, true),
+            ("敬老日", 21, true),
+            ("Meeting", 21, true)
+        ] {
+            let fixture = try gridFirstFixture(day: day)
+            let result = try fixture.parser.parseMonth(
+                observations: [gridFirstObservation(title, in: fixture.region, line: 0)],
+                yearMonth: fixture.yearMonth,
+                weekStart: .sunday,
+                grid: fixture.grid,
+                defaultCalendarID: calendarID,
+                holidayNamesByDate: holidayNames,
+                calendar: utcGregorianCalendar()
+            )
+
+            let candidate = try XCTUnwrap(result.candidates.first)
+            XCTAssertEqual(candidate.isSelected, expectedSelected, title)
+        }
     }
 
     func testGridFirstMonthKeepsTwoTimedLinesAsIndependentCandidates() throws {

@@ -762,6 +762,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                     weekStart: weekStart,
                     grid: rectified.geometry,
                     defaultCalendarID: defaultCalendarID,
+                    holidayNamesByDate: holidayNamesByDate(in: yearMonth),
                     orientationDiagnostics: orientationDiagnostics,
                     recognitionCellDiagnostics: recognitionPlan.cellDiagnostics,
                     recognitionModelPOC: recognitionPlan.recognitionModelPOC,
@@ -792,6 +793,25 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             .dateComponents([.year, .month], from: monthSelection)
         guard let year = components.year, let month = components.month else { return nil }
         return CalendarImportYearMonth(year: year, month: month)
+    }
+
+    private func holidayNamesByDate(
+        in yearMonth: CalendarImportYearMonth
+    ) -> [DateOnly: Set<String>] {
+        let manager = HolidaySubscriptionManager.shared
+        let localizer = HolidayNameLocalizer()
+        let events = manager.holidays(for: manager.enabledRegions).filter {
+            $0.date.year == yearMonth.year && $0.date.month == yearMonth.month
+        }
+        return events.reduce(into: [:]) { result, event in
+            let names = [
+                event.name,
+                localizer.localizedDisplayName(for: event.name, in: event.region)
+            ] + Array(event.translatedNames.values)
+            for name in names where !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                result[event.date, default: []].insert(name)
+            }
+        }
     }
 
     func applySelectedYearMonth() {
