@@ -630,6 +630,11 @@ struct CalendarPhotoCellDiagnostics: Equatable, Sendable {
 struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var scanMode: CalendarPhotoScanMode? = nil
     var selectedDate: Date? = nil
+    var appLanguage: DisplayLanguage? = nil
+    var ocrLanguage: String? = nil
+    var timeRecognitionEngine: String? = nil
+    var textRecognitionEngine: String? = nil
+    var textRecognitionLanguage: String? = nil
     var gridDetection: String = "legacy"
     var recognitionMode: CalendarPhotoRecognitionMode? = nil
     var recognitionCellDiagnostics: [CalendarPhotoCellRecognitionDiagnostics] = []
@@ -688,6 +693,11 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         [
             ("Scan Mode", scanMode?.rawValue ?? "legacy"),
             ("Selected Date", Self.dateText(selectedDate)),
+            ("App Language", appLanguage?.rawValue ?? "unknown"),
+            ("OCR Language", ocrLanguage ?? "unknown"),
+            ("Time Engine", timeRecognitionEngine ?? "legacy"),
+            ("Text Engine", textRecognitionEngine ?? "legacy"),
+            ("Text Language", textRecognitionLanguage ?? "unknown"),
             ("Grid Detection", gridDetection),
             ("Recognition", recognitionMode?.rawValue ?? "legacy"),
             ("PP-OCR Success Cells", "\(ppOCRSuccessCellCount)"),
@@ -725,6 +735,11 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             "CalendarImportDiagnostics",
             "scanMode=\(scanMode?.rawValue ?? "legacy")",
             "selectedDate=\(Self.dateText(selectedDate))",
+            "appLanguage=\(appLanguage?.rawValue ?? "unknown")",
+            "ocrLanguage=\(ocrLanguage ?? "unknown")",
+            "timeRecognitionEngine=\(timeRecognitionEngine ?? "legacy")",
+            "textRecognitionEngine=\(textRecognitionEngine ?? "legacy")",
+            "textRecognitionLanguage=\(textRecognitionLanguage ?? "unknown")",
             "gridDetection=\(gridDetection)",
             "recognitionMode=\(recognitionMode?.rawValue ?? "legacy")",
             "ppocrSuccessCells=\(ppOCRSuccessCellCount)",
@@ -1174,6 +1189,14 @@ struct CalendarImportTimeParser {
         removingTime(from: text, includesCompactRecovery: true)
     }
 
+    static func monthTimeText(in text: String) -> String? {
+        guard let match = match(in: text, includesCompactRecovery: true),
+              let range = Range(match.range, in: text) else {
+            return nil
+        }
+        return String(text[range])
+    }
+
     private static func removingTime(
         from text: String,
         includesCompactRecovery: Bool
@@ -1441,6 +1464,69 @@ struct CalendarImportTimeParser {
 
     private static func isValid(hour: Int, minute: Int) -> Bool {
         (0...23).contains(hour) && (0...59).contains(minute)
+    }
+}
+
+struct CalendarMonthOCRObservationMerger {
+    func merge(
+        ppOCRObservations: [CalendarOCRObservation],
+        visionObservations: [CalendarOCRObservation],
+        regions: [CalendarImportDayRegion],
+        visionFallbackRegions: [CalendarImportDayRegion]
+    ) -> [CalendarOCRObservation] {
+        let fallbackDays = Set(visionFallbackRegions.map(\.day))
+        var merged: [CalendarOCRObservation] = []
+
+        for region in regions.sorted(by: { $0.day < $1.day }) {
+            let ppOCRCell = ppOCRObservations.filter(region.contains)
+            let visionCell = visionObservations.filter(region.contains)
+            if fallbackDays.contains(region.day) {
+                merged.append(contentsOf: visionCell)
+                continue
+            }
+
+            merged.append(contentsOf: ppOCRCell.compactMap(Self.timeOrNumericObservation))
+            merged.append(contentsOf: visionCell.compactMap(Self.titleObservation))
+        }
+        return merged
+    }
+
+    private static func timeOrNumericObservation(
+        _ observation: CalendarOCRObservation
+    ) -> CalendarOCRObservation? {
+        if let timeText = CalendarImportTimeParser.monthTimeText(in: observation.text) {
+            return replacingText(timeText, in: observation, reason: "ppocrTime")
+        }
+        guard !containsLetter(observation.text) else { return nil }
+        return observation
+    }
+
+    private static func titleObservation(
+        _ observation: CalendarOCRObservation
+    ) -> CalendarOCRObservation? {
+        let title = CalendarImportTimeParser.removingMonthTime(from: observation.text)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard containsLetter(title) else { return nil }
+        return replacingText(title, in: observation, reason: "visionLanguageAwareTitle")
+    }
+
+    private static func replacingText(
+        _ text: String,
+        in observation: CalendarOCRObservation,
+        reason: String
+    ) -> CalendarOCRObservation {
+        CalendarOCRObservation(
+            text: text,
+            confidence: observation.confidence,
+            boundingBox: observation.boundingBox,
+            candidateDiagnostics: observation.candidateDiagnostics,
+            selectionReason: reason,
+            timeParseQualityOverride: observation.timeParseQualityOverride
+        )
+    }
+
+    private static func containsLetter(_ text: String) -> Bool {
+        text.unicodeScalars.contains { CharacterSet.letters.contains($0) }
     }
 }
 

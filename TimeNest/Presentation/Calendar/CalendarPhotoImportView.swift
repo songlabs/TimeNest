@@ -220,7 +220,7 @@ private struct CalendarVisionOCRService {
 
     func recognize(
         image: CGImage,
-        preferredLanguageCode: String,
+        ocrLanguage: CalendarOCRLanguage,
         expectedGridRows: Int?
     ) async throws -> CalendarVisionOCRResult {
         try await Task.detached(priority: .userInitiated) {
@@ -234,7 +234,7 @@ private struct CalendarVisionOCRService {
             if expectedGridRows == nil {
                 observations = try Self.recognizeSynchronously(
                     image: image,
-                    preferredLanguageCode: preferredLanguageCode,
+                    ocrLanguage: ocrLanguage,
                     recognitionLevel: .accurate
                 )
             } else {
@@ -257,7 +257,7 @@ private struct CalendarVisionOCRService {
     func recognizeMonthCells(
         image: CGImage,
         regions: [CalendarImportDayRegion],
-        preferredLanguageCode: String
+        ocrLanguage: CalendarOCRLanguage
     ) async throws -> [CalendarOCRObservation] {
         try await Task.detached(priority: .userInitiated) {
             var output: [CalendarOCRObservation] = []
@@ -276,7 +276,7 @@ private struct CalendarVisionOCRService {
                         : crop
                     let local = try Self.recognizeSynchronously(
                         image: ocrImage,
-                        preferredLanguageCode: preferredLanguageCode,
+                        ocrLanguage: ocrLanguage,
                         recognitionLevel: .accurate
                     )
                     output.append(contentsOf: local.map {
@@ -285,6 +285,8 @@ private struct CalendarVisionOCRService {
                     Self.debugLogCell(region: region, crop: crop, ocrImage: ocrImage)
                 } catch is CancellationError {
                     throw CancellationError()
+                } catch let error as CalendarOCRLanguageError {
+                    throw error
                 } catch {
                     #if DEBUG
                     print("[CalendarImport] Vision fallback failed for day=\(region.day)")
@@ -297,7 +299,7 @@ private struct CalendarVisionOCRService {
 
     func recognizeBestOrientation(
         image: CGImage,
-        preferredLanguageCode: String
+        ocrLanguage: CalendarOCRLanguage
     ) async throws -> CalendarVisionOCRResult {
         try await Task.detached(priority: .userInitiated) {
             let selector = CalendarPhotoOrientationSelector()
@@ -313,7 +315,7 @@ private struct CalendarVisionOCRService {
                 )
                 let observations = try Self.recognizeSynchronously(
                     image: rotated,
-                    preferredLanguageCode: preferredLanguageCode,
+                    ocrLanguage: ocrLanguage,
                     recognitionLevel: .fast
                 )
                 fastCandidates.append(CalendarPhotoOrientationCandidate(
@@ -333,7 +335,7 @@ private struct CalendarVisionOCRService {
                 )
                 return try Self.recognizeSynchronously(
                     image: selectedImage,
-                    preferredLanguageCode: preferredLanguageCode,
+                    ocrLanguage: ocrLanguage,
                     recognitionLevel: .accurate
                 )
             }()
@@ -358,7 +360,7 @@ private struct CalendarVisionOCRService {
                     )
                     let observations = try Self.recognizeSynchronously(
                         image: rotated,
-                        preferredLanguageCode: preferredLanguageCode,
+                        ocrLanguage: ocrLanguage,
                         recognitionLevel: .accurate
                     )
                     accurateCandidates.append(CalendarPhotoOrientationCandidate(
@@ -484,22 +486,24 @@ private struct CalendarVisionOCRService {
 
     private static func recognizeSynchronously(
         image: CGImage,
-        preferredLanguageCode: String,
+        ocrLanguage: CalendarOCRLanguage,
         recognitionLevel: VNRequestTextRecognitionLevel
     ) throws -> [CalendarOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = recognitionLevel
         request.usesLanguageCorrection = true
-        request.automaticallyDetectsLanguage = true
+        request.automaticallyDetectsLanguage = false
 
         let supportedLanguages = (try? request.supportedRecognitionLanguages()) ?? []
-        let recognitionLanguages = preferredRecognitionLanguages(
-            supported: supportedLanguages,
-            preferredLanguageCode: preferredLanguageCode
+        let recognitionLanguages = ocrLanguage.preferredVisionRecognitionLanguages(
+            supported: supportedLanguages
         )
-        if !recognitionLanguages.isEmpty {
-            request.recognitionLanguages = recognitionLanguages
+        guard !recognitionLanguages.isEmpty else {
+            throw CalendarOCRLanguageError.unsupportedByVision(
+                ocrLanguage.visionRecognitionLanguageCode
+            )
         }
+        request.recognitionLanguages = recognitionLanguages
 
         let handler = VNImageRequestHandler(
             cgImage: image,
@@ -535,49 +539,6 @@ private struct CalendarVisionOCRService {
                 candidateDiagnostics: alternatives,
                 selectionReason: candidate == alternatives.first ? nil : "validTimeRange"
             )
-        }
-    }
-
-    private static func preferredRecognitionLanguages(
-        supported: [String],
-        preferredLanguageCode: String
-    ) -> [String] {
-        let desired: [String]
-        switch preferredLanguageCode.lowercased() {
-        case let code where code.contains("hant") || code.contains("tw") || code.contains("hk"):
-            desired = ["zh-Hant", "ja", "zh-Hans", "en", "ko"]
-        case let code where code.contains("hans") || code.contains("cn") || code.contains("sg"):
-            desired = ["zh-Hans", "ja", "zh-Hant", "en", "ko"]
-        case let code where code.hasPrefix("en"):
-            desired = ["en", "ja", "zh-Hans", "zh-Hant", "ko"]
-        case let code where code.hasPrefix("ko"):
-            desired = ["ko", "ja", "zh-Hans", "zh-Hant", "en"]
-        default:
-            desired = ["ja", "zh-Hans", "zh-Hant", "en", "ko"]
-        }
-
-        var selected: [String] = []
-        for language in desired {
-            guard let supportedLanguage = supported.first(where: {
-                languageMatches($0, desired: language)
-            }), !selected.contains(supportedLanguage) else {
-                continue
-            }
-            selected.append(supportedLanguage)
-        }
-        return selected
-    }
-
-    private static func languageMatches(_ supported: String, desired: String) -> Bool {
-        let value = supported.lowercased().replacingOccurrences(of: "_", with: "-")
-        switch desired {
-        case "zh-Hans":
-            return value.contains("hans") || value == "zh-cn" || value == "zh-sg"
-        case "zh-Hant":
-            return value.contains("hant") || value == "zh-tw" || value == "zh-hk"
-        default:
-            return value == desired.lowercased()
-                || value.hasPrefix(desired.lowercased() + "-")
         }
     }
 
@@ -639,6 +600,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     private var observations: [CalendarOCRObservation] = []
     private var accurateOrientationCandidates: [CalendarPhotoOrientationCandidate] = []
     private var orientationDiagnostics: CalendarPhotoOrientationDiagnostics?
+    private var scanOCRLanguage: CalendarOCRLanguage?
 
     init(
         eventUseCase: EventUseCase,
@@ -679,7 +641,16 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
         return latestDiagnostics
     }
 
-    func process(image: UIImage, languageCode: String) async {
+    func process(
+        image: UIImage,
+        appLanguage: DisplayLanguage,
+        systemLocale: Locale = .current
+    ) async {
+        let ocrLanguage = CalendarOCRLanguage.resolve(
+            appLanguage: appLanguage,
+            systemLocale: systemLocale
+        )
+        scanOCRLanguage = ocrLanguage
         step = .recognizing
         failureMessage = nil
         latestDiagnostics = nil
@@ -691,6 +662,10 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             print(
                 "[CalendarImport] sourcePixels=\(rawSize) "
                     + "normalizedPixels=\(normalizedImage.width)x\(normalizedImage.height)"
+            )
+            print(
+                "[CalendarImport] appLanguage=\(ocrLanguage.appLanguage.rawValue) "
+                    + "ocrLanguage=\(ocrLanguage.visionRecognitionLanguageCode)"
             )
             #endif
             let yearMonth = selectedYearMonth
@@ -707,7 +682,7 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
             }
             let recognized = try await ocrService.recognize(
                 image: normalizedImage,
-                preferredLanguageCode: languageCode,
+                ocrLanguage: ocrLanguage,
                 expectedGridRows: expectedRows
             )
             observations = recognized.observations
@@ -740,24 +715,23 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                 let ppOCRRun = try await ppOCRService.recognizeMonthCells(
                     image: rectified.image,
                     regions: regions,
-                    preferredLanguageCode: languageCode
+                    ocrLanguage: ocrLanguage
                 )
                 let recognitionPlan = PPOCRMonthRecognitionRouter().makePlan(
                     run: ppOCRRun,
                     regions: regions
                 )
-                let visionFallbackObservations: [CalendarOCRObservation]
-                if recognitionPlan.visionFallbackRegions.isEmpty {
-                    visionFallbackObservations = []
-                } else {
-                    visionFallbackObservations = try await ocrService.recognizeMonthCells(
-                        image: rectified.image,
-                        regions: recognitionPlan.visionFallbackRegions,
-                        preferredLanguageCode: languageCode
-                    )
-                }
-                observations = recognitionPlan.candidateInputObservations
-                    + visionFallbackObservations
+                let languageAwareVisionObservations = try await ocrService.recognizeMonthCells(
+                    image: rectified.image,
+                    regions: regions,
+                    ocrLanguage: ocrLanguage
+                )
+                observations = CalendarMonthOCRObservationMerger().merge(
+                    ppOCRObservations: recognitionPlan.candidateInputObservations,
+                    visionObservations: languageAwareVisionObservations,
+                    regions: regions,
+                    visionFallbackRegions: recognitionPlan.visionFallbackRegions
+                )
                 let result = try monthParser.parseMonth(
                     observations: observations,
                     yearMonth: yearMonth,
@@ -997,6 +971,14 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     }
 
     private func recordDiagnostics(_ diagnostics: CalendarPhotoImportDiagnostics) {
+        var diagnostics = diagnostics
+        if let scanOCRLanguage {
+            diagnostics.appLanguage = scanOCRLanguage.appLanguage
+            diagnostics.ocrLanguage = scanOCRLanguage.visionRecognitionLanguageCode
+            diagnostics.timeRecognitionEngine = "ppocrv6"
+            diagnostics.textRecognitionEngine = "vision"
+            diagnostics.textRecognitionLanguage = scanOCRLanguage.visionRecognitionLanguageCode
+        }
         latestDiagnostics = diagnostics
         recognizedYearMonth = diagnostics.resolvedYearMonth
         if let date = diagnostics.resolvedYearMonth?.date() {
@@ -1191,7 +1173,8 @@ struct CalendarPhotoImportView: View {
                     Task {
                         await viewModel.process(
                             image: image,
-                            languageCode: localization.currentLanguageCode
+                            appLanguage: localization.currentLanguage,
+                            systemLocale: localization.currentLocale
                         )
                     }
                 },
@@ -1944,7 +1927,8 @@ struct CalendarPhotoImportView: View {
             }
             await viewModel.process(
                 image: image,
-                languageCode: localization.currentLanguageCode
+                appLanguage: localization.currentLanguage,
+                systemLocale: localization.currentLocale
             )
         } catch {
             viewModel.failureMessage = localization.localized(

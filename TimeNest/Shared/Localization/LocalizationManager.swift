@@ -113,19 +113,14 @@ final class LocalizationManager: ObservableObject {
     }
 
     private func systemBundleName() -> String {
-        let languageCode = Locale.current.language.languageCode?.identifier ?? "en"
+        let locale = Locale.current
+        let languageCode = locale.language.languageCode?.identifier ?? "en"
         if languageCode == "zh" {
-            return usesTraditionalChinese(Locale.current) ? "zh-Hant" : "zh-Hans"
+            return DisplayLanguage.system.resolved(systemLocale: locale) == .zhHant
+                ? "zh-Hant"
+                : "zh-Hans"
         }
         return languageCode
-    }
-
-    private func usesTraditionalChinese(_ locale: Locale) -> Bool {
-        let identifier = locale.identifier.lowercased()
-        return identifier.contains("hant")
-            || identifier.contains("_tw")
-            || identifier.contains("_hk")
-            || identifier.contains("_mo")
     }
 
     /// 根据语言代码获取对应的 Bundle
@@ -419,24 +414,7 @@ final class LocalizationManager: ObservableObject {
     }
 
     private func effectiveCalendarLanguage(for language: DisplayLanguage) -> DisplayLanguage {
-        switch language {
-        case .system:
-            let languageCode = Locale.current.language.languageCode?.identifier ?? "en"
-            switch languageCode {
-            case "zh":
-                return usesTraditionalChinese(Locale.current) ? .zhHant : .zhHans
-            case "ja":
-                return .ja
-            case "ko":
-                return .ko
-            case "en":
-                return .enUS
-            default:
-                return .enUS
-            }
-        default:
-            return language
-        }
+        language.resolved(systemLocale: .current)
     }
 
     private func shouldUseVeryShortWeekdaySymbols(for language: DisplayLanguage) -> Bool {

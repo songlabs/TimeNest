@@ -5,10 +5,13 @@ import Vision
 actor PPOCRService {
     private var sessions: PPOCRONNXSessions?
 
+    // The bundled ONNX recognizers are fixed models and do not consume a
+    // language hint. ocrLanguage is forwarded only to the Vision time-recovery
+    // path, which has a real recognitionLanguages API.
     func recognizeMonthCells(
         image: CGImage,
         regions: [CalendarImportDayRegion],
-        preferredLanguageCode: String = "ja"
+        ocrLanguage: CalendarOCRLanguage
     ) async throws -> PPOCRRecognitionRun {
         let modelInitializedThisRun = sessions == nil
         let modelStart = PPOCRMonotonicClock.nowMilliseconds
@@ -53,7 +56,7 @@ actor PPOCRService {
                     image: image,
                     region: region,
                     sessions: loadedSessions,
-                    preferredLanguageCode: preferredLanguageCode
+                    ocrLanguage: ocrLanguage
                 )
             }
         )
@@ -102,7 +105,7 @@ actor PPOCRService {
         image: CGImage,
         region: CalendarImportDayRegion,
         sessions: PPOCRONNXSessions,
-        preferredLanguageCode: String
+        ocrLanguage: CalendarOCRLanguage
     ) throws -> PPOCRCellRecognitionResult {
         let totalStart = PPOCRMonotonicClock.nowMilliseconds
         let imageSize = PPOCRImageSize(width: image.width, height: image.height)
@@ -305,7 +308,7 @@ actor PPOCRService {
                     )
                     visionAlternative = try PPOCRVisionTimeRecognizer.recognize(
                         image: visionImage,
-                        preferredLanguageCode: preferredLanguageCode
+                        ocrLanguage: ocrLanguage
                     )
                     visionMilliseconds = PPOCRMonotonicClock.nowMilliseconds - visionStart
                 } catch is CancellationError {
@@ -557,20 +560,22 @@ private enum PPOCRCGImageBridge {
 private enum PPOCRVisionTimeRecognizer {
     static func recognize(
         image: CGImage,
-        preferredLanguageCode: String
+        ocrLanguage: CalendarOCRLanguage
     ) throws -> PPOCRRecognitionAlternative? {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.usesLanguageCorrection = false
-        request.automaticallyDetectsLanguage = true
+        request.automaticallyDetectsLanguage = false
         let supported = (try? request.supportedRecognitionLanguages()) ?? []
-        let preferred = preferredRecognitionLanguages(
-            supported: supported,
-            preferredLanguageCode: preferredLanguageCode
+        let preferred = ocrLanguage.preferredVisionRecognitionLanguages(
+            supported: supported
         )
-        if !preferred.isEmpty {
-            request.recognitionLanguages = preferred
+        guard !preferred.isEmpty else {
+            throw CalendarOCRLanguageError.unsupportedByVision(
+                ocrLanguage.visionRecognitionLanguageCode
+            )
         }
+        request.recognitionLanguages = preferred
         try VNImageRequestHandler(
             cgImage: image,
             orientation: .up,
@@ -588,25 +593,6 @@ private enum PPOCRVisionTimeRecognizer {
             ?? first
     }
 
-    private static func preferredRecognitionLanguages(
-        supported: [String],
-        preferredLanguageCode: String
-    ) -> [String] {
-        let desired: [String]
-        switch preferredLanguageCode.lowercased() {
-        case let code where code.contains("hant") || code.contains("tw")
-            || code.contains("hk"):
-            desired = ["zh-Hant", "ja", "zh-Hans", "en", "ko"]
-        case let code where code.contains("hans") || code.contains("cn")
-            || code.contains("sg"):
-            desired = ["zh-Hans", "ja", "zh-Hant", "en", "ko"]
-        case let code where code.hasPrefix("en"):
-            desired = ["en", "ja", "zh-Hant", "zh-Hans", "ko"]
-        default:
-            desired = ["ja", "zh-Hant", "zh-Hans", "en", "ko"]
-        }
-        return desired.filter(supported.contains)
-    }
 }
 
 private final class PPOCRONNXSessions {

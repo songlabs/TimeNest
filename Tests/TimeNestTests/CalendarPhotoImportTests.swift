@@ -4,6 +4,155 @@ import XCTest
 final class CalendarPhotoImportTests: XCTestCase {
     private let calendarID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
 
+    func testAppLanguagesResolveToCanonicalVisionOCRLanguages() {
+        let cases: [(DisplayLanguage, String)] = [
+            (.ja, "ja-JP"),
+            (.zhHans, "zh-Hans"),
+            (.zhHant, "zh-Hant"),
+            (.ko, "ko-KR"),
+            (.enUS, "en-US")
+        ]
+
+        for (appLanguage, expectedOCRLanguage) in cases {
+            let resolved = CalendarOCRLanguage.resolve(appLanguage: appLanguage)
+            XCTAssertEqual(resolved.appLanguage, appLanguage)
+            XCTAssertEqual(resolved.resolvedAppLanguage, appLanguage)
+            XCTAssertEqual(resolved.visionRecognitionLanguageCode, expectedOCRLanguage)
+        }
+    }
+
+    func testSystemOCRLanguageUsesInjectedLocaleAndNeverPassesSystem() {
+        let cases: [(String, DisplayLanguage, String)] = [
+            ("ja_JP", .ja, "ja-JP"),
+            ("zh_Hans_CN", .zhHans, "zh-Hans"),
+            ("zh_Hant_TW", .zhHant, "zh-Hant"),
+            ("ko_KR", .ko, "ko-KR"),
+            ("en_GB", .enUS, "en-US"),
+            ("fr_FR", .enUS, "en-US")
+        ]
+
+        for (localeIdentifier, expectedLanguage, expectedOCRLanguage) in cases {
+            let resolved = CalendarOCRLanguage.resolve(
+                appLanguage: .system,
+                systemLocale: Locale(identifier: localeIdentifier)
+            )
+            XCTAssertEqual(resolved.appLanguage, .system)
+            XCTAssertEqual(resolved.resolvedAppLanguage, expectedLanguage)
+            XCTAssertEqual(resolved.visionRecognitionLanguageCode, expectedOCRLanguage)
+            XCTAssertNotEqual(resolved.visionRecognitionLanguageCode, "system")
+        }
+    }
+
+    func testResolvedOCRLanguageSelectsOnlyMatchingVisionLanguage() {
+        let supported = ["en-US", "zh-Hans", "zh-Hant", "ja-JP", "ko-KR"]
+        let cases: [(DisplayLanguage, [String])] = [
+            (.ja, ["ja-JP"]),
+            (.zhHans, ["zh-Hans"]),
+            (.zhHant, ["zh-Hant"]),
+            (.ko, ["ko-KR"]),
+            (.enUS, ["en-US"])
+        ]
+
+        for (appLanguage, expectedLanguages) in cases {
+            XCTAssertEqual(
+                CalendarOCRLanguage.resolve(appLanguage: appLanguage)
+                    .preferredVisionRecognitionLanguages(supported: supported),
+                expectedLanguages
+            )
+        }
+    }
+
+    func testMonthObservationMergerUsesVisionTitleAndPPOCRTime() throws {
+        let fixture = try gridFirstFixture(day: 12)
+        let ppOCR = gridFirstObservation(
+            "適性核查对策 17:30-20:30",
+            in: fixture.region,
+            line: 1,
+            confidence: 0.91
+        )
+        let vision = gridFirstObservation(
+            "適性検査対策 17:30-20:30",
+            in: fixture.region,
+            line: 1,
+            confidence: 0.88
+        )
+
+        let merged = CalendarMonthOCRObservationMerger().merge(
+            ppOCRObservations: [ppOCR],
+            visionObservations: [vision],
+            regions: [fixture.region],
+            visionFallbackRegions: []
+        )
+
+        XCTAssertEqual(
+            Set(merged.map(\.text)),
+            Set(["17:30-20:30", "適性検査対策"])
+        )
+        XCTAssertFalse(merged.contains { $0.text.contains("核查") })
+        XCTAssertEqual(
+            try XCTUnwrap(merged.first { $0.text == "17:30-20:30" })
+                .selectionReason,
+            "ppocrTime"
+        )
+        XCTAssertEqual(
+            try XCTUnwrap(merged.first { $0.text == "適性検査対策" })
+                .selectionReason,
+            "visionLanguageAwareTitle"
+        )
+        let parsed = try fixture.parser.parseMonth(
+            observations: merged,
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar()
+        )
+        let candidate = try XCTUnwrap(parsed.candidates.first)
+        XCTAssertEqual(candidate.title, "適性検査対策")
+        XCTAssertEqual(candidate.startTimeMinutes, 17 * 60 + 30)
+        XCTAssertEqual(candidate.endTimeMinutes, 20 * 60 + 30)
+    }
+
+    func testMonthObservationMergerKeepsVisionForPPOCRTechnicalFallback() {
+        let region = CalendarImportDayRegion(
+            day: 12,
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1)
+        )
+        let ppOCR = observation("適性核查对策 17:30-20:30", day: 12, line: 0)
+        let vision = observation("適性検査対策 17:30-20:30", day: 12, line: 0)
+
+        let merged = CalendarMonthOCRObservationMerger().merge(
+            ppOCRObservations: [ppOCR],
+            visionObservations: [vision],
+            regions: [region],
+            visionFallbackRegions: [region]
+        )
+
+        XCTAssertEqual(merged, [vision])
+    }
+
+    func testMonthObservationMergerDoesNotUseFixedModelTextAsTitleFallback() {
+        let region = CalendarImportDayRegion(
+            day: 12,
+            boundingBox: CalendarOCRBoundingBox(x: 0, y: 0, width: 1, height: 1)
+        )
+        let ppOCR = CalendarOCRObservation(
+            text: "適性核查对策 17:30-20:30",
+            confidence: 0.91,
+            boundingBox: CalendarOCRBoundingBox(x: 0.1, y: 0.2, width: 0.8, height: 0.15)
+        )
+
+        let merged = CalendarMonthOCRObservationMerger().merge(
+            ppOCRObservations: [ppOCR],
+            visionObservations: [],
+            regions: [region],
+            visionFallbackRegions: []
+        )
+
+        XCTAssertEqual(merged.map(\.text), ["17:30-20:30"])
+        XCTAssertFalse(merged.contains { $0.text.contains("核查") })
+    }
+
     func testSeptember2026AssignsMonthStartAndEndWithoutAdjacentMonthCells() throws {
         var observations = september2026DateObservations()
         observations.append(contentsOf: [
@@ -440,8 +589,19 @@ final class CalendarPhotoImportTests: XCTestCase {
             diagnosticsHandler: { diagnostics = $0 }
         )
 
-        let text = try XCTUnwrap(diagnostics).plainText
+        var resolvedDiagnostics = try XCTUnwrap(diagnostics)
+        resolvedDiagnostics.appLanguage = .ja
+        resolvedDiagnostics.ocrLanguage = "ja-JP"
+        resolvedDiagnostics.timeRecognitionEngine = "ppocrv6"
+        resolvedDiagnostics.textRecognitionEngine = "vision"
+        resolvedDiagnostics.textRecognitionLanguage = "ja-JP"
+        let text = resolvedDiagnostics.plainText
         XCTAssertTrue(text.hasPrefix("CalendarImportDiagnostics\n"))
+        XCTAssertTrue(text.contains("appLanguage=ja"))
+        XCTAssertTrue(text.contains("ocrLanguage=ja-JP"))
+        XCTAssertTrue(text.contains("timeRecognitionEngine=ppocrv6"))
+        XCTAssertTrue(text.contains("textRecognitionEngine=vision"))
+        XCTAssertTrue(text.contains("textRecognitionLanguage=ja-JP"))
         XCTAssertTrue(text.contains("manualYearMonth=2026-09"))
         XCTAssertTrue(text.contains("resolvedYearMonth=2026-09"))
         XCTAssertTrue(text.contains("gridAccepted=true"))
@@ -459,7 +619,9 @@ final class CalendarPhotoImportTests: XCTestCase {
                 $0.split(separator: "=", maxSplits: 1).first.map(String.init)
             },
             [
-                "scanMode", "selectedDate", "gridDetection",
+                "scanMode", "selectedDate", "appLanguage", "ocrLanguage",
+                "timeRecognitionEngine", "textRecognitionEngine",
+                "textRecognitionLanguage", "gridDetection",
                 "recognitionMode", "ppocrSuccessCells", "visionFallbackCells",
                 "candidateInput",
                 "manualYearMonth", "resolvedYearMonth", "selectedRotation",
