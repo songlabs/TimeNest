@@ -105,7 +105,9 @@ actor PPOCRService {
         image: CGImage,
         region: CalendarImportDayRegion,
         sessions: PPOCRONNXSessions,
-        ocrLanguage: CalendarOCRLanguage
+        ocrLanguage: CalendarOCRLanguage,
+        allowsUpscaleRetry: Bool = true,
+        cellImageOverride: PPOCRBGRImage? = nil
     ) throws -> PPOCRCellRecognitionResult {
         let totalStart = PPOCRMonotonicClock.nowMilliseconds
         let imageSize = PPOCRImageSize(width: image.width, height: image.height)
@@ -123,7 +125,15 @@ actor PPOCRService {
 
         try Task.checkCancellation()
         let preprocessStart = PPOCRMonotonicClock.nowMilliseconds
-        let cellImage = try PPOCRCGImageBridge.bgrImage(from: crop)
+        let cellImage: PPOCRBGRImage
+        if let cellImageOverride {
+            guard cellImageOverride.size == pixelRect.size else {
+                throw PPOCRError.invalidCrop
+            }
+            cellImage = cellImageOverride
+        } else {
+            cellImage = try PPOCRCGImageBridge.bgrImage(from: crop)
+        }
         let detectorInputSize = try PPOCRPreprocessor.detectionInputSize(for: cellImage.size)
         let detectorTensor = try PPOCRPreprocessor.detectionTensor(from: cellImage)
         let preprocessMilliseconds = PPOCRMonotonicClock.nowMilliseconds - preprocessStart
@@ -195,7 +205,10 @@ actor PPOCRService {
             )
             let currentMilliseconds = PPOCRMonotonicClock.nowMilliseconds - currentStart
             recognitionMilliseconds += currentMilliseconds
-            let localBoundingBox = Self.boundingBox(for: box, imageSize: cellImage.size)
+            let localBoundingBox = PPOCRNormalizedBoxConverter.boundingBox(
+                for: box,
+                imageSize: cellImage.size
+            )
 
             let candidateDecoded: PPOCRDecodedText?
             let candidateMilliseconds: Double?
@@ -502,7 +515,7 @@ actor PPOCRService {
             }
         }
 
-        return PPOCRCellRecognitionResult(
+        let primaryResult = PPOCRCellRecognitionResult(
             day: region.day,
             sourcePixels: imageSize,
             cropRect: pixelRect,
@@ -521,6 +534,51 @@ actor PPOCRService {
                 totalMilliseconds: PPOCRMonotonicClock.nowMilliseconds - totalStart
             ),
             error: nil
+        )
+        guard allowsUpscaleRetry else { return primaryResult }
+
+        // Bounded POC: only a still-unresolved 1x detection reaches this runner.
+        // Each retry starts from the whole Cell and re-enters this same detector,
+        // classifier, perspective-crop, recognizer, and recovery pipeline.
+        let upscaleRecovery = try PPOCRCellUpscaleRecoveryRunner.run(
+            original: primaryResult,
+            pipeline: { scaleFactor in
+                let scaledCellImage = try cellImage.upscaled(by: scaleFactor)
+                let scaledCGImage = try PPOCRCGImageBridge.cgImage(from: scaledCellImage)
+                return try inferCell(
+                    image: scaledCGImage,
+                    region: CalendarImportDayRegion(
+                        day: region.day,
+                        boundingBox: CalendarOCRBoundingBox(
+                            x: 0,
+                            y: 0,
+                            width: 1,
+                            height: 1
+                        )
+                    ),
+                    sessions: sessions,
+                    ocrLanguage: ocrLanguage,
+                    allowsUpscaleRetry: false,
+                    cellImageOverride: scaledCellImage
+                )
+            }
+        )
+        guard upscaleRecovery.attempted else { return primaryResult }
+        return PPOCRCellRecognitionResult(
+            day: primaryResult.day,
+            sourcePixels: primaryResult.sourcePixels,
+            cropRect: primaryResult.cropRect,
+            paddingApplied: primaryResult.paddingApplied,
+            cellPixels: primaryResult.cellPixels,
+            detectorInputPixels: primaryResult.detectorInputPixels,
+            results: primaryResult.results + upscaleRecovery.recoveredResults,
+            recognitionModelComparisons: primaryResult.recognitionModelComparisons,
+            detectionCount: primaryResult.detectionCount,
+            timing: primaryResult.timing,
+            error: primaryResult.error,
+            cellUpscaleRecoveryAttempted: true,
+            cellUpscaleAttempts: upscaleRecovery.attempts,
+            cellUpscaleSelectedScale: upscaleRecovery.selectedScale
         )
     }
 
@@ -582,7 +640,8 @@ actor PPOCRService {
                 recognitionMilliseconds: 0,
                 totalMilliseconds: 0
             ),
-            error: errorCode
+            error: errorCode,
+            cellUpscaleSelectedScale: .none
         )
     }
 
@@ -606,25 +665,6 @@ actor PPOCRService {
         )
     }
 
-    private static func boundingBox(
-        for box: PPOCRDetectedBox,
-        imageSize: PPOCRImageSize
-    ) -> CalendarOCRBoundingBox {
-        let xs = box.points.map(\.x)
-        let ys = box.points.map(\.y)
-        let minX = xs.min() ?? 0
-        let maxX = xs.max() ?? minX
-        let minY = ys.min() ?? 0
-        let maxY = ys.max() ?? minY
-        let width = Double(max(imageSize.width, 1))
-        let height = Double(max(imageSize.height, 1))
-        return CalendarOCRBoundingBox(
-            x: min(max(minX / width, 0), 1),
-            y: min(max(1 - maxY / height, 0), 1),
-            width: min(max((maxX - minX) / width, 0), 1),
-            height: min(max((maxY - minY) / height, 0), 1)
-        )
-    }
 }
 
 private enum PPOCRMonotonicClock {

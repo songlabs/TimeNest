@@ -28,6 +28,26 @@ struct CalendarPhotoOCRDetectionDiagnostics: Equatable, Sendable {
     let distanceToBottomPixels: Double
 }
 
+struct CalendarPhotoCellUpscaleDetectionDiagnostics: Equatable, Sendable {
+    let boundingBox: CalendarOCRBoundingBox
+    let currentText: String
+    let selectedText: String
+    let selectedSource: String
+}
+
+struct CalendarPhotoCellUpscaleAttemptDiagnostics: Equatable, Sendable {
+    let scaleFactor: Int
+    let cellPixels: CalendarPhotoPixelSizeDiagnostics
+    let detectorInputPixels: CalendarPhotoPixelSizeDiagnostics?
+    let detectionCount: Int
+    let detections: [CalendarPhotoCellUpscaleDetectionDiagnostics]
+    let timeCandidates: [String]
+    let selectedTexts: [String]
+    let selectionReason: String
+    let totalMilliseconds: Double
+    let error: String?
+}
+
 struct CalendarPhotoRecognitionModelComparisonDiagnostics: Equatable, Sendable {
     let boundingBox: CalendarOCRBoundingBox
     let currentText: String
@@ -85,8 +105,12 @@ struct CalendarPhotoCellRecognitionDiagnostics: Equatable, Sendable {
     let paddingApplied: Bool
     let detections: [CalendarPhotoOCRDetectionDiagnostics]
     let recognitionModelComparisons: [CalendarPhotoRecognitionModelComparisonDiagnostics]
+    let oneXTotalMilliseconds: Double
     let ppOCRText: [String]
     let ppOCRError: String?
+    let cellUpscaleRecoveryAttempted: Bool
+    let cellUpscaleAttempts: [CalendarPhotoCellUpscaleAttemptDiagnostics]
+    let cellUpscaleSelectedScale: String
 
     var fallbackUsed: Bool { recognitionSource == .visionFallback }
 }
@@ -702,14 +726,43 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     }
 
     var unresolvedTimeDetectionCount: Int {
-        recognitionCellDiagnostics
-            .flatMap(\.recognitionModelComparisons)
-            .filter {
-                $0.timeFocusedRecoveryAttempted
-                    && $0.selectedSource == PPOCRTimeRecognitionSource.currentPPocr.rawValue
-                    && $0.selectionReason == "noValidSecondaryResult"
-            }
-            .count
+        recognitionCellDiagnostics.reduce(0) { total, cell in
+            let originalUnresolved = cell.recognitionModelComparisons.filter {
+                    $0.timeFocusedRecoveryAttempted
+                        && $0.selectedSource
+                            == PPOCRTimeRecognitionSource.currentPPocr.rawValue
+                        && $0.selectionReason == "noValidSecondaryResult"
+                }.count
+            let recovered = cell.cellUpscaleAttempts
+                .first { "\($0.scaleFactor)x" == cell.cellUpscaleSelectedScale }?
+                .selectedTexts.count ?? 0
+            return total + max(0, originalUnresolved - recovered)
+        }
+    }
+
+    var cellUpscaleRecoveryCellCount: Int {
+        recognitionCellDiagnostics.filter(\.cellUpscaleRecoveryAttempted).count
+    }
+
+    var cellUpscale2xTotalMilliseconds: Double {
+        cellUpscaleTotalMilliseconds(scaleFactor: 2)
+    }
+
+    var cellUpscale3xTotalMilliseconds: Double {
+        cellUpscaleTotalMilliseconds(scaleFactor: 3)
+    }
+
+    var ppOCROneXCellTotalMilliseconds: Double {
+        recognitionCellDiagnostics.map(\.oneXTotalMilliseconds).reduce(0, +)
+    }
+
+    var cellUpscaleAddedTotalMilliseconds: Double {
+        cellUpscale2xTotalMilliseconds + cellUpscale3xTotalMilliseconds
+    }
+
+    var cellUpscaleAddedPercent: Double? {
+        guard ppOCROneXCellTotalMilliseconds > 0 else { return nil }
+        return cellUpscaleAddedTotalMilliseconds / ppOCROneXCellTotalMilliseconds * 100
     }
 
     var displayFields: [(label: String, value: String)] {
@@ -726,6 +779,15 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ("PP-OCR Success Cells", "\(ppOCRSuccessCellCount)"),
             ("Vision Fallback Cells", "\(visionFallbackCellCount)"),
             ("Unresolved Time Detections", "\(unresolvedTimeDetectionCount)"),
+            ("PP-OCR 1x Cell Total", "\(Self.decimalText(ppOCROneXCellTotalMilliseconds)) ms"),
+            ("Cell Upscale Retry Cells", "\(cellUpscaleRecoveryCellCount)"),
+            ("Cell Upscale 2x Total", "\(Self.decimalText(cellUpscale2xTotalMilliseconds)) ms"),
+            ("Cell Upscale 3x Total", "\(Self.decimalText(cellUpscale3xTotalMilliseconds)) ms"),
+            ("Cell Upscale Added", "\(Self.decimalText(cellUpscaleAddedTotalMilliseconds)) ms"),
+            (
+                "Cell Upscale Added vs 1x",
+                cellUpscaleAddedPercent.map { "\(Self.decimalText($0))%" } ?? "none"
+            ),
             ("Manual YM", Self.yearMonthText(manualYearMonth)),
             ("Resolved YM", Self.yearMonthText(resolvedYearMonth)),
             ("Selected Rotation", orientation.map { "\($0.selectedRotation.rawValue)" } ?? "none"),
@@ -769,6 +831,12 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             "ppocrSuccessCells=\(ppOCRSuccessCellCount)",
             "visionFallbackCells=\(visionFallbackCellCount)",
             "unresolvedTimeDetections=\(unresolvedTimeDetectionCount)",
+            "ppocr1xCellTotalMs=\(Self.decimalText(ppOCROneXCellTotalMilliseconds))",
+            "cellUpscaleRecoveryCells=\(cellUpscaleRecoveryCellCount)",
+            "cellUpscale2xTotalMs=\(Self.decimalText(cellUpscale2xTotalMilliseconds))",
+            "cellUpscale3xTotalMs=\(Self.decimalText(cellUpscale3xTotalMilliseconds))",
+            "cellUpscaleAddedTotalMs=\(Self.decimalText(cellUpscaleAddedTotalMilliseconds))",
+            "cellUpscaleAddedVs1xPercent=\(Self.decimalText(cellUpscaleAddedPercent))",
             "candidateInput=\(recognitionMode == .ppocrv6)",
             "manualYearMonth=\(Self.yearMonthText(manualYearMonth))",
             "resolvedYearMonth=\(Self.yearMonthText(resolvedYearMonth))",
@@ -815,6 +883,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
             ].joined(separator: " ")
         } ?? []
         let recognitionLines = Self.recognitionLines(recognitionCellDiagnostics)
+        let cellUpscaleLines = Self.cellUpscaleLines(recognitionCellDiagnostics)
         let recognitionModelPOCLines: [String] = recognitionModelPOC.map { poc in
             let summary = [
                 "currentModel=\(Self.quotedText(poc.currentModel))",
@@ -1023,6 +1092,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         return [
             summary,
             Self.section(title: "RecognitionCells", lines: recognitionLines),
+            Self.section(title: "CellUpscaleRecovery", lines: cellUpscaleLines),
             Self.section(title: "RecognitionModelPOC", lines: recognitionModelPOCLines),
             Self.section(title: "PPOCRDetections", lines: ppOCRDetectionLines),
             Self.section(title: "GridGeometry", lines: geometryLines),
@@ -1049,12 +1119,74 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 "sourcePixels=\(pixelSizeText(cell.sourceImagePixels))",
                 "cropRect=\(pixelRectText(cell.cropRect))",
                 "cropPixels=\(pixelSizeText(cell.cropImagePixels))",
+                "oneXTotalMs=\(decimalText(cell.oneXTotalMilliseconds))",
                 "padding=\(cell.paddingApplied)",
                 "ppocrText=\(textList(cell.ppOCRText))",
                 "ppocrError=\(cell.ppOCRError ?? "none")",
+                "cellUpscaleRecoveryAttempted=\(cell.cellUpscaleRecoveryAttempted)",
+                "cellUpscale2xAttempted=\(cell.cellUpscaleAttempts.contains { $0.scaleFactor == 2 })",
+                "cellUpscale3xAttempted=\(cell.cellUpscaleAttempts.contains { $0.scaleFactor == 3 })",
+                "cellUpscaleSelectedScale=\(cell.cellUpscaleSelectedScale)",
                 "fallbackUsed=\(cell.fallbackUsed)"
             ].joined(separator: " ")
         }
+    }
+
+    private static func cellUpscaleLines(
+        _ cells: [CalendarPhotoCellRecognitionDiagnostics]
+    ) -> [String] {
+        cells.sorted(by: { $0.day < $1.day }).flatMap { cell -> [String] in
+            guard cell.cellUpscaleRecoveryAttempted else { return [] }
+            let header = [
+                "day=\(cell.day)",
+                "cellUpscaleRecoveryAttempted=true",
+                "cellUpscale2xAttempted=\(cell.cellUpscaleAttempts.contains { $0.scaleFactor == 2 })",
+                "cellUpscale3xAttempted=\(cell.cellUpscaleAttempts.contains { $0.scaleFactor == 3 })",
+                "cellUpscaleSelectedScale=\(cell.cellUpscaleSelectedScale)"
+            ].joined(separator: " ")
+            let attempts = cell.cellUpscaleAttempts.flatMap { attempt -> [String] in
+                let prefix = "cellUpscale\(attempt.scaleFactor)x"
+                let selectedText = attempt.selectedTexts.first
+                let summary = [
+                    "day=\(cell.day)",
+                    "\(prefix)Attempted=true",
+                    "\(prefix)Pixels=\(pixelSizeText(attempt.cellPixels))",
+                    "\(prefix)DetectorInputPixels=\(optionalPixelSizeText(attempt.detectorInputPixels))",
+                    "\(prefix)DetectionCount=\(attempt.detectionCount)",
+                    "\(prefix)Texts=\(textList(attempt.detections.map(\.selectedText)))",
+                    "\(prefix)TimeCandidates=\(textList(attempt.timeCandidates))",
+                    "\(prefix)SelectedText=\(selectedText.map(Self.quotedText) ?? "none")",
+                    "\(prefix)SelectedTexts=\(textList(attempt.selectedTexts))",
+                    "\(prefix)ParseResult=\(timeParseResult(selectedText))",
+                    "\(prefix)SelectionReason=\(attempt.selectionReason)",
+                    "\(prefix)TotalMs=\(decimalText(attempt.totalMilliseconds))",
+                    "\(prefix)Error=\(attempt.error ?? "none")"
+                ].joined(separator: " ")
+                let detections = attempt.detections.enumerated().map { index, detection in
+                    let bounds = detection.boundingBox
+                    return [
+                        "day=\(cell.day)",
+                        "cellUpscaleScale=\(attempt.scaleFactor)x",
+                        "detection=\(index + 1)",
+                        "bbox=(x=\(decimalText(bounds.x)),y=\(decimalText(bounds.y)),w=\(decimalText(bounds.width)),h=\(decimalText(bounds.height)))",
+                        "currentText=\(quotedText(detection.currentText))",
+                        "selectedText=\(quotedText(detection.selectedText))",
+                        "selectedSource=\(detection.selectedSource)",
+                        "parseResult=\(timeParseResult(detection.selectedText))"
+                    ].joined(separator: " ")
+                }
+                return [summary] + detections
+            }
+            return [header] + attempts
+        }
+    }
+
+    private func cellUpscaleTotalMilliseconds(scaleFactor: Int) -> Double {
+        recognitionCellDiagnostics
+            .flatMap(\.cellUpscaleAttempts)
+            .filter { $0.scaleFactor == scaleFactor }
+            .map(\.totalMilliseconds)
+            .reduce(0, +)
     }
 
     private static func pixelSizeText(_ size: CalendarPhotoPixelSizeDiagnostics) -> String {

@@ -133,6 +133,14 @@ struct PPOCRImageSize: Equatable, Sendable {
     let height: Int
 
     var text: String { "\(width)x\(height)" }
+
+    func scaled(by factor: Int) throws -> PPOCRImageSize {
+        guard factor > 1 else { throw PPOCRError.invalidImage }
+        let (scaledWidth, widthOverflow) = width.multipliedReportingOverflow(by: factor)
+        let (scaledHeight, heightOverflow) = height.multipliedReportingOverflow(by: factor)
+        guard !widthOverflow, !heightOverflow else { throw PPOCRError.invalidImage }
+        return PPOCRImageSize(width: scaledWidth, height: scaledHeight)
+    }
 }
 
 struct PPOCRPoint: Equatable, Sendable {
@@ -382,6 +390,33 @@ struct PPOCRCellTiming: Equatable, Sendable {
     let totalMilliseconds: Double
 }
 
+enum PPOCRCellUpscaleSelectedScale: String, Equatable, Sendable {
+    case one = "1x"
+    case two = "2x"
+    case three = "3x"
+    case none
+}
+
+struct PPOCRCellUpscaleDetection: Equatable, Sendable {
+    let boundingBox: CalendarOCRBoundingBox
+    let currentText: String
+    let selectedText: String
+    let selectedSource: PPOCRTimeRecognitionSource
+}
+
+struct PPOCRCellUpscaleAttempt: Equatable, Sendable {
+    let scaleFactor: Int
+    let cellPixels: PPOCRImageSize
+    let detectorInputPixels: PPOCRImageSize?
+    let detectionCount: Int
+    let detections: [PPOCRCellUpscaleDetection]
+    let timeCandidates: [String]
+    let selectedTexts: [String]
+    let selectionReason: String
+    let totalMilliseconds: Double
+    let error: String?
+}
+
 struct PPOCRCellRecognitionResult: Equatable, Sendable {
     let day: Int
     let sourcePixels: PPOCRImageSize
@@ -394,6 +429,247 @@ struct PPOCRCellRecognitionResult: Equatable, Sendable {
     let detectionCount: Int
     let timing: PPOCRCellTiming
     let error: String?
+    var cellUpscaleRecoveryAttempted: Bool = false
+    var cellUpscaleAttempts: [PPOCRCellUpscaleAttempt] = []
+    var cellUpscaleSelectedScale: PPOCRCellUpscaleSelectedScale = .one
+}
+
+struct PPOCRCellUpscaleRecoveryOutcome: Equatable, Sendable {
+    let attempted: Bool
+    let attempts: [PPOCRCellUpscaleAttempt]
+    let selectedScale: PPOCRCellUpscaleSelectedScale
+    let recoveredResults: [PPOCRTextResult]
+}
+
+enum PPOCRCellUpscaleRecoveryRunner {
+    static func run(
+        original: PPOCRCellRecognitionResult,
+        pipeline: (Int) throws -> PPOCRCellRecognitionResult
+    ) throws -> PPOCRCellUpscaleRecoveryOutcome {
+        let unresolvedBounds = original.recognitionModelComparisons
+            .filter(isUnresolvedTimeDetection)
+            .map(\.boundingBox)
+        guard !unresolvedBounds.isEmpty else {
+            return PPOCRCellUpscaleRecoveryOutcome(
+                attempted: false,
+                attempts: [],
+                selectedScale: .one,
+                recoveredResults: []
+            )
+        }
+
+        var attempts: [PPOCRCellUpscaleAttempt] = []
+        for scaleFactor in [2, 3] {
+            try Task.checkCancellation()
+            let attemptStart = ProcessInfo.processInfo.systemUptime * 1_000
+            do {
+                let scaledCell = try pipeline(scaleFactor)
+                let elapsed = ProcessInfo.processInfo.systemUptime * 1_000 - attemptStart
+                let detections = scaledCell.recognitionModelComparisons.map { comparison in
+                    PPOCRCellUpscaleDetection(
+                        boundingBox: comparison.boundingBox,
+                        currentText: comparison.currentText,
+                        selectedText: selectedAlternative(for: comparison).text,
+                        selectedSource: comparison.selectedSource
+                    )
+                }
+                let timeCandidates = scaledCell.recognitionModelComparisons.compactMap {
+                    comparison -> String? in
+                    let text = selectedAlternative(for: comparison).text
+                    return PPOCRTimeRecoveryPolicy.isUsableRecoveredRange(text) ? text : nil
+                }
+                let recoveredResults = recoveredResults(
+                    from: scaledCell.recognitionModelComparisons,
+                    matching: unresolvedBounds
+                )
+                let selectionReason: String
+                if !recoveredResults.isEmpty {
+                    selectionReason = "validUnresolvedRangeSelected"
+                } else if timeCandidates.isEmpty {
+                    selectionReason = "noValidTimeRange"
+                } else {
+                    selectionReason = "validRangeDidNotMatchUnresolvedDetection"
+                }
+                attempts.append(PPOCRCellUpscaleAttempt(
+                    scaleFactor: scaleFactor,
+                    cellPixels: scaledCell.cellPixels,
+                    detectorInputPixels: scaledCell.detectorInputPixels,
+                    detectionCount: scaledCell.detectionCount,
+                    detections: detections,
+                    timeCandidates: timeCandidates,
+                    selectedTexts: recoveredResults.map(\.text),
+                    selectionReason: selectionReason,
+                    totalMilliseconds: elapsed,
+                    error: nil
+                ))
+                if !recoveredResults.isEmpty {
+                    return PPOCRCellUpscaleRecoveryOutcome(
+                        attempted: true,
+                        attempts: attempts,
+                        selectedScale: scaleFactor == 2 ? .two : .three,
+                        recoveredResults: recoveredResults
+                    )
+                }
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let error as PPOCRError {
+                attempts.append(failedAttempt(
+                    original: original,
+                    scaleFactor: scaleFactor,
+                    startMilliseconds: attemptStart,
+                    error: error.diagnosticCode
+                ))
+            } catch {
+                attempts.append(failedAttempt(
+                    original: original,
+                    scaleFactor: scaleFactor,
+                    startMilliseconds: attemptStart,
+                    error: "runtimeFailure:cellUpscale\(scaleFactor)x"
+                ))
+            }
+        }
+        return PPOCRCellUpscaleRecoveryOutcome(
+            attempted: true,
+            attempts: attempts,
+            selectedScale: .none,
+            recoveredResults: []
+        )
+    }
+
+    static func isUnresolvedTimeDetection(
+        _ comparison: PPOCRRecognitionModelComparison
+    ) -> Bool {
+        comparison.timeFocusedRecoveryAttempted
+            && comparison.selectedSource == .currentPPocr
+            && comparison.selectionReason == "noValidSecondaryResult"
+            && !PPOCRTimeRecoveryPolicy.isUsableRecoveredRange(
+                comparison.selectedText ?? comparison.currentText
+            )
+    }
+
+    private static func recoveredResults(
+        from comparisons: [PPOCRRecognitionModelComparison],
+        matching unresolvedBounds: [CalendarOCRBoundingBox]
+    ) -> [PPOCRTextResult] {
+        // A scaled pass sees every line in the Cell. Match normalized geometry
+        // so a changed reading of an already-valid 1x line cannot replace it.
+        var unmatched = unresolvedBounds
+        var results: [PPOCRTextResult] = []
+        for comparison in comparisons {
+            let alternative = selectedAlternative(for: comparison)
+            guard PPOCRTimeRecoveryPolicy.isUsableRecoveredRange(alternative.text),
+                  let matchIndex = bestMatchIndex(
+                      for: comparison.boundingBox,
+                      in: unmatched
+                  ) else {
+                continue
+            }
+            unmatched.remove(at: matchIndex)
+            results.append(PPOCRTextResult(
+                text: alternative.text,
+                confidence: alternative.confidence,
+                boundingBox: comparison.boundingBox,
+                timeParseQualityOverride: .recovered
+            ))
+        }
+        return results
+    }
+
+    private static func selectedAlternative(
+        for comparison: PPOCRRecognitionModelComparison
+    ) -> PPOCRRecognitionAlternative {
+        let alternative: PPOCRRecognitionAlternative?
+        switch comparison.selectedSource {
+        case .currentPPocr:
+            alternative = PPOCRRecognitionAlternative(
+                text: comparison.currentText,
+                confidence: comparison.currentConfidence
+            )
+        case .enhancedPPocr:
+            alternative = optionalAlternative(
+                text: comparison.enhancedText,
+                confidence: comparison.enhancedConfidence
+            )
+        case .candidatePPocr:
+            alternative = optionalAlternative(
+                text: comparison.candidateText,
+                confidence: comparison.candidateConfidence
+            )
+        case .visionSecondary:
+            alternative = optionalAlternative(
+                text: comparison.visionText,
+                confidence: comparison.visionConfidence
+            )
+        case .timeFocusedPPocr:
+            alternative = optionalAlternative(
+                text: comparison.timeFocusedPPocrText,
+                confidence: comparison.timeFocusedPPocrConfidence
+            )
+        case .timeFocusedVision:
+            alternative = optionalAlternative(
+                text: comparison.timeFocusedVisionText,
+                confidence: comparison.timeFocusedVisionConfidence
+            )
+        }
+        return alternative ?? PPOCRRecognitionAlternative(
+            text: comparison.selectedText ?? comparison.currentText,
+            confidence: comparison.currentConfidence
+        )
+    }
+
+    private static func optionalAlternative(
+        text: String?,
+        confidence: Float?
+    ) -> PPOCRRecognitionAlternative? {
+        guard let text, let confidence else { return nil }
+        return PPOCRRecognitionAlternative(text: text, confidence: confidence)
+    }
+
+    private static func bestMatchIndex(
+        for candidate: CalendarOCRBoundingBox,
+        in unresolved: [CalendarOCRBoundingBox]
+    ) -> Int? {
+        let scored = unresolved.enumerated().map { index, bounds in
+            (index: index, score: overlapScore(candidate, bounds))
+        }.max(by: { $0.score < $1.score })
+        guard let scored, scored.score >= 0.2 else { return nil }
+        return scored.index
+    }
+
+    private static func overlapScore(
+        _ lhs: CalendarOCRBoundingBox,
+        _ rhs: CalendarOCRBoundingBox
+    ) -> Double {
+        let width = max(0, min(lhs.maxX, rhs.maxX) - max(lhs.minX, rhs.minX))
+        let height = max(0, min(lhs.maxY, rhs.maxY) - max(lhs.minY, rhs.minY))
+        let intersection = width * height
+        let smallerArea = min(lhs.width * lhs.height, rhs.width * rhs.height)
+        guard smallerArea > 0 else { return 0 }
+        return intersection / smallerArea
+    }
+
+    private static func failedAttempt(
+        original: PPOCRCellRecognitionResult,
+        scaleFactor: Int,
+        startMilliseconds: Double,
+        error: String
+    ) -> PPOCRCellUpscaleAttempt {
+        let expectedSize = (try? original.cellPixels.scaled(by: scaleFactor))
+            ?? original.cellPixels
+        return PPOCRCellUpscaleAttempt(
+            scaleFactor: scaleFactor,
+            cellPixels: expectedSize,
+            detectorInputPixels: nil,
+            detectionCount: 0,
+            detections: [],
+            timeCandidates: [],
+            selectedTexts: [],
+            selectionReason: "pipelineFailed",
+            totalMilliseconds: ProcessInfo.processInfo.systemUptime * 1_000
+                - startMilliseconds,
+            error: error
+        )
+    }
 }
 
 struct PPOCRRecognitionRun: Equatable, Sendable {
@@ -553,10 +829,42 @@ struct PPOCRMonthRecognitionRouter {
                     selectionReason: comparison.selectionReason
                 )
             },
+            oneXTotalMilliseconds: cell.timing.totalMilliseconds,
             ppOCRText: cell.recognitionModelComparisons
                 .map(\.currentText)
                 .filter { !$0.isEmpty },
-            ppOCRError: error
+            ppOCRError: error,
+            cellUpscaleRecoveryAttempted: cell.cellUpscaleRecoveryAttempted,
+            cellUpscaleAttempts: cell.cellUpscaleAttempts.map { attempt in
+                CalendarPhotoCellUpscaleAttemptDiagnostics(
+                    scaleFactor: attempt.scaleFactor,
+                    cellPixels: CalendarPhotoPixelSizeDiagnostics(
+                        width: attempt.cellPixels.width,
+                        height: attempt.cellPixels.height
+                    ),
+                    detectorInputPixels: attempt.detectorInputPixels.map {
+                        CalendarPhotoPixelSizeDiagnostics(
+                            width: $0.width,
+                            height: $0.height
+                        )
+                    },
+                    detectionCount: attempt.detectionCount,
+                    detections: attempt.detections.map { detection in
+                        CalendarPhotoCellUpscaleDetectionDiagnostics(
+                            boundingBox: detection.boundingBox,
+                            currentText: detection.currentText,
+                            selectedText: detection.selectedText,
+                            selectedSource: detection.selectedSource.rawValue
+                        )
+                    },
+                    timeCandidates: attempt.timeCandidates,
+                    selectedTexts: attempt.selectedTexts,
+                    selectionReason: attempt.selectionReason,
+                    totalMilliseconds: attempt.totalMilliseconds,
+                    error: attempt.error
+                )
+            },
+            cellUpscaleSelectedScale: cell.cellUpscaleSelectedScale.rawValue
         )
     }
 

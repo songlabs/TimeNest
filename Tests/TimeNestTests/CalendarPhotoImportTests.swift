@@ -2217,6 +2217,260 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(first.values[48], 0, accuracy: 0.000_001)
     }
 
+    func testPPOCRCellUpscaleProducesExactTwoAndThreeTimesDimensions() throws {
+        let image = try PPOCRBGRImage(
+            width: 100,
+            height: 50,
+            pixels: [UInt8](repeating: 127, count: 100 * 50 * 3)
+        )
+
+        XCTAssertEqual(try image.upscaled(by: 2).size, PPOCRImageSize(width: 200, height: 100))
+        XCTAssertEqual(try image.upscaled(by: 3).size, PPOCRImageSize(width: 300, height: 150))
+    }
+
+    func testPPOCRCellUpscaleDetectorInputSizesFollowCurrentMinimumSideRule() throws {
+        XCTAssertEqual(
+            try PPOCRPreprocessor.detectionInputSize(
+                for: PPOCRImageSize(width: 482, height: 361)
+            ),
+            PPOCRImageSize(width: 1_280, height: 960)
+        )
+        XCTAssertEqual(
+            try PPOCRPreprocessor.detectionInputSize(
+                for: PPOCRImageSize(width: 964, height: 722)
+            ),
+            PPOCRImageSize(width: 1_280, height: 960)
+        )
+        XCTAssertEqual(
+            try PPOCRPreprocessor.detectionInputSize(
+                for: PPOCRImageSize(width: 1_446, height: 1_083)
+            ),
+            PPOCRImageSize(width: 1_440, height: 1_088)
+        )
+    }
+
+    func testPPOCRScaledDetectionBoxNormalizesToOriginalCellCoordinates() {
+        let original = PPOCRNormalizedBoxConverter.boundingBox(
+            for: PPOCRDetectedBox(
+                points: [
+                    PPOCRPoint(x: 10, y: 10),
+                    PPOCRPoint(x: 90, y: 10),
+                    PPOCRPoint(x: 90, y: 30),
+                    PPOCRPoint(x: 10, y: 30)
+                ],
+                score: 0.9
+            ),
+            imageSize: PPOCRImageSize(width: 100, height: 50)
+        )
+        let scaled = PPOCRNormalizedBoxConverter.boundingBox(
+            for: PPOCRDetectedBox(
+                points: [
+                    PPOCRPoint(x: 20, y: 20),
+                    PPOCRPoint(x: 180, y: 20),
+                    PPOCRPoint(x: 180, y: 60),
+                    PPOCRPoint(x: 20, y: 60)
+                ],
+                score: 0.9
+            ),
+            imageSize: PPOCRImageSize(width: 200, height: 100)
+        )
+
+        XCTAssertEqual(scaled.x, original.x, accuracy: 0.000_001)
+        XCTAssertEqual(scaled.y, original.y, accuracy: 0.000_001)
+        XCTAssertEqual(scaled.width, original.width, accuracy: 0.000_001)
+        XCTAssertEqual(scaled.height, original.height, accuracy: 0.000_001)
+    }
+
+    func testPPOCRCellUpscaleDoesNotRetryWhenOneTimesIsValid() throws {
+        let original = ppOCRUpscaleCell(comparisons: [
+            ppOCRUpscaleComparison(text: "17:30-20:30")
+        ])
+        var attemptedScales: [Int] = []
+
+        let outcome = try PPOCRCellUpscaleRecoveryRunner.run(original: original) { scale in
+            attemptedScales.append(scale)
+            return self.ppOCRUpscaleCell(comparisons: [])
+        }
+
+        XCTAssertFalse(outcome.attempted)
+        XCTAssertEqual(outcome.selectedScale, .one)
+        XCTAssertTrue(outcome.attempts.isEmpty)
+        XCTAssertTrue(attemptedScales.isEmpty)
+    }
+
+    func testPPOCRCellUpscaleStopsAfterTwoTimesFindsValidRange() throws {
+        let original = ppOCRUpscaleCell(comparisons: [
+            ppOCRUpscaleComparison(text: "2020-21246", unresolved: true)
+        ])
+        var attemptedScales: [Int] = []
+
+        let outcome = try PPOCRCellUpscaleRecoveryRunner.run(original: original) { scale in
+            attemptedScales.append(scale)
+            return self.ppOCRUpscaleCell(
+                comparisons: [self.ppOCRUpscaleComparison(text: "20:20-21:40")],
+                cellPixels: PPOCRImageSize(width: 100 * scale, height: 50 * scale)
+            )
+        }
+
+        XCTAssertEqual(attemptedScales, [2])
+        XCTAssertEqual(outcome.selectedScale, .two)
+        XCTAssertEqual(outcome.recoveredResults.map(\.text), ["20:20-21:40"])
+        XCTAssertEqual(outcome.attempts.map(\.scaleFactor), [2])
+    }
+
+    func testPPOCRCellUpscaleRunsThreeTimesOnlyAfterTwoTimesFails() throws {
+        let original = ppOCRUpscaleCell(comparisons: [
+            ppOCRUpscaleComparison(text: "17230-2030", unresolved: true)
+        ])
+        var attemptedScales: [Int] = []
+
+        let outcome = try PPOCRCellUpscaleRecoveryRunner.run(original: original) { scale in
+            attemptedScales.append(scale)
+            let text = scale == 2 ? "still-invalid" : "17:30-20:30"
+            return self.ppOCRUpscaleCell(
+                comparisons: [self.ppOCRUpscaleComparison(text: text)],
+                cellPixels: PPOCRImageSize(width: 100 * scale, height: 50 * scale)
+            )
+        }
+
+        XCTAssertEqual(attemptedScales, [2, 3])
+        XCTAssertEqual(outcome.selectedScale, .three)
+        XCTAssertEqual(outcome.recoveredResults.map(\.text), ["17:30-20:30"])
+        XCTAssertEqual(outcome.attempts.map(\.selectionReason), [
+            "noValidTimeRange", "validUnresolvedRangeSelected"
+        ])
+    }
+
+    func testPPOCRCellUpscaleKeepsFailureEvidenceWhenAllScalesFail() throws {
+        let original = ppOCRUpscaleCell(comparisons: [
+            ppOCRUpscaleComparison(text: "2020-21246", unresolved: true)
+        ])
+
+        let outcome = try PPOCRCellUpscaleRecoveryRunner.run(original: original) { scale in
+            self.ppOCRUpscaleCell(
+                comparisons: [self.ppOCRUpscaleComparison(text: "invalid-\(scale)x")],
+                cellPixels: PPOCRImageSize(width: 100 * scale, height: 50 * scale)
+            )
+        }
+
+        XCTAssertTrue(outcome.attempted)
+        XCTAssertEqual(outcome.selectedScale, .none)
+        XCTAssertTrue(outcome.recoveredResults.isEmpty)
+        XCTAssertEqual(outcome.attempts.map(\.scaleFactor), [2, 3])
+        XCTAssertEqual(outcome.attempts.map(\.detectionCount), [1, 1])
+        XCTAssertEqual(outcome.attempts.map(\.selectionReason), [
+            "noValidTimeRange", "noValidTimeRange"
+        ])
+        XCTAssertEqual(outcome.attempts.map { $0.detections.map(\.selectedText) }, [
+            ["invalid-2x"], ["invalid-3x"]
+        ])
+
+        let fixture = try gridFirstFixture(day: 4)
+        let recoveredCell = ppOCRUpscaleCell(
+            comparisons: original.recognitionModelComparisons,
+            upscaleOutcome: outcome
+        )
+        let plan = PPOCRMonthRecognitionRouter().makePlan(
+            run: ppOCRRun(cells: [recoveredCell]),
+            regions: [fixture.region]
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        XCTAssertThrowsError(try fixture.parser.parseMonth(
+            observations: plan.candidateInputObservations,
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            recognitionCellDiagnostics: plan.cellDiagnostics,
+            recognitionModelPOC: plan.recognitionModelPOC,
+            diagnosticsHandler: { diagnostics = $0 }
+        ))
+        let text = try XCTUnwrap(diagnostics).plainText
+        XCTAssertEqual(diagnostics?.candidateCount, 0)
+        XCTAssertEqual(diagnostics?.unresolvedTimeDetectionCount, 1)
+        XCTAssertTrue(text.contains(#"cellUpscale2xTexts=["invalid-2x"]"#))
+        XCTAssertTrue(text.contains("cellUpscale2xParseResult=none"))
+        XCTAssertTrue(text.contains(#"cellUpscale3xTexts=["invalid-3x"]"#))
+        XCTAssertTrue(text.contains("cellUpscale3xSelectionReason=noValidTimeRange"))
+        XCTAssertTrue(text.contains("cellUpscaleSelectedScale=none"))
+    }
+
+    func testPPOCRCellUpscaleAddsOnlyRecoveredUnresolvedAppointment() throws {
+        let fixture = try gridFirstFixture(day: 26)
+        let firstBox = CalendarOCRBoundingBox(x: 0.08, y: 0.62, width: 0.8, height: 0.14)
+        let secondBox = CalendarOCRBoundingBox(x: 0.08, y: 0.2, width: 0.8, height: 0.14)
+        let original = ppOCRUpscaleCell(day: 26, comparisons: [
+            ppOCRUpscaleComparison(text: "17:30-20.30", boundingBox: firstBox),
+            ppOCRUpscaleComparison(
+                text: "2020-21246",
+                boundingBox: secondBox,
+                unresolved: true
+            )
+        ])
+        let outcome = try PPOCRCellUpscaleRecoveryRunner.run(original: original) { _ in
+            self.ppOCRUpscaleCell(day: 26, comparisons: [
+                self.ppOCRUpscaleComparison(text: "18:00-19:00", boundingBox: firstBox),
+                self.ppOCRUpscaleComparison(text: "20=20-21:40", boundingBox: secondBox)
+            ], cellPixels: PPOCRImageSize(width: 200, height: 100))
+        }
+        let recoveredCell = ppOCRUpscaleCell(
+            day: 26,
+            comparisons: original.recognitionModelComparisons,
+            upscaleOutcome: outcome
+        )
+        let plan = PPOCRMonthRecognitionRouter().makePlan(
+            run: ppOCRRun(cells: [recoveredCell]),
+            regions: [fixture.region]
+        )
+        var diagnostics: CalendarPhotoImportDiagnostics?
+        let parsed = try fixture.parser.parseMonth(
+            observations: plan.candidateInputObservations,
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            recognitionCellDiagnostics: plan.cellDiagnostics,
+            recognitionModelPOC: plan.recognitionModelPOC,
+            diagnosticsHandler: { diagnostics = $0 }
+        )
+
+        XCTAssertEqual(outcome.recoveredResults.map(\.text), ["20=20-21:40"])
+        XCTAssertEqual(parsed.candidates.map(\.startTimeMinutes), [1_050, 1_220])
+        XCTAssertEqual(parsed.candidates.map(\.endTimeMinutes), [1_230, 1_300])
+        XCTAssertEqual(diagnostics?.unresolvedTimeDetectionCount, 0)
+        let text = try XCTUnwrap(diagnostics).plainText
+        XCTAssertTrue(text.contains("cellUpscaleRecoveryCells=1"))
+        XCTAssertTrue(text.contains("ppocr1xCellTotalMs=5.0000"))
+        XCTAssertTrue(text.contains("cellUpscaleAddedTotalMs="))
+        XCTAssertTrue(text.contains("cellUpscaleAddedVs1xPercent="))
+        XCTAssertTrue(text.contains("cellUpscale2xAttempted=true"))
+        XCTAssertTrue(text.contains("cellUpscale3xAttempted=false"))
+        XCTAssertTrue(text.contains("cellUpscale2xDetectionCount=2"))
+        XCTAssertTrue(text.contains(#"cellUpscale2xSelectedText="20=20-21:40""#))
+        XCTAssertTrue(text.contains("cellUpscale2xParseResult=20:20-21:40"))
+        XCTAssertTrue(text.contains("cellUpscaleSelectedScale=2x"))
+    }
+
+    func testPPOCRCellUpscaleNeverAcceptsOrdinaryNumericOrVersionText() throws {
+        let original = ppOCRUpscaleCell(comparisons: [
+            ppOCRUpscaleComparison(text: "2020-21246", unresolved: true)
+        ])
+
+        for text in ["ID 17302030", "09012345678", "123456789012", "Release 1.23"] {
+            let outcome = try PPOCRCellUpscaleRecoveryRunner.run(original: original) { scale in
+                self.ppOCRUpscaleCell(
+                    comparisons: [self.ppOCRUpscaleComparison(text: text)],
+                    cellPixels: PPOCRImageSize(width: 100 * scale, height: 50 * scale)
+                )
+            }
+            XCTAssertEqual(outcome.selectedScale, .none, text)
+            XCTAssertTrue(outcome.recoveredResults.isEmpty, text)
+            XCTAssertTrue(outcome.attempts.allSatisfy { $0.timeCandidates.isEmpty }, text)
+        }
+    }
+
     func testPPOCRTimeRecoveryPreprocessingIsBoundedAndDeterministic() throws {
         let image = try PPOCRBGRImage(
             width: 2,
@@ -2682,6 +2936,91 @@ final class CalendarPhotoImportTests: XCTestCase {
         ])
         XCTAssertEqual(plan.cellDiagnostics.last?.ppOCRError, "runtimeFailure:recognition")
     }
+
+    private func ppOCRUpscaleComparison(
+        text: String,
+        boundingBox: CalendarOCRBoundingBox = CalendarOCRBoundingBox(
+            x: 0.08,
+            y: 0.2,
+            width: 0.8,
+            height: 0.15
+        ),
+        unresolved: Bool = false
+    ) -> PPOCRRecognitionModelComparison {
+        PPOCRRecognitionModelComparison(
+            boundingBox: boundingBox,
+            currentText: text,
+            currentConfidence: 0.9,
+            currentMilliseconds: 1,
+            recoveryAttempted: unresolved,
+            recoveryReason: unresolved ? .timeLikeButUnparsed : nil,
+            candidateText: nil,
+            candidateConfidence: nil,
+            candidateMilliseconds: nil,
+            candidateError: nil,
+            timeFocusedRecoveryAttempted: unresolved,
+            timeFocusedSelectionReason: unresolved
+                ? "noValidFocusedResult"
+                : "notAttempted",
+            selectedText: text,
+            selectedSource: .currentPPocr,
+            selectionReason: unresolved
+                ? "noValidSecondaryResult"
+                : (PPOCRTimeRecoveryPolicy.isUsableRecoveredRange(text)
+                    ? "currentValidTime"
+                    : "recoveryNotTriggered")
+        )
+    }
+
+    private func ppOCRUpscaleCell(
+        day: Int = 4,
+        comparisons: [PPOCRRecognitionModelComparison],
+        cellPixels: PPOCRImageSize = PPOCRImageSize(width: 100, height: 50),
+        upscaleOutcome: PPOCRCellUpscaleRecoveryOutcome? = nil
+    ) -> PPOCRCellRecognitionResult {
+        let parsedResults = comparisons.compactMap { comparison -> PPOCRTextResult? in
+            let text = comparison.selectedText ?? comparison.currentText
+            guard PPOCRTimeRecoveryPolicy.isUsableRecoveredRange(text) else { return nil }
+            return PPOCRTextResult(
+                text: text,
+                confidence: comparison.currentConfidence,
+                boundingBox: comparison.boundingBox,
+                timeParseQualityOverride: comparison.selectedSource == .currentPPocr
+                    ? nil
+                    : .recovered
+            )
+        }
+        let recoveredResults = upscaleOutcome?.recoveredResults ?? []
+        return PPOCRCellRecognitionResult(
+            day: day,
+            sourcePixels: cellPixels,
+            cropRect: PPOCRPixelRect(
+                x: 0,
+                y: 0,
+                width: cellPixels.width,
+                height: cellPixels.height
+            ),
+            paddingApplied: false,
+            cellPixels: cellPixels,
+            detectorInputPixels: cellPixels,
+            results: parsedResults + recoveredResults,
+            recognitionModelComparisons: comparisons,
+            detectionCount: comparisons.count,
+            timing: PPOCRCellTiming(
+                preprocessMilliseconds: 1,
+                detectionMilliseconds: 1,
+                detectionPostprocessMilliseconds: 1,
+                classificationMilliseconds: 1,
+                recognitionMilliseconds: 1,
+                totalMilliseconds: 5
+            ),
+            error: nil,
+            cellUpscaleRecoveryAttempted: upscaleOutcome?.attempted ?? false,
+            cellUpscaleAttempts: upscaleOutcome?.attempts ?? [],
+            cellUpscaleSelectedScale: upscaleOutcome?.selectedScale ?? .one
+        )
+    }
+
     private func ppOCRRun(cells: [PPOCRCellRecognitionResult]) -> PPOCRRecognitionRun {
         PPOCRRecognitionRun(
             runtimeVersion: PPOCRModelManifest.onnxRuntimeVersion,

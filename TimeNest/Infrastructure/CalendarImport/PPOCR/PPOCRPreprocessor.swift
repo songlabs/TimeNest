@@ -68,6 +68,11 @@ struct PPOCRBGRImage: Equatable, Sendable {
 
     var size: PPOCRImageSize { PPOCRImageSize(width: width, height: height) }
 
+    func upscaled(by factor: Int) throws -> PPOCRBGRImage {
+        let target = try size.scaled(by: factor)
+        return try resized(to: target)
+    }
+
     func resized(to target: PPOCRImageSize) throws -> PPOCRBGRImage {
         guard target.width > 0, target.height > 0 else {
             throw PPOCRError.invalidImage
@@ -540,5 +545,27 @@ enum PPOCRBoxCoordinateConverter {
                 y: min(max(0, y), Double(destinationSize.height - 1))
             )
         }
+    }
+}
+
+enum PPOCRNormalizedBoxConverter {
+    static func boundingBox(
+        for box: PPOCRDetectedBox,
+        imageSize: PPOCRImageSize
+    ) -> CalendarOCRBoundingBox {
+        let xs = box.points.map(\.x)
+        let ys = box.points.map(\.y)
+        let minX = xs.min() ?? 0
+        let maxX = xs.max() ?? minX
+        let minY = ys.min() ?? 0
+        let maxY = ys.max() ?? minY
+        let width = Double(max(imageSize.width, 1))
+        let height = Double(max(imageSize.height, 1))
+        return CalendarOCRBoundingBox(
+            x: min(max(minX / width, 0), 1),
+            y: min(max(1 - maxY / height, 0), 1),
+            width: min(max((maxX - minX) / width, 0), 1),
+            height: min(max((maxY - minY) / height, 0), 1)
+        )
     }
 }
