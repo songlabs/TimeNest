@@ -1,12 +1,14 @@
 import CoreGraphics
 import Foundation
+import Vision
 
 actor PPOCRService {
     private var sessions: PPOCRONNXSessions?
 
     func recognizeMonthCells(
         image: CGImage,
-        regions: [CalendarImportDayRegion]
+        regions: [CalendarImportDayRegion],
+        preferredLanguageCode: String = "ja"
     ) async throws -> PPOCRRecognitionRun {
         let modelInitializedThisRun = sessions == nil
         let modelStart = PPOCRMonotonicClock.nowMilliseconds
@@ -50,7 +52,8 @@ actor PPOCRService {
                 try inferCell(
                     image: image,
                     region: region,
-                    sessions: loadedSessions
+                    sessions: loadedSessions,
+                    preferredLanguageCode: preferredLanguageCode
                 )
             }
         )
@@ -98,7 +101,8 @@ actor PPOCRService {
     private func inferCell(
         image: CGImage,
         region: CalendarImportDayRegion,
-        sessions: PPOCRONNXSessions
+        sessions: PPOCRONNXSessions,
+        preferredLanguageCode: String
     ) throws -> PPOCRCellRecognitionResult {
         let totalStart = PPOCRMonotonicClock.nowMilliseconds
         let imageSize = PPOCRImageSize(width: image.width, height: image.height)
@@ -169,8 +173,9 @@ actor PPOCRService {
             let predictedAngleIndex = classificationOutput.values[1]
                 > classificationOutput.values[0] ? 1 : 0
             let predictedAngleScore = classificationOutput.values[predictedAngleIndex]
-            if predictedAngleIndex == 1,
-               predictedAngleScore > PPOCRConfiguration.classificationThreshold {
+            let rotatesLine = predictedAngleIndex == 1
+                && predictedAngleScore > PPOCRConfiguration.classificationThreshold
+            if rotatesLine {
                 lineImage = try lineImage.rotated180Degrees()
             }
             classificationMilliseconds +=
@@ -221,22 +226,134 @@ actor PPOCRService {
                 candidateError = sessions.candidateInitializationError
                     ?? "runtimeFailure:candidateModelUnavailable"
             }
+            let currentAlternative = PPOCRRecognitionAlternative(
+                text: decoded.text,
+                confidence: decoded.confidence
+            )
+            let candidateAlternative = candidateDecoded.map {
+                PPOCRRecognitionAlternative(text: $0.text, confidence: $0.confidence)
+            }
+            let recoveryReason = PPOCRTimeRecoveryPolicy.reason(
+                text: decoded.text,
+                confidence: decoded.confidence
+            )
+            var enhancedDecoded: PPOCRDecodedText?
+            var enhancedMilliseconds: Double?
+            var enhancedError: String?
+            var recoveryImage: PPOCRBGRImage?
+            if recoveryReason != nil {
+                let enhancedStart = PPOCRMonotonicClock.nowMilliseconds
+                do {
+                    let expandedPoints = PPOCRDetectionCropper.expandedPoints(
+                        box.points,
+                        imageSize: cellImage.size
+                    )
+                    var enhancedLine = try cellImage.perspectiveCrop(points: expandedPoints)
+                    if rotatesLine {
+                        enhancedLine = try enhancedLine.rotated180Degrees()
+                    }
+                    enhancedLine = try enhancedLine.timeRecoveryEnhanced()
+                    recoveryImage = enhancedLine
+                    let enhancedTensor = try PPOCRPreprocessor.recognitionTensor(
+                        from: enhancedLine
+                    )
+                    enhancedDecoded = try Self.recognize(
+                        tensor: enhancedTensor,
+                        session: sessions.recognizer,
+                        characters: sessions.characters,
+                        stage: "enhancedRecognition"
+                    )
+                    enhancedMilliseconds = PPOCRMonotonicClock.nowMilliseconds - enhancedStart
+                } catch let error as PPOCRError {
+                    enhancedMilliseconds = PPOCRMonotonicClock.nowMilliseconds - enhancedStart
+                    enhancedError = error.diagnosticCode
+                } catch {
+                    enhancedMilliseconds = PPOCRMonotonicClock.nowMilliseconds - enhancedStart
+                    enhancedError = "runtimeFailure:enhancedRecognition"
+                }
+            }
+            let enhancedAlternative = enhancedDecoded.map {
+                PPOCRRecognitionAlternative(text: $0.text, confidence: $0.confidence)
+            }
+            var selection: PPOCRTimeRecognitionSelection
+            if recoveryReason == nil {
+                selection = PPOCRTimeRecognitionSelection(
+                    alternative: currentAlternative,
+                    source: .currentPPocr,
+                    selectionReason: CalendarImportTimeParser.parseMonth(decoded.text) == nil
+                        ? "recoveryNotTriggered"
+                        : "currentValidTime"
+                )
+            } else {
+                selection = PPOCRTimeRecoveryPolicy.select(
+                    current: currentAlternative,
+                    enhanced: enhancedAlternative,
+                    candidate: candidateAlternative,
+                    vision: nil
+                )
+            }
+            var visionAlternative: PPOCRRecognitionAlternative?
+            var visionMilliseconds: Double?
+            var visionError: String?
+            if recoveryReason != nil,
+               selection.source == .currentPPocr,
+               CalendarImportTimeParser.parseMonth(decoded.text) == nil {
+                let visionStart = PPOCRMonotonicClock.nowMilliseconds
+                do {
+                    let visionImage = try PPOCRCGImageBridge.cgImage(
+                        from: recoveryImage ?? lineImage.timeRecoveryEnhanced()
+                    )
+                    visionAlternative = try PPOCRVisionTimeRecognizer.recognize(
+                        image: visionImage,
+                        preferredLanguageCode: preferredLanguageCode
+                    )
+                    visionMilliseconds = PPOCRMonotonicClock.nowMilliseconds - visionStart
+                } catch is CancellationError {
+                    throw CancellationError()
+                } catch {
+                    visionMilliseconds = PPOCRMonotonicClock.nowMilliseconds - visionStart
+                    visionError = "runtimeFailure:visionSecondary"
+                }
+                selection = PPOCRTimeRecoveryPolicy.select(
+                    current: currentAlternative,
+                    enhanced: enhancedAlternative,
+                    candidate: candidateAlternative,
+                    vision: visionAlternative
+                )
+            }
             modelComparisons.append(PPOCRRecognitionModelComparison(
                 boundingBox: localBoundingBox,
                 currentText: decoded.text,
                 currentConfidence: decoded.confidence,
                 currentMilliseconds: currentMilliseconds,
+                recoveryAttempted: recoveryReason != nil,
+                recoveryReason: recoveryReason,
+                enhancedText: enhancedDecoded?.text,
+                enhancedConfidence: enhancedDecoded?.confidence,
+                enhancedMilliseconds: enhancedMilliseconds,
+                enhancedError: enhancedError,
                 candidateText: candidateDecoded?.text,
                 candidateConfidence: candidateDecoded?.confidence,
                 candidateMilliseconds: candidateMilliseconds,
-                candidateError: candidateError
+                candidateError: candidateError,
+                visionText: visionAlternative?.text,
+                visionConfidence: visionAlternative?.confidence,
+                visionMilliseconds: visionMilliseconds,
+                visionError: visionError,
+                selectedText: selection.alternative.text,
+                selectedSource: selection.source,
+                selectionReason: selection.selectionReason
             ))
-            if !decoded.text.isEmpty,
-               decoded.confidence >= PPOCRConfiguration.textScore {
+            let selectedTime = CalendarImportTimeParser.parseMonth(selection.alternative.text)
+            let passesTextScore = selection.alternative.confidence
+                >= PPOCRConfiguration.textScore
+            let recoveredValidTime = selection.isRecovered && selectedTime != nil
+            if !selection.alternative.text.isEmpty, passesTextScore || recoveredValidTime {
                 textResults.append(PPOCRTextResult(
-                    text: decoded.text,
-                    confidence: decoded.confidence,
-                    boundingBox: localBoundingBox
+                    text: selection.alternative.text,
+                    confidence: selection.alternative.confidence,
+                    boundingBox: localBoundingBox,
+                    timeParseQualityOverride: selection.isRecovered ? .recovered : nil
                 ))
             }
         }
@@ -404,6 +521,91 @@ private enum PPOCRCGImageBridge {
             bgr[bgrOffset + 2] = rgba[rgbaOffset]
         }
         return try PPOCRBGRImage(width: width, height: height, pixels: bgr)
+    }
+
+    static func cgImage(from image: PPOCRBGRImage) throws -> CGImage {
+        var rgba = [UInt8](repeating: 255, count: image.width * image.height * 4)
+        for pixelIndex in 0..<(image.width * image.height) {
+            let bgrOffset = pixelIndex * 3
+            let rgbaOffset = pixelIndex * 4
+            rgba[rgbaOffset] = image.pixels[bgrOffset + 2]
+            rgba[rgbaOffset + 1] = image.pixels[bgrOffset + 1]
+            rgba[rgbaOffset + 2] = image.pixels[bgrOffset]
+        }
+        guard let provider = CGDataProvider(data: Data(rgba) as CFData),
+              let output = CGImage(
+                  width: image.width,
+                  height: image.height,
+                  bitsPerComponent: 8,
+                  bitsPerPixel: 32,
+                  bytesPerRow: image.width * 4,
+                  space: CGColorSpaceCreateDeviceRGB(),
+                  bitmapInfo: CGBitmapInfo(
+                      rawValue: CGImageAlphaInfo.premultipliedLast.rawValue
+                  ).union(.byteOrder32Big),
+                  provider: provider,
+                  decode: nil,
+                  shouldInterpolate: true,
+                  intent: .defaultIntent
+              ) else {
+            throw PPOCRError.invalidImage
+        }
+        return output
+    }
+}
+
+private enum PPOCRVisionTimeRecognizer {
+    static func recognize(
+        image: CGImage,
+        preferredLanguageCode: String
+    ) throws -> PPOCRRecognitionAlternative? {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = false
+        request.automaticallyDetectsLanguage = true
+        let supported = (try? request.supportedRecognitionLanguages()) ?? []
+        let preferred = preferredRecognitionLanguages(
+            supported: supported,
+            preferredLanguageCode: preferredLanguageCode
+        )
+        if !preferred.isEmpty {
+            request.recognitionLanguages = preferred
+        }
+        try VNImageRequestHandler(
+            cgImage: image,
+            orientation: .up,
+            options: [:]
+        ).perform([request])
+        let alternatives = (request.results ?? []).flatMap { observation in
+            observation.topCandidates(5).map {
+                PPOCRRecognitionAlternative(text: $0.string, confidence: $0.confidence)
+            }
+        }
+        guard let first = alternatives.first else { return nil }
+        return alternatives
+            .filter { PPOCRTimeRecoveryPolicy.isUsableRecoveredRange($0.text) }
+            .max(by: { $0.confidence < $1.confidence })
+            ?? first
+    }
+
+    private static func preferredRecognitionLanguages(
+        supported: [String],
+        preferredLanguageCode: String
+    ) -> [String] {
+        let desired: [String]
+        switch preferredLanguageCode.lowercased() {
+        case let code where code.contains("hant") || code.contains("tw")
+            || code.contains("hk"):
+            desired = ["zh-Hant", "ja", "zh-Hans", "en", "ko"]
+        case let code where code.contains("hans") || code.contains("cn")
+            || code.contains("sg"):
+            desired = ["zh-Hans", "ja", "zh-Hant", "en", "ko"]
+        case let code where code.hasPrefix("en"):
+            desired = ["en", "ja", "zh-Hant", "zh-Hans", "ko"]
+        default:
+            desired = ["ja", "zh-Hant", "zh-Hans", "en", "ko"]
+        }
+        return desired.filter(supported.contains)
     }
 }
 

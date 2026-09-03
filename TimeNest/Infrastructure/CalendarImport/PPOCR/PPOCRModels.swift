@@ -5,6 +5,7 @@ import Foundation
 
 enum PPOCRConfiguration {
     static let textScore: Float = 0.30
+    static let timeRecoveryConfidenceThreshold: Float = 0.65
 
     static let detectionLimitSideLength = 960
     static let detectionLimitType = "min"
@@ -148,6 +149,107 @@ struct PPOCRTextResult: Equatable, Sendable {
     let text: String
     let confidence: Float
     let boundingBox: CalendarOCRBoundingBox
+    var timeParseQualityOverride: CalendarImportTimeParseQuality? = nil
+}
+
+enum PPOCRTimeRecoveryReason: String, Equatable, Sendable {
+    case lowConfidence
+    case timeLikeButUnparsed
+}
+
+enum PPOCRTimeRecognitionSource: String, Equatable, Sendable {
+    case currentPPocr
+    case enhancedPPocr
+    case candidatePPocr
+    case visionSecondary
+}
+
+struct PPOCRRecognitionAlternative: Equatable, Sendable {
+    let text: String
+    let confidence: Float
+}
+
+struct PPOCRTimeRecognitionSelection: Equatable, Sendable {
+    let alternative: PPOCRRecognitionAlternative
+    let source: PPOCRTimeRecognitionSource
+    let selectionReason: String
+
+    var isRecovered: Bool { source != .currentPPocr }
+}
+
+enum PPOCRTimeRecoveryPolicy {
+    static func reason(
+        text: String,
+        confidence: Float
+    ) -> PPOCRTimeRecoveryReason? {
+        guard CalendarImportTimeParser.parseMonth(text) == nil else { return nil }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if confidence < PPOCRConfiguration.timeRecoveryConfidenceThreshold,
+           !isInsufficientNumericToken(trimmed) {
+            return .lowConfidence
+        }
+        return isTimeLikeButUnparsed(trimmed) ? .timeLikeButUnparsed : nil
+    }
+
+    static func select(
+        current: PPOCRRecognitionAlternative,
+        enhanced: PPOCRRecognitionAlternative?,
+        candidate: PPOCRRecognitionAlternative?,
+        vision: PPOCRRecognitionAlternative?
+    ) -> PPOCRTimeRecognitionSelection {
+        if CalendarImportTimeParser.parseMonth(current.text) != nil {
+            return PPOCRTimeRecognitionSelection(
+                alternative: current,
+                source: .currentPPocr,
+                selectionReason: "currentValidTime"
+            )
+        }
+        let secondary: [(PPOCRTimeRecognitionSource, PPOCRRecognitionAlternative?)] = [
+            (.enhancedPPocr, enhanced),
+            (.candidatePPocr, candidate),
+            (.visionSecondary, vision)
+        ]
+        for (source, alternative) in secondary {
+            guard let alternative, isUsableRecoveredRange(alternative.text) else { continue }
+            return PPOCRTimeRecognitionSelection(
+                alternative: alternative,
+                source: source,
+                selectionReason: "validTimeBeatsUnparsed"
+            )
+        }
+        return PPOCRTimeRecognitionSelection(
+            alternative: current,
+            source: .currentPPocr,
+            selectionReason: "noValidSecondaryResult"
+        )
+    }
+
+    static func isUsableRecoveredRange(_ text: String) -> Bool {
+        guard let parsed = CalendarImportTimeParser.parseMonthRangeOnly(text),
+              let end = parsed.endMinutes else {
+            return false
+        }
+        return end > parsed.startMinutes
+    }
+
+    private static func isInsufficientNumericToken(_ text: String) -> Bool {
+        !text.isEmpty && text.allSatisfy(\.isNumber) && !(7...9).contains(text.count)
+    }
+
+    private static func isTimeLikeButUnparsed(_ text: String) -> Bool {
+        let digits = text.filter(\.isNumber).count
+        guard digits >= 6 else { return false }
+        let significant = text.filter { !$0.isWhitespace }.count
+        guard significant > 0, Double(digits) / Double(significant) >= 0.6 else {
+            return false
+        }
+        let possibleTimeCharacters = CharacterSet(charactersIn: ":：.=-–—〜～~")
+        let hasTimePunctuation = text.unicodeScalars.contains {
+            possibleTimeCharacters.contains($0)
+        }
+        if hasTimePunctuation { return digits <= 10 }
+        return (7...9).contains(digits)
+    }
 }
 
 struct PPOCRRecognitionModelComparison: Equatable, Sendable {
@@ -155,10 +257,23 @@ struct PPOCRRecognitionModelComparison: Equatable, Sendable {
     let currentText: String
     let currentConfidence: Float
     let currentMilliseconds: Double
+    var recoveryAttempted: Bool = false
+    var recoveryReason: PPOCRTimeRecoveryReason? = nil
+    var enhancedText: String? = nil
+    var enhancedConfidence: Float? = nil
+    var enhancedMilliseconds: Double? = nil
+    var enhancedError: String? = nil
     let candidateText: String?
     let candidateConfidence: Float?
     let candidateMilliseconds: Double?
     let candidateError: String?
+    var visionText: String? = nil
+    var visionConfidence: Float? = nil
+    var visionMilliseconds: Double? = nil
+    var visionError: String? = nil
+    var selectedText: String? = nil
+    var selectedSource: PPOCRTimeRecognitionSource = .currentPPocr
+    var selectionReason: String = "recoveryNotTriggered"
 }
 
 struct PPOCRRecognitionModelPOC: Equatable, Sendable {
@@ -241,7 +356,8 @@ struct PPOCRMonthRecognitionRouter {
                 CalendarOCRObservation(
                     text: result.text,
                     confidence: result.confidence,
-                    boundingBox: Self.map(result.boundingBox, into: region.boundingBox)
+                    boundingBox: Self.map(result.boundingBox, into: region.boundingBox),
+                    timeParseQualityOverride: result.timeParseQualityOverride
                 )
             })
             diagnostics.append(Self.diagnostics(
@@ -301,10 +417,10 @@ struct PPOCRMonthRecognitionRouter {
                 height: cell.cellPixels.height
             ),
             paddingApplied: cell.paddingApplied,
-            detections: cell.results.map { result in
-                let bounds = result.boundingBox
+            detections: cell.recognitionModelComparisons.map { comparison in
+                let bounds = comparison.boundingBox
                 return CalendarPhotoOCRDetectionDiagnostics(
-                    text: result.text,
+                    text: comparison.currentText,
                     cellLocalBoundingBox: bounds,
                     distanceToTopPixels: max(0, 1 - bounds.maxY) * cropHeight,
                     distanceToBottomPixels: max(0, bounds.minY) * cropHeight
@@ -316,13 +432,28 @@ struct PPOCRMonthRecognitionRouter {
                     currentText: comparison.currentText,
                     currentConfidence: comparison.currentConfidence,
                     currentMilliseconds: comparison.currentMilliseconds,
+                    recoveryAttempted: comparison.recoveryAttempted,
+                    recoveryReason: comparison.recoveryReason?.rawValue,
+                    enhancedText: comparison.enhancedText,
+                    enhancedConfidence: comparison.enhancedConfidence,
+                    enhancedMilliseconds: comparison.enhancedMilliseconds,
+                    enhancedError: comparison.enhancedError,
                     candidateText: comparison.candidateText,
                     candidateConfidence: comparison.candidateConfidence,
                     candidateMilliseconds: comparison.candidateMilliseconds,
-                    candidateError: comparison.candidateError
+                    candidateError: comparison.candidateError,
+                    visionText: comparison.visionText,
+                    visionConfidence: comparison.visionConfidence,
+                    visionMilliseconds: comparison.visionMilliseconds,
+                    visionError: comparison.visionError,
+                    selectedText: comparison.selectedText ?? comparison.currentText,
+                    selectedSource: comparison.selectedSource.rawValue,
+                    selectionReason: comparison.selectionReason
                 )
             },
-            ppOCRText: cell.results.map(\.text),
+            ppOCRText: cell.recognitionModelComparisons
+                .map(\.currentText)
+                .filter { !$0.isEmpty },
             ppOCRError: error
         )
     }

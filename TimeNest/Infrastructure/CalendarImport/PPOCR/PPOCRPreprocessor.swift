@@ -151,6 +151,29 @@ struct PPOCRBGRImage: Equatable, Sendable {
         return try PPOCRBGRImage(width: width, height: height, pixels: output)
     }
 
+    func timeRecoveryEnhanced() throws -> PPOCRBGRImage {
+        var output = [UInt8](repeating: 0, count: pixels.count)
+        for index in 0..<(width * height) {
+            let offset = index * 3
+            let blue = Double(pixels[offset])
+            let green = Double(pixels[offset + 1])
+            let red = Double(pixels[offset + 2])
+            let grayscale = 0.114 * blue + 0.587 * green + 0.299 * red
+            let contrasted = (grayscale - 128) * 1.35 + 128
+            let value = UInt8(max(0, min(255, Int(contrasted.rounded()))))
+            output[offset] = value
+            output[offset + 1] = value
+            output[offset + 2] = value
+        }
+        let enhanced = try PPOCRBGRImage(width: width, height: height, pixels: output)
+        guard height < 96 else { return enhanced }
+        let scale = min(3, max(2, Int(ceil(96.0 / Double(height)))))
+        return try enhanced.resized(to: PPOCRImageSize(
+            width: width * scale,
+            height: height * scale
+        ))
+    }
+
     private func rotated90DegreesCounterClockwise() throws -> PPOCRBGRImage {
         let targetWidth = height
         let targetHeight = width
@@ -217,6 +240,45 @@ struct PPOCRBGRImage: Equatable, Sendable {
 
     private func distance(_ lhs: PPOCRPoint, _ rhs: PPOCRPoint) -> Double {
         hypot(lhs.x - rhs.x, lhs.y - rhs.y)
+    }
+}
+
+enum PPOCRDetectionCropper {
+    static func expandedPoints(
+        _ points: [PPOCRPoint],
+        imageSize: PPOCRImageSize,
+        marginRatio: Double = 0.06
+    ) -> [PPOCRPoint] {
+        guard points.count == 4,
+              imageSize.width > 0,
+              imageSize.height > 0 else {
+            return points
+        }
+        let xs = points.map(\.x)
+        let ys = points.map(\.y)
+        guard let minX = xs.min(), let maxX = xs.max(),
+              let minY = ys.min(), let maxY = ys.max(),
+              maxX > minX, maxY > minY else {
+            return points
+        }
+        let centerX = (minX + maxX) / 2
+        let centerY = (minY + maxY) / 2
+        let marginX = max(2, (maxX - minX) * marginRatio)
+        let marginY = max(2, (maxY - minY) * marginRatio)
+        let scaleX = (maxX - minX + marginX * 2) / (maxX - minX)
+        let scaleY = (maxY - minY + marginY * 2) / (maxY - minY)
+        return points.map { point in
+            PPOCRPoint(
+                x: min(
+                    max(0, centerX + (point.x - centerX) * scaleX),
+                    Double(imageSize.width - 1)
+                ),
+                y: min(
+                    max(0, centerY + (point.y - centerY) * scaleY),
+                    Double(imageSize.height - 1)
+                )
+            )
+        }
     }
 }
 

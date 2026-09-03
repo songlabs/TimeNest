@@ -463,7 +463,8 @@ private struct CalendarVisionOCRService {
                 height: observation.boundingBox.height * cell.height
             ),
             candidateDiagnostics: observation.candidateDiagnostics,
-            selectionReason: observation.selectionReason
+            selectionReason: observation.selectionReason,
+            timeParseQualityOverride: observation.timeParseQualityOverride
         )
     }
 
@@ -738,7 +739,8 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
                 )
                 let ppOCRRun = try await ppOCRService.recognizeMonthCells(
                     image: rectified.image,
-                    regions: regions
+                    regions: regions,
+                    preferredLanguageCode: languageCode
                 )
                 let recognitionPlan = PPOCRMonthRecognitionRouter().makePlan(
                     run: ppOCRRun,

@@ -1,6 +1,6 @@
 # PP-OCR iOS Calendar Recognition and Recognition-Only A/B POC
 
-PP-OCRv6 is the primary per-cell OCR engine for monthly Calendar Photo Import. Its locally recognized text and visual-order bounding boxes feed the existing `CalendarImportCandidateBuilder`. Apple Vision runs only for cells where PP-OCR cannot initialize or returns a technical inference error.
+PP-OCRv6 is the primary per-cell OCR engine for monthly Calendar Photo Import. Its locally recognized text and visual-order bounding boxes feed the existing `CalendarImportCandidateBuilder`. Cell-level Apple Vision fallback remains limited to PP-OCR technical failures. A separate detection-level Vision pass may run only after a suspicious, unparsed PP-OCR detection also fails semantic recovery through enhanced PP-OCRv6 and the PP-OCRv5 candidate.
 
 ## Runtime integration
 
@@ -47,15 +47,17 @@ The largest file is below GitHub's 100 MB per-file limit. Git LFS is not used. T
 - Recognition model: PP-OCRv6 small
 - `rec_img_shape = [3, 48, 320]`, with RapidOCR-compatible dynamic width expansion
 
-No CLAHE, binarization, sharpening, custom grayscale conversion, OCR output repair, or global punctuation replacement is applied.
+The primary recognition pass uses no CLAHE, binarization, sharpening, custom grayscale conversion, OCR output repair, or global punctuation replacement. A triggered detection-level recovery uses one bounded variant: a 6% detection-crop margin, grayscale, fixed contrast enhancement, and up to 3x source upscale for crops below 96 pixels high. Detector thresholds, detector unclip, Grid geometry, perspective correction, and Cell bounds are unchanged.
 
-## Recognition-only A/B POC
+## Candidate recognizer and detection-level time recovery
 
-The current candidate input remains `PP-OCRv6_rec_small`. The A/B candidate is PaddleOCR's official `PP-OCRv5_mobile_rec`, represented by RapidOCR's `ch_PP-OCRv5_rec_mobile.onnx` conversion. PaddleOCR documents this model family as supporting Simplified Chinese, Traditional Chinese, English, and Japanese in one model and as targeting difficult scenarios including handwriting. The mobile model was selected instead of the roughly 81 MB server model to bound iOS bundle and runtime cost; this selection does not assert that it is more accurate on the TimeNest photo.
+The primary candidate input remains `PP-OCRv6_rec_small`. The secondary candidate is PaddleOCR's official `PP-OCRv5_mobile_rec`, represented by RapidOCR's `ch_PP-OCRv5_rec_mobile.onnx` conversion. PaddleOCR documents this model family as supporting Simplified Chinese, Traditional Chinese, English, and Japanese in one model and as targeting difficult scenarios including handwriting. The mobile model was selected instead of the roughly 81 MB server model to bound iOS bundle and runtime cost; this selection does not assert that it is more accurate on the TimeNest photo.
 
-For every rectified Cell, TimeNest runs the existing detector once and the existing 0/180 classifier once. After classification, both recognition models receive the exact same recognition tensor derived from the exact same detected line crop. Candidate text is diagnostic-only and never enters `CalendarOCRObservation`, `CalendarImportCandidateBuilder`, or Vision fallback routing.
+For every rectified Cell, TimeNest runs the existing detector once and the existing 0/180 classifier once. After classification, both recognition models receive the same primary tensor. If PP-OCRv6 is unparsed and either below `0.65` confidence or sufficiently time-like, TimeNest also runs the bounded enhanced PP-OCRv6 variant. Pure numeric tokens outside the bounded 7–9 digit compact format do not trigger on low confidence alone, which preserves rejection of date fragments and short numeric noise such as `4`, `40`, and `20002`. A valid current result always wins. Otherwise, the first complete, forward-moving time range is selected in this order: enhanced PP-OCRv6, PP-OCRv5 candidate, detection-level Vision. Confidence alone never replaces the current result. If no secondary result is a valid range, the original text remains and the Candidate Builder continues to reject it as `noParsedTime`.
 
-Both recognition sessions initialize at most once for a `PPOCRService` instance. A candidate resource, initialization, shape, or inference failure is reported in `[RecognitionModelPOC]` and does not fail the current model's Cell. Diagnostics record model names, initialization time/error, total per-model recognition time, and for each detection its day, bbox, text, confidence, and comparable model-run-plus-CTC-decode time.
+Month parsing additionally accepts only unlabelled, all-digit sources of length 7 through 9. Seven digits must have one unique `HMMHHMM` or `HHMMHMM` interpretation; eight digits must be `HHMMHHMM`; nine digits may drop at most one leading or trailing digit and must leave one unique eight-digit interpretation. Hours, minutes, and forward range order are validated. Compact and secondary recoveries are marked `recovered` and always require review. Day scan parsing is unchanged.
+
+Both recognition sessions initialize at most once for a `PPOCRService` instance. A candidate resource, initialization, shape, or inference failure is reported in `[RecognitionModelPOC]` and does not fail the current model's Cell. Per-detection diagnostics preserve the original v6 text and confidence and separately record the trigger, enhanced/candidate/Vision results, semantic parse results, selected text/source, selection reason, and timings. Images and crops are never included.
 
 Compatibility was checked with ONNX Runtime 1.29.0. Both models have one float input shaped `[N, 3, 48, dynamicWidth]` and one CTC output shaped `[N, timeSteps, classes]`. The candidate uses ONNX opset 14 and outputs 18,385 classes, exactly matching blank + 18,383 dictionary entries + appended space. Physical iOS initialization, memory, latency, and Japanese handwriting quality still require Xcode/TestFlight validation.
 

@@ -33,10 +33,23 @@ struct CalendarPhotoRecognitionModelComparisonDiagnostics: Equatable, Sendable {
     let currentText: String
     let currentConfidence: Float
     let currentMilliseconds: Double
+    let recoveryAttempted: Bool
+    let recoveryReason: String?
+    let enhancedText: String?
+    let enhancedConfidence: Float?
+    let enhancedMilliseconds: Double?
+    let enhancedError: String?
     let candidateText: String?
     let candidateConfidence: Float?
     let candidateMilliseconds: Double?
     let candidateError: String?
+    let visionText: String?
+    let visionConfidence: Float?
+    let visionMilliseconds: Double?
+    let visionError: String?
+    let selectedText: String
+    let selectedSource: String
+    let selectionReason: String
 }
 
 struct CalendarPhotoRecognitionModelPOCDiagnostics: Equatable, Sendable {
@@ -104,6 +117,7 @@ struct CalendarOCRObservation: Equatable, Sendable {
     let boundingBox: CalendarOCRBoundingBox
     var candidateDiagnostics: [CalendarOCRCandidate] = []
     var selectionReason: String? = nil
+    var timeParseQualityOverride: CalendarImportTimeParseQuality? = nil
 }
 
 struct CalendarOCRCandidate: Equatable, Sendable {
@@ -772,7 +786,8 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 "candidateInitializationError=\(poc.candidateInitializationError ?? "none")",
                 "currentTotalMs=\(Self.decimalText(poc.currentTotalMilliseconds))",
                 "candidateTotalMs=\(Self.decimalText(poc.candidateTotalMilliseconds))",
-                "candidateInput=currentModel"
+                "primaryModel=currentModel",
+                "candidateInput=semanticRecoverySelection"
             ].joined(separator: " ")
             let comparisons = recognitionCellDiagnostics
                 .sorted(by: { $0.day < $1.day })
@@ -783,13 +798,30 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                             "day=\(cell.day)",
                             "detection=\(index + 1)",
                             "bbox=(x=\(Self.decimalText(bounds.x)),y=\(Self.decimalText(bounds.y)),w=\(Self.decimalText(bounds.width)),h=\(Self.decimalText(bounds.height)))",
-                            "currentText=\(Self.quotedText(comparison.currentText))",
-                            "currentConfidence=\(Self.decimalText(Double(comparison.currentConfidence)))",
-                            "candidateText=\(comparison.candidateText.map(Self.quotedText) ?? "none")",
-                            "candidateConfidence=\(Self.decimalText(comparison.candidateConfidence.map(Double.init)))",
+                            "recoveryAttempted=\(comparison.recoveryAttempted)",
+                            "recoveryReason=\(comparison.recoveryReason ?? "none")",
+                            "originalText=\(Self.quotedText(comparison.currentText))",
+                            "originalConfidence=\(Self.decimalText(Double(comparison.currentConfidence)))",
+                            "originalParseResult=\(Self.timeParseResult(comparison.currentText))",
+                            "enhancedText=\(comparison.enhancedText.map(Self.quotedText) ?? "none")",
+                            "enhancedConfidence=\(Self.decimalText(comparison.enhancedConfidence.map(Double.init)))",
+                            "enhancedParseResult=\(Self.timeParseResult(comparison.enhancedText))",
+                            "enhancedError=\(comparison.enhancedError ?? "none")",
+                            "candidateModelText=\(comparison.candidateText.map(Self.quotedText) ?? "none")",
+                            "candidateModelConfidence=\(Self.decimalText(comparison.candidateConfidence.map(Double.init)))",
+                            "candidateModelParseResult=\(Self.timeParseResult(comparison.candidateText))",
+                            "visionText=\(comparison.visionText.map(Self.quotedText) ?? "none")",
+                            "visionConfidence=\(Self.decimalText(comparison.visionConfidence.map(Double.init)))",
+                            "visionParseResult=\(Self.timeParseResult(comparison.visionText))",
+                            "visionError=\(comparison.visionError ?? "none")",
+                            "selectedText=\(Self.quotedText(comparison.selectedText))",
+                            "selectedSource=\(comparison.selectedSource)",
+                            "selectionReason=\(comparison.selectionReason)",
                             "currentRecognitionMs=\(Self.decimalText(comparison.currentMilliseconds))",
+                            "enhancedRecognitionMs=\(Self.decimalText(comparison.enhancedMilliseconds))",
                             "candidateRecognitionMs=\(Self.decimalText(comparison.candidateMilliseconds))",
-                            "candidateError=\(comparison.candidateError ?? "none")"
+                            "candidateError=\(comparison.candidateError ?? "none")",
+                            "visionRecognitionMs=\(Self.decimalText(comparison.visionMilliseconds))"
                         ].joined(separator: " ")
                     }
                 }
@@ -1081,6 +1113,15 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
         return String(format: "%02d:%02d", minutes / 60, minutes % 60)
     }
 
+    private static func timeParseResult(_ text: String?) -> String {
+        guard let text, let parsed = CalendarImportTimeParser.parseMonth(text) else {
+            return "none"
+        }
+        let start = timeText(parsed.startMinutes)
+        guard let end = parsed.endMinutes else { return start }
+        return "\(start)-\(timeText(end))"
+    }
+
     private static func textList(_ values: [String]) -> String {
         "[" + values.map(quotedText).joined(separator: ",") + "]"
     }
@@ -1108,7 +1149,11 @@ struct CalendarImportTimeParser {
     }
 
     static func parse(_ text: String) -> CalendarImportParsedTime? {
-        match(in: text)?.time
+        match(in: text, includesCompactRecovery: false)?.time
+    }
+
+    static func parseMonth(_ text: String) -> CalendarImportParsedTime? {
+        match(in: text, includesCompactRecovery: true)?.time
     }
 
     static func parseRangeOnly(_ text: String) -> CalendarImportParsedTime? {
@@ -1116,8 +1161,24 @@ struct CalendarImportTimeParser {
         return parsed
     }
 
+    static func parseMonthRangeOnly(_ text: String) -> CalendarImportParsedTime? {
+        guard let parsed = parseMonth(text), parsed.endMinutes != nil else { return nil }
+        return parsed
+    }
+
     static func removingTime(from text: String) -> String {
-        guard let match = match(in: text),
+        removingTime(from: text, includesCompactRecovery: false)
+    }
+
+    static func removingMonthTime(from text: String) -> String {
+        removingTime(from: text, includesCompactRecovery: true)
+    }
+
+    private static func removingTime(
+        from text: String,
+        includesCompactRecovery: Bool
+    ) -> String {
+        guard let match = match(in: text, includesCompactRecovery: includesCompactRecovery),
               let range = Range(match.range, in: text) else {
             return text
         }
@@ -1126,7 +1187,10 @@ struct CalendarImportTimeParser {
         return result
     }
 
-    private static func match(in text: String) -> MatchResult? {
+    private static func match(
+        in text: String,
+        includesCompactRecovery: Bool
+    ) -> MatchResult? {
         // A compact end time (for example 2030) is accepted only after an
         // explicit range separator; unrelated four-digit text is never guessed.
         // PP-OCR can confuse the hour/minute punctuation with `=` or `.`.
@@ -1179,7 +1243,99 @@ struct CalendarImportTimeParser {
            ) {
             return MatchResult(time: parsed, range: match.range)
         }
+        if includesCompactRecovery, let recovered = compactRange(in: text) {
+            return recovered
+        }
         return nil
+    }
+
+    private static func compactRange(in text: String) -> MatchResult? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (7...9).contains(trimmed.count),
+              trimmed.allSatisfy(\.isNumber),
+              let sourceRange = text.range(of: trimmed) else {
+            return nil
+        }
+        let digits = Array(trimmed)
+        var candidates: [CalendarImportParsedTime] = []
+
+        switch digits.count {
+        case 7:
+            appendCompactCandidate(
+                digits: digits,
+                startHourDigits: 1,
+                endHourDigits: 2,
+                to: &candidates
+            )
+            appendCompactCandidate(
+                digits: digits,
+                startHourDigits: 2,
+                endHourDigits: 1,
+                to: &candidates
+            )
+        case 8:
+            appendCompactCandidate(
+                digits: digits,
+                startHourDigits: 2,
+                endHourDigits: 2,
+                to: &candidates
+            )
+        case 9:
+            for offset in 0...1 {
+                appendCompactCandidate(
+                    digits: Array(digits[offset..<(offset + 8)]),
+                    startHourDigits: 2,
+                    endHourDigits: 2,
+                    to: &candidates
+                )
+            }
+        default:
+            return nil
+        }
+
+        var unique: [String: CalendarImportParsedTime] = [:]
+        for candidate in candidates {
+            let key = "\(candidate.startMinutes)-\(candidate.endMinutes ?? -1)"
+            unique[key] = candidate
+        }
+        guard unique.count == 1, let time = unique.values.first else { return nil }
+        return MatchResult(
+            time: time,
+            range: NSRange(sourceRange, in: text)
+        )
+    }
+
+    private static func appendCompactCandidate(
+        digits: [Character],
+        startHourDigits: Int,
+        endHourDigits: Int,
+        to candidates: inout [CalendarImportParsedTime]
+    ) {
+        let expectedCount = startHourDigits + 2 + endHourDigits + 2
+        guard digits.count == expectedCount else { return }
+        let startMinuteIndex = startHourDigits
+        let endHourIndex = startMinuteIndex + 2
+        let endMinuteIndex = endHourIndex + endHourDigits
+        guard let startHour = integer(digits[0..<startMinuteIndex]),
+              let startMinute = integer(digits[startMinuteIndex..<endHourIndex]),
+              let endHour = integer(digits[endHourIndex..<endMinuteIndex]),
+              let endMinute = integer(digits[endMinuteIndex..<digits.count]),
+              isValid(hour: startHour, minute: startMinute),
+              isValid(hour: endHour, minute: endMinute) else {
+            return
+        }
+        let start = startHour * 60 + startMinute
+        let end = endHour * 60 + endMinute
+        guard end > start else { return }
+        candidates.append(CalendarImportParsedTime(
+            startMinutes: start,
+            endMinutes: end,
+            parseQuality: .recovered
+        ))
+    }
+
+    private static func integer(_ digits: ArraySlice<Character>) -> Int? {
+        Int(String(digits))
     }
 
     private static func clockParseQuality(
@@ -1721,11 +1877,21 @@ private struct CalendarImportCandidateBuilder {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let normalized = normalizedText(rawText)
             guard !normalized.isEmpty else { return nil }
+            let parsedTime = CalendarImportTimeParser.parseMonth(normalized).map { parsed in
+                guard sorted.contains(where: {
+                    $0.timeParseQualityOverride == .recovered
+                }) else { return parsed }
+                return CalendarImportParsedTime(
+                    startMinutes: parsed.startMinutes,
+                    endMinutes: parsed.endMinutes,
+                    parseQuality: .recovered
+                )
+            }
             return ParsedLine(
                 observations: sorted,
                 rawText: rawText,
                 normalizedText: normalized,
-                time: CalendarImportTimeParser.parse(normalized)
+                time: parsedTime
             )
         }
 
@@ -1741,7 +1907,7 @@ private struct CalendarImportCandidateBuilder {
             let originalText = sourceLines.map(\.rawText).joined(separator: " ")
             let normalized = sourceLines.map(\.normalizedText).joined(separator: " ")
             let personToken = personToken(in: normalized)
-            var title = CalendarImportTimeParser.removingTime(from: normalized)
+            var title = CalendarImportTimeParser.removingMonthTime(from: normalized)
             if let personToken, let range = title.range(of: personToken) {
                 title.removeSubrange(range)
             }
