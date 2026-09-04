@@ -397,6 +397,55 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(title.text, "適性検査対策")
     }
 
+    func testMonthTimeRecoveryUsesReliablePageTemplateForMissingPunctuation() throws {
+        let observations = [
+            CalendarOCRObservation(text: "17:30-20:30", confidence: 0.96,
+                                   boundingBox: .init(x: 0, y: 0, width: 0.1, height: 0.02)),
+            CalendarOCRObservation(text: "17:30-20:30", confidence: 0.93,
+                                   boundingBox: .init(x: 0, y: 0.1, width: 0.1, height: 0.02))
+        ]
+        let templates = CalendarMonthTimeRecovery.templates(from: observations)
+        let result = try XCTUnwrap(CalendarMonthTimeRecovery.recover(
+            "17230-2030", templates: templates
+        ))
+        XCTAssertEqual(result.template.displayText, "17:30-20:30")
+        XCTAssertEqual(result.time.startMinutes, 17 * 60 + 30)
+        XCTAssertEqual(result.time.endMinutes, 20 * 60 + 30)
+    }
+
+    func testMonthTimeRecoveryReconstructsTwoSameLineDetectionTexts() throws {
+        let template = CalendarMonthTimeTemplate(
+            startMinutes: 20 * 60 + 20,
+            endMinutes: 21 * 60 + 40
+        )
+        let result = try XCTUnwrap(CalendarMonthTimeRecovery.recover(
+            "3202021=40", templates: [template]
+        ))
+        XCTAssertEqual(result.time.startMinutes, 20 * 60 + 20)
+        XCTAssertEqual(result.time.endMinutes, 21 * 60 + 40)
+        XCTAssertEqual(result.distance, 1)
+    }
+
+    func testMonthTimeRecoveryDoesNotPromoteAccidentallyLegalCompactRange() {
+        let wrong = CalendarImportTimeParser.parseMonthRangeOnly("5202021")
+        XCTAssertNotNil(wrong)
+        XCTAssertNil(CalendarMonthTimeRecovery.recover("5202021", templates: []))
+    }
+
+    func testMonthTimeTemplateDoesNotOverrideDifferentHighConfidenceTime() {
+        let template = CalendarMonthTimeTemplate(
+            startMinutes: 17 * 60 + 30,
+            endMinutes: 20 * 60 + 30
+        )
+        XCTAssertNil(CalendarMonthTimeRecovery.recover(
+            "17:30-20:20", templates: [template]
+        ))
+        XCTAssertEqual(
+            CalendarImportTimeParser.parseMonthRangeOnly("17:30-20:20")?.endMinutes,
+            20 * 60 + 20
+        )
+    }
+
     func testPPOCRTimeRecoverySelectionUsesSemanticPriority() {
         let validCurrent = PPOCRRecognitionAlternative(
             text: "17:30-20:30",
