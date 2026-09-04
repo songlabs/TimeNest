@@ -502,20 +502,16 @@ actor PPOCRService {
                 selectionReason: selection.selectionReason
             )
             modelComparisons.append(comparison)
-            let selectedTime = CalendarImportTimeParser.parseMonth(selection.alternative.text)
-            let passesTextScore = selection.alternative.confidence
-                >= PPOCRConfiguration.textScore
-            let recoveredValidTime = selection.isRecovered && selectedTime != nil
-            if !selection.alternative.text.isEmpty, passesTextScore || recoveredValidTime {
-                textResults.append(PPOCRTextResult(
-                    text: selection.alternative.text,
-                    confidence: selection.alternative.confidence,
-                    boundingBox: localBoundingBox,
-                    timeParseQualityOverride: selection.isRecovered ? .recovered : nil,
-                    candidateDiagnostics: comparison.calendarOCRCandidates,
-                    selectionReason: comparison.selectionReason
-                ))
-            }
+            // Detection already accepted this text region. Recognition quality
+            // controls review, not whether the user's possible appointment exists.
+            textResults.append(PPOCRTextResult(
+                text: selection.alternative.text,
+                confidence: selection.alternative.confidence,
+                boundingBox: localBoundingBox,
+                timeParseQualityOverride: selection.isRecovered ? .recovered : nil,
+                candidateDiagnostics: comparison.calendarOCRCandidates,
+                selectionReason: comparison.selectionReason
+            ))
         }
 
         let primaryResult = PPOCRCellRecognitionResult(

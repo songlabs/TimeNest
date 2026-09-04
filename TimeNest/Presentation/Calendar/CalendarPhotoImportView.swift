@@ -277,7 +277,8 @@ private struct CalendarVisionOCRService {
                     let local = try Self.recognizeSynchronously(
                         image: ocrImage,
                         ocrLanguage: ocrLanguage,
-                        recognitionLevel: .accurate
+                        recognitionLevel: .accurate,
+                        preservesUnrecognizedText: true
                     )
                     output.append(contentsOf: local.map {
                         Self.map($0, from: region.boundingBox)
@@ -466,7 +467,9 @@ private struct CalendarVisionOCRService {
             ),
             candidateDiagnostics: observation.candidateDiagnostics,
             selectionReason: observation.selectionReason,
-            timeParseQualityOverride: observation.timeParseQualityOverride
+            timeParseQualityOverride: observation.timeParseQualityOverride,
+            rawTexts: observation.rawTexts,
+            requiresReview: observation.requiresReview
         )
     }
 
@@ -487,7 +490,8 @@ private struct CalendarVisionOCRService {
     private static func recognizeSynchronously(
         image: CGImage,
         ocrLanguage: CalendarOCRLanguage,
-        recognitionLevel: VNRequestTextRecognitionLevel
+        recognitionLevel: VNRequestTextRecognitionLevel,
+        preservesUnrecognizedText: Bool = false
     ) throws -> [CalendarOCRObservation] {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = recognitionLevel
@@ -520,7 +524,10 @@ private struct CalendarVisionOCRService {
                     isPrimary: index == 0
                 )
             }
-            guard let candidate = CalendarOCRCandidateSelector.select(from: alternatives) else {
+            let unrecognized = preservesUnrecognizedText
+                ? CalendarOCRCandidate(text: "", confidence: 0, source: .vision, isPrimary: true)
+                : nil
+            guard let candidate = CalendarOCRCandidateSelector.select(from: alternatives) ?? unrecognized else {
                 return nil
             }
             let box = observation.boundingBox
@@ -542,7 +549,11 @@ private struct CalendarVisionOCRService {
                     height: Double(box.size.height)
                 ),
                 candidateDiagnostics: alternatives,
-                selectionReason: candidate == alternatives.first ? nil : "validTimeRange"
+                selectionReason: alternatives.isEmpty ? "unrecognizedTextRegion"
+                    : candidate == alternatives.first ? nil : "validTimeRange",
+                rawTexts: preservesUnrecognizedText ? alternatives.map(\.text) : [],
+                requiresReview: preservesUnrecognizedText
+                    && candidate.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             )
         }
     }
@@ -784,7 +795,9 @@ private final class CalendarPhotoImportViewModel: ObservableObject {
     ) -> [DateOnly: Set<String>] {
         let manager = HolidaySubscriptionManager.shared
         let localizer = HolidayNameLocalizer()
-        let events = manager.holidays(for: manager.enabledRegions).filter {
+        // Printed paper calendars need not match the user's enabled subscriptions.
+        // Read existing caches only; this does not change subscriptions or fetch data.
+        let events = manager.holidays(for: HolidayRegion.allCases).filter {
             $0.date.year == yearMonth.year && $0.date.month == yearMonth.month
         }
         return events.reduce(into: [:]) { result, event in
@@ -1600,7 +1613,8 @@ struct CalendarPhotoImportView: View {
                 }
                 .font(.subheadline)
 
-                Text(candidate.effectiveTitle)
+                Text(candidate.effectiveTitle.isEmpty
+                    ? localization.localized(.calendarPhotoImportNeedsReview) : candidate.effectiveTitle)
                     .font(.body)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -1628,7 +1642,8 @@ struct CalendarPhotoImportView: View {
                         width: CalendarPhotoImportResultLayout.timeColumnWidth,
                         alignment: .leading
                     )
-                Text(candidate.effectiveTitle)
+                Text(candidate.effectiveTitle.isEmpty
+                    ? localization.localized(.calendarPhotoImportNeedsReview) : candidate.effectiveTitle)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1706,18 +1721,22 @@ struct CalendarPhotoImportView: View {
                         .foregroundStyle(.orange)
                     }
                     Button(localization.localized(.calendarPhotoImportMakeAllDay)) {
-                        candidate.wrappedValue.startTimeMinutes = nil
-                        candidate.wrappedValue.endTimeMinutes = nil
+                        candidate.wrappedValue.setAllDay()
                     }
                 } else {
                     LabeledContent(
                         localization.localized(.calendarPhotoImportTime),
-                        value: localization.localized(.calendarPhotoImportAllDay)
+                        value: candidateTimeText(candidate.wrappedValue)
                     )
                     Button(localization.localized(.calendarPhotoImportSetTime)) {
                         candidate.wrappedValue.startTimeMinutes = 9 * 60
                         candidate.wrappedValue.endTimeMinutes = nil
                         candidate.wrappedValue.needsReview = true
+                    }
+                    if candidate.wrappedValue.requiresTimeConfirmation {
+                        Button(localization.localized(.calendarPhotoImportMakeAllDay)) {
+                            candidate.wrappedValue.setAllDay()
+                        }
                     }
                 }
 
@@ -1850,7 +1869,8 @@ struct CalendarPhotoImportView: View {
     private func candidateTimeText(_ candidate: CalendarImportCandidate) -> String {
         switch (candidate.startTimeMinutes, candidate.endTimeMinutes) {
         case (nil, nil):
-            return localization.localized(.calendarPhotoImportAllDay)
+            return localization.localized(candidate.requiresTimeConfirmation
+                ? .calendarPhotoImportNeedsReview : .calendarPhotoImportAllDay)
         case let (start?, end?):
             return "\(timeText(start))–\(timeText(end))"
         case let (start?, nil):

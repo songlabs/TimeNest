@@ -781,7 +781,10 @@ struct PPOCRMonthRecognitionRouter {
                     boundingBox: Self.map(result.boundingBox, into: region.boundingBox),
                     candidateDiagnostics: result.candidateDiagnostics,
                     selectionReason: result.selectionReason,
-                    timeParseQualityOverride: result.timeParseQualityOverride
+                    timeParseQualityOverride: result.timeParseQualityOverride,
+                    rawTexts: [result.text] + result.candidateDiagnostics.map(\.text),
+                    requiresReview: result.confidence < PPOCRConfiguration.textScore
+                        || result.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 )
             })
             diagnostics.append(Self.diagnostics(
