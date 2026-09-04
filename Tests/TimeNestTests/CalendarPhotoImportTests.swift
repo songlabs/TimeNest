@@ -1562,9 +1562,23 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertTrue(captured.plainText.contains(
             #"rawTexts=["⑤","20:20–21:40"]"#
         ))
-        XCTAssertTrue(captured.plainText.contains(
-            #"parsedStart=20:20 parsedEnd=21:40 remainingTitle="⑤" ocrConfidence=0.7250 quality=standard timeParseQuality=normalized holidayMatch=false needsReview=true defaultSelected=true candidateCreated=true"#
-        ))
+        let plainText = captured.plainText
+        XCTAssertTrue(plainText.contains(#"originalTexts=["⑤","20:20–21:40"]"#))
+        XCTAssertTrue(plainText.contains(#"mergedTexts="""#))
+        XCTAssertTrue(plainText.contains("parsedStart=20:20"))
+        XCTAssertTrue(plainText.contains("parsedEnd=21:40"))
+        XCTAssertTrue(plainText.contains(#"remainingTitle="⑤""#))
+        XCTAssertTrue(plainText.contains("ocrConfidence=0.7250"))
+        XCTAssertTrue(plainText.contains("quality=standard"))
+        XCTAssertTrue(plainText.contains("timeParseQuality=normalized"))
+        XCTAssertTrue(plainText.contains("holidayMatch=false"))
+        XCTAssertTrue(plainText.contains("needsReview=true"))
+        XCTAssertTrue(plainText.contains("selectedSource=ocr"))
+        XCTAssertTrue(plainText.contains("selectionReason=directParse"))
+        XCTAssertTrue(plainText.contains("templateMatched=false"))
+        XCTAssertTrue(plainText.contains("templateDistance=none"))
+        XCTAssertTrue(plainText.contains("defaultSelected=true"))
+        XCTAssertTrue(plainText.contains("candidateCreated=true"))
     }
 
     func testGridFirstMonthKeepsTimeOnlyCellAsWarningCandidate() throws {
@@ -1836,6 +1850,32 @@ final class CalendarPhotoImportTests: XCTestCase {
         XCTAssertEqual(day.timeLinesDetected, 2)
         XCTAssertEqual(day.candidates.count, 2)
         XCTAssertTrue(day.candidates.allSatisfy { $0.timeParseQuality == .recovered })
+    }
+
+    func testGridFirstMonthRejectsSingleSeparatorFreeRecoveredTimeWithoutIndependentEvidence() throws {
+        let fixture = try gridFirstFixture(day: 4)
+        var diagnostics: CalendarPhotoImportDiagnostics?
+
+        XCTAssertThrowsError(try fixture.parser.parseMonth(
+            observations: [
+                gridFirstObservation("17302030", in: fixture.region, line: 0)
+            ],
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            defaultCalendarID: calendarID,
+            calendar: utcGregorianCalendar(),
+            diagnosticsHandler: { diagnostics = $0 }
+        )) { error in
+            XCTAssertEqual(error as? CalendarPhotoImportParseError, .noCandidates)
+        }
+
+        let day = try XCTUnwrap(diagnostics?.cellDiagnostics.first { $0.day == 4 })
+        XCTAssertEqual(day.rawTexts, ["17302030"])
+        XCTAssertEqual(day.timeLinesDetected, 0)
+        XCTAssertTrue(day.candidates.isEmpty)
+        XCTAssertEqual(day.rejectedNoParsedTimeLineCount, 1)
+        XCTAssertEqual(day.rejectedReason, .noParsedTime)
     }
 
     func testGridFirstMonthSecondaryOCRResultAlwaysRequiresReview() throws {

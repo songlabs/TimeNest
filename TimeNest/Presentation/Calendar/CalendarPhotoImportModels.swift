@@ -2338,7 +2338,20 @@ private struct CalendarImportCandidateBuilder {
         [CalendarPhotoCellCandidateDiagnostics],
         rejectedNoParsedTimeLineCount: Int
     ) {
-        let parsedLines = group(observations).compactMap { line -> ParsedLine? in
+        let groupedLines = group(observations)
+        let separatorFreeRecoveredLineCount = groupedLines.reduce(into: 0) { count, line in
+            let normalized = normalizedText(line.observations.map(\.text).joined(separator: " "))
+            guard let parsed = CalendarImportTimeParser.parseMonth(normalized),
+                  parsed.parseQuality == .recovered,
+                  let endMinutes = parsed.endMinutes,
+                  endMinutes > parsed.startMinutes,
+                  !normalized.contains(where: { "-–—〜～~".contains($0) }) else {
+                return
+            }
+            count += 1
+        }
+        let hasIndependentSeparatorFreeRecoveredLines = separatorFreeRecoveredLineCount >= 2
+        let parsedLines = groupedLines.compactMap { line -> ParsedLine? in
             let sorted = line.observations.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
             let rawText = sorted.map(\.text).joined(separator: " ")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2348,10 +2361,12 @@ private struct CalendarImportCandidateBuilder {
             let directTime: CalendarImportParsedTime? =
                 CalendarImportTimeParser.parseMonth(normalized).flatMap { parsed -> CalendarImportParsedTime? in
                 // A separator-free range is too easy for one OCR route to invent. It
-                // needs either independent alternatives or a page-template match.
+                // needs either OCR alternatives or another independently grouped
+                // recovered range in the same cell.
                 if parsed.parseQuality == .recovered,
                    !normalized.contains(where: { "-–—〜～~".contains($0) }),
-                   sorted.flatMap(\.candidateDiagnostics).count < 2 {
+                   sorted.flatMap(\.candidateDiagnostics).count < 2,
+                   !hasIndependentSeparatorFreeRecoveredLines {
                     return nil
                 }
                 return parsed
@@ -2385,6 +2400,7 @@ private struct CalendarImportCandidateBuilder {
         var candidates: [CalendarImportCandidate] = []
         var diagnostics: [CalendarPhotoCellCandidateDiagnostics] = []
         var pendingTitleLines: [ParsedLine] = []
+        var rejectedNoParsedTimeLines: [ParsedLine] = []
 
         func appendCandidate(from sourceLines: [ParsedLine]) {
             guard !sourceLines.isEmpty,
@@ -2464,13 +2480,21 @@ private struct CalendarImportCandidateBuilder {
             if line.time == nil {
                 // OCR time fragments remain visible in cell diagnostics but must
                 // never leak into the event title.
-                if !line.isTimeLike { pendingTitleLines.append(line) }
+                if line.isTimeLike {
+                    rejectedNoParsedTimeLines.append(line)
+                } else {
+                    pendingTitleLines.append(line)
+                }
                 continue
             }
             appendCandidate(from: pendingTitleLines + [line])
             pendingTitleLines.removeAll(keepingCapacity: true)
         }
-        return (candidates, diagnostics, pendingTitleLines.count)
+        return (
+            candidates,
+            diagnostics,
+            pendingTitleLines.count + rejectedNoParsedTimeLines.count
+        )
     }
 
     private func group(_ observations: [CalendarOCRObservation]) -> [Line] {
