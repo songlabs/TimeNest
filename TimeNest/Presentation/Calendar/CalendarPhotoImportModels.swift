@@ -166,19 +166,116 @@ struct CalendarOCRCandidateSelector {
         guard candidates.contains(where: { CalendarImportTimeParser.parseRangeOnly($0.text) != nil }) else {
             return first
         }
-        return candidates.max { lhs, rhs in
-            score(lhs) < score(rhs)
-        }
+        return candidates.enumerated().max { lhs, rhs in
+            score(lhs.element, index: lhs.offset, candidates: candidates)
+                < score(rhs.element, index: rhs.offset, candidates: candidates)
+        }?.element
     }
 
-    private static func score(_ candidate: CalendarOCRCandidate) -> Double {
+    private static func score(
+        _ candidate: CalendarOCRCandidate,
+        index: Int,
+        candidates: [CalendarOCRCandidate]
+    ) -> Double {
         guard let range = CalendarImportTimeParser.parseRangeOnly(candidate.text),
               let end = range.endMinutes, end > range.startMinutes else {
             return Double(candidate.confidence)
         }
-        // A structurally valid range outweighs the small confidence differences
-        // between alternatives from the same Vision observation.
-        return 2 + Double(candidate.confidence)
+        let agreement = candidates.filter {
+            guard let other = CalendarImportTimeParser.parseRangeOnly($0.text) else { return false }
+            return other.startMinutes == range.startMinutes && other.endMinutes == range.endMinutes
+        }.count
+        let quality: Double
+        switch range.parseQuality {
+        case .exact: quality = 0.8
+        case .normalized: quality = 0.55
+        case .recovered: quality = 0.15
+        }
+        let primarySourceBonus = index == 0 ? 0.2 : 0
+        let consensusBonus = agreement > 1 ? Double(agreement) * 0.75 : 0
+        return 1 + Double(candidate.confidence) + quality + primarySourceBonus + consensusBonus
+    }
+}
+
+struct CalendarMonthTimeTemplate: Hashable, Sendable {
+    let startMinutes: Int
+    let endMinutes: Int
+
+    var displayText: String {
+        String(format: "%02d:%02d-%02d:%02d", startMinutes / 60, startMinutes % 60,
+               endMinutes / 60, endMinutes % 60)
+    }
+}
+
+struct CalendarMonthTimeRecovery {
+    struct Result: Equatable, Sendable {
+        let time: CalendarImportParsedTime
+        let template: CalendarMonthTimeTemplate
+        let distance: Int
+    }
+
+    static func isTimeLike(_ text: String) -> Bool {
+        let digits = text.filter(\.isNumber).count
+        guard digits >= 4 else { return false }
+        let nonWhitespace = text.filter { !$0.isWhitespace }
+        let timeCharacters = nonWhitespace.filter {
+            $0.isNumber || ":：.=-–—〜～~".contains($0)
+        }.count
+        return Double(timeCharacters) / Double(max(nonWhitespace.count, 1)) >= 0.72
+    }
+
+    static func templates(from observations: [CalendarOCRObservation]) -> [CalendarMonthTimeTemplate] {
+        var evidence: [CalendarMonthTimeTemplate: (count: Int, bestConfidence: Float)] = [:]
+        for observation in observations {
+            guard let time = CalendarImportTimeParser.parseMonthRangeOnly(observation.text),
+                  let end = time.endMinutes, end > time.startMinutes,
+                  time.parseQuality != .recovered else { continue }
+            let template = CalendarMonthTimeTemplate(startMinutes: time.startMinutes, endMinutes: end)
+            let old = evidence[template] ?? (0, 0)
+            evidence[template] = (old.count + 1, max(old.bestConfidence, observation.confidence))
+        }
+        return evidence.compactMap { template, value in
+            value.count >= 2 || value.bestConfidence >= 0.90 ? template : nil
+        }.sorted { $0.displayText < $1.displayText }
+    }
+
+    static func recover(_ text: String, templates: [CalendarMonthTimeTemplate]) -> Result? {
+        guard isTimeLike(text), CalendarImportTimeParser.parseMonthRangeOnly(text) == nil else { return nil }
+        let source = comparisonKey(text)
+        guard source.count >= 7 else { return nil }
+        let matches = templates.compactMap { template -> Result? in
+            let distance = editDistance(source, comparisonKey(template.displayText))
+            guard distance <= 2 else { return nil }
+            return Result(
+                time: CalendarImportParsedTime(startMinutes: template.startMinutes,
+                                               endMinutes: template.endMinutes,
+                                               parseQuality: .recovered),
+                template: template,
+                distance: distance
+            )
+        }.sorted { $0.distance < $1.distance }
+        guard let first = matches.first,
+              matches.dropFirst().first?.distance != first.distance else { return nil }
+        return first
+    }
+
+    private static func comparisonKey(_ text: String) -> String {
+        text.folding(options: .widthInsensitive, locale: Locale(identifier: "en_US_POSIX"))
+            .filter(\.isNumber)
+    }
+
+    private static func editDistance(_ lhs: String, _ rhs: String) -> Int {
+        let left = Array(lhs), right = Array(rhs)
+        var previous = Array(0...right.count)
+        for (i, a) in left.enumerated() {
+            var current = [i + 1]
+            for (j, b) in right.enumerated() {
+                current.append(min(current[j] + 1, previous[j + 1] + 1,
+                                   previous[j] + (a == b ? 0 : 1)))
+            }
+            previous = current
+        }
+        return previous[right.count]
     }
 }
 
@@ -631,6 +728,12 @@ enum CalendarPhotoCellRejectionReason: String, Equatable, Sendable {
 }
 
 struct CalendarPhotoCellCandidateDiagnostics: Equatable, Sendable {
+    let originalTexts: [String]
+    let mergedText: String?
+    let selectedSource: String
+    let selectionReason: String
+    let templateMatched: Bool
+    let templateDistance: Int?
     let parsedStartMinutes: Int?
     let parsedEndMinutes: Int?
     let remainingTitle: String
@@ -677,6 +780,7 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
     var cellDiagnostics: [CalendarPhotoCellDiagnostics] = []
     var unassignedRawTexts: [String] = []
     var unassignedNormalizedTexts: [String] = []
+    var pageTimeTemplates: [String] = []
     var gridGeometry: CalendarPhotoGridGeometry? = nil
     let orientation: CalendarPhotoOrientationDiagnostics?
     let manualYearMonth: CalendarImportYearMonth?
@@ -1051,6 +1155,8 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                 [
                     "day=\(cell.day)",
                     "candidate=\(index + 1)",
+                    "originalTexts=\(Self.textList(candidate.originalTexts))",
+                    "mergedTexts=\(Self.quotedText(candidate.mergedText ?? ""))",
                     "parsedStart=\(Self.timeText(candidate.parsedStartMinutes))",
                     "parsedEnd=\(Self.timeText(candidate.parsedEndMinutes))",
                     "remainingTitle=\(Self.quotedText(candidate.remainingTitle))",
@@ -1059,6 +1165,10 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
                     "timeParseQuality=\(candidate.timeParseQuality?.rawValue ?? "none")",
                     "holidayMatch=\(candidate.holidayMatch)",
                     "needsReview=\(candidate.needsReview)",
+                    "selectedSource=\(candidate.selectedSource)",
+                    "selectionReason=\(candidate.selectionReason)",
+                    "templateMatched=\(candidate.templateMatched)",
+                    "templateDistance=\(Self.integerText(candidate.templateDistance))",
                     "defaultSelected=\(candidate.defaultSelected)",
                     "candidateCreated=\(candidate.candidateCreated)",
                     "rejectedReason=\(candidate.rejectedReason?.rawValue ?? "none")"
@@ -1091,6 +1201,9 @@ struct CalendarPhotoImportDiagnostics: Equatable, Sendable {
 
         return [
             summary,
+            Self.section(title: "TimeRecovery", lines: [
+                "pageTimeTemplates=\(Self.textList(pageTimeTemplates))"
+            ]),
             Self.section(title: "RecognitionCells", lines: recognitionLines),
             Self.section(title: "CellUpscaleRecovery", lines: cellUpscaleLines),
             Self.section(title: "RecognitionModelPOC", lines: recognitionModelPOCLines),
@@ -1943,6 +2056,7 @@ struct CalendarPhotoGridFirstParser {
             cellDiagnostics: buildResult.cellDiagnostics,
             unassignedRawTexts: buildResult.unassignedRawTexts,
             unassignedNormalizedTexts: buildResult.unassignedNormalizedTexts,
+            pageTimeTemplates: buildResult.pageTimeTemplates,
             gridGeometry: grid,
             orientation: orientationDiagnostics,
             manualYearMonth: yearMonth,
@@ -2059,6 +2173,7 @@ private struct CalendarPhotoMonthCandidateBuildResult {
     let cellDiagnostics: [CalendarPhotoCellDiagnostics]
     var unassignedRawTexts: [String] = []
     var unassignedNormalizedTexts: [String] = []
+    var pageTimeTemplates: [String] = []
 }
 
 private struct CalendarImportCandidateBuilder {
@@ -2069,6 +2184,9 @@ private struct CalendarImportCandidateBuilder {
         let rawText: String
         let normalizedText: String
         let time: CalendarImportParsedTime?
+        let isTimeLike: Bool
+        let usedMergedText: Bool
+        let templateDistance: Int?
     }
 
     func makeMonthCandidates(
@@ -2081,6 +2199,7 @@ private struct CalendarImportCandidateBuilder {
     ) -> CalendarPhotoMonthCandidateBuildResult {
         var candidates: [CalendarImportCandidate] = []
         var diagnostics: [CalendarPhotoCellDiagnostics] = []
+        let pageTimeTemplates = CalendarMonthTimeRecovery.templates(from: observations)
 
         for region in regions.sorted(by: { $0.day < $1.day }) {
             let assigned = observations.filter(region.contains)
@@ -2112,7 +2231,8 @@ private struct CalendarImportCandidateBuilder {
                     observations: meaningful,
                     date: date,
                     calendarID: calendarID,
-                    holidayNames: holidayNames
+                    holidayNames: holidayNames,
+                    pageTimeTemplates: pageTimeTemplates
                 )
             } else {
                 cellCandidates = []
@@ -2158,7 +2278,8 @@ private struct CalendarImportCandidateBuilder {
             candidates: candidates,
             cellDiagnostics: diagnostics,
             unassignedRawTexts: unassigned.map(\.text),
-            unassignedNormalizedTexts: unassigned.map { normalizedText($0.text) }
+            unassignedNormalizedTexts: unassigned.map { normalizedText($0.text) },
+            pageTimeTemplates: pageTimeTemplates.map(\.displayText)
         )
     }
 
@@ -2210,7 +2331,8 @@ private struct CalendarImportCandidateBuilder {
         observations: [CalendarOCRObservation],
         date: Date,
         calendarID: UUID,
-        holidayNames: Set<String>
+        holidayNames: Set<String>,
+        pageTimeTemplates: [CalendarMonthTimeTemplate]
     ) -> (
         [CalendarImportCandidate],
         [CalendarPhotoCellCandidateDiagnostics],
@@ -2222,7 +2344,23 @@ private struct CalendarImportCandidateBuilder {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let normalized = normalizedText(rawText)
             guard !normalized.isEmpty else { return nil }
-            let parsedTime = CalendarImportTimeParser.parseMonth(normalized).map { parsed in
+            let compactMerged = sorted.map(\.text).joined()
+            let directTime = CalendarImportTimeParser.parseMonth(normalized).flatMap { parsed in
+                // A separator-free range is too easy for one OCR route to invent. It
+                // needs either independent alternatives or a page-template match.
+                if parsed.parseQuality == .recovered,
+                   !normalized.contains(where: { "-–—〜～~".contains($0) }),
+                   sorted.flatMap(\.candidateDiagnostics).count < 2 {
+                    return nil
+                }
+                return parsed
+            }
+            let mergedRecovery = canMergeTimeFragments(sorted)
+                ? CalendarMonthTimeRecovery.recover(compactMerged, templates: pageTimeTemplates)
+                : nil
+            let recovery = mergedRecovery
+                ?? CalendarMonthTimeRecovery.recover(normalized, templates: pageTimeTemplates)
+            let parsedTime = (directTime ?? recovery?.time).map { parsed in
                 guard sorted.contains(where: {
                     $0.timeParseQualityOverride == .recovered
                 }) else { return parsed }
@@ -2236,7 +2374,10 @@ private struct CalendarImportCandidateBuilder {
                 observations: sorted,
                 rawText: rawText,
                 normalizedText: normalized,
-                time: parsedTime
+                time: parsedTime,
+                isTimeLike: sorted.contains { CalendarMonthTimeRecovery.isTimeLike($0.text) },
+                usedMergedText: mergedRecovery != nil,
+                templateDistance: recovery?.distance
             )
         }
 
@@ -2296,6 +2437,14 @@ private struct CalendarImportCandidateBuilder {
                 includesPersonTokenInTitle: personToken != nil
             ))
             diagnostics.append(CalendarPhotoCellCandidateDiagnostics(
+                originalTexts: candidateObservations.map(\.text),
+                mergedText: sourceLines.first(where: \.usedMergedText)?.normalizedText,
+                selectedSource: sourceLines.contains(where: { $0.templateDistance != nil })
+                    ? "pageTemplate" : "ocr",
+                selectionReason: sourceLines.contains(where: { $0.templateDistance != nil })
+                    ? "uniqueTemplateWithinTwoEdits" : "directParse",
+                templateMatched: sourceLines.contains(where: { $0.templateDistance != nil }),
+                templateDistance: sourceLines.compactMap(\.templateDistance).min(),
                 parsedStartMinutes: time.startMinutes,
                 parsedEndMinutes: time.endMinutes,
                 remainingTitle: title,
@@ -2312,7 +2461,9 @@ private struct CalendarImportCandidateBuilder {
 
         for line in parsedLines {
             if line.time == nil {
-                pendingTitleLines.append(line)
+                // OCR time fragments remain visible in cell diagnostics but must
+                // never leak into the event title.
+                if !line.isTimeLike { pendingTitleLines.append(line) }
                 continue
             }
             appendCandidate(from: pendingTitleLines + [line])
@@ -2335,6 +2486,22 @@ private struct CalendarImportCandidateBuilder {
             }
         }
         return lines
+    }
+
+    private func canMergeTimeFragments(_ observations: [CalendarOCRObservation]) -> Bool {
+        guard observations.count == 2 else { return false }
+        let sorted = observations.sorted { $0.boundingBox.minX < $1.boundingBox.minX }
+        let left = sorted[0], right = sorted[1]
+        let overlap = min(left.boundingBox.maxY, right.boundingBox.maxY)
+            - max(left.boundingBox.minY, right.boundingBox.minY)
+        let minimumHeight = min(left.boundingBox.height, right.boundingBox.height)
+        let gap = right.boundingBox.minX - left.boundingBox.maxX
+        return overlap >= minimumHeight * 0.45
+            && abs(left.boundingBox.midY - right.boundingBox.midY)
+                <= max(left.boundingBox.height, right.boundingBox.height) * 0.55
+            && gap >= -min(left.boundingBox.width, right.boundingBox.width) * 0.15
+            && gap <= max(left.boundingBox.height, right.boundingBox.height) * 3
+            && observations.contains { CalendarMonthTimeRecovery.isTimeLike($0.text) }
     }
 
     private func centerY(_ line: Line) -> Double {
