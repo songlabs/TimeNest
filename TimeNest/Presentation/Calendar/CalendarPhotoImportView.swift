@@ -512,8 +512,13 @@ private struct CalendarVisionOCRService {
         )
         try handler.perform([request])
         return (request.results ?? []).compactMap { observation in
-            let alternatives = observation.topCandidates(5).map {
-                CalendarOCRCandidate(text: $0.string, confidence: $0.confidence)
+            let alternatives = observation.topCandidates(5).enumerated().map { index, value in
+                CalendarOCRCandidate(
+                    text: value.string,
+                    confidence: value.confidence,
+                    source: .vision,
+                    isPrimary: index == 0
+                )
             }
             guard let candidate = CalendarOCRCandidateSelector.select(from: alternatives) else {
                 return nil

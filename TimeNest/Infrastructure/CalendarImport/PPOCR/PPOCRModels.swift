@@ -158,6 +158,8 @@ struct PPOCRTextResult: Equatable, Sendable {
     let confidence: Float
     let boundingBox: CalendarOCRBoundingBox
     var timeParseQualityOverride: CalendarImportTimeParseQuality? = nil
+    var candidateDiagnostics: [CalendarOCRCandidate] = []
+    var selectionReason: String? = nil
 }
 
 enum PPOCRTimeRecoveryReason: String, Equatable, Sendable {
@@ -369,6 +371,63 @@ struct PPOCRRecognitionModelComparison: Equatable, Sendable {
     var selectionReason: String = "recoveryNotTriggered"
 }
 
+extension PPOCRRecognitionModelComparison {
+    var calendarOCRCandidates: [CalendarOCRCandidate] {
+        var candidates = [CalendarOCRCandidate(
+            text: currentText,
+            confidence: currentConfidence,
+            source: .currentPPocr,
+            isPrimary: true
+        )]
+        Self.appendCandidate(
+            text: enhancedText,
+            confidence: enhancedConfidence,
+            source: .enhancedPPocr,
+            to: &candidates
+        )
+        Self.appendCandidate(
+            text: candidateText,
+            confidence: candidateConfidence,
+            source: .candidatePPocr,
+            to: &candidates
+        )
+        Self.appendCandidate(
+            text: visionText,
+            confidence: visionConfidence,
+            source: .visionSecondary,
+            to: &candidates
+        )
+        Self.appendCandidate(
+            text: timeFocusedPPocrText,
+            confidence: timeFocusedPPocrConfidence,
+            source: .timeFocusedPPocr,
+            to: &candidates
+        )
+        Self.appendCandidate(
+            text: timeFocusedVisionText,
+            confidence: timeFocusedVisionConfidence,
+            source: .timeFocusedVision,
+            to: &candidates
+        )
+        return candidates
+    }
+
+    private static func appendCandidate(
+        text: String?,
+        confidence: Float?,
+        source: CalendarOCRCandidateSource,
+        to candidates: inout [CalendarOCRCandidate]
+    ) {
+        guard let text, let confidence, !text.isEmpty else { return }
+        candidates.append(CalendarOCRCandidate(
+            text: text,
+            confidence: confidence,
+            source: source,
+            isPrimary: false
+        ))
+    }
+}
+
 struct PPOCRRecognitionModelPOC: Equatable, Sendable {
     let currentModel: String
     let candidateModel: String
@@ -569,7 +628,9 @@ enum PPOCRCellUpscaleRecoveryRunner {
                 text: alternative.text,
                 confidence: alternative.confidence,
                 boundingBox: comparison.boundingBox,
-                timeParseQualityOverride: .recovered
+                timeParseQualityOverride: .recovered,
+                candidateDiagnostics: comparison.calendarOCRCandidates,
+                selectionReason: comparison.selectionReason
             ))
         }
         return results
@@ -718,6 +779,8 @@ struct PPOCRMonthRecognitionRouter {
                     text: result.text,
                     confidence: result.confidence,
                     boundingBox: Self.map(result.boundingBox, into: region.boundingBox),
+                    candidateDiagnostics: result.candidateDiagnostics,
+                    selectionReason: result.selectionReason,
                     timeParseQualityOverride: result.timeParseQualityOverride
                 )
             })

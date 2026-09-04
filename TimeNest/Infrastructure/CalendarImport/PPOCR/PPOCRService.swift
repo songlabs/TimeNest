@@ -467,7 +467,7 @@ actor PPOCRService {
                     timeFocusedSelectionReason = "noLocalizedVisionTimeEvidence"
                 }
             }
-            modelComparisons.append(PPOCRRecognitionModelComparison(
+            let comparison = PPOCRRecognitionModelComparison(
                 boundingBox: localBoundingBox,
                 currentText: decoded.text,
                 currentConfidence: decoded.confidence,
@@ -500,7 +500,8 @@ actor PPOCRService {
                 selectedText: selection.alternative.text,
                 selectedSource: selection.source,
                 selectionReason: selection.selectionReason
-            ))
+            )
+            modelComparisons.append(comparison)
             let selectedTime = CalendarImportTimeParser.parseMonth(selection.alternative.text)
             let passesTextScore = selection.alternative.confidence
                 >= PPOCRConfiguration.textScore
@@ -510,7 +511,9 @@ actor PPOCRService {
                     text: selection.alternative.text,
                     confidence: selection.alternative.confidence,
                     boundingBox: localBoundingBox,
-                    timeParseQualityOverride: selection.isRecovered ? .recovered : nil
+                    timeParseQualityOverride: selection.isRecovered ? .recovered : nil,
+                    candidateDiagnostics: comparison.calendarOCRCandidates,
+                    selectionReason: comparison.selectionReason
                 ))
             }
         }
