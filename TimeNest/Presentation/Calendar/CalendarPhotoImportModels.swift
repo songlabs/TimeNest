@@ -2345,7 +2345,8 @@ private struct CalendarImportCandidateBuilder {
             let normalized = normalizedText(rawText)
             guard !normalized.isEmpty else { return nil }
             let compactMerged = sorted.map(\.text).joined()
-            let directTime = CalendarImportTimeParser.parseMonth(normalized).flatMap { parsed in
+            let directTime: CalendarImportParsedTime? =
+                CalendarImportTimeParser.parseMonth(normalized).flatMap { parsed -> CalendarImportParsedTime? in
                 // A separator-free range is too easy for one OCR route to invent. It
                 // needs either independent alternatives or a page-template match.
                 if parsed.parseQuality == .recovered,
