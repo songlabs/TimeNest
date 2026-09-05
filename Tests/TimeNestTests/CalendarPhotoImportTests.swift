@@ -1901,30 +1901,22 @@ final class CalendarPhotoImportTests: XCTestCase {
                 source: .candidatePPocr
             )
         ]
-        let templateBounds = CalendarOCRBoundingBox(
-            x: 0.8,
-            y: 0.8,
-            width: 0.15,
-            height: 0.02
-        )
+        let templateRegions = fixture.parser.dayRegions(
+            yearMonth: fixture.yearMonth,
+            weekStart: .sunday,
+            grid: fixture.grid,
+            calendar: utcGregorianCalendar()
+        ).filter { $0.day == 12 || $0.day == 13 }
+        XCTAssertEqual(templateRegions.count, 2)
         var diagnostics: CalendarPhotoImportDiagnostics?
         let result = try fixture.parser.parseMonth(
             observations: [
                 target,
-                CalendarOCRObservation(
-                    text: "20:20-21:40",
-                    confidence: 0.96,
-                    boundingBox: templateBounds
+                gridFirstObservation(
+                    "20:20-21:40", in: templateRegions[0], line: 0, confidence: 0.96
                 ),
-                CalendarOCRObservation(
-                    text: "20:20-21:40",
-                    confidence: 0.94,
-                    boundingBox: CalendarOCRBoundingBox(
-                        x: templateBounds.x,
-                        y: templateBounds.y - 0.04,
-                        width: templateBounds.width,
-                        height: templateBounds.height
-                    )
+                gridFirstObservation(
+                    "20:20-21:40", in: templateRegions[1], line: 0, confidence: 0.94
                 )
             ],
             yearMonth: fixture.yearMonth,

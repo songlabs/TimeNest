@@ -3304,9 +3304,14 @@ private struct CalendarImportCandidateBuilder {
         let text = normalizedText(observation.text)
         let isDayNumber = text.range(of: #"^\d{1,2}$"#, options: .regularExpression) != nil
             && Int(text).map { (1...31).contains($0) } == true
+        let inPrintedDayBand = observation.boundingBox.midY
+            >= region.boundingBox.minY + region.boundingBox.height * 0.65
+        // The known Cell date is reliable printed-content evidence throughout
+        // its date band. Other numeric text still needs the tighter date-box
+        // geometry so handwritten numeric titles remain reviewable.
+        if text == String(region.day) { return inPrintedDayBand }
         return (isDayNumber || (text.isEmpty && observation.requiresReview))
-            && observation.boundingBox.midY
-                >= region.boundingBox.minY + region.boundingBox.height * 0.65
+            && inPrintedDayBand
             && observation.boundingBox.midX <= region.boundingBox.minX + region.boundingBox.width * 0.35
             && observation.boundingBox.width <= region.boundingBox.width * 0.30
             && observation.boundingBox.height <= region.boundingBox.height * 0.25
