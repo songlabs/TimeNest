@@ -91,7 +91,7 @@ struct CalendarBottomToolbarView: View {
                                 onAddEventTapped()
                             }
                         }) {
-                            Image(systemName: selectedViewMode == .month ? "camera.viewfinder" : "plus")
+                            Image(systemName: selectedViewMode == .month ? "square.and.pencil" : "plus")
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundColor(.white)
                                 .frame(width: ShiftCalendarLayout.addButtonSize, height: ShiftCalendarLayout.addButtonSize)

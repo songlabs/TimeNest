@@ -899,6 +899,95 @@ final class CalendarSharingAcceptanceCoordinatorTests: XCTestCase {
 
 @MainActor
 final class CalendarSharingStoreTests: XCTestCase {
+    func testMonthInputConfirmationDoesNotSaveAndFinalActionWritesOneBatch() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = MonthInputTestEventUseCase(repository: repository)
+        let store = makeStore(client: MockCalendarSharingClient(), calendars: [.personal(name: "Mine")],
+                              eventUseCase: useCase)
+        let model = CalendarPhotoImportViewModel(eventUseCase: useCase, sharingStore: store, initialDate: Date())
+        model.draft.rows[0].setTitle("  Appointment  ")
+        model.draft.addRow(on: model.draft.rows[0].candidate.date)
+        model.draft.rows[1].setTitle("Another appointment")
+        let beforeConfirmation = await model.saveSelected()
+        XCTAssertFalse(beforeConfirmation)
+        XCTAssertEqual(useCase.batchCallCount, 0)
+        model.prepareConfirmation()
+        XCTAssertEqual(model.step, .review)
+        XCTAssertEqual(model.draft.confirmationRows.count, 2)
+        XCTAssertEqual(useCase.batchCallCount, 0)
+        let beforeSave = try await repository.event(id: model.draft.rows[0].id)
+        XCTAssertNil(beforeSave)
+        let saved = await model.saveSelected()
+        XCTAssertTrue(saved)
+        XCTAssertEqual(useCase.batchCallCount, 1)
+        let first = try await repository.event(id: model.draft.rows[0].id)
+        let second = try await repository.event(id: model.draft.rows[1].id)
+        XCTAssertEqual(first?.title, "Appointment")
+        XCTAssertEqual(second?.title, "Another appointment")
+        XCTAssertEqual(first?.calendarID, TimeNestCalendar.personalID)
+        let repeatSave = await model.saveSelected()
+        XCTAssertFalse(repeatSave)
+        XCTAssertEqual(useCase.batchCallCount, 1, "Repeated taps must not submit a completed batch")
+    }
+
+    func testMonthInputSaveFailureRetainsWholeDraftAndBackRefreshesConfirmation() async throws {
+        let repository = InMemoryEventRepository()
+        let useCase = MonthInputTestEventUseCase(repository: repository)
+        useCase.failNextBatch = true
+        let store = makeStore(client: MockCalendarSharingClient(), calendars: [.personal(name: "Mine")],
+                              eventUseCase: useCase)
+        let model = CalendarPhotoImportViewModel(eventUseCase: useCase, sharingStore: store, initialDate: Date())
+        model.draft.rows[0].setTitle("Original")
+        model.prepareConfirmation()
+        let original = model.draft
+        let failed = await model.saveSelected()
+        XCTAssertFalse(failed)
+        XCTAssertEqual(model.step, .review)
+        XCTAssertEqual(model.draft, original)
+        XCTAssertNotNil(model.failureMessage)
+        XCTAssertFalse(model.isSaving)
+        XCTAssertFalse(model.didSave)
+        let unsaved = try await repository.event(id: model.draft.rows[0].id)
+        XCTAssertNil(unsaved)
+        model.backToInput()
+        model.draft.rows[0].setTitle("Corrected")
+        model.prepareConfirmation()
+        XCTAssertEqual(model.draft.confirmationRows.first?.candidate.title, "Corrected")
+        let retried = await model.saveSelected()
+        XCTAssertTrue(retried)
+        XCTAssertEqual(useCase.batchCallCount, 2)
+        let saved = try await repository.event(id: model.draft.rows[0].id)
+        XCTAssertEqual(saved?.title, "Corrected")
+    }
+
+    func testMonthInputPreservesEventOnlyPermissionOfReceivedCalendar() {
+        var received = makeCalendar(kind: .sharedReceived, name: "Received")
+        received.eventEditingAllowed = true
+        received.collaborationProtocolVersion = 1
+        received.participantPermission = .readWrite
+        let useCase = EventUseCase(repository: InMemoryEventRepository())
+        let store = makeStore(client: MockCalendarSharingClient(),
+                              calendars: [.personal(name: "Mine"), received], eventUseCase: useCase)
+        let model = CalendarPhotoImportViewModel(eventUseCase: useCase, sharingStore: store, initialDate: Date())
+        model.draft.rows[0].setTitle("Meeting")
+        model.setTargetCalendarID(received.id)
+        model.prepareConfirmation()
+        XCTAssertTrue(model.canSave)
+        model.backToInput()
+        model.draft.rows[0].selectShift(ShiftTimeTemplate(
+            id: .night, nameKey: .calendarPhotoImportSchedule, displayName: "Night",
+            note: "", colorHex: "123456", startTime: "20:30", endTime: "08:30", enabled: true
+        ))
+        model.prepareConfirmation()
+        XCTAssertFalse(model.canSave)
+        XCTAssertEqual(model.commonTargetCalendarID, received.id, "Never silently change the destination")
+        XCTAssertFalse(model.compatibleCalendars.contains { $0.id == received.id })
+        XCTAssertTrue(store.eventWritableCalendars.contains { $0.id == received.id })
+        model.setTargetCalendarID(TimeNestCalendar.personalID)
+        XCTAssertTrue(model.canSave)
+        XCTAssertEqual(model.draft.confirmationRows.first?.shiftTemplateID, .night)
+    }
+
     func testSharingRevisionKeepsPresentedDayDetail() async {
         let eventUseCase = EventUseCase(repository: InMemoryEventRepository())
         let store = makeStore(
@@ -5219,4 +5308,18 @@ private func makeTestDate(
     components.hour = hour
     components.minute = minute
     return components.date!
+}
+
+private final class MonthInputTestEventUseCase: EventUseCase {
+    var batchCallCount = 0
+    var failNextBatch = false
+
+    override func createEventsAtomically(_ events: [CalendarEvent]) async throws {
+        batchCallCount += 1
+        if failNextBatch {
+            failNextBatch = false
+            throw EventUseCaseError.invalidDateRange
+        }
+        try await super.createEventsAtomically(events)
+    }
 }

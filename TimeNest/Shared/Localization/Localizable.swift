@@ -534,6 +534,18 @@ enum LocalizedString: String {
 
     // MARK: - Calendar Photo Import
 
+    case monthInputConfirm = "month_input.confirm"
+    case monthInputBack = "month_input.back"
+    case monthInputSaveAndClose = "month_input.save_and_close"
+    case monthInputTitlePlaceholder = "month_input.title_placeholder"
+    case monthInputChooseShift = "month_input.choose_shift"
+    case monthInputAddRow = "month_input.add_row"
+    case monthInputDeleteRow = "month_input.delete_row"
+    case monthInputTimeRange = "month_input.time_range"
+    case monthInputSaveCountFormat = "month_input.save_count_format"
+    case monthInputScanOptions = "month_input.scan_options"
+    case monthInputShiftCalendarRequired = "month_input.shift_calendar_required"
+
     case calendarPhotoImportTitle = "calendar_photo_import.title"
     case calendarPhotoImportScanMode = "calendar_photo_import.scan_mode"
     case calendarPhotoImportMonthScan = "calendar_photo_import.month_scan"

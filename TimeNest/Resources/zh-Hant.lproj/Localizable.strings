@@ -668,14 +668,14 @@
 "shift_template.delete_confirmation.unused" = "已建立的班次不會被刪除。";
 
 /* 從照片匯入行程 */
-"calendar_photo_import.title" = "從照片匯入行程";
-"calendar_photo_import.source_message" = "拍攝紙本月曆或選擇現有照片。影像只會在此裝置上處理，確認前不會加入任何行程。";
+"calendar_photo_import.title" = "按月快速輸入";
+"calendar_photo_import.source_message" = "可用 AI 辨識紙本月曆，輔助填寫。";
 "calendar_photo_import.camera" = "拍照";
 "calendar_photo_import.photos" = "選擇照片";
 "calendar_photo_import.recognizing" = "正在辨識…";
 "calendar_photo_import.results" = "辨識結果";
 "calendar_photo_import.retry" = "換一張照片";
-"calendar_photo_import.error_title" = "匯入錯誤";
+"calendar_photo_import.error_title" = "輸入錯誤";
 "calendar_photo_import.recognized_month" = "辨識年月";
 "calendar_photo_import.year_month_required" = "無法辨識年份和月份。請先選擇年月，再確認候選行程。";
 "calendar_photo_import.select_year_month" = "選擇年月";
@@ -683,9 +683,9 @@
 "calendar_photo_import.candidate_count" = "行程候選";
 "calendar_photo_import.candidate_count_format" = "%d項";
 "calendar_photo_import.selected" = "加入此項";
-"calendar_photo_import.date" = "日期";
+"calendar_photo_import.date" = "日";
 "calendar_photo_import.time" = "時間";
-"calendar_photo_import.schedule" = "行程";
+"calendar_photo_import.schedule" = "標題";
 "calendar_photo_import.start_time" = "開始時間";
 "calendar_photo_import.end_time" = "結束時間";
 "calendar_photo_import.set_time" = "設定時間";
@@ -726,3 +726,16 @@
 "calendar_photo_import.week_start_help" = "請選擇紙本月曆第一欄對應的星期。用於正確判斷每個格子對應的日期。";
 "calendar_photo_import.sunday_first" = "星期日";
 "calendar_photo_import.monday_first" = "星期一";
+
+// Monthly quick entry
+"month_input.confirm" = "確認";
+"month_input.back" = "返回";
+"month_input.save_and_close" = "儲存並關閉";
+"month_input.title_placeholder" = "輸入標題";
+"month_input.choose_shift" = "選擇班次";
+"month_input.add_row" = "為這一天新增行程";
+"month_input.delete_row" = "刪除新增列";
+"month_input.time_range" = "時間";
+"month_input.save_count_format" = "儲存對象 %d項";
+"month_input.scan_options" = "照片辨識設定";
+"month_input.shift_calendar_required" = "儲存班次時，請選擇可編輯的個人行事曆或自己擁有的共用行事曆。收到的共用行事曆僅支援新增一般行程。";

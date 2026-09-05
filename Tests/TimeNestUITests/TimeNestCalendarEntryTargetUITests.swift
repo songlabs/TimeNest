@@ -6,6 +6,31 @@ final class TimeNestCalendarEntryTargetUITests: XCTestCase {
         continueAfterFailure = false
     }
 
+    func testMonthlyQuickEntryReviewsOnlyFilledRowsAndClosesAfterSaving() {
+        let app = launchApp(language: "ja")
+        app.buttons["calendar.photoImport"].tap()
+        let title = app.textFields["monthInput.title.1"]
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["monthInput.confirm"].isEnabled)
+        XCTAssertTrue(app.buttons["calendarPhotoImport.camera"].exists)
+        XCTAssertFalse(app.buttons["calendarPhotoImport.save"].exists)
+        title.tap()
+        title.typeText("月入力テスト")
+        app.buttons["monthInput.confirm"].tap()
+        XCTAssertTrue(app.buttons["calendarPhotoImport.save"].waitForExistence(timeout: 5))
+        XCTAssertTrue(element(in: app, identifier: "monthInput.confirmedRow.1").exists)
+        XCTAssertFalse(element(in: app, identifier: "monthInput.confirmedRow.2").exists)
+        XCTAssertEqual(element(in: app, identifier: "monthInput.saveCount").label, "保存対象 1件")
+        app.buttons["monthInput.back"].tap()
+        XCTAssertTrue(title.waitForExistence(timeout: 5))
+        XCTAssertEqual(title.value as? String, "月入力テスト")
+        app.buttons["monthInput.confirm"].tap()
+        app.buttons["calendarPhotoImport.save"].tap()
+        XCTAssertTrue(app.buttons["calendar.photoImport"].waitForExistence(timeout: 8))
+        XCTAssertFalse(app.buttons["calendarPhotoImport.save"].exists)
+        XCTAssertTrue(app.staticTexts["月入力テスト"].waitForExistence(timeout: 8))
+    }
+
     func testPersonalCalendarCreateAndEditKeepCalendarFixed() {
         let app = launchApp(seedData: true)
 

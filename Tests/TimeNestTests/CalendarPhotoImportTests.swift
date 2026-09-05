@@ -4,6 +4,185 @@ import XCTest
 final class CalendarPhotoImportTests: XCTestCase {
     private let calendarID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
 
+    func testMonthInputGeneratesEveryDayIn28Through31DayMonths() throws {
+        let calendar = utcGregorianCalendar()
+        for (year, month, count) in [(2025, 2, 28), (2024, 2, 29), (2026, 9, 30), (2026, 12, 31)] {
+            let date = try XCTUnwrap(calendar.date(from: DateComponents(year: year, month: month, day: 15)))
+            let draft = CalendarMonthInputDraft(month: date, calendarID: calendarID, calendar: calendar)
+            XCTAssertEqual(draft.rows.count, count)
+            XCTAssertEqual(draft.rows.map { calendar.component(.day, from: $0.candidate.date) }, Array(1...count))
+            XCTAssertTrue(draft.rows.allSatisfy(\.isBaseRow))
+            XCTAssertTrue(draft.validRows.isEmpty, "Default clocks alone must never create events")
+        }
+    }
+
+    func testMonthInputDateIncludesCorrectLocalizedWeekday() throws {
+        let calendar = utcGregorianCalendar()
+        let date = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 9, day: 1)))
+        XCTAssertEqual(CalendarMonthInputDraft.dateText(date, locale: Locale(identifier: "ja_JP"),
+                                                       calendar: calendar), "1（火）")
+    }
+
+    func testMonthInputRequiresTrimmedTitleAndTwoValidClockValues() {
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        XCTAssertFalse(row.isValidForSaving)
+        row.setTitle("  \n\t　")
+        XCTAssertFalse(row.isValidForSaving)
+        row.setTitle("  説明会  ")
+        XCTAssertTrue(row.isValidForSaving)
+        XCTAssertEqual(row.candidate.effectiveTitle, "説明会")
+        row.candidate.endTimeMinutes = nil
+        XCTAssertFalse(row.isValidForSaving)
+        row.candidate.startTimeMinutes = nil
+        XCTAssertFalse(row.isValidForSaving, "No implicit all-day events in monthly entry")
+        row.candidate.startTimeMinutes = -1
+        row.candidate.endTimeMinutes = 1050
+        XCTAssertFalse(row.isValidForSaving)
+        row.candidate.startTimeMinutes = 540
+        row.candidate.endTimeMinutes = 1440
+        XCTAssertFalse(row.isValidForSaving)
+    }
+
+    func testMonthInputLoadsExistingCustomShiftAndPreservesItsAssociation() throws {
+        let suite = "MonthInputShift-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let template = ShiftTimeTemplate(
+            id: .custom(UUID()), nameKey: .calendarPhotoImportSchedule, displayName: "Custom night",
+            note: "", colorHex: "123456", startTime: "20:30", endTime: "08:30", enabled: true
+        )
+        template.persist(to: defaults)
+        let loaded = try XCTUnwrap(ShiftTimeTemplate.enabled(from: defaults).first { $0.id == template.id })
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        row.candidate.date = try XCTUnwrap(utcGregorianCalendar().date(
+            from: DateComponents(year: 2026, month: 9, day: 12)
+        ))
+        row.selectShift(loaded)
+        XCTAssertEqual(row.candidate.title, "Custom night")
+        XCTAssertEqual(row.candidate.startTimeMinutes, 1230)
+        XCTAssertEqual(row.candidate.endTimeMinutes, 510)
+        XCTAssertEqual(row.shiftTemplateID, template.id)
+        XCTAssertEqual(row.shiftColorHex, "123456")
+        XCTAssertTrue(row.spansMidnight)
+        let event = try row.makeEvent(calendar: utcGregorianCalendar())
+        XCTAssertEqual(event.shiftTemplateID, template.id)
+        XCTAssertFalse(event.isAllDay)
+        XCTAssertEqual(event.endDate.timeIntervalSince(event.startDate), 12 * 3600)
+        row.setTitle("面談")
+        XCTAssertNil(row.shiftTemplateID)
+        XCTAssertNil(try row.makeEvent().shiftTemplateID)
+        XCTAssertEqual(ShiftTimeTemplate.enabled(from: defaults).first { $0.id == template.id }, loaded,
+                       "Monthly entry must not modify the existing shift data source")
+    }
+
+    func testMonthInputOvernightUsesNextCalendarDayAcrossDST() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 3, day: 7)))
+        var row = CalendarMonthInputRow(date: day, calendarID: calendarID)
+        row.setTitle("Night")
+        row.setTime(20 * 60 + 30, isStart: true)
+        row.setTime(8 * 60 + 30, isStart: false)
+        let event = try row.makeEvent(calendar: calendar)
+        XCTAssertEqual(calendar.component(.day, from: event.endDate), 8)
+        XCTAssertEqual(calendar.component(.hour, from: event.endDate), 8)
+        XCTAssertEqual(calendar.component(.minute, from: event.endDate), 30)
+        XCTAssertEqual(event.endDate.timeIntervalSince(event.startDate), 11 * 3600)
+    }
+
+    func testMonthInputKeepsBaseRowsAndConfirmsMultipleEventsOnOneDay() {
+        var draft = CalendarMonthInputDraft(month: Date(), calendarID: calendarID)
+        let baseID = draft.rows[0].id
+        let day = draft.rows[0].candidate.date
+        draft.deleteRow(id: baseID)
+        XCTAssertEqual(draft.rows.first?.id, baseID)
+        draft.rows[0].setTitle("日勤")
+        draft.addRow(on: day)
+        draft.rows[1].setTitle("説明会")
+        draft.rows[2].setTitle("  ")
+        draft.prepareConfirmation()
+        XCTAssertEqual(draft.confirmationRows.map(\.candidate.title), ["日勤", "説明会"])
+        XCTAssertEqual(draft.confirmationRows.map(\.candidate.date), [day, day])
+        XCTAssertNotEqual(draft.confirmationRows[0].id, draft.confirmationRows[1].id)
+        draft.deleteRow(id: draft.rows[1].id)
+        draft.prepareConfirmation()
+        XCTAssertEqual(draft.confirmationRows.count, 1)
+        XCTAssertEqual(draft.rows.first?.id, baseID)
+    }
+
+    func testMonthInputConfirmationIsSnapshotAndIncludesFreeTextWithoutOCR() {
+        var draft = CalendarMonthInputDraft(month: Date(), calendarID: calendarID)
+        draft.rows[0].setTitle("会議")
+        draft.prepareConfirmation()
+        draft.rows[0].setTitle("病院")
+        XCTAssertEqual(draft.confirmationRows.first?.candidate.title, "会議")
+        XCTAssertTrue(draft.rows.allSatisfy { $0.ocrSource == nil })
+        draft.prepareConfirmation()
+        XCTAssertEqual(draft.confirmationRows.first?.candidate.title, "病院")
+        let target = UUID()
+        draft.setTargetCalendarID(target)
+        XCTAssertTrue(draft.rows.allSatisfy { $0.candidate.targetCalendarID == target })
+        XCTAssertEqual(draft.confirmationRows.first?.candidate.targetCalendarID, target)
+    }
+
+    func testMonthInputPrefillsRealOCRCandidatesAndRetainsWarningAndMissingEnd() throws {
+        let fixture = try gridFirstFixture(day: 12)
+        let result = try fixture.parser.parseMonth(
+            observations: [gridFirstObservation("面談 17:30-20:30", in: fixture.region, line: 1)],
+            yearMonth: fixture.yearMonth, weekStart: .sunday, grid: fixture.grid,
+            defaultCalendarID: calendarID, calendar: utcGregorianCalendar()
+        )
+        var candidate = try XCTUnwrap(result.candidates.first)
+        candidate.endTimeMinutes = nil
+        candidate.needsReview = true
+        var draft = CalendarMonthInputDraft(month: candidate.date, calendarID: calendarID,
+                                             calendar: utcGregorianCalendar())
+        draft.prefill(from: [candidate], calendar: utcGregorianCalendar())
+        let row = try XCTUnwrap(draft.rows.first { $0.ocrSource != nil })
+        XCTAssertTrue(row.isBaseRow)
+        XCTAssertEqual(row.candidate, candidate)
+        XCTAssertNil(row.candidate.endTimeMinutes, "OCR must not borrow the blank row's default end")
+        XCTAssertTrue(row.candidate.needsReview)
+        XCTAssertEqual(draft.rows.count, 30)
+        draft.prepareConfirmation()
+        XCTAssertTrue(draft.confirmationRows.isEmpty)
+        let index = try XCTUnwrap(draft.rows.firstIndex { $0.id == row.id })
+        draft.rows[index].setTime(20 * 60 + 30, isStart: false)
+        draft.prepareConfirmation()
+        XCTAssertEqual(draft.confirmationRows.count, 1)
+    }
+
+    func testMonthInputOCRPreservesManualEditsAndDoesNotDuplicateRescan() {
+        var draft = CalendarMonthInputDraft(month: Date(), calendarID: calendarID)
+        draft.rows[0].setTitle("Manual")
+        var candidate = CalendarMonthInputRow(date: draft.rows[0].candidate.date, calendarID: calendarID).candidate
+        candidate.title = "OCR"
+        draft.prefill(from: [candidate])
+        XCTAssertEqual(draft.rows.prefix(2).map(\.candidate.title), ["Manual", "OCR"])
+        XCTAssertFalse(draft.rows[1].isBaseRow)
+        draft.rows[1].setTitle("Corrected OCR")
+        draft.prefill(from: [candidate])
+        XCTAssertEqual(draft.rows.filter { $0.ocrSource != nil }.count, 1)
+        XCTAssertEqual(draft.rows[1].candidate.title, "Corrected OCR")
+        draft.prepareConfirmation()
+        XCTAssertEqual(draft.confirmationRows.count, 2)
+    }
+
+    func testMonthInputPreservesTwoIdenticalOCRAppointmentsWithinOneScan() {
+        var draft = CalendarMonthInputDraft(month: Date(), calendarID: calendarID)
+        var candidate = CalendarMonthInputRow(date: draft.month, calendarID: calendarID).candidate
+        candidate.title = "Appointment"
+        var otherCandidate = CalendarMonthInputRow(date: draft.month, calendarID: calendarID).candidate
+        otherCandidate.title = candidate.title
+        draft.prefill(from: [candidate, otherCandidate])
+        draft.prepareConfirmation()
+        XCTAssertEqual(draft.confirmationRows.count, 2)
+        XCTAssertNotEqual(draft.confirmationRows[0].id, draft.confirmationRows[1].id)
+        draft.prefill(from: [candidate, otherCandidate])
+        draft.prepareConfirmation()
+        XCTAssertEqual(draft.confirmationRows.count, 2)
+    }
+
     func testAppLanguagesResolveToCanonicalVisionOCRLanguages() {
         let cases: [(DisplayLanguage, String)] = [
             (.ja, "ja-JP"),

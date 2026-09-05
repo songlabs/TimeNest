@@ -668,14 +668,14 @@
 "shift_template.delete_confirmation.unused" = "Existing shifts will not be deleted.";
 
 /* Import events from a photo */
-"calendar_photo_import.title" = "Import Events from a Photo";
-"calendar_photo_import.source_message" = "Take a photo of a paper monthly calendar or choose an existing photo. Processing stays on this device, and nothing is added until you confirm.";
+"calendar_photo_import.title" = "Monthly Quick Entry";
+"calendar_photo_import.source_message" = "Use AI to read a paper monthly calendar and help fill in your entries.";
 "calendar_photo_import.camera" = "Take Photo";
 "calendar_photo_import.photos" = "Choose Photo";
 "calendar_photo_import.recognizing" = "Recognizing…";
 "calendar_photo_import.results" = "Recognition Results";
 "calendar_photo_import.retry" = "Different Photo";
-"calendar_photo_import.error_title" = "Import Error";
+"calendar_photo_import.error_title" = "Entry Error";
 "calendar_photo_import.recognized_month" = "Recognized Month";
 "calendar_photo_import.year_month_required" = "The year and month could not be recognized. Select them before reviewing the candidates.";
 "calendar_photo_import.select_year_month" = "Select Year and Month";
@@ -683,9 +683,9 @@
 "calendar_photo_import.candidate_count" = "Event Candidates";
 "calendar_photo_import.candidate_count_format" = "%d items";
 "calendar_photo_import.selected" = "Include";
-"calendar_photo_import.date" = "Date";
+"calendar_photo_import.date" = "Day";
 "calendar_photo_import.time" = "Time";
-"calendar_photo_import.schedule" = "Event";
+"calendar_photo_import.schedule" = "Title";
 "calendar_photo_import.start_time" = "Start Time";
 "calendar_photo_import.end_time" = "End Time";
 "calendar_photo_import.set_time" = "Set a Time";
@@ -726,3 +726,16 @@
 "calendar_photo_import.week_start_help" = "Choose the weekday shown in the first column of the paper calendar. This is used to match each box to the correct date.";
 "calendar_photo_import.sunday_first" = "Sunday";
 "calendar_photo_import.monday_first" = "Monday";
+
+// Monthly quick entry
+"month_input.confirm" = "Review";
+"month_input.back" = "Back";
+"month_input.save_and_close" = "Save and Close";
+"month_input.title_placeholder" = "Enter a title";
+"month_input.choose_shift" = "Choose a shift";
+"month_input.add_row" = "Add another entry on this day";
+"month_input.delete_row" = "Delete extra row";
+"month_input.time_range" = "Time";
+"month_input.save_count_format" = "%d to save";
+"month_input.scan_options" = "Photo Reading Options";
+"month_input.shift_calendar_required" = "To save shifts, choose an editable personal calendar or a shared calendar you own. Shared calendars you have joined accept ordinary events only.";

@@ -668,14 +668,14 @@
 "shift_template.delete_confirmation.unused" = "作成済みのシフトは削除されません。";
 
 /* 写真から予定を取り込む */
-"calendar_photo_import.title" = "写真から予定を取り込む";
-"calendar_photo_import.source_message" = "紙の月間カレンダーを撮影するか、写真を選択してください。画像は端末内だけで処理され、確認するまで予定には追加されません。";
+"calendar_photo_import.title" = "月単位でまとめて入力";
+"calendar_photo_import.source_message" = "紙の月間カレンダーをAIで読み取り、入力の補助に使えます。";
 "calendar_photo_import.camera" = "カメラで撮影";
 "calendar_photo_import.photos" = "写真を選択";
 "calendar_photo_import.recognizing" = "認識中…";
 "calendar_photo_import.results" = "認識結果";
 "calendar_photo_import.retry" = "別の写真";
-"calendar_photo_import.error_title" = "取り込みエラー";
+"calendar_photo_import.error_title" = "入力エラー";
 "calendar_photo_import.recognized_month" = "認識した年月";
 "calendar_photo_import.year_month_required" = "年月を認識できませんでした。選択してから候補を確認してください。";
 "calendar_photo_import.select_year_month" = "年月を選択";
@@ -683,9 +683,9 @@
 "calendar_photo_import.candidate_count" = "予定候補";
 "calendar_photo_import.candidate_count_format" = "%d件";
 "calendar_photo_import.selected" = "追加する";
-"calendar_photo_import.date" = "日付";
+"calendar_photo_import.date" = "日";
 "calendar_photo_import.time" = "時刻";
-"calendar_photo_import.schedule" = "予定";
+"calendar_photo_import.schedule" = "タイトル";
 "calendar_photo_import.start_time" = "開始時刻";
 "calendar_photo_import.end_time" = "終了時刻";
 "calendar_photo_import.set_time" = "時刻を設定";
@@ -726,3 +726,16 @@
 "calendar_photo_import.week_start_help" = "紙の月間カレンダーの一番左の列にある曜日を選んでください。各マスの日付を正しく判断するために使用します。";
 "calendar_photo_import.sunday_first" = "日曜日";
 "calendar_photo_import.monday_first" = "月曜日";
+
+// Monthly quick entry
+"month_input.confirm" = "確認";
+"month_input.back" = "戻る";
+"month_input.save_and_close" = "保存して閉じる";
+"month_input.title_placeholder" = "タイトルを入力";
+"month_input.choose_shift" = "シフトを選択";
+"month_input.add_row" = "この日に予定を追加";
+"month_input.delete_row" = "追加した行を削除";
+"month_input.time_range" = "時間";
+"month_input.save_count_format" = "保存対象 %d件";
+"month_input.scan_options" = "写真読み取りの設定";
+"month_input.shift_calendar_required" = "シフトを保存するには、自分が編集できる個人または共有カレンダーを選択してください。参加中の共有カレンダーには通常の予定のみ追加できます。";

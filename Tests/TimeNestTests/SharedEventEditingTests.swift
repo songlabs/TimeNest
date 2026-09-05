@@ -4,6 +4,57 @@ import XCTest
 
 @MainActor
 final class SharedEventEditingTests: XCTestCase {
+    func testMonthInputPartialSharedSaveKeepsDraftAndRetriesExistingMutation() async throws {
+        let descriptor = makeReceivedDescriptor()
+        let calendar = makeReceivedCalendar(id: descriptor.id, permission: .readWrite)
+        let client = SharedEventEditingClientStub()
+        client.receivedDescriptors = [descriptor]
+        let cache = CalendarSharingCache(fileURL: FileManager.default.temporaryDirectory
+            .appendingPathComponent("MonthInputSharedCache-\(UUID()).json"))
+        try cache.save(CalendarSharingCacheData(receivedCalendars: [descriptor],
+                                                eventsByCalendarID: [descriptor.id: []]))
+        let suite = "MonthInputShared-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let persistence = makePersistence()
+        let useCase = EventUseCase(repository: InMemoryEventRepository())
+        let store = CalendarSharingStore(
+            client: client, eventUseCase: useCase,
+            calendarRepository: InMemoryCalendarRepository(calendars: [calendar]), cache: cache,
+            sharedEventEditingPersistence: persistence,
+            selectionPersistence: CalendarSelectionPersistence(defaults: defaults),
+            syncMetadataPersistence: CalendarSharingSyncMetadataPersistence(defaults: defaults),
+            initialCalendars: [calendar]
+        )
+        let model = CalendarPhotoImportViewModel(eventUseCase: useCase, sharingStore: store, initialDate: Date())
+        model.draft.rows[0].setTitle("Saved first")
+        model.draft.rows[1].setTitle("Retry second")
+        model.prepareConfirmation()
+        let original = model.draft
+        let firstID = model.draft.rows[0].id
+        let secondID = model.draft.rows[1].id
+        client.confirmedNotSentEventIDs = [secondID]
+        let initial = await model.saveSelected()
+        XCTAssertFalse(initial)
+        XCTAssertEqual(model.step, .review)
+        XCTAssertFalse(model.didSave)
+        XCTAssertNotNil(model.failureMessage)
+        XCTAssertEqual(model.draft, original, "Partial success must not discard accepted or failed drafts")
+        XCTAssertEqual(store.sharedEventSyncStatus(calendarID: calendar.id, eventID: firstID), .synced)
+        XCTAssertEqual(store.sharedEventSyncStatus(calendarID: calendar.id, eventID: secondID), .pending)
+        XCTAssertEqual(model.submittedIDs, [firstID, secondID])
+        let initialMutation = try XCTUnwrap(persistence.load().outbox.first { $0.eventID == secondID })
+        client.confirmedNotSentEventIDs = []
+        let retried = await model.saveSelected()
+        XCTAssertTrue(retried)
+        XCTAssertEqual(client.receivedRecords.count, 2)
+        XCTAssertEqual(client.receivedCreateEventIDs.filter { $0 == firstID }.count, 1)
+        XCTAssertEqual(client.receivedWriteSnapshots.map(\.id), [firstID, secondID])
+        XCTAssertEqual(client.receivedWriteMutationIDs.last, initialMutation.id,
+                       "Use the existing outbox mutation, not another logical create")
+        XCTAssertEqual(model.draft, original)
+    }
+
     func testLegacyPermissionFieldsDefaultToReadOnlyAndReadWriteIsEventOnly() throws {
         let id = UUID()
         let legacyDescriptorJSON: [String: Any] = [
@@ -1371,6 +1422,8 @@ final class SharedEventEditingTests: XCTestCase {
 
 @MainActor
 private final class SharedEventEditingClientStub: CalendarSharingClientProtocol {
+    var receivedDescriptors: [SharedCalendarDescriptor] = []
+    var confirmedNotSentEventIDs: Set<UUID> = []
     var receivedRecords: [UUID: SharedEventEnvelope] = [:]
     var ownerRecords: [UUID: SharedEventEnvelope] = [:]
     var receivedWriteErrors: [CalendarSharingError] = []
@@ -1434,7 +1487,15 @@ private final class SharedEventEditingClientStub: CalendarSharingClientProtocol 
         name: String
     ) async throws {}
 
-    func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload] { [] }
+    func fetchReceivedCalendars() async throws -> [ReceivedSharedCalendarPayload] {
+        receivedDescriptors.map { descriptor in
+            let envelopes = receivedRecords.values.filter { $0.calendarID == descriptor.id }
+            return ReceivedSharedCalendarPayload(
+                calendar: descriptor, events: envelopes.map(\.snapshot), shifts: [], workRecords: [],
+                eventEnvelopes: Array(envelopes)
+            )
+        }
+    }
 
     func createReceivedSharedEvent(
         _ snapshot: SharedEventSnapshot,
@@ -1443,6 +1504,9 @@ private final class SharedEventEditingClientStub: CalendarSharingClientProtocol 
     ) async throws -> SharedEventEnvelope {
         receivedCreateEventIDs.append(snapshot.id)
         receivedAttemptMutationIDs.append(mutationID)
+        if confirmedNotSentEventIDs.contains(snapshot.id) {
+            throw SharedEventWriteError.confirmedNotSent(.networkUnavailable)
+        }
         try await prepareReceivedWrite()
         if receivedRecords[snapshot.id]?.isDeleted == true {
             throw CalendarSharingError.sharedEventDeleted

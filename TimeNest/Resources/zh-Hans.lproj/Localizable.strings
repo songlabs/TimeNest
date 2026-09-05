@@ -668,14 +668,14 @@
 "shift_template.delete_confirmation.unused" = "已创建的班次不会被删除。";
 
 /* 从照片导入日程 */
-"calendar_photo_import.title" = "从照片导入日程";
-"calendar_photo_import.source_message" = "拍摄纸质月历或选择已有照片。图片仅在本机处理，确认前不会添加任何日程。";
+"calendar_photo_import.title" = "按月快速输入";
+"calendar_photo_import.source_message" = "可用 AI 识别纸质月历，辅助填写。";
 "calendar_photo_import.camera" = "拍照";
 "calendar_photo_import.photos" = "选择照片";
 "calendar_photo_import.recognizing" = "正在识别…";
 "calendar_photo_import.results" = "识别结果";
 "calendar_photo_import.retry" = "换一张照片";
-"calendar_photo_import.error_title" = "导入错误";
+"calendar_photo_import.error_title" = "输入错误";
 "calendar_photo_import.recognized_month" = "识别年月";
 "calendar_photo_import.year_month_required" = "无法识别年份和月份。请先选择年月，再确认候选日程。";
 "calendar_photo_import.select_year_month" = "选择年月";
@@ -683,9 +683,9 @@
 "calendar_photo_import.candidate_count" = "日程候选";
 "calendar_photo_import.candidate_count_format" = "%d项";
 "calendar_photo_import.selected" = "添加此项";
-"calendar_photo_import.date" = "日期";
+"calendar_photo_import.date" = "日";
 "calendar_photo_import.time" = "时间";
-"calendar_photo_import.schedule" = "日程";
+"calendar_photo_import.schedule" = "标题";
 "calendar_photo_import.start_time" = "开始时间";
 "calendar_photo_import.end_time" = "结束时间";
 "calendar_photo_import.set_time" = "设置时间";
@@ -726,3 +726,16 @@
 "calendar_photo_import.week_start_help" = "请选择纸质月历第一列对应的星期。用于正确判断每个格子对应的日期。";
 "calendar_photo_import.sunday_first" = "星期日";
 "calendar_photo_import.monday_first" = "星期一";
+
+// Monthly quick entry
+"month_input.confirm" = "确认";
+"month_input.back" = "返回";
+"month_input.save_and_close" = "保存并关闭";
+"month_input.title_placeholder" = "输入标题";
+"month_input.choose_shift" = "选择班次";
+"month_input.add_row" = "为这一天添加日程";
+"month_input.delete_row" = "删除附加行";
+"month_input.time_range" = "时间";
+"month_input.save_count_format" = "保存对象 %d项";
+"month_input.scan_options" = "照片识别设置";
+"month_input.shift_calendar_required" = "保存班次时，请选择可编辑的个人日历或自己拥有的共享日历。收到的共享日历仅支持添加普通日程。";
