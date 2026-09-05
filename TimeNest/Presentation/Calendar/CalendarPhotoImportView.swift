@@ -1020,15 +1020,18 @@ struct CalendarPhotoImportView: View {
     @State private var editingTime: CalendarMonthTimeSelection?
     @State private var detailRow: CalendarMonthInputRow?
     @FocusState private var focusedTitleID: UUID?
+    let holidayDates: Set<DateOnly>
     let onCompleted: () -> Void
 
     init(
         eventUseCase: EventUseCase,
         sharingStore: CalendarSharingStore,
         initialDate: Date,
+        holidayDates: Set<DateOnly>,
         onCompleted: @escaping () -> Void
     ) {
         self.sharingStore = sharingStore
+        self.holidayDates = holidayDates
         _viewModel = StateObject(wrappedValue: CalendarPhotoImportViewModel(
             eventUseCase: eventUseCase, sharingStore: sharingStore, initialDate: initialDate
         ))
@@ -1070,6 +1073,7 @@ struct CalendarPhotoImportView: View {
                     }
                     ToolbarItem(placement: .confirmationAction) {
                         Button(localization.localized(.monthInputConfirm)) {
+                            commitTitle(focusedTitleID)
                             focusedTitleID = nil
                             viewModel.prepareConfirmation()
                         }
@@ -1097,6 +1101,9 @@ struct CalendarPhotoImportView: View {
             }
         }
         .interactiveDismissDisabled(viewModel.isSaving || viewModel.step == .recognizing)
+        .onChange(of: focusedTitleID) { previousID, _ in
+            commitTitle(previousID)
+        }
         .fullScreenCover(isPresented: $showingCamera) {
             CalendarCameraPicker(
                 onImage: { image in
@@ -1254,7 +1261,10 @@ struct CalendarPhotoImportView: View {
             .focused($focusedTitleID, equals: row.id)
             .font(.subheadline)
             .submitLabel(.done)
-            .onSubmit { focusedTitleID = nil }
+            .onSubmit {
+                commitTitle(row.id)
+                focusedTitleID = nil
+            }
             .accessibilityLabel(localization.localized(.calendarPhotoImportSchedule))
             .accessibilityIdentifier("monthInput.title.\(dayNumber(row))")
             Menu {
@@ -1552,12 +1562,22 @@ struct CalendarPhotoImportView: View {
         Calendar(identifier: .gregorian).component(.day, from: row.candidate.date)
     }
 
+    private func commitTitle(_ id: UUID?) {
+        guard let id else { return }
+        let templates = viewModel.shiftTemplates
+        updateRow(id) { $0.commitTitle(shiftTemplates: templates) }
+    }
+
     private func dateLabel(_ row: CalendarMonthInputRow) -> some View {
-        let weekday = Calendar(identifier: .gregorian).component(.weekday, from: row.candidate.date)
+        let color: Color
+        switch row.dateDisplayKind(holidayDates: holidayDates) {
+        case .normal: color = SettingsModalSurface.primaryText
+        case .saturday: color = ShiftCalendarColors.saturdayBlue
+        case .sundayOrHoliday: color = ShiftCalendarColors.sundayRed
+        }
         return Text(dateText(row.candidate.date))
             .font(.subheadline)
-            .foregroundStyle(weekday == 1 ? ShiftCalendarColors.sundayRed
-                : weekday == 7 ? ShiftCalendarColors.saturdayBlue : SettingsModalSurface.primaryText)
+            .foregroundStyle(color)
             .lineLimit(1).minimumScaleFactor(0.8)
     }
 

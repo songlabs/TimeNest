@@ -17,6 +17,18 @@ enum EventMarkerType {
 
 // MARK: - Month Grid Models
 
+/// Date text priority shared by the month calendar and monthly input/review.
+enum CalendarDateDisplayKind: Equatable {
+    case normal
+    case saturday
+    case sundayOrHoliday
+
+    static func resolve(weekday: Int, isHoliday: Bool) -> Self {
+        if isHoliday || weekday == 1 { return .sundayOrHoliday }
+        return weekday == 7 ? .saturday : .normal
+    }
+}
+
 struct MonthGrid: Hashable {
     let title: String
     let weekdaySymbols: [String]

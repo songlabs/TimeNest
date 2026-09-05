@@ -9,6 +9,7 @@ struct CalendarMonthInputRow: Identifiable, Equatable {
     private(set) var shiftColorHex: String?
     private(set) var ocrSource: CalendarImportCandidate?
     private(set) var isUserEdited = false
+    private var hasUncommittedTitle = false
 
     var id: UUID { candidate.id }
     var spansMidnight: Bool {
@@ -43,11 +44,25 @@ struct CalendarMonthInputRow: Identifiable, Equatable {
 
     mutating func setTitle(_ title: String) {
         candidate.title = title
-        // Typing is an explicit choice of an ordinary event, even if its name
-        // happens to match a saved template.
+        // Keep typing free-form. A unique template is resolved only at commit.
         shiftTemplateID = nil
         shiftColorHex = nil
         isUserEdited = true
+        hasUncommittedTitle = true
+    }
+
+    mutating func commitTitle(shiftTemplates: [ShiftTimeTemplate]) {
+        // A second submit/focus callback must not reset manually adjusted clocks.
+        guard hasUncommittedTitle else { return }
+        hasUncommittedTitle = false
+        guard shiftTemplateID == nil else { return }
+        let title = candidate.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { return }
+        let matches = shiftTemplates.filter {
+            $0.enabled && $0.displayName.trimmingCharacters(in: .whitespacesAndNewlines) == title
+        }
+        guard matches.count == 1, let template = matches.first else { return }
+        selectShift(template)
     }
 
     mutating func selectShift(_ template: ShiftTimeTemplate) {
@@ -62,6 +77,7 @@ struct CalendarMonthInputRow: Identifiable, Equatable {
             candidate.endTimeMinutes = end.hour * 60 + end.minute
         }
         isUserEdited = true
+        hasUncommittedTitle = false
     }
 
     mutating func setTime(_ minutes: Int, isStart: Bool) {
@@ -71,6 +87,16 @@ struct CalendarMonthInputRow: Identifiable, Equatable {
             candidate.endTimeMinutes = minutes
         }
         isUserEdited = true
+    }
+
+    func dateDisplayKind(
+        holidayDates: Set<DateOnly>, calendar: Calendar = Calendar(identifier: .gregorian)
+    ) -> CalendarDateDisplayKind {
+        let isHoliday = DateOnly(from: candidate.date, in: calendar.timeZone)
+            .map { holidayDates.contains($0) } ?? false
+        return CalendarDateDisplayKind.resolve(
+            weekday: calendar.component(.weekday, from: candidate.date), isHoliday: isHoliday
+        )
     }
 
     func makeEvent(calendar: Calendar = Calendar(identifier: .gregorian)) throws -> CalendarEvent {

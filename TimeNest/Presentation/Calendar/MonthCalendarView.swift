@@ -256,6 +256,9 @@ struct MonthCalendarView: View {
                 eventUseCase: eventUseCase,
                 sharingStore: calendarSharingStore,
                 initialDate: viewModel.selectedDate,
+                // Reuse the displayed grid, including its subscription/cache fallback rules.
+                holidayDates: Set((viewModel.grid?.days ?? [])
+                    .filter { !$0.holidays.isEmpty }.map(\.date)),
                 onCompleted: {
                     Task { await viewModel.reloadMonth() }
                 }
@@ -1408,15 +1411,15 @@ struct DayCellView: View {
         if !cell.isInCurrentMonth {
             return ShiftCalendarColors.otherMonthGray
         }
-        // 节假日优先于周末颜色
-        if !cell.holidays.isEmpty {
+        let weekday = Calendar(identifier: .gregorian).component(.weekday, from: cell.date.toDate())
+        switch CalendarDateDisplayKind.resolve(weekday: weekday, isHoliday: !cell.holidays.isEmpty) {
+        case .sundayOrHoliday:
             return ShiftCalendarColors.sundayRed
+        case .saturday:
+            return ShiftCalendarColors.saturdayBlue
+        case .normal:
+            return ShiftCalendarColors.primaryText
         }
-        // 使用 isWeekend 属性判断周末，而不是硬编码星期文字
-        if cell.isWeekend, let weekendColor = ShiftCalendarColors.weekendTextColor(for: cell.weekdayText) {
-            return weekendColor
-        }
-        return ShiftCalendarColors.primaryText
     }
 
     

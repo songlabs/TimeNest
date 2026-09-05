@@ -75,6 +75,193 @@ final class CalendarPhotoImportTests: XCTestCase {
                        "Monthly entry must not modify the existing shift data source")
     }
 
+    func testMonthInputCommitsUniqueEnabledShiftWithTimesColorAndEventID() throws {
+        let suite = "MonthInputExactShift-\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: ShiftTimeTemplateID.day.enabledKey)
+        defaults.set(false, forKey: ShiftTimeTemplateID.night.enabledKey)
+        let template = monthInputShift()
+        template.persist(to: defaults)
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        row.setTitle("日勤")
+        XCTAssertNil(row.shiftTemplateID, "Typing alone must not select a shift")
+        XCTAssertEqual(row.candidate.startTimeMinutes, 540)
+
+        row.commitTitle(shiftTemplates: ShiftTimeTemplate.enabled(from: defaults))
+
+        XCTAssertEqual(row.candidate.title, "日勤")
+        XCTAssertEqual(row.shiftTemplateID, template.id)
+        XCTAssertEqual(row.shiftColorHex, "123456")
+        XCTAssertEqual(row.candidate.startTimeMinutes, 510)
+        XCTAssertEqual(row.candidate.endTimeMinutes, 1050)
+        XCTAssertFalse(row.candidate.includesPersonTokenInTitle)
+        XCTAssertEqual(try row.makeEvent().shiftTemplateID, template.id)
+    }
+
+    func testMonthInputTrimsInputAndTemplateNamesForExactMatch() {
+        for name in ["日勤", "　日勤 \n"] {
+            let template = monthInputShift(name: name)
+            for input in ["日勤", "  日勤  ", "\t日勤\n", "　日勤　"] {
+                var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+                row.setTitle(input)
+                row.commitTitle(shiftTemplates: [template])
+                XCTAssertEqual(row.shiftTemplateID, template.id, input)
+                XCTAssertEqual(row.candidate.title, template.displayName)
+            }
+        }
+    }
+
+    func testMonthInputDoesNotFuzzyMatchOrRejectFreeText() throws {
+        let templates = [monthInputShift(), monthInputShift(name: "夜勤")]
+        for input in ["日", "日勤A", "夜", "説明会", "病院", "面談", "会議"] {
+            var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+            row.setTitle(input)
+            row.commitTitle(shiftTemplates: templates)
+            XCTAssertEqual(row.candidate.title, input)
+            XCTAssertNil(row.shiftTemplateID, input)
+            XCTAssertNil(row.shiftColorHex)
+            XCTAssertEqual(row.candidate.startTimeMinutes, 540)
+            XCTAssertEqual(row.candidate.endTimeMinutes, 1050)
+            XCTAssertNil(try row.makeEvent().shiftTemplateID)
+        }
+    }
+
+    func testMonthInputDoesNotChooseDuplicateOrDisabledShiftNames() {
+        for templates in [
+            [monthInputShift(), monthInputShift()],
+            [monthInputShift(), monthInputShift(name: " 日勤 ")],
+            [monthInputShift(enabled: false)]
+        ] {
+            var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+            row.setTitle("日勤")
+            row.commitTitle(shiftTemplates: templates)
+            XCTAssertEqual(row.candidate.title, "日勤")
+            XCTAssertNil(row.shiftTemplateID)
+            XCTAssertNil(row.shiftColorHex)
+            XCTAssertEqual(row.candidate.startTimeMinutes, 540)
+        }
+        let enabled = monthInputShift()
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        row.setTitle("日勤")
+        row.commitTitle(shiftTemplates: [enabled, monthInputShift(enabled: false)])
+        XCTAssertEqual(row.shiftTemplateID, enabled.id)
+    }
+
+    func testMonthInputBlankTitleDoesNotMatchBlankShiftName() {
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        row.setTitle("　 \n")
+        row.commitTitle(shiftTemplates: [monthInputShift(name: " ")])
+        XCTAssertNil(row.shiftTemplateID)
+        XCTAssertFalse(row.isValidForSaving)
+    }
+
+    func testMonthInputEditingMatchedTitleDetachesShiftWithoutClearingAdjustedTimes() throws {
+        let template = monthInputShift()
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        row.setTitle("日勤")
+        row.commitTitle(shiftTemplates: [template])
+        row.setTime(600, isStart: true)
+        row.setTime(1100, isStart: false)
+        row.setTitle("日勤打合せ")
+        XCTAssertNil(row.shiftTemplateID)
+        XCTAssertNil(row.shiftColorHex)
+        row.commitTitle(shiftTemplates: [template])
+        XCTAssertNil(try row.makeEvent().shiftTemplateID)
+        XCTAssertEqual(row.candidate.title, "日勤打合せ")
+        XCTAssertEqual(row.candidate.startTimeMinutes, 600)
+        XCTAssertEqual(row.candidate.endTimeMinutes, 1100)
+    }
+
+    func testMonthInputTypedShiftEqualsDropdownSelectionIncludingMetadata() {
+        let template = monthInputShift()
+        var dropdown = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        dropdown.candidate.includesPersonTokenInTitle = true
+        var typed = dropdown
+        dropdown.selectShift(template)
+        typed.setTitle(" 日勤 ")
+        typed.commitTitle(shiftTemplates: [template])
+        XCTAssertEqual(typed, dropdown)
+    }
+
+    func testMonthInputRepeatedCommitAndDropdownFocusLossPreserveAdjustedTimes() {
+        let template = monthInputShift()
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        row.setTitle("日勤")
+        row.commitTitle(shiftTemplates: [template])
+        row.setTime(600, isStart: true)
+        row.setTime(1100, isStart: false)
+        let adjusted = row
+        row.commitTitle(shiftTemplates: [template])
+        XCTAssertEqual(row, adjusted)
+
+        row.setTitle("日勤")
+        let other = monthInputShift(name: "夜勤")
+        row.selectShift(other)
+        let dropdown = row
+        row.commitTitle(shiftTemplates: [template, other])
+        XCTAssertEqual(row, dropdown, "A pending focus callback must not override a dropdown choice")
+    }
+
+    func testMonthInputShiftWithoutConfiguredTimesKeepsCurrentClocks() {
+        var template = monthInputShift()
+        template.startTime = ""
+        template.endTime = ""
+        var row = CalendarMonthInputRow(date: Date(), calendarID: calendarID)
+        row.setTime(600, isStart: true)
+        row.setTime(1100, isStart: false)
+        row.setTitle("日勤")
+        row.commitTitle(shiftTemplates: [template])
+        XCTAssertEqual(row.shiftTemplateID, template.id)
+        XCTAssertEqual(row.candidate.startTimeMinutes, 600)
+        XCTAssertEqual(row.candidate.endTimeMinutes, 1100)
+    }
+
+    func testMonthInputDoesNotResolveUntouchedOCRTitleAtCommit() {
+        var source = CalendarMonthInputRow(date: Date(), calendarID: calendarID).candidate
+        source.title = "日勤"
+        var row = CalendarMonthInputRow(candidate: source, isBaseRow: true)
+        row.setTime(600, isStart: true)
+        let before = row
+        row.commitTitle(shiftTemplates: [monthInputShift()])
+        XCTAssertEqual(row, before)
+    }
+
+    func testMonthInputDateClassificationUsesHolidayPriorityAndPreservesDraft() throws {
+        let calendar = utcGregorianCalendar()
+        let cases: [(Int, Bool, CalendarDateDisplayKind)] = [
+            (1, false, .normal), (5, false, .saturday), (6, false, .sundayOrHoliday),
+            (21, true, .sundayOrHoliday), (22, true, .sundayOrHoliday),
+            (23, true, .sundayOrHoliday), (5, true, .sundayOrHoliday)
+        ]
+        for (day, isHoliday, expected) in cases {
+            let dateOnly = DateOnly(year: 2026, month: 9, day: day)
+            let date = dateOnly.toDate(in: calendar.timeZone)
+            let holidayDates: Set<DateOnly> = isHoliday ? [dateOnly] : []
+            var draft = CalendarMonthInputDraft(month: date, calendarID: calendarID, calendar: calendar)
+            let emptyDraft = draft
+            XCTAssertEqual(draft.rows[day - 1].dateDisplayKind(holidayDates: holidayDates,
+                                                            calendar: calendar), expected)
+            XCTAssertEqual(draft, emptyDraft, "Date styling must not edit or select any row")
+            XCTAssertTrue(draft.validRows.isEmpty)
+            draft.rows[day - 1].setTitle("説明会")
+            draft.prepareConfirmation()
+            let before = draft
+            let input = draft.rows[day - 1]
+            let confirmation = try XCTUnwrap(draft.confirmationRows.first)
+            XCTAssertEqual(input.dateDisplayKind(holidayDates: holidayDates, calendar: calendar), expected)
+            XCTAssertEqual(confirmation.dateDisplayKind(holidayDates: holidayDates, calendar: calendar), expected)
+            XCTAssertEqual(draft, before)
+        }
+    }
+
+    private func monthInputShift(name: String = "日勤", enabled: Bool = true) -> ShiftTimeTemplate {
+        ShiftTimeTemplate(
+            id: .custom(UUID()), nameKey: .calendarPhotoImportSchedule, displayName: name,
+            note: "", colorHex: "123456", startTime: "08:30", endTime: "17:30", enabled: enabled
+        )
+    }
+
     func testMonthInputOvernightUsesNextCalendarDayAcrossDST() throws {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
